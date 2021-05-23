@@ -1,0 +1,82 @@
+	/*
+	semweb.aboutObj(1,'http://www.auster-gmbh.de/09/09/lib#door_restoration_double-leaf');
+	semweb.inheritObj('http://www.auster-gmbh.de/09/09/lib#door_restoration_double-leaf');
+	semweb.setGraphLiteral(2,'http://www.w3.org/2000/01/rdf-schema#label','Tür zweifl. (Sanierung)');
+	semweb.swappointer();
+	
+	semweb.aboutObj(1,'http://www.auster-gmbh.de/09/09/lib#door_restoration_double-leaf_tube_frame');
+	semweb.inheritObj('http://www.auster-gmbh.de/09/09/lib#door_restoration_double-leaf_tube_frame');
+	semweb.setGraphLiteral(2,'http://www.w3.org/2000/01/rdf-schema#label','Tür zweifl. RR (Sanierung)');
+	semweb.swappointer();
+	
+	semweb.findID(2,def_num);
+	semweb.setGraphObj('http://www.w3.org/2000/01/rdf-schema#isDefinedBy');
+	
+	semweb.parentNode(1, 0);
+	semweb.aboutObj(1,'http://www.auster-gmbh.de/09/09/lib#door_restoration_double-leaf_sheet');
+	semweb.inheritObj('http://www.auster-gmbh.de/09/09/lib#door_restoration_double-leaf_sheet');
+	semweb.setGraphLiteral(2,'http://www.w3.org/2000/01/rdf-schema#label','Tür zweifl. Vollblatt (Sanierung)');
+	
+	semweb.swappointer();
+	
+	semweb.findID(2,def_num);
+	semweb.setGraphObj('http://www.w3.org/2000/01/rdf-schema#isDefinedBy');
+	
+	semweb.parentNode(1, 0);
+	semweb.parentNode(1, 0);
+	semweb.parentNode(1, 0);
+	
+	semweb.aboutObj(1,'http://www.auster-gmbh.de/09/09/lib#door_new');
+	semweb.inheritObj('http://www.auster-gmbh.de/09/09/lib#door_new');
+	semweb.setGraphLiteral(2,'http://www.w3.org/2000/01/rdf-schema#label','Tür (Neuausst.)');
+	semweb.swappointer();
+	
+	semweb.aboutObj(1,'http://www.auster-gmbh.de/09/09/lib#door_new_single-leaf');
+	semweb.inheritObj('http://www.auster-gmbh.de/09/09/lib#door_new_single-leaf');
+	semweb.setGraphLiteral(2,'http://www.w3.org/2000/01/rdf-schema#label','Tür einfl. (Neuausst.)');
+	semweb.swappointer();
+	
+	semweb.aboutObj(1,'http://www.auster-gmbh.de/09/09/lib#door_new_single-leaf_tube_frame');
+	semweb.inheritObj('http://www.auster-gmbh.de/09/09/lib#door_new_single-leaf_tube_frame');
+	semweb.setGraphLiteral(2,'http://www.w3.org/2000/01/rdf-schema#label','Tür einfl. RR (Neuausst.)');
+	semweb.swappointer();
+	
+	semweb.findID(2,def_num);
+	semweb.setGraphObj('http://www.w3.org/2000/01/rdf-schema#isDefinedBy');
+	
+	semweb.parentNode(1, 0);
+	semweb.aboutObj(1,'http://www.auster-gmbh.de/09/09/lib#door_new_single-leaf_sheet');
+	semweb.inheritObj('http://www.auster-gmbh.de/09/09/lib#door_new_single-leaf_sheet');
+	semweb.setGraphLiteral(2,'http://www.w3.org/2000/01/rdf-schema#label','Tür einfl. Vollblatt (Neuausst.)');	
+	semweb.swappointer();
+	
+	semweb.findID(2,def_num);
+	semweb.setGraphObj('http://www.w3.org/2000/01/rdf-schema#isDefinedBy');
+	
+	semweb.parentNode(1, 0);
+	semweb.parentNode(1, 0);
+	
+	semweb.aboutObj(1,'http://www.auster-gmbh.de/09/09/lib#door_new_double-leaf');
+	semweb.inheritObj('http://www.auster-gmbh.de/09/09/lib#door_new_double-leaf');
+	semweb.setGraphLiteral(2,'http://www.w3.org/2000/01/rdf-schema#label','Tür zweifl. (Neuausst.)');
+	semweb.swappointer();
+	
+	semweb.aboutObj(1,'http://www.auster-gmbh.de/09/09/lib#door_new_double-leaf_tube_frame');
+	semweb.inheritObj('http://www.auster-gmbh.de/09/09/lib#door_new_double-leaf_tube_frame');
+	semweb.setGraphLiteral(2,'http://www.w3.org/2000/01/rdf-schema#label','Tür zweifl. RR (Neuausst.)');
+	semweb.swappointer();
+	
+	semweb.findID(2,def_num);
+	semweb.setGraphObj('http://www.w3.org/2000/01/rdf-schema#isDefinedBy');
+	
+	semweb.parentNode(1, 0);
+	semweb.aboutObj(1,'http://www.auster-gmbh.de/09/09/lib#door_new_double-leaf_sheet');
+	semweb.inheritObj('http://www.auster-gmbh.de/09/09/lib#door_new_double-leaf_sheet');
+	semweb.setGraphLiteral(2,'http://www.w3.org/2000/01/rdf-schema#label','Tür zweifl. Vollblatt (Neuausst.)');
+	semweb.swappointer();
+	
+	semweb.findID(2,def_num);
+	semweb.setGraphObj('http://www.w3.org/2000/01/rdf-schema#isDefinedBy');
+	
+	semweb.rootNode(1);
+	*/

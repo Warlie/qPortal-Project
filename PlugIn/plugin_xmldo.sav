@@ -1,0 +1,386 @@
+<?PHP
+
+/**
+*ContentGenerator
+*
+* Generates content by reading and writing trees
+*
+* @-------------------------------------------
+* @title:XMLDO
+* @autor:Stefan Wegerhoff
+* @description: Treeobject, transforms trees to tables and back
+* --------------------------------------------
+* @function: MOVEFIRST = goes to first record
+* @function: MOVELAST = goes to last record
+*/
+
+require_once("plugin_interface.php");
+
+class XMLDO extends plugin 
+{
+private $test = 0;
+private $rst;
+private $pos = 0;
+private $template;
+private $content;
+private $documentForInsert;
+private $verification = array();
+
+	function XMLDO(/* System.Parser */ &$back, /* System.CurRef */ &$treepos, /* System.Content */ &$content)
+	{
+		$this->back= &$back;
+		$this->treepos = &$value;
+		$this->content = &$content;
+		//$this->id = $value; , &$id
+	}
+	
+			
+	/**
+	*@function: MOVEFIRST = goes to first record
+	*/
+		
+	public function moveFirst()
+	{$this->pos = 0;}
+	
+	/**
+	*@function: MOVELAST = goes to last record
+	*/
+	public function moveLast()
+	{$this->pos = count($this->table) - 1;}
+	
+
+	/**
+	*@function: ITER = gives out a object to LIST-parameter
+	*/
+	public function &iter()
+		{
+		//echo 'booh' . $this->test++ . '<br>';
+		return $this;}
+
+
+	/**
+	* XMLTEMPLATE
+	*@function: HAS_TAG = returns a boolean value refering to the seeking tag, descripted by xpath 
+	* TODO muss auf xpath erweitert werden
+	*
+	*/
+	public function setXMLTemplate($new_template, $use_at_tag)
+	{
+		
+		$tmpstamp = $this->back->position_stamp();
+		
+		if(!$this->back->change_URI($this->content->get_template($new_template)))
+		echo $new_template . 'isn\'t a available documentident';
+		
+		
+		
+		$this->back->set_first_node();
+		
+		$this->back->complete_list(true);
+		$this->back->cloneResult(true);
+		$this->back->xpath($use_at_tag);
+		$this->back->cloneResult(false);
+		$this->documentForInsert = &$this->back->get_xpath_Result();
+
+		/*
+		$orginal = &$this->generator()->XMLlist->show_xmlelement();
+		$clone = &$this->find($orginal,$has_tag);
+		*/
+		if(count($this->documentForInsert) == 0 )
+		{
+		$mytemp = "false";
+		}
+		else
+		{
+		$mytemp = "true";
+		}	
+		
+		$this->back->go_to_stamp($tmpstamp);
+		return $mytemp;
+	}
+	
+	/**
+	*@parameter: LIST = gets an object to receive data
+	*/
+	public function set_list(&$value)
+	{
+	
+	if(is_object($value))
+	{
+		$this->rst = &$value;
+	}
+	else
+	return 'no element received';
+	
+	//echo get_Class($this->rst) . 'xxxx';
+	//return $this->back->get_context_generator()->get_template($new_template);
+	//get_context_generator
+	//	$this->template = $generator->heap['template'][$value];
+	//	if(is_null($this->template))echo '<br><b>das Template ist nicht verf&uuml;gbar:' . $value . '</b><br>';
+		
+	}
+	
+
+
+	/**
+	* COLLECTION
+	*
+	*/
+	public function setCollection()
+	{
+		$this->collection = $value;
+	}
+	
+	/**
+	* CDATA
+	*
+	*/
+	public function setCDATAmode()
+	{
+			
+			$this->cdata = true;
+			
+			
+	}
+	/**
+	* SETTAG
+	*
+	*/
+	public function define_tag($name, $xpath, $attrib_data, $pos, $prefix, $postfix, $value)
+	{	
+		$cur_pos = count($this->verification);
+		$this->verification[$cur_pos] = array();
+		$this->verification[$cur_pos]['name'] = $name; /* name to call*/
+		$this->verification[$cur_pos]['xpath'] = $xpath; /* pos in document */
+		$this->verification[$cur_pos]['attrib_data'] = $attrib_data; /* data or attribute */
+		$this->verification[$cur_pos]['pos'] = $pos;
+		$this->verification[$cur_pos]['prefix'] = $prefix; /* prefix like dc(:autor) */
+		$this->verification[$cur_pos]['postfix'] = $postfix; /* postfix like (dc:)autor */
+		$this->verification[$cur_pos]['value'] = $value;  /* constant value */
+	}
+	
+	
+		/*
+		if($type == "TAG_OUT")
+		{
+			
+			$this->cur = '';
+			
+			
+		}
+		if($type == "XPATH")
+		{
+			
+			$this->tag[$this->cur]['xpath']=$value;
+			
+			
+		}
+		if($type == "ATTRIB")
+		{
+			
+			$this->tag[$this->cur]['pos']='ATTRIB';
+			$this->tag[$this->cur]['name']=$value;
+			
+		}
+		if($type == "DATA")
+		{
+			//echo 'boooh' . $this->cur;
+			$this->tag[$this->cur]['pos']='DATA';
+			
+			
+		}
+		if($type == "CONTENT")
+		{
+			
+			$this->tag[$this->cur]['content']=$value;
+			
+			
+		}
+		if($type == "VALUE")
+		{
+			//$this->tag[$this->cur]['pos']='VALUE';
+			$this->tag[$this->cur]['value']=$value;
+			
+			
+		}
+
+*/
+		public function col($columnName)
+		{
+		}
+		/*
+		if($type == "COL")
+		{
+			
+			if(is_null($this->table))echo '<br><b>Keine Tabelle erstellt!</b><br>';
+			$tmp=$this->table[$this->pos][$value];
+			$this->param_out($tmp);
+			//echo "<br><b>" . $value . '</b> ' . $tmp . ' <i>' . $this->pos . '</i>';
+		}
+		*/
+		
+		public function getMany()
+		{
+		if($type == "MANY"){$this->param_out(count( $this->table ));}
+		}
+		
+		
+		/*
+		if($type == "ERR")
+			{
+				$tmp = $generator->XMLlist->error_num();
+			$this->param_out($tmp );
+			}
+		
+		if($type == "ERRDESC"){$this->param_out($generator->XMLlist->error_desc() );}
+		*/
+		
+	public function generateTagTree()
+	{
+	
+		if(is_null($this->rst) || $this->rst->moveFirst())
+		{
+		
+		
+		$tmpstamp = $this->back->position_stamp();
+		
+		if(!$this->back->change_URI($this->content->get_out_template()))
+		echo $new_template . 'isn\'t a available documentident';
+
+		//echo $this->back->cur_node();
+		
+		$tmpName = $this->back->show_xmlelement();
+		
+		if(count($this->documentForInsert) > 0)
+		{
+		
+		do {
+		$obj = $this->documentForInsert[0]->cloning($this->back->show_xmlelement());
+		
+		/*
+		* Creates new entries
+		*
+		*/
+		$list = array();
+		$obj_ref;
+		for($i = 0;$i<count($this->verification);$i++)
+		{
+		
+		$this->back->freexpath($this->verification[$i]['xpath'], $obj);
+		$obj_ref = &$this->back->get_xpath_Result();
+		
+		if($this->verification[$i]['attrib_data'] == 'data')
+		{
+		$tmp = $obj_ref[0]->index_max();
+		//$this->cur_pointer[$this->idx]->setdata($cdata,$tmp);
+		if(!is_null($this->rst))$datarec = $this->rst->col($this->verification[$i]['name']);
+		$obj_ref[0]->setdata($datarec,$tmp);
+		unset($tmp);
+		unset($datarec);
+		//echo $this->rst->col($this->verification[$i]['name']) . "\n";
+		}elseif($this->verification[$i]['attrib_data'] == 'attrib')
+		{
+		//TODO aenderung fuer bereits besehende Attribute
+				if(!$this->verification[$i]['prefix'] )
+				{
+					
+					
+					$myattrib = $this->back->get_Object_of_Namespace( $this->content->get_Main_NS() . '#' . 
+					  $this->verification[$cur_pos]['postfix'] );
+					  
+					$tmp = $this->rst->col($this->verification[$i]['name']);				
+					$myattrib->setdata($tmp,0);
+					unset($tmp);
+					//$this->back->set_node_attrib(
+					//$this->content->get_Main_NS() . '#' . 
+					 // $this->verification[$i]['postfix'],$this->rst->col($this->verification[$i]['name']));
+					$obj_ref[0]->attribute($this->content->get_Main_NS() . '#' . $this->verification[$i]['postfix'], $myattrib);
+					unset($myattrib);
+					
+				}
+				else
+				{
+				
+				
+					//$this->back->set_node_attrib(
+					//$this->verification[$i]['prefix'] . '#' . 
+					//  $this->verification[$i]['postfix'],$this->rst->col($this->verification[$i]['name']));
+					  
+					//$myattrib = $this->back->get_Object_of_Namespace( $this->verification[$i]['prefix'] . '#' . 
+					 // $this->verification[$i]['postfix'] );
+					 					
+					//$myattrib->setdata($this->rst->col($this->verification[$i]['name']),0);
+				        
+				
+					$attrib = $this->back->get_Object_of_Namespace(  
+					  $this->verification[$i]['prefix'] . '#' . $this->verification[$i]['postfix'] );
+						
+					$tmp = $this->rst->col($this->verification[$i]['name']);
+						
+					$attrib->setdata($tmp,0);
+					unset($tmp);
+				        
+				
+											
+					$prefix = $this->back->get_Prefix($this->verification[$i]['prefix'],$obj_ref[0]->get_idx());
+					$postfix = $this->verification[$i]['postfix'];
+					
+					//$attrib->setdata($value,0);
+		
+							if(strlen($prefix) > 0)
+							{
+								$attrib->name = $prefix . ':' . $postfix;
+								$obj_ref[0]->attribute( $prefix . ':' . $postfix, $attrib);
+								
+							}
+							else
+							{
+							
+								$attrib->name = $postfix;
+								$obj_ref[0]->attribute( $postfix, $attrib);
+							}
+							
+					unset($attrib);
+						
+
+				
+				}
+		
+		  $tmp = $obj_ref[0]->index_max();
+		
+		if(!is_null($this->rst))$attribrec = $this->rst->col($this->verification[$i]['name']);
+		//get_Object_of_Namespace($full_ns)
+		$obj_ref[0]->setdata($datarec,$tmp);
+		
+		
+		}
+		}
+		//echo $list[0]->name;
+		//echo getclass($this->rst); //->col('');
+		} while (!is_null($this->rst) && $this->rst->next());
+		
+		$this->back->go_to_stamp($tmpstamp);
+		return '';
+		}
+		}
+		return 'kein Datensatz';
+	}
+	
+	public function reset()
+	{
+	
+	$this->test = 0;
+	unset($this->rst);
+	$this->rst = null;
+	$this->pos = 0;
+	$this->template = '';
+
+	$this->documentForInsert = '';
+	$this->verification = array();
+	}
+		
+	public function getAdditiveSource(){}
+	public function __toString(){return 'xmldo';}	
+}
+
+?>

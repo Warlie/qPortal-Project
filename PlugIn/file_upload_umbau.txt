@@ -1,0 +1,43 @@
+	public function set_name($name)
+	{
+	$this->page_id = $value;
+	}
+	
+	public function get_client()
+	{
+	if(!is_null($tmp = $_FILES[$this->page_id]['name']))
+		{
+		return $tmp;
+		}	
+		return false;
+	}
+	
+	public function get_size()
+	{
+	if(!is_null($tmp = $_FILES[$this->page_id]['size']))
+		{
+		return $tmp;
+		}	
+		return false;
+	}
+	
+	public function get_server()
+	{
+	if(!is_null($tmp = $_FILES[$this->page_id]['tmp_name']))
+		{
+		return $tmp;
+		}	
+		return false;
+	}
+	
+	public function move($value)
+	{
+	if(move_uploaded_file  ( $_FILES[$this->page_id]['tmp_name']  , $value  ))
+		{
+		$_FILES[$this->page_id]['tmp_name'] = $value;
+		}	
+	}	
+
+
+			
+

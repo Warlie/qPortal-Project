@@ -1,0 +1,284 @@
+public function Request(/* System.Parser */ &$back)
+	{
+		$this->back= &$back;
+		
+		//$this->id = $value; , &$id
+	}
+
+
+
+
+	
+public function &out($request_name)
+ {
+ 		if(!is_null($tmp = $this->back->heap['request'][$value]))
+		{
+		
+			return $tmp;
+		}
+ }
+ protected function moveFirst(){return false;}
+ protected function moveLast(){return false;}
+ protected function get_list(&$value){return false;}
+ public function &out($request_name)
+ {
+ 		if(!is_null($tmp = $this->back->heap['request'][$value]))
+		{
+		
+			return $tmp;
+		}
+ }
+
+public function in($request_name, $value)
+{
+	$this->back->heap['request'][$request_name] = $value;
+}
+	
+public function to_eval($statement)
+{
+	return eval($statement);
+}
+public function sessionOut($session_index)
+{
+		if(!is_null($tmp = $_SESSION[$session_index]))
+		{
+		
+			return $tmp;
+		}
+		else
+		{
+			$tmp = "";
+			return $tmp;
+		}
+		
+}
+
+/**
+* @function: 	sessionIn 	: overwrites sessions, previous needs NAME to set key to value
+* @param: 	$session_index 	: sessionname
+* @param:	$value		: new value
+*/
+public function sessionIn($session_index,$value)
+		{
+
+			$this->back->heap['session'][$session_index] = trim($value);
+			$_SESSION[$session_index] = trim($value);
+			
+		}
+
+
+
+	
+	function set($type, $value)
+	{
+		parent::set($type, $value);
+		//echo $type . ' ' . $value;
+
+		//parameterausgabe
+		/**
+		*@function: OUT = gets requests of GET and POST methods
+		*/
+		if($type == "OUT")
+		{
+			
+			//foreach($this->back->heap['request'] as $key => $val)
+			//{
+			
+			//echo "anzeige $key $val \n";
+			//}
+			//$this->request_name
+			//echo $this->back->param['kennziffer'] . ' ';
+			//echo $this->back->heap['request']['kennziffer'];
+		$this->param_out($this->out($value));
+		}	
+
+		/**
+		*@function: EVAL = executes php code
+		*/
+		if($type == "EVAL")
+		{
+			
+			//echo $value;
+			$this->param_out($this->to_eval($value));
+	
+		}	
+		
+		//parameterausgabe
+		/**
+		*@function: SESSIONOUT = gets sessionparameter
+		*/
+		if($type == "SESSIONOUT")
+		{
+
+			$this->param_out($this->sessionOut($value));
+		}
+		
+		/**
+		*@function: IN = overwrite requests, previous needs NAME to set key to value
+		*/
+		if($type == "IN")
+		{
+			
+			//echo $this->back->param['kennziffer'] . ' ';
+			//echo $this->back->heap['request']['kennziffer'];
+			//$this->back->heap['request'][$this->request_name] = $value;
+			$this->in($this->request_name, $value);
+			
+			
+			
+		}
+		
+		/**
+		*@function: SESSIONIN = overwrites sessions, previous needs NAME to set key to value
+		*/
+		if($type == "SESSIONIN")
+		{
+			$this->sessionIn($this->request_name,$value);
+			
+		}
+		
+		
+		/**
+		*@function: CHOICE_DOC = specifies a tree
+		*/
+		if($type == "CHOICE_DOC")
+		{
+		$this->page_id = $value;
+		}
+		
+		
+		/**
+		*@parameter: NAME = sets the key for requests and sessions
+		*/
+		if($type == "NAME")
+		{
+		
+			$this->request_name = $value;
+		
+		}	
+		
+		
+		/**
+		*@parameter: CASE_FOLDING = sets case folding for dynamic loaded documents
+		*/
+		if($type == "CASE_FOLDING")
+		{
+			$this->case_folding = $value;
+		}
+		
+		/**
+		*@parameter: DOCTYPE = select parsertype for dynamic loaded documents
+		*/
+		if($type == "DOCTYPE")
+		{	
+			$this->doctype = $value;
+		}
+		
+		/**
+		*@parameter: LIST = offers a connection to a fileserviceobject, to build up a stream
+		*/
+		if($type == "LIST")
+		{
+			
+			if(is_object($value))
+			{
+				$this->file_handle = &$value;
+				
+			}
+		}
+		
+		/**
+		*@parameter: OUTPUT = boolean value true/false for giving out
+		*/
+		if($type == "OUTPUT")
+		{
+			if($value == 'true')
+			{
+				$this->setOutput = true;
+				
+			}
+			else
+			{
+				$this->setOutput = false;
+				
+			}
+		}
+		/**
+		*@parameter: BUILD_XML = reads a file, needs NAME to write it into session or request or a fileserviceobject to deal with data. By missing both, it loads file as a new tree
+		*/
+		if($type == "BUILD_XML")
+		{
+			if(
+			($this->back->heap['request'][$this->request_name] || $_SESSION[$this->request_name])
+			|| $this->file_handle)
+			{
+				
+				
+			$backinstanz = &$this->generator();
+			$xmlinstanz = &$backinstanz->XMLlist;
+			$xmlinstanz->setNewTree($value);
+				
+				if(!$this->file_handle)
+				{
+				
+					if($this->back->heap['request'][$this->request_name])
+					$stringBuffer = $this->back->heap['request'][$this->request_name];
+					
+				
+				else
+				
+					$stringBuffer = $_SESSION[$this->request_name];
+				}
+			
+
+			
+			if(!$this->file_handle)
+			{
+				$xmlinstanz->load_Stream(stripslashes($stringBuffer),$this->case_folding,$this->doctype);
+			}
+			else
+			{
+				if(is_subclass_of($this->file_handle,'Readable'))
+				{
+					//echo "ich bin hier" . get_class($this->file_handle->get_file_handler());
+					$xmlinstanz->load_Stream($this->file_handle->get_file_handler(),$this->case_folding,$this->doctype,1);
+				}
+			}
+			$backinstanz->heap['template'][$value] = $value;
+			
+			if($this->setOutput)
+			{
+				
+				$backinstanz->out_template = $value;
+				
+			}
+
+			
+			
+			}
+		}
+				
+		if($type == "RUN")
+		{
+			//$booh = $this->get_GK3(array('Am Grafenwald','10','42859','Remscheid'));
+			
+			//echo 'x=' . $booh[0] . ',y=' . $booh[1] . ',z=' . $booh[2] . '<br>';
+			//
+			
+		}
+	}
+	
+	function check_type($type)
+	{
+	if($type == "OUT")return true;
+	if($type == "IN")return true;
+	if($type == "NAME")return true;
+	if($type == "ATTRIB")return true;
+	
+	return parent::check_type($type);
+	}
+
+	function next(){return false;}
+
+	
+	function decription(){return "no description avaiable!";}

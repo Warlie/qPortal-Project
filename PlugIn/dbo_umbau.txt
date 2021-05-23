@@ -1,0 +1,270 @@
+	pubic function sql($sql_statement)	{
+			//echo $value . "hier";
+			$obj = &$this->generator();
+			$obj->dbAccess->set_db_encode($this->dbencode);
+			$this->rst = $obj->dbAccess->get_rst($value);
+			$this->rst->first_ds();
+			$fieldlist = $this->rst->db_field_list();
+			
+			foreach( $fieldlist as $key => $value )
+			{
+				echo "$key - $value \n";
+			}	}
+		
+			
+	/**
+	*DBENCODE = selects formats like UTF-8
+	*/
+	public function db_encode($format)
+	{
+			$this->dbencode = $format;
+	}
+		
+	/**
+	*MOVEFIRST = goes to first record
+	*/
+	public 
+		{$this->rst->first_ds();}
+		
+		
+		/**
+		*@function: MOVELAST = goes to last record
+		*/
+		if($type == "MOVELAST")
+		{$this->rst->last_ds();}
+		
+		/**
+		*@function: FREESQL = Free SQL Statement without result
+		*/
+		if($type == "FREESQL")
+		{
+			
+			$obj = &$this->generator();
+			$obj->dbAccess->SQL($value);
+			
+			
+		}
+		
+		/**
+		*@parameter: LIST = gets an object to receive data
+		*/
+		if($type == "LIST")
+		{
+			
+			if(is_object($value))
+			{
+				$this->obj = &$value;
+				
+			}
+		}
+		/**
+		*@parameter: ITER = gives out a object to LIST-parameter
+		*/
+		if($type == "ITER"){$this->param_out($this);}
+		/**
+		*@parameter: COL = gives out data to an field
+		*/
+		if($type == "COL")
+		{
+			$tmp=$this->rst->value($value);
+			
+			$this->param_out($tmp);
+		}
+
+		/**
+		*@---------sequence---------
+		*@parameter: TAG_IN = opens a definition for a column, which is available about the value name.
+		*/
+		if($type == "TAG_IN")
+		{
+			
+			$this->cur = $value;
+			$this->order[count($this->order)] = $value;
+			
+		}
+		/**
+		*
+		*@parameter: TAG_OUT = close the current columndefinition. Needs no value.
+		*/
+		if($type == "TAG_OUT")
+		{
+			
+			$this->cur = '';
+			
+			
+		}
+		/**
+		*
+		*@parameter: FIELD = field in database table corresponding to the receiving data (needs tablename.column )
+		*/
+		if($type == "FIELD")
+		{
+			
+			$this->tag[$this->cur]['field']=$value;
+			
+			
+		}
+		/**
+		*
+		*@parameter: CONTENT = indentifer, to call about the connected object (connected with list)
+		*/
+		if($type == "CONTENT")
+		{
+			
+			$this->tag[$this->cur]['content']=$value;
+			
+			
+		}
+		/**
+		*
+		*@parameter: VALUE = direct data as value
+		*@------------end sequence---------------
+		*/
+		if($type == "VALUE")
+		{
+			
+			$this->tag[$this->cur]['value']=$value;
+			
+			
+		}
+		/**
+		*
+		*@parameter: MANY = many of rows
+		*@-------------------------------------------
+		*/
+		if($type == "MANY"){$this->param_out($this->rst->rst_num());}
+		
+		if($type == "RUN")
+		{
+		if(!is_Null($this->obj))
+		{
+				
+			
+				$this->rst->first_ds();
+				
+				$h = 0;
+				$field = array();
+				
+				//nicht vllstaändig xpath fehlt
+				
+				do{
+
+					
+				
+				for($i=0;$i < count($this->order);$i++)
+				{
+				
+					if(!is_null($this->order[$i]['content']))
+					{
+					
+					$this->obj->set('COL',$this->tag[$this->order[$i]]['content']);
+					
+					$field[$h][$this->tag[$this->order[$i]]['field']] = $this->obj->out();
+					//$field[$h]['field_name'] = 
+					
+					}
+					else
+					{
+					
+					$field[$h][$this->tag[$this->order[$i]]['field']] = $this->order[$i]['value'];					
+					
+					}
+					//echo 'Abfrage <b>' . $this->tag[$this->order[$i]]['field'] . '</b> - ' . $field[$h][$this->tag[$this->order[$i]]['field']] . '<i>' . $h . '</i><br>';
+				}
+					
+					
+					$h++;
+				}while($this->obj->next());
+				
+				$prim = $this->rst->prim_field();
+				
+				//echo count($field) . '!!<br>';
+				
+		//durchlauf
+		for($hr = 0;$hr < count($field);$hr++)
+		{
+		//echo $hr . '!!<br>';
+
+//if(is_null($field[$hr][$prim[0]]) || ($field[$hr][$prim[0]] == ''))echo '<h2>-' . $field[$hr][$prim[0]] . "- $hr " . count($field) . '</h2>';
+		
+		if(!(is_null($field[$hr][$prim[0]]) || ($field[$hr][$prim[0]] == '')))
+			{
+		//echo " " . $hr . ' ' . $field[$hr][$prim[0]] . ' <br>';	
+			$this->rst->first_ds();
+			
+			//läuft bis zum ende der liste
+			while(!$this->rst->EOF())
+				{
+					
+				
+				
+//				echo $this->rst->value($prim[0]) . " - " . $field[$hr][$prim[0]] . '<br>';
+				
+				//fragt prim ab
+				if($this->rst->value($prim[0])==$field[$hr][$prim[0]])
+					{
+						
+//echo '<h1>' . $this->rst->value($prim[0]) . ' = ' . $field[$hr][$prim[0]] . '</h1>';
+							for($i=0;$i < count($this->order);$i++)
+							{
+				
+						//echo $hr;		
+		//echo '<br>-<b>' . $this->tag[$this->order[$i]]['field'] . '</b> ' . $field[$hr][$this->tag[$this->order[$i]]['field']] . '<i>' . $hr . '</i><br>';
+							//$this->obj->set('COL',$this->tag[$this->order[$i]]['content']);
+							if( $prim[0] <> $this->tag[$this->order[$i]]['field'])
+							$this->rst->setValue(
+								$this->tag[$this->order[$i]]['field'],
+								$field[$this->rst->rst_cur_num()][$this->tag[$this->order[$i]]['field']],
+								$this->rst->rst_cur_num()
+								);
+							
+								
+					
+							
+							}
+							$this->rst->update();
+							break;
+						}
+
+						$this->rst->next_ds();
+					}
+					
+				
+					
+					
+				}
+				else
+				{
+			
+							for($i=0;$i < count($this->order);$i++)
+							{
+				
+							
+//echo '<b>' . $this->tag[$this->order[$i]]['field'] . '</b> ' . $field[$hr][$this->tag[$this->order[$i]]['field']] . ' <i>' . $hr . '</i><br>';
+							//$this->obj->set('COL',$this->tag[$this->order[$i]]['content']);
+								$this->rst->setValue(
+									$this->tag[$this->order[$i]]['field'],
+									$field[$hr][$this->tag[$this->order[$i]]['field']]								
+									);
+							
+								
+					
+							
+							}
+							$this->rst->update();
+							//break;
+					
+				}
+				
+			//echo $hr . '!!<br>';	
+			}	
+
+			//echo '<b>' . $this->rst->value(414,'gewerbeimmobilien.ID') . '</b>-----------------------------------------------------------------------------';
+			
+			$port = &$this->generator();
+			$port->dbAccess->insert_rst($this->rst);
+		}	
+				
+	}
+		
+	}

@@ -1,0 +1,313 @@
+
+
+
+class DB_Interface {
+
+ var $my_id = 0;
+ var $arrayObj;
+ var $able = MULTI;
+ //function ObjInterface(){$this->my_id = id_counter();}
+
+ function getID($name){$this->my_id=$name;}
+
+ function add($object){
+                if(is_array($this->arrayObj)){
+                     $tmp = count($this->arrayObj);$this->arrayObj[$tmp]=$object;
+
+                     }else{$this->arrayObj[0]=$object;}
+                     }
+                     
+ function toString(){return "<b> toString wurde nicht überschrieben</b>";}
+ function toScript(){
+
+         $res['func']['none'] = "document.write('toScript wurde nicht überschrieben!')";
+
+         return $res;}
+ }
+ 
+ 
+class DB_Container extends DB_Interface {
+var $DB_list;
+var $ico;
+var $select_rst;
+var $select;
+var $cur_num=0;
+
+var $class_var_js='';
+var $class_func_js='';
+
+//generell list
+function db_list(){}
+
+//rst for selection 
+function table_value($rst){$this->select_rst=$rst;}
+
+function table_assoz($field_name,$view_element,$order,$icon=null,$connected_el=null){
+        
+                $this->select[$order]['field_name']=$field_name;
+
+                $this->select[$order]['field']=$view_element;
+                                
+                                $this->select[$order]['icon']=$icon;
+
+                $this->select[$order]['connect']=$connected_el;
+                
+
+                }
+
+
+function get_data_element($elemnent_object,$rst_field_name,$connect_field_name){
+
+        $len_rst = $this->select_rst->rst_num();
+
+        $id_name = $this->my_id . $this->cur_num++; 
+
+    $clone = $elemnent_object->factory();
+    $clone->getID($id_name);
+
+    $typ = $elemnent_object->typ;
+
+    $event = $elemnent_object->event;
+
+    //echo $typ;
+        $elemnent_object->getID($id_name);
+
+//        $elemnent_object->add("&nbsp;");
+ 
+
+
+        
+
+                $this->class_var_js .= "insert['db']['" . $id_name . "']=new Array()\n";
+        
+
+        
+                for($i=0;$i<$len_rst;$i++){
+                        
+                $this->class_var_js .= "insert['db']['" . $id_name . "']['" . $this->select_rst->value($i,$connect_field_name) . "']=";
+        $clone->clear();
+
+        $clone->add($this->select_rst->value($i,$rst_field_name));
+                $this->class_var_js .= "'" .$clone->toString() . "'\n";
+                 
+
+                }                                                                                                       //' . $typ . '
+                
+                $this->class_func_js .= "if(document.all." . $id_name . ")document.all." . $id_name . ".outerHTML = insert['db']['" . $id_name . "'][db_view];\n";
+
+        return $elemnent_object;
+        }
+
+
+
+function get_list_element($rst_field_name_array,$connect_field_name,$event=null){
+
+           $len_rst = $this->select_rst->rst_num();
+
+        $id_name = $this->my_id . $this->cur_num++;
+
+    $clone = new table_list();
+    
+    $clone->getID($id_name);
+
+
+        if(!is_null($event))$clone->event($event);
+
+ //fill
+ for($i=0;$i<$len_rst;$i++){
+
+          for($j=0;$j<count($rst_field_name_array);$j++){
+
+             $clone->add($this->select_rst->value($i,$rst_field_name_array[$j]),$i,$j);
+         }
+   // echo  $this->select_rst->value($i,$rst_field_name_array[0]);
+     }
+
+
+
+                $this->class_var_js .= "insert['db']['" . $id_name . "']=new Array()\n";
+
+
+
+                for($i=0;$i<$len_rst;$i++){
+
+                $this->class_var_js .= "insert['db']['" . $id_name . "']['" . $this->select_rst->value($i,$connect_field_name) . "']=";
+
+                $this->class_var_js .= "'" .$clone->toString() . "'\n";
+
+
+                }                                                                                                       //' . $typ . '
+
+                $this->class_func_js .= "if(document.all." . $id_name . ")document.all." . $id_name . ".outerHTML = insert['db']['" . $id_name . "'][db_view];\n";
+
+ $clone->clear();
+ for($i=0;$i<$len_rst;$i++){
+     for($j=0;$j<count($rst_field_name_array);$j++){
+             $clone->add('leer',$i,$j);
+         }
+     }
+
+
+        return $clone;}
+
+
+function order($downer_step,$level){
+
+//rst not set
+if(is_null($this->select_rst))echo "fehler recordset nicht vorhanden";
+
+//grenze, wenn level unter 0 -> kein arrayeintrag
+
+if($level>=0){
+
+//how many recordsets
+        $rst_len = $this->select_rst->rst_num();
+                        
+                        
+                        //unwichtig, da bereits bekannt
+                        $field = $this->select_rst->db_field_list();
+
+                        //declare
+                        $upper_step[0]='';
+                        $reg_values[0]='';
+                        
+                        
+                        //$this->select_rst->field[$my_count];
+
+                       //fortlaufender counter, da die Forschleife übersprungen werden kann
+                       $cur_array_count =0;
+
+//loop to create all elements in level
+                for($i=0;$i<$rst_len;$i++){
+
+                $connect = (is_Null($this->select[$level]['connect'])? $this->select[$level]['field_name']:$this->select[$level]['connect']);
+
+                        if(!in_array($this->select_rst->value($i,$this->select[$level]['field_name']),$reg_values)){
+
+                        $reg_values[$i] = $this->select_rst->value($i,$connect);
+
+
+                        //weißt object einen platz im array zu
+                        $upper_step[$cur_array_count]['obj'] = $this->select[$level]['field']->factory();
+                        //weißt ihm eine individuelle ID zu
+                        $upper_step[$cur_array_count]['obj']->getID($this->my_id . $this->cur_num++);
+                        //object bekommt title
+                        $upper_step[$cur_array_count]['obj']->title=$this->select_rst->value($i,$this->select[$level]['field_name']);
+
+                        //object bekommt wert
+                        if(is_null($downer_step))$upper_step[$cur_array_count]['obj']->add($this->select_rst->value($i,$this->select[$level]['field_name']));
+
+                                                if($this->select[$level]['field']->able == SINGLE)$upper_step[$cur_array_count]['obj']->event('onclick="db_view(' . "'" . $this->select_rst->value($i,$connect) . "'" . ')"');
+
+                        //echo $upper_step[$cur_array_count]['obj']->toString();
+
+                        $upper_step[$cur_array_count]['name'] = $this->select_rst->value($i,$this->select[$level]['field_name']);
+                        //trägt einen namen ein, der später für das zuordnen behilflich ist
+                        $upper_step[$cur_array_count]['subname'] = $this->select_rst->value($i,$this->select[$level-1]['field_name']);
+
+
+                                                if(!is_null($downer_step)){
+
+                                                        $len_downer = count($downer_step);
+
+                                //untergeordneter array wird zugewiesein
+                                                        for($j=0;$j<$len_downer;$j++){
+                                                               //echo $downer_step[$j]['subname'] . ' und ' . $upper_step[$j]['name'];
+                                                                if($upper_step[$cur_array_count]['name']==$downer_step[$j]['subname']){
+                                                                        //get objects
+                                                                        $upper_step[$cur_array_count]['obj']->add($downer_step[$j]['obj']);
+                                                                }
+                                                        }
+                                                // $downer_step[$i]['subname'];
+
+                                                }
+
+
+
+                        //inkrement
+                        $cur_array_count++;
+                        }
+                                }
+
+
+
+
+
+
+
+        $this->order($upper_step,$level - 1);
+        }else{
+
+
+        $rst_len = count($downer_step);
+        for($i=0;$i<$rst_len;$i++){
+        //echo $downer_step[$i]['obj']->toString();
+        $this->arrayObj[$i] = $downer_step[$i]['obj'];}
+        
+        }
+        
+        }                
+
+
+
+function toString(){
+
+                $this->order(null,count($this->select)-1);
+
+
+$tmp = count($this->arrayObj);
+        for($i = 0 ; $i<$tmp ; $i++){
+ 
+
+                if(is_object($this->arrayObj[$i])){
+
+                        $res .= "<P>" . $this->arrayObj[$i]->toString() . "</P>";
+                        
+                }else{
+                        $res .= "<P>" . $this->arrayObj[$i] . "</P>";
+                        
+                }
+        }
+
+                return $res;
+        }
+
+function toScript(){
+
+
+
+
+
+                $tmp = count($this->arrayObj);
+
+
+        $array_res['var'][$this->my_id]= "var next_data = 0 \ninsert['db']= new Array()\n" . $this->class_var_js;
+                $array_res['func']['db_view'] = "function db_view(db_view){\n next_data=db_view \n" . $this->class_func_js . " }";
+
+          
+                for($i = 0 ; $i<$tmp ; $i++){
+ 
+
+
+                if(is_object($this->arrayObj[$i])){
+
+
+
+                        $array_res = merge_it($array_res, $this->arrayObj[$i]->toScript());
+
+                        
+
+                                        //echo $array_res['var']["ich"]; 
+                }}
+
+                if(is_null($array_res))$array_res='';
+
+        return $array_res;                                                                
+                                                                        } 
+
+}
+
+
+
+
+

@@ -1,0 +1,182 @@
+   	   	if(DEBUG)echo str_repeat("   ", $lvl + 1) . "Box[" . count($groups[$lookfor]['data']) . "]{";
+    	//var_dump($groups[$lookfor]);
+    	   	
+    	//for no name
+    	if(is_null($lookfor)){
+    		if(DEBUG)echo str_repeat("   ", $lvl + 1) . "// no groupname\n" . str_repeat("   ", $lvl + 1) . "}\n";
+    		return;
+    	}else
+    	if(DEBUG)echo "\n";
+    	
+
+    	$cur_root = &$this->buildCrotch($groups, $lookfor);
+    	if(!$cur_root)echo "=====================================Fehler, die Astgabel der Gruppe $lookfor im level $lvl exitistiert nicht===========================================\n";
+    	
+    	$run_branch = null;
+    	
+    	
+ 
+
+    	
+    	$hold = false;
+    	
+    	$arr_of_rowvalues = array();
+    	$arr_of_colnames = array();
+    	   	foreach ($groups[$lookfor]['data'] as $key => $value2)
+    	   		$arr_of_rowvalues[$key] = null;
+    	
+    	
+    	for($i = $box[0]; $i <= $box[1]; $i++)
+    	{
+	   
+    	$empty = true;
+    	//var_dump($tbl[$i]);
+    	
+    	foreach ($groups[$lookfor]['data'] as $key2 => $value2)
+    		{
+
+ 
+    		if(!is_null($tbl[$i][$value2['name']]))
+    		{
+    			if(DEBUG)echo str_repeat("   ", $lvl) . "// " . $value2['name'] . " mit  " .  $tbl[$i][$value2['name']] . "\n";
+    			$empty = false;
+    		}
+    		else
+    		{
+    			if(DEBUG)echo str_repeat("   ", $lvl) . "// " . $value2['name'] . " mit  null \n";
+    		}
+    		//if(DEBUG)echo str_repeat("   ", $lvl) . "tbl[name]='" . $value2['name'] . "'\n\n";
+//echo "look in " . $value2['name'] . "\n";
+    		
+//   			if(is_null($tbl[$i][$value2['name']]))
+//    			{
+//    				return;
+    		//		echo "look in " . $value2['name'] . "\n";
+    		//		var_dump($tbl[$i]);
+  //  			}
+    		
+    		if($i == $box[0])$arr_of_colnames[$key2] = $tbl[$i][$value2['name']];
+    			
+
+    		if(strcmp($arr_of_colnames[$key2], $tbl[$i][$value2['name']]) == 0)
+    			{
+    				$newbox[1] = $i;
+    			}
+    			else
+    			{
+    				$arr_of_colnames[$key2] = $tbl[$i][$value2['name']];
+    				$hold = true;
+
+
+   				
+    				//echo $tbl[$i][$value2['name']] . " ";
+    			}
+    		}
+
+    		if($empty)
+    		{
+    			    if(DEBUG)echo str_repeat("   ", $lvl + 1) . "// didnt found\n" . str_repeat("   ", $lvl + 1) . "}\n";
+    			    return;
+    		}
+    		
+    		if($hold)
+    			{
+    				
+    				$oldbox[0] = $newbox[0];
+    				$oldbox[1] = $newbox[1];
+    				//if(DEBUG)echo "\n-----------------------.." . ($lvl + 1) ."..------------------------------------\n";
+    				 unset($run_branch);
+    				$run_branch = &$this->buildBranch($groups, $lookfor);
+    				
+    				 //foreach ($arr_of_colnames as $key2 => $value2)
+    				 	 foreach ($groups[$lookfor]['data'] as $key2 => $value2)
+    				 	 {
+ //echo $tbl[$newbox[0]][$value2['name']] . "rumsbums\n";
+    				 	 	 if(strcmp($groups[$lookfor]['data'][$key2]['attrib_data'], 'data') == 0)
+    				 	 	 {
+    				 	 	 	 if(DEBUG)
+    				 	 	 	 {	
+    				 	 	 	 	 echo str_repeat("   ", $lvl + 1) . "data[$key2]{\n";
+    				 	 	 	 	 echo str_repeat("   ", $lvl + 2) . "[name]='" . $groups[$lookfor]['data'][$key2]['name'] .  "'\n";
+    				 	 	 	 	 echo str_repeat("   ", $lvl + 2) . "[value]='" . $tbl[$newbox[0]][$value2['name']] .  "'\n";
+    				 	 	 	 	 echo str_repeat("   ", $lvl + 1) . "}\n";
+    				 	 	 	 	 //echo "save data $key2 : ";
+    				 	 	 	 	 //var_dump( $value2);
+    				 	 	 	 }
+    				 	 	 	 $this->setData( $groups[$lookfor]['data'][$key2]['xpath'], 
+    				 	 	 	 	 $tbl[$newbox[0]][$value2['name']]);
+    				 	 	 }
+    				 	 	 else
+    				 	 	 {
+    				 	 	 	if(DEBUG)
+    				 	 	 	{
+   				 	 	 	 	 echo str_repeat("   ", $lvl + 1) . "attrib[$key2]{\n";
+    				 	 	 	 	 echo str_repeat("   ", $lvl + 2) . "[name]='" . $groups[$lookfor]['data'][$key2]['name'] .  "'\n";
+    				 	 	 	 	 echo str_repeat("   ", $lvl + 2) . "[value]='" . $tbl[$newbox[0]][$value2['name']] .  "'\n";
+    				 	 	 	 	 echo str_repeat("   ", $lvl + 1) . "}\n";
+    				 	 	 		//echo "save attrib $key2 : ";
+    				 	 	 		 //var_dump($value2);
+    				 	 	 	}
+    				 	 	 	$this->setAttrib( $groups[$lookfor]['data'][$key2]['xpath'], 
+    				 	 	 		$groups[$lookfor]['data'][$key2]['prefix'] , 
+    				 	 	 		$groups[$lookfor]['data'][$key2]['postfix'], 
+    				 	 	 		$tbl[$newbox[0]][$value2['name']]);
+    				 	 	 }
+    				 	 }
+    				 	 
+    				
+    				$this->back->set_xmlelement($run_branch);
+    				//if(DEBUG)echo $this->back->position_stamp() . " sprungzweig  \n";
+    				//if(DEBUG)echo ".........................................sprung.......................................\n";
+    				$this->processingBox($tbl, $groups, $newbox, $lvl + 1);
+    				//if(DEBUG)echo "--------------------------------------------------------------------------\n";
+    				$this->back->set_xmlelement($cur_root);
+    				//if(DEBUG)echo $this->back->position_stamp() . " ruecksprungzweig  \n";
+    				
+    				
+   				$newbox[0] = $i;
+   				$newbox[1] = $i;
+    				
+    				$hold = false;
+    			}
+
+    	}
+    	//if(DEBUG)echo "\n-----------------------------" . ($lvl + 1) ."-----------------------------------------\n";
+    				 unset($run_branch);
+    				$run_branch = &$this->buildBranch($groups, $lookfor);
+    				
+    				 foreach ($arr_of_colnames as $key2 => $value2)
+    				 	 {
+ 
+    				 	 	 if(strcmp($groups[$lookfor]['data'][$key2]['attrib_data'], 'data') == 0)
+    				 	 	 {
+    				 	 	 	 if(DEBUG)
+    				 	 	 	 {
+    				 	 	 	 	 //echo "--save data $key2 : ";
+    				 	 	 	 	 //var_dump($value2);
+    				 	 	 	 }
+    				 	 	 	 $this->setData( $groups[$lookfor]['data'][$key2]['xpath'], $value2);
+    				 	 	 }
+    				 	 	 else
+    				 	 	 {
+    				 	 	 	if(DEBUG)
+    				 	 	 	{
+    				 	 	 		//echo "--save attrib $key2 : ";
+    				 	 	 		//var_dump($value2);
+    				 	 	 	}
+    				 	 	 	$this->setAttrib( $groups[$lookfor]['data'][$key2]['xpath'], 
+    				 	 	 		$groups[$lookfor]['data'][$key2]['prefix'] , 
+    				 	 	 		$groups[$lookfor]['data'][$key2]['postfix'], $value2);
+    				 	 	 }
+    				 	 }
+    				 	 
+    				
+    				$this->back->set_xmlelement($run_branch);
+    		//if(DEBUG)echo $this->back->position_stamp() . " sprungzweig  \n";
+   		//if(DEBUG)echo ".........................................sprung.......................................\n";
+    				$this->processingBox($tbl, $groups, $newbox, $lvl + 1);
+    		//if(DEBUG)echo "--------------------------------------------------------------------------\n";
+    				$this->back->set_xmlelement($cur_root);
+    		//if(DEBUG)echo $this->back->position_stamp() . " ruecksprungzweig  \n";
+    		if(DEBUG)echo str_repeat("   ", $lvl) . "}\n";
+ 

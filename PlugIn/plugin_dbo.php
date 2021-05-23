@@ -1,0 +1,632 @@
+<?PHP
+
+/**
+*ContentGenerator
+*
+* Generates content by reading XML and DB-entries
+* @-------------------------------------------
+* @title:DBO
+* @autor:Stefan Wegerhoff
+* @description: Databaseobject, needs only a columndefinition to receive data from other object
+*
+*/
+require_once("plugin_interface.php");
+
+class DBO extends plugin 
+{
+private $dbclazz = null;
+private $bool_op = array();
+private $rst = null;
+
+private $obj = null;
+private $dbencode = "ISO-8859-1";
+private $tag = array();
+private $cur = array();
+private $order = array();
+private $statement = '';
+private $last = '';
+var $where = array();
+var $lvl = array();
+private $opStatement = array();
+private $testme = array();
+var $orderby = array();
+var $limit = 0;
+var $distinct = false;
+var $asc = array(); 
+private $testmode = false;
+
+	function __construct (/* System.Database */ &$db)
+	{
+		$this->dbclazz = &$db;
+	
+	}
+	
+
+
+		
+
+	
+		/**
+		*loads a recordset
+		*/
+public function sql($sql_Statement)
+		{
+			//echo $sql_Statement;
+			$this->dbclazz->set_db_encode($this->dbencode);
+			$this->rst = $this->dbclazz->get_rst($sql_Statement);
+			//var_dump($this-rst);
+			$res = $this->rst->first_ds();
+			$fieldlist = $this->rst->db_field_list();
+			/*
+			foreach( $fieldlist as $key => $value )
+			{
+				echo "$key - $value \n";
+			}*/
+		}
+		
+public function setStatement($statement, $last = ''){$this->statement = $statement; $this->last= $last;}
+
+public function mod_bool_op($pos, $new_bool)
+	{
+		$this->bool_op[$pos] = $new_bool;
+	}
+
+/* Becomes DNF Concept */ 
+public function setWhere($val1,$op,$val2, $isString = true, $bool_op = 'AND', $lvl = 0)
+	{
+//echo $val2;
+	$this->lvl[] = $lvl; 
+
+	if($isString)
+		$this->where[] = array($val1, $op, trim($val2)  );
+	else
+		$this->where[] = array($val1, $op, "'" . trim($val2) . "'" );
+	
+	if($bool_op)	
+		$this->bool_op[] = ' ' . $bool_op . ' ';
+	else
+		$this->bool_op[] = ' AND ';
+
+	}
+
+public function setSet($val1,$op,$val2, $isString = false)
+	{
+
+	if($isString)
+		$this->opStatement[] = array($val1, $op, trim($val2) );
+	else
+		$this->opStatement[] = array($val1, $op, "'" . trim($val2) . "'" );
+	
+	$this->bool_op[] = ' AND ';
+
+
+	}
+	
+	/*
+		val1 : column
+	*/
+public function setWhereBetween($val1,$param1,$param2, $format)
+	{
+		if(!$format)
+		{
+		$sep = '';
+		if(! is_numeric($param1) )$sep = '\''; 
+			
+
+		$this->where[] = array( '(' . $val1, "BETWEEN $sep$param1$sep", "AND $sep$param2$sep )" );
+
+		}
+		elseif(strtolower($format) == 'date')$this->where[] = array( '(' . $val1, "BETWEEN CAST(\"$param1\" AS DATE)", "AND CAST(\"$param2\" AS DATE) )" ); //"YYYY-MM-DD"
+		elseif(strtolower($format) == 'datetime')$this->where[] = array( '(' . $val1, "BETWEEN CAST(\"$param1\" AS DATETIME)", "AND CAST(\"$param2\" AS DATETIME) )" ); //"YYYY-MM-DD HH:MM:SS"
+		elseif(strtolower($format) == 'time')$this->where[] = array( '(' . $val1, "BETWEEN CAST(\"$param1\" AS TIME)", "AND CAST(\"$param2\" AS TIME) )" ); //"HH:MM:SS"
+
+		$this->lvl[] = 0; 	
+		$this->bool_op[] = ' AND ';
+	}
+
+public function setOrderBy($columnName, $sort = 'asc')
+	{
+
+		$this->orderby[] = $columnName;
+		if(strtolower(substr($sort,0,3)) == 'asc' || !$sort)
+		  $this->asc[] = true;
+		else
+		  $this->asc[] = false;
+		
+	}
+	
+public function setDistinct()
+	{
+		$this->distinct = true;
+	}
+	
+public function setLimit($num)
+	{
+
+		$this->limit =  $num;
+		
+	}
+
+public function setWhereRST($name, $op, &$rst, $col, $isString = true)
+{
+	//echo  $name . " ";
+	$bool_op = 'AND';
+	$rst->moveFirst();
+	do
+		{
+			$this->setWhere($name,$op,$rst->col($col), $isString, $bool_op,1);
+			$bool_op = 'OR';
+		}
+		while($rst->next());
+		
+		$this->lvl[count($this->lvl) - 1] = 0;
+	
+}
+	
+	
+	/**
+	* TODO Nested function instead of last
+	*/
+
+public function execute()
+		{
+			global $logger_class;
+
+			$my_lvl = 0; $i = 0;
+	
+			
+			
+			$this->dbclazz->set_db_encode($this->dbencode);
+
+   //var_dump($this->where);
+      //var_dump($this->lvl);
+			
+      
+      
+			$sql = trim($this->statement);
+			if($this->distinct && (strtoupper(substr($sql,0, 6)) == "SELECT"))
+				$sql = "SELECT DISTINCT" . substr($sql,6);
+				
+			
+			
+			if(count($this->where) > 0)
+			{
+			$sql .= ' WHERE ';
+			for($i = 0; count($this->where) > $i; $i++ )
+			{
+			if($i <> 0)$sql .= $this->bool_op[$i];
+				if($this->lvl[$i] > $my_lvl)
+				{
+					$sql .= '(';
+					$my_lvl =$this->lvl[$i];
+				}
+
+			$sql .=  $this->where[$i][0] . ' ' . $this->where[$i][1] . ' ' . $this->where[$i][2];
+			
+				if($this->lvl[$i] < $my_lvl)
+				{
+					$sql .= ')';
+					$my_lvl =$this->lvl[$i];
+				}
+			//echo $this->where[$i][0] . ' ' . $this->where[$i][1] . ' ' . $this->where[$i][2];
+			}			
+
+				if($my_lvl != 0)
+				{
+					$sql .= ')';
+				}
+			
+			}
+
+			if(count($this->orderby) > 0)
+			{
+			$sql .= ' ORDER BY ';
+			$tmp = array();
+			
+			for($i = 0; count($this->orderby) > $i; $i++ )
+			{
+			if(!$this->asc[$i])
+				$tmp[] = $this->orderby[$i] . ' DESC';
+			else
+				$tmp[] = $this->orderby[$i] . ' ASC';				
+			} 
+
+			$sql .=  ' ' . implode(",",$tmp);
+			
+			}
+			
+			if($this->limit > 0) $sql .=  ' LIMIT ' .  $this->limit;
+
+			$sql .= $this->last . ';';
+			//echo $sql . "\n";
+			$logger_class->setAssert("execute $sql \n",0);
+			$this->rst = $this->dbclazz->get_rst($sql);
+			$this->rst->first_ds();
+		}
+
+public function execute_no_result()
+		{
+			$this->dbclazz->set_db_encode($this->dbencode);
+			$sql = $this->statement;
+			
+			if(count($this->opStatement) > 0)
+			{
+			$sql .= ' SET ';
+			for($i = 0; count($this->where) > $i; $i++ )
+			{
+			if($i <> 0)$sql .= $this->bool_op[$i];
+			$sql .=  $this->opStatement[$i][0] . ' ' . $this->opStatement[$i][1] . ' ' . $this->opStatement[$i][2];
+			}
+			}
+			
+			if(count($this->where) > 0)
+			{
+			$sql .= ' WHERE ';
+			for($i = 0; count($this->where) > $i; $i++ )
+			{
+			if($i <> 0)$sql .= $this->bool_op[$i];
+			$sql .=  $this->where[$i][0] . ' ' . $this->where[$i][1] . ' ' . $this->where[$i][2];
+			}
+			}
+
+			if(count($this->orderby) > 0)
+			{
+			$sql .= ' ORDER BY ';
+			$tmp = array();
+			for($i = 0; count($this->orderby) > $i; $i++ )
+			{
+			if($this->asc[$i])
+				$tmp[] = $this->orderby[$i] . ' DESC';
+			else
+				$tmp[] = $this->orderby[$i] . ' ASC';				
+			}
+
+			$sql .=  ' ' . implode(",",$tmp);
+
+			}
+
+			$sql .= $this->last . ';';
+			//echo $sql . " booooooooooooja";
+
+			$this->dbclazz->SQL($sql);
+			
+		}
+		
+public function loadfile($filename)
+		{	
+			$this->dbclazz->loadfile($filename);
+		}
+		
+/**
+*@parameter: dbEncode = selects formats like UTF-8
+*/
+public function dbEncode($encoding)
+		{
+			
+			$this->dbencode = $encoding;
+			
+			
+		}
+		
+/**
+*@function: MOVEFIRST = goes to first record
+*/
+public function moveFirst()
+		{
+			if($this->obj)$this->obj->moveFirst();
+		return $this->rst->first_ds();}
+		
+		
+		/**
+		*@function: MOVELAST = goes to last record
+		*/
+public function moveLast()
+		{
+		if($this->obj)$this->obj->moveLast();
+		return $this->rst->last_ds();}
+		
+		/**
+		*@function: FREESQL = Free SQL Statement without result
+		*/
+public function freeSQL($sql_statement)
+		{
+			
+			$this->dbclazz->SQL($sql_statement);
+			
+			
+		}
+		
+		public function set_list(&$value)
+		{
+			
+		if(is_object($value))
+		{
+
+			$this->obj = &$value;
+		}
+		}
+		
+		/**
+		*@parameter: LIST = gets an object to receive data
+		*/
+public function get_list(&$instance )
+		{
+		
+			if( $instance instanceof plugin )
+				$this->obj = &$instance;
+				
+		}
+		
+		/**
+		*@parameter: ITER = gives out a object to LIST-parameter
+		*/
+public function &iter()
+{
+
+return $this;}
+
+public function test(){echo "test (" . $this->many() . ")";}
+
+public function setTestmode($bool){	$this->testmode = $bool;	}
+		/**
+		*@parameter: COL = gives out data to an field
+		*/
+public function get_col($col_name){//echo $col_name . " " .  strval($this->rst->value($col_name)) . '-' .  $this->many(); 
+	return strval($this->rst->value($col_name));// . "blah";
+}
+		//TODO Problem mit 0 und Baum
+public function col($col_name){return $this->rst->value($col_name);}
+
+public function datatype($columnname){return false;}
+public function fields(){return $this->rst->db_field_list();}
+		/** 
+		*@parameter: tag_name = name for column in plug in
+		*@parameter: field_name = fieldname in db
+		*@parameter: content = name of column in piped in plugin [optional]
+		*@parameter: value = constant value in column [optional]
+		*/
+		
+public function set_Column_config($tag_name, $field_name,$content, $value, $datatype)
+{
+	
+	global $logger_class;
+	$logger_class->setAssert("Argumente tag_name: $tag_name, field_name: $field_name, content: $content, value: $value \n",0);
+	$this->cur = $tag_name;
+	$this->order[] = $tag_name;
+	$this->tag[$this->cur]['field'] = $field_name;
+	if($content)$this->tag[$this->cur]['content'] = $content;
+	if($value)$this->tag[$this->cur]['value'] = $value;
+	if($datatype)$this->tag[$this->cur]['datatype'] = $datatype;
+}
+
+
+
+		/**
+		*
+		*@parameter: MANY = many of rows
+		*@-------------------------------------------
+		*/
+public function many(){if(!$this->rst)return -1; return $this->rst->rst_num();}
+
+public function entry_exists($column, $value)
+	{
+		return ($this->rst->find($column, $value) !== false)?'true':'false';
+	}
+		
+public function saves_dataset_back()
+		{
+		 global $logger_class;
+
+		 //if($this->testmode)
+		//	$this->rst->show_content();
+		 
+
+		// starts, when a plugin is connected
+		if(!is_Null($this->obj))
+		{
+			if(!$this->obj->moveFirst())return false;
+			
+			        //moves to first recordset
+				$this->rst->first_ds();
+				
+				$h = 0;
+				$field = array();
+				
+				//echo "tag\n";
+				//var_dump($this->tag);
+				//echo "order\n";
+				//var_dump($this->order);
+				
+				do{
+
+				$field[$h] = array();
+				for($i=0;$i < count($this->order);$i++)
+				{
+				
+					//echo $this->tag[$this->order[$i]]['content'] . " ";
+				        //
+				        //echo "content: " . $this->tag[$this->order[$i]]['content'] . " (" . $this->order[$i] . ")[$i] \n";
+				        //Der Fehler ist wo anders. Es gibt Referenzprobleme der der Function_parameter Objekte
+					if(!is_null($this->tag[$this->order[$i]]['content']) && is_null($this->tag[$this->order[$i]]['value']))
+					{
+					
+					//var_dump($this->tag);
+					//echo " und die order 66 '" . $this->order[$i] . "' \n";
+					//echo "key '" . $this->tag[$this->order[$i]]['content'] . "' =" . $this->obj->col($this->tag[$this->order[$i]]['content']) . "\n";
+					$field[$h][$this->tag[$this->order[$i]]['field']] = $this->convert($this->obj->col($this->tag[$this->order[$i]]['content']),  $this->rst->type($this->tag[$this->order[$i]]['field']));
+					//echo  "\nfield[" . $this->order[$i] . "=" . $this->tag[$this->order[$i]]['field'] . "\n";
+					
+					}
+					else //if(!is_null($this->tag[$this->order[$i]]['value']))
+					{
+					//echo "value[" . $this->order[$i] . "]=" . $this->tag[$this->order[$i]]['value'] . "\n";
+					//echo $this->rst->type($this->tag[$this->order[$i]]['field']);
+					$field[$h][$this->tag[$this->order[$i]]['field']] = $this->convert( $this->tag[$this->order[$i]]['value'],  $this->rst->type($this->tag[$this->order[$i]]['field']) );
+					//echo  "field[" . $this->order[$i] . "]=" . $this->tag[$this->order[$i]]['field'] . "\n";
+					}
+					
+				}
+					
+					
+					$h++;
+				}while($this->obj->next());
+				//var_dump($field);
+				$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: $h rows effected",0);
+				
+				$prim = $this->rst->prim_field();
+				
+			//echo 	count($field);
+		//durchlauf
+		for($hr = 0;$hr < count($field);$hr++)
+		{			
+		//echo "<br>\n ----- ";
+		//foreach($field[$hr] as $key => $value) echo $key . ' ' . $value . ', '; 
+		
+		//var_dump($field);
+		
+		//echo '(' . $prim[0] . ') >' . $field[$hr][$prim[0]] . '< ';
+		//echo "Field: $hr prim:" . $prim[0] . "\n";
+		//var_dump($field);
+		/*
+		* TODO case, new prim value
+		*/
+		$is_new_prim = true;
+		if(!(is_null($field[$hr][$prim[0]]) || ($field[$hr][$prim[0]] == '')))
+			{
+			$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: prim",0);
+			
+			$this->rst->first_ds();
+			//var_dump($field);
+			//l�uft bis zum ende der liste
+			while(!$this->rst->EOF())
+				{
+					
+			//echo "booho";	
+				
+$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: " . $this->rst->value($prim[0]) . "==" . $field[$hr][$prim[0]],0);
+
+				//fragt prim ab
+				if($this->rst->value($prim[0])==$field[$hr][$prim[0]])
+					{
+						
+						$is_new_prim = false;
+						$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: write " . count($this->order) ,0);
+
+							for($i=0;$i < count($this->order);$i++)
+							{
+				
+								//echo $prim[0] . "----------------"; 
+							//if( $prim[0] <> $this->tag[$this->order[$i]]['field'])
+							$this->rst->setValue(
+								$this->tag[$this->order[$i]]['field'],
+								$field[$hr][$this->tag[$this->order[$i]]['field']],
+								$this->rst->rst_cur_num()
+								);
+							//var_dump($field[$hr][$this->tag[$this->order[$i]]['field']]);
+							/*
+							echo "speichert " . $this->tag[$this->order[$i]]['field'] . ' ,'
+								. $field[$this->rst->rst_cur_num()][$this->tag[$this->order[$i]]['field']] . ' '
+								. $this->rst->rst_cur_num() . "\n"; */
+							$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: write " . $this->tag[$this->order[$i]]['field'] . ' ,'
+								. $field[$this->rst->rst_cur_num()][$this->tag[$this->order[$i]]['field']] . ' '
+								. $this->rst->rst_cur_num() ,0); 
+					
+							
+							}
+							//echo " \n uuuund speichern ";
+							$this->rst->update();
+							break;
+						}
+
+$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: hier",0);
+						$this->rst->next_ds();
+					}
+					
+					//new line with prim
+					if($is_new_prim)
+						{
+							$is_new_prim = false;
+							for($i=0;$i < count($this->order);$i++)
+								{
+									
+												
+								$this->rst->setValue(
+									$this->tag[$this->order[$i]]['field'],
+									$field[$hr][$this->tag[$this->order[$i]]['field']]								
+									);
+												
+							
+								}
+								
+							$this->rst->update();
+						}
+						
+				
+					
+					
+				}
+				else
+				{
+					$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: no prim",0);
+							for($i=0;$i < count($this->order);$i++)
+							{
+				
+							$logger_class->setAssert("rumbsbums " . $this->tag[$this->order[$i]]['field'] . " " . $field[$hr][$this->tag[$this->order[$i]]['field']]	 ,0);
+//var_dump($field[$hr]);
+								$this->rst->setValue(
+									$this->tag[$this->order[$i]]['field'],
+									$field[$hr][$this->tag[$this->order[$i]]['field']]								
+									);
+							
+								
+					
+							
+							}
+							$this->rst->update();
+
+					
+				}
+				
+	
+			}	
+			
+			if($this->testmode)
+			$this->rst->show_content();
+			else
+			$this->dbclazz->insert_rst($this->rst);
+			
+		}
+		else
+			$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: no plugin Obj found",0);
+				
+	}
+		
+
+	private function convert($in, $dataset)
+	{
+		if(false !== strpos($dataset , 'tinyint') )
+		{
+			if($in)
+				return 'true';
+			else
+				return 'false';
+		}
+			
+		return $in;
+	}
+	
+	function check_type($type)
+	{
+	if($type == "SQL")return true;
+	if($type == "XMLTEMPLATE")return true;
+	if($type == "COL")return true;
+	//if($type == "")return true;
+	return parent::check_type($type);
+	}
+
+	function next(){$this->rst->next_ds();return !$this->rst->EOF();}
+	
+	function decription(){return "no description avaiable!";}
+	public function getAdditiveSource(){}
+}
+?>

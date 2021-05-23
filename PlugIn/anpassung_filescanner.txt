@@ -1,0 +1,401 @@
+<?PHP
+
+/**
+*FileService
+*
+* Supports following func_tions.
+*	- loding files into request-array
+*	- 
+*
+* @-------------------------------------------
+* @title:Upload_File
+* @autor:Stefan Wegerhoff
+* @description: Loads files over browserupload
+*
+*/
+require_once("plugin_interface.php");
+
+class FileService extends plugin 
+{
+var $reset_name = "";
+var $producer = '';
+var $xpath = '';
+var $toUse = '';
+var $doctype = 'xml';
+var $scanner;
+var $result_table = array();
+var $pos_res = 0;
+var $filehandle;
+var $save_file;
+var $handle;
+
+	function FileService()
+	{
+		echo 'pitsch';
+		$this->scanner = new File_Scan();
+		
+		
+	}
+	
+	public function add_path($path)
+	{
+	}
+	
+
+	
+	public function moveFirst(){}
+    	public function moveLast(){}
+    	public function set_list(&$value){}
+    	public function getAdditiveSource(){}
+}
+?>
+
+
+
+	function set($type, $value)
+	{
+		parent::set($type, $value);
+		//If(!is_object( $value )){
+		//	echo $type . ' ' . $value . "\n";
+		//}else 
+		//echo $type . "\n";
+		//parameterausgabe
+		
+		/**
+		*@parameter: ADD_PATH = scannes all files in the pathcollection. Use one path, for one parametercall.
+		*/
+		if($type == "ADD_PATH")
+		{
+			//unset($this->filehandle);
+			if($this->scanner)
+			$this->scanner->add_path($value);
+		}
+		
+		/**
+		*@parameter: PROHIB_PATH = void all files in this pathcollection. Use one path, for one parametercall.
+		*/
+		if($type == "PROHIB_PATH")
+		{
+			//unset($this->filehandle);
+			if($this->scanner)
+			$this->scanner->prohib_path($value);
+		}
+		
+		
+
+		
+		/**
+		*@parameter: ADD_TAG = void all files in this pathcollection. Use one path, for one parametercall.
+		*/
+		if($type == "ADD_TAG")
+		{
+			
+			//unset($this->filehandle);
+			if($this->scanner)
+			$this->scanner->add_tag($value);
+		}
+		
+		
+		/**
+		*@parameter: ADD_FIX = void all files in this pathcollection. Use one path, for one parametercall.
+		*/
+		if($type == "ADD_FIX")
+		{
+			
+			//unset($this->filehandle);
+			if($this->scanner)
+			$this->scanner->add_fix($value);
+			
+		}
+		
+		
+
+		
+		
+		/**
+		*@parameter: RELATIVE_PATH (false/true) = void all files in this pathcollection. Use one path, for one parametercall.
+		*/
+		if($type == "RELATIVE_PATH")
+		{
+			//unset($this->filehandle);
+			if($this->scanner)
+			$this->scanner->relative_path( (strtolower($value) == 'true') );
+		}
+		
+		/**
+		*@function: START_SCAN = void all files in this pathcollection. Use one path, for one parametercall.
+		*/
+		if($type == "START_SCAN")
+		{
+			//unset($this->filehandle);
+			if($this->scanner)
+			{
+			$this->scanner->seeking();
+			
+			$this->result_table = $this->scanner->result();
+			
+			
+			}
+		}
+		
+		
+		/**
+		*@function: LOAD_FILE = loads a file, optional with a specific modus like "splitted load"
+		*/
+		if($type == "LOAD_FILE")
+		{
+			//unset($this->filehandle);
+			if(!$this->filehandle)
+			$this->filehandle = new FileHandle();
+			if(!(false === ($pos = strpos($value,';'))))
+			{
+				$mode = substr($value,$pos);
+				//echo $mode;
+			}
+			//echo $value;
+			$this->filehandle->open_URL($value);
+		}
+
+		/**
+		*@warning splitt loading has no description
+		*@-----------------------------------------
+		*/
+		if($type == "GATHER")
+		{
+			$this->toUse = $value;
+		}
+		
+		/**
+		*
+		*/
+		if($type == "PRODUCER")
+		{
+			$this->producer = $value;
+		}
+		
+		if($type == "GOTO")
+		{
+			$this->xpath = $value;
+		}
+		
+		if($type == "RESET")
+		{
+			$this->reset_name = $value;
+		}
+		
+		if($type == "DOCTYPE")
+		{
+			$this->doctype = $value;
+		}
+		
+		if($type =="RESIZE_SPACE")
+		{
+			$this->scanner->loading_size($value);
+		}
+		
+		if($type == "SAVE_FILE")
+		{
+			
+			if(!$this->filehandle) echo 'No source available!';
+			
+			$backinstanz = &$this->generator();
+			$xmlinstanz = &$backinstanz->XMLlist;
+			
+			//takes id of producer
+			$xmlinstanz->change_URI($backinstanz->heap['template'][$this->producer]);
+			
+			$cur_id = $xmlinstanz->idx;
+			
+			//switch to incomming tree
+			$xmlinstanz->change_URI($backinstanz->heap['template'][$this->toUse]);
+			
+			$xmlinstanz->TYPE[$xmlinstanz->idx] = $this->doctype;
+			
+			$this->save_file = new FileHandle();
+			
+			if(!(false === ($pos = strpos($value,';'))))
+			{
+				$mode = substr($value,$pos + 1);
+				$value = substr($value,0,$pos);
+				
+			}
+			
+			$this->save_file->open_URL($value,$mode);
+			$xmlinstanz->change_URI($backinstanz->heap['template'][$this->toUse]);
+			$xmlinstanz->save_file_stream($this->save_file,'ISO-8859-1',false);
+			//echo $cur_id;
+			
+			
+
+			//$xmlinstanz->idx = $cur_id;
+			//echo $xmlinstanz->index_child();
+			
+			//echo $z . " und " . $xmlinstanz->PARAMETER[$cur_id]['LOADED_RECORDS'] . " mit " . $xmlinstanz->PARAMETER[$cur_id]['MODUS'] . "\n";
+			
+			$z = 0;
+			if($xmlinstanz->PARAMETER[$cur_id]['MODUS'] == 'SPLIT')
+			while( $xmlinstanz->PARAMETER[$cur_id]['LOADED_RECORDS'] > -1 && $z++ < 10000)
+			{
+				//echo $z . " und " . $xmlinstanz->PARAMETER[$cur_id]['LOADED_RECORDS'] . " mit " . $xmlinstanz->PARAMETER[$cur_id]['MODUS'] . "\n";
+				
+							$list = explode(',',$this->reset_name);
+			
+			for($i = 0;$i < count($list);$i++)
+			{
+				$xmlinstanz->change_URI($backinstanz->heap['template'][$list[$i]]);
+				$xmlinstanz->set_first_node();
+				$xmlelement = &$xmlinstanz->show_xmlelement();
+				
+				$xmlelement->exhaustion();
+			}
+				
+				$xmlinstanz->idx = 5;
+				//echo $xmlinstanz->cur_node() . ' ';
+				//echo $xmlinstanz->index_child() . "\n";
+				
+				//echo "------------------" . $cur_id . '-------------------------';
+				$xmlinstanz->delete_index($cur_id);// = $cur_id;
+				//Garbage Collector
+				echo gc_collect_cycles();
+				
+				//echo $xmlinstanz->mirror[5]->name . " hier ist nichts\n";
+				//$xmlinstanz->idx = 5;
+				//echo $xmlinstanz->cur_node() . ': ';
+				//$source = &$xmlinstanz->PARAMETER[$cur_id]['FILE'];
+				//echo $source->get_line() . ' booh';
+				
+				
+				
+				$xmlinstanz->handle_select($xmlinstanz->PARAMETER[$cur_id]['FILE'],0,'CSV');
+				//$xmlinstanz->idx = $xmlinstanz->max_idx;
+				$xmlinstanz->used_parser = true;
+				
+				//echo $xmlinstanz->mirror[5]->name . " hier ist nichts\n";
+				//$xmlinstanz->idx = 5;
+				//echo $xmlinstanz->cur_node() . ': ';
+				
+				//$xmlinstanz->idx = $cur_id;
+				//$xmlinstanz->set_first_node();
+				//echo $xmlinstanz->cur_node();
+				//echo $xmlinstanz->index_child();
+				
+				$xmlinstanz->change_URI($backinstanz->structur);
+				$getback = $xmlinstanz->position_stamp();
+				
+				while(	$xmlinstanz->cur_node() <>  'OBJECT')
+				{
+					if( !$xmlinstanz->parent_node() ) return false;
+				}
+				
+				$stamp = $xmlinstanz->position_stamp();
+				
+				//echo $stamp . '-------------------------------------------------------------------------------------------------------------' . "\n";
+
+				$xmlinstanz->set_first_node();
+				$xmlinstanz->child_node(0);
+				$elem = &$xmlinstanz->xpath($this->xpath);
+				$exstamp = '0000.' . $xmlinstanz->idx . $elem->position_stamp();
+				$xmlinstanz->go_to_stamp($exstamp);
+				
+				
+				
+				//zweiter Prozess gestartet
+				//echo "start mit $exstamp und $stamp \n";
+				$backinstanz->insertContent($exstamp,$stamp);
+				$backinstanz->eject = false;
+				
+				//echo $this->producer;
+				
+				//echo $backinstanz->heap['template'][$this->producer];
+				//echo $this->producer . ': ';
+				//$xmlinstanz->change_URI($backinstanz->heap['template'][$this->producer]);
+				//$xmlinstanz->idx = 5;
+				//echo $xmlinstanz->cur_node() . ' ';
+				//echo $xmlinstanz->index_child() . "\n";
+				
+				$xmlinstanz->change_URI($backinstanz->heap['template'][$this->toUse]);
+				//echo $this->toUse . ': ';
+				//echo $xmlinstanz->cur_node() . ' ';
+				//echo $xmlinstanz->index_child() . "\n";
+				
+				//echo $xmlinstanz->idx;
+				$xmlinstanz->PARAMETER[$xmlinstanz->idx]['HEAD_OFF'] = true;
+				$xmlinstanz->save_file_stream($this->save_file,'ISO-8859-1',false);
+				
+				
+				
+				//echo $xmlinstanz->cur_node();
+				
+				
+				//$xmlinstanz->xpath
+				
+				$xmlinstanz->go_to_stamp($getback);
+				
+			//echo $z . " und " . $xmlinstanz->PARAMETER[$cur_id]['LOADED_RECORDS'] . " mit " . $xmlinstanz->PARAMETER[$cur_id]['MODUS'] . "\n";
+			}
+			//echo $xmlinstanz->PARAMETER[$cur_id]['LOADED_RECORDS'];
+			
+			//echo $xmlinstanz->PARAMETER[$cur_id]['MODUS'];
+			
+			//echo $value;
+			//$text = $this->filehandle->load_File();
+			//$this->back->heap['session'][$value] = $text;
+			//$_SESSION[$value] = $text;
+			
+		}
+		if($type == "READ")
+		{
+			
+						
+		}
+		if($type == "COL")
+		{
+			
+			$tmp=$this->result_table[$this->pos_res][$value];
+			
+			$this->param_out($tmp);
+		}
+		if($type == "ITER"){$this->param_out($this);}
+		if($type == "EOF")
+		{
+			
+			
+			
+		}
+		if($type == "MANY")
+		{
+			
+			$this->param_out(count($this->result_table));
+		}
+		
+
+	}
+	
+	/**
+	*
+	*@-------------------------------------------
+	*/
+	//parameterausgabe
+	public function getAdditiveSource(){}
+	
+	function check_type($type)
+	{
+	if($type == "OUT")return true;
+	if($type == "IN")return true;
+	if($type == "NAME")return true;
+	if($type == "ATTRIB")return true;
+	
+	return parent::check_type($type);
+	}
+
+	function next(){return (++$this->pos_res < (count($this->result_table)) - 1);}
+
+	
+	function description(){return "FileService supports following functions:";}
+	
+	//implemention for readable
+	function &get_file_handler()
+	{
+		
+	return $this->filehandle;
+	}

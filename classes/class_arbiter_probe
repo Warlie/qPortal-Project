@@ -1,0 +1,12 @@
+		//erster durchlauf aktiviert alle Objekte
+		if(!function_exists(activate_objects))function activate_objects($xml_element){
+		
+		}
+		
+		if(!function_exists(parse_tree))function parse_tree($xml_element){
+		
+		}
+		
+		
+		
+		
