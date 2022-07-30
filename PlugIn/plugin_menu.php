@@ -35,6 +35,33 @@ var $res = array();
 private $logout_url = '';
 private $logout = true;
 
+	/**
+	* @param $back get reference to container with all trees
+	* @param $content get reference to the Content class, which handles control 
+	*
+	* jump_address shows a two dim array of its surroundings like
+	* 
+	array(4) {
+  [0]=>
+  array(2) {
+    [0]=>
+    string(14) "sub_name_1"
+    [1]=>
+    string(15) "sub_value_1"
+  }
+  [1]=>
+  array(2) {
+    [0]=>
+    string(14) "sub_name_2"
+    [1]=>
+    string(7) "sub_value_2"
+  }
+  [2]=>
+  string(3) "sur_name"
+  [3]=>
+  string(3) "sur_value"
+}
+	*/
 	function __construct(/* System.Parser */ &$back, /* System.Content */ &$content)
 	{
 		global $_SESSION;
@@ -61,9 +88,10 @@ private $logout = true;
 	/* change to control tree */
 	$this->back->change_URI($structur);
 	
+	/* save a specific posstamp */
 	$stamp_structur = $this->back->position_stamp();
 	
-	
+	/* differences between the final and the tree tags */
 	$this->is_final = ($this->back->get_NS_QName() == 'final');
 	if(!$this->is_final)
 	{
@@ -88,42 +116,6 @@ private $logout = true;
 		/* Collect name and value of the tree-tags */
 		
 		$locked = !$this->content->getAccess();
-/*
-		if ($att_sector = $this->back->show_ns_attrib('http://www.trscript.de/tree#sector'))
-		{
-			//if($this->content->getAccess()) echo "booja ";
-			//echo $_SESSION['http://www.auster-gmbh.de/surface#sector'];
-			//if (false == strpos($_SESSION['http://www.auster-gmbh.de/surface#sector'],$att_sector))$locked = true;
-			//var_dump($this->content->getAccess());
-			if (!$this->content->getAccess())$locked = true;
-			//var_dump($locked);
-		}
-		
-		
-		if ($att_security = $this->back->show_ns_attrib('http://www.trscript.de/tree#securitylevel'))
-		{
-
-		if ((intval($_SESSION['http://www.auster-gmbh.de/surface#securityclass']) < intval($att_security)) 
-		&& 
-		(intval($att_security) <> -1)  )
-		{
-		$locked = true;
-		}
-		
-		if (($_SESSION['http://www.auster-gmbh.de/surface#securityclass']) 
-		&& 
-		(intval($att_security) == -1)  )
-		{
-		$locked = true;
-		}
-		
-		
-
-		}
-		
-		  if ( !(false === ($hidden = strpos( $this->back->show_ns_attrib('http://www.trscript.de/tree#name'), '.' ) ) )
-		   && $hidden < 2)$locked = true;
-		*/
 		
 			if(!$locked)
 			{
@@ -142,40 +134,20 @@ private $logout = true;
 	
 
 
-		//var_dump($this->jump_address);
+	//var_dump($this->jump_address);
 	}
 	
+	/**
+	* @param $columnname 
+	* @see plugin
+	*/
 	public function col($columnname)
 	{
 	
 	//echo "\nMenu.col[" . $this->pos . "](" . $columnname . ") -> '" . $this->res[$this->pos][$columnname] .  "' (" . count($this->res) . ")\n";
 	
 	return $this->res[$this->pos][$columnname];
-	/*
-		$type = 0;
-		
-		
-		if($columnname == 'value')$type = 1;	
-	
-		if($columnname == 'URI')
-		{
-		$add_SID = '';
-		if(false)$add_SI = 'PHPSESSID=' . htmlspecialchars(session_id()) . '&';
-		
-		if(count($this->jump_address[$type]) > $this->pos)
-		return '?' . $add_SI . 'i=' . $this->jump_address[0][$this->pos];
-		elseif(count($this->jump_address[$type]) == $this->pos)
-		return '?' . $add_SI . 'i=' . $this->jump_address[$type + 2];
-		}
-		
 
-		
-		if(count($this->jump_address[$type]) > $this->pos)
-		  return $this->jump_address[$type][$this->pos];
-		elseif(count($this->jump_address[$type]) == $this->pos)
-		  return $this->jump_address[$type + 2];
-	
-	  return null; */
 	}
 	
 	
@@ -186,6 +158,7 @@ private $logout = true;
 	
 	/**
 	*@function: ITER = gives out a object to LIST-parameter
+	* @see plugin
 	*/
 	public function &iter()
 		{
@@ -214,7 +187,7 @@ private $logout = true;
 		}
 	}
 	
-	function setLevelName( $name, $url ) 
+	function setLevelName( $name, $url) 
 	{
 	  $this->level[] = array('Name' => $name, 'URL' => $url);
 	}
@@ -235,10 +208,10 @@ private $logout = true;
        $tmp = Array();
        
        	for($i = count($this->level) - 1; $i > 1; $i--)
-	{
+       	{
 	    $tmp[$this->level[$i]['URL']] = null;
 	    $tmp[$this->level[$i]['Name']] = null;
-	}
+	    }
        
 	$tmp[$this->level[0]['URL']] = str_replace('%s', $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),STD_URL);
 	$tmp[$this->level[0]['Name']] = $this->back->show_ns_attrib('http://www.trscript.de/tree#value');

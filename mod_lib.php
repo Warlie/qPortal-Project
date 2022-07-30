@@ -1186,7 +1186,9 @@ function level_tasklist(&$levellist,&$table,&$catched,$curpos,  &$system , $cont
     //if(!is_object($table[1][$levellist[$curpos][$i]]) )echo "ist kein objekt!\n";
     //if(!isset($table[1][$levellist[$curpos][$i]]) )echo "ist nicht gesetzt!\n";
     	//echo "$curpos -> id= '$id' auf index(" . $levellist[$curpos][$i] . ") \n";
-    	if(false !== $pos = find_and_load_uri($system , $table[2][$levellist[$curpos][$i]]->getdata(0) ))
+    	if($pos = find_and_load_uri(
+    		$system , 
+    		$table[2][$levellist[$curpos][$i]]->getdata(0) ))
     	{
     	$stamp = $table[6][$levellist[$curpos][$i]]->getdata(0);
     	$node = $table[3][$levellist[$curpos][$i]]->getdata(0); 
@@ -1359,6 +1361,7 @@ $_SESSION['http://www.auster-gmbh.de/surface#user'] = $db->sResult(0,'tbl_user_m
 
 $_SESSION['http://www.auster-gmbh.de/surface#forename'] = $db->sResult(0,'tbl_user_management.forename');
 $_SESSION['http://www.auster-gmbh.de/surface#surname'] = $db->sResult(0,'tbl_user_management.surname');
+$_SESSION['http://www.auster-gmbh.de/surface#fullname'] = $db->sResult(0,'tbl_user_management.forename') . ' ' . $db->sResult(0,'tbl_user_management.surname');
 
 $_SESSION['http://www.auster-gmbh.de/surface#securityclass'] = $db->sResult(0,'tbl_user_management.securityclass');
 $_SESSION['http://www.auster-gmbh.de/surface#group'] = $db->sResult(0,'tbl_group_management.groupname');

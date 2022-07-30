@@ -67,7 +67,7 @@ class database {
 
 //db-conntection
 var $User = "root";//root
-var $pwt = "toor";
+var $pwt = "";
 var $Server = "localhost"; //localhost
 var $db_name = "qportal";
 //encoding
@@ -134,6 +134,7 @@ function __construct($Server = "", $User = "", $pwt = ""){
 	*/
 	function set_db_encode($codeset)
 		{
+
 			$this->open_db->set_charset ( $codeset );
 			
 		}
@@ -751,7 +752,7 @@ for($i=0;$i<count($table);$i++)
 							$sql_string .= ');';
 							//$rst->show_content();
 
-							//
+							
 							//echo $sql_string . "<br>\n";
 			   				//speichert einen Datensatz, der neu geschieben wurde
 			   				

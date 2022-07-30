@@ -55,7 +55,10 @@
 * parseCommand($command);
 */
 
-
+/*
+* TODO
+* clean up and set more comments
+*/
 
 //kind of node
 define('NODE',0);
@@ -723,7 +726,8 @@ function setdata(&$data,$pos = null){
 		}
 		else
 		{
-			//echo $data . ": $index  <br>\n";
+			//if(is_Object($this->data[$index]))echo get_class($this->data[$index]) . " is still on this position\n";
+			//echo $data . ": $index  <br> in primitiv data area \n";
 			$tmp = $data;
 			//unset($this->data[$index]);
 			$this->data[$index] = $tmp;

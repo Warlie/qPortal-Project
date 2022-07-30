@@ -401,7 +401,9 @@ function delete_index($index)
 						
 						if(is_array($this->prefixes[$this->idx]))
 						{
-							$this->prefixes[$this->idx][count($this->prefixes['_main'])] = $value;
+
+							//var_dump($this->prefixes);
+							$this->prefixes[$this->idx][] = $value;
 							
 							$this->prefixes_inv[$value][$this->idx] = '';
 						}
@@ -606,7 +608,11 @@ function delete_index($index)
 					//var_dump($this->prefixes, $prefix, $this->prefixes[$prefix]);
 					if('xmlns' == $prefix)$prefix = 0;
 					if('xml' == $prefix)$prefix = 0;
-					$full_ns = $this->prefixes[$prefix][count($this->prefixes[$prefix]) - 1];
+					
+					if(!is_null($this->prefixes[$prefix]))
+						$full_ns = $this->prefixes[$prefix][count($this->prefixes[$prefix]) - 1];
+					else 
+						$full_ns = $this->prefixes[$prefix][0];
 					//echo "ns:$full_ns pre:$prefix attrib:$attribname ist ausgabe<br>\n";
 					if($this->namespace_frameworks[$full_ns]['node'][$attribname])
 					{
@@ -1103,6 +1109,8 @@ function delete_index($index)
 		   if($id < 0)$id = $this->idx;
 		   if($namespace == '')
 		   {
+		   	   //var_dump($this->prefixes);
+		   	   //if(!isset($this->prefixes[$id]))echo "nope!";
 		   	   $inMyPos = count($this->prefixes[$id]) - 1;
 			   return $this->prefixes[$id][$inMyPos];
 		   }

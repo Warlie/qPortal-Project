@@ -19,7 +19,7 @@ private $bool_op = array();
 private $rst = null;
 
 private $obj = null;
-private $dbencode = "ISO-8859-1";
+private $dbencode = "utf8"; //ISO-8859-1
 private $tag = array();
 private $cur = array();
 private $order = array();
@@ -390,6 +390,7 @@ public function set_Column_config($tag_name, $field_name,$content, $value, $data
 {
 	
 	global $logger_class;
+	//echo "Argumente tag_name: $tag_name, field_name: $field_name, content: $content, value: $value \n";
 	$logger_class->setAssert("Argumente tag_name: $tag_name, field_name: $field_name, content: $content, value: $value \n",0);
 	$this->cur = $tag_name;
 	$this->order[] = $tag_name;
@@ -604,6 +605,7 @@ $logger_class->setAssert("plugin_dbo.php#saves_dataset_back: hier",0);
 
 	private function convert($in, $dataset)
 	{
+		/*
 		if(false !== strpos($dataset , 'tinyint') )
 		{
 			if($in)
@@ -611,6 +613,7 @@ $logger_class->setAssert("plugin_dbo.php#saves_dataset_back: hier",0);
 			else
 				return 'false';
 		}
+		*/
 			
 		return $in;
 	}

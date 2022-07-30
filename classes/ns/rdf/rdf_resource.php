@@ -56,10 +56,21 @@ return new RDF_resource();
 		
 		if(false === ($posinstr =  strpos(($data = $this->getdata()),'#')))
 			{
+
 				if(false === ($posinstr = strpos(($data),';')))
-				{
-				$namespace = $this->get_parser()->get_NS('',$this->get_idx());
-				$qname = $data;
+				{ //
+				if($this->get_parser()->get_Prefix($data,$this->get_idx()))
+					{
+						$namespace = $data; //here
+						$qname = "";
+					}
+					else
+					{
+						//echo $data;
+						$namespace = $this->get_parser()->get_NS("",$this->get_idx());
+						$qname = $data;
+					}
+
 				}
 				else 
 				{

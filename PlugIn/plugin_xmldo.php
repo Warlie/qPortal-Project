@@ -195,51 +195,6 @@ private $testmode = false;
 	}
 	
 	
-		/*
-		if($type == "TAG_OUT")
-		{
-			
-			$this->cur = '';
-			
-			
-		}
-		if($type == "XPATH")
-		{
-			
-			$this->tag[$this->cur]['xpath']=$value;
-			
-			
-		}
-		if($type == "ATTRIB")
-		{
-			
-			$this->tag[$this->cur]['pos']='ATTRIB';
-			$this->tag[$this->cur]['name']=$value;
-			
-		}
-		if($type == "DATA")
-		{
-			//echo 'boooh' . $this->cur;
-			$this->tag[$this->cur]['pos']='DATA';
-			
-			
-		}
-		if($type == "CONTENT")
-		{
-			
-			$this->tag[$this->cur]['content']=$value;
-			
-			
-		}
-		if($type == "VALUE")
-		{
-			//$this->tag[$this->cur]['pos']='VALUE';
-			$this->tag[$this->cur]['value']=$value;
-			
-			
-		}
-
-*/
 		public function col($columnName)
 		{
 		}
@@ -302,6 +257,10 @@ private $testmode = false;
 	}
 		
 		
+	/**
+	* 
+	* @param child_pos: 
+	*/
 	public function setCrotch( $child_pos, $xpath, $group, $level)
 	{
 	  $this->level[] = array('type'=> 0, 'child_pos' => intval($child_pos),  'xpath' => $xpath, 'group' => $group);

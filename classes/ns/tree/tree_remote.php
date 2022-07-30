@@ -1,5 +1,4 @@
 <?php
-
 /**  Interface
 *
 * full_URI() : Gives out full Namespace with nodetype delimited with #
@@ -91,41 +90,7 @@ function complete()
 function event_message_in($type,&$obj)
 	{
 	global $logger_class;
-	//echo $type . '-' . $obj->get_request() . '-' . $obj->get_context() . "<br>\n";
-	/*
-	$datacol = array();
-	$disconnect = '';
-	$has_obj_child = false;
-	*/
-	/*
-	
-	Na super, ich vermute, dass ich wieder probleme bekomme, sobald ich mehrere object Tags habe.
-	
-	*/
-	/*
-	for($i = 0;$this->index_max() > $i;$i++)
-	{
-	  $has_obj_child = ($this->getRefnext[$i]->full_URI() == 'http://www.trscript.de/tree#object');
-	}
-	
-	 
-	//saves all data
-	for($i = 0;$this->data_many() > $i;$i++)
-	{
-	$disconnect = $this->getdata($i);
-	$datacol[$i] = $disconnect;
-	unset($disconnect);
-	
-	}
-	*/
 
-	//for($i = 0;count($this->way_out) > $i;$i++)
-	//{
-		
-	//	echo $this->way_out[$i]->full_URI() . ' ist das aktuelle objekt <br>';
-	//	}
-
-	//if($this->get_attribute('name') == 'FileService.add_fix')echo 'checkpoint (' . $this->get_attribute('name') . ")<br>\n";
 	//activates a child tree:Object object to receive its data later
 	$message = 'http://www.trscript.de/tree#object';
 	
@@ -149,60 +114,21 @@ function event_message_in($type,&$obj)
 	else
 	$booh = null;
 	
-	/*
-	if($has_obj_child)
-	{
-	$res = '';
-	for($i = 0;count($datacol) > $i;$i++)
-	{
-	
-
-	
-	$res .= $datacol[$i] . $booh;
-	
-	}
-	$booh = $res;
-	}
-	
-	echo $booh . "\n";
-	*/
 	//writes data to a linked Parameterobject
 	$send = 'http://www.w3.org/2006/05/pedl-lib#Object_Parameter?__set_data=0'; 
 	
 	
 	$Event = new EventObject('',$this,$booh);
-	$Event->set_node($obj->get_node());
-	//		echo '{';				
+	$Event->set_node($obj->get_node());			
 	$this->send_messages($send,$Event);
 	
 	//receive date from a funtion object, if there is a function-object, it causes a alterdataevent
-	$send = 'http://www.w3.org/2006/05/pedl-lib#Object_Funktion?__get_data=0'; 
-	//echo '}[';
-			
+	$send = 'http://www.w3.org/2006/05/pedl-lib#Object_Funktion?__get_data=0'; 			
 	$this->send_messages($send,$Event);
-	//echo ']---' . count($this->way_out) . '--';
+
 	
 	}
-/*
-function send_messages($message,&$event)
-{
 
-	echo "**********send_message*****<br>\n";
-	echo "Message:" .$message . "<br>\n";
-	echo "Request  :" .$event->get_request() . "<br>\n";
-	echo "Requester:" .get_Class($event->get_requester()) . "<br>\n";
-	echo "Context  :" .get_Class($event->get_context()) . "<br>\n";
-	echo '**************way out****************' . "<br>\n";
-			for($i = 0;count($this->way_out) > $i;$i++)
-			{
-			echo $this->way_out[$i]->full_URI() . "<br>\n";
-			}
-	echo '*************************************' . "<br>\n";
-	echo "****************************<br>\n";	
-	
-	parent::send_messages($message,$event);
-}
-*/
 protected function event_alterdata($own)
 	{
 	

@@ -120,6 +120,11 @@ var $rst = null;
 		
 	}
 	
+	/**
+	*	col
+	*	@param @columnname : <id>.<columnname>
+	*	@throws ObjectBlockException : misses any datasource
+	*/
 
 	public function col($columnname)
 	{
@@ -175,7 +180,7 @@ var $rst = null;
 	private function run()
 	{
 		
-
+		//TODO set real exception
 		if(count($this->rst) != count($this->config))echo " Config Exception";
 		
 		//visits all recordsets
@@ -187,6 +192,7 @@ var $rst = null;
 			//echo "\n";
 			$this->search_tree = array();
 			
+			// skips all "not a list"s
 			if(!$this->rst[$i]->moveFirst())continue;
 			
 			// and walks though them
@@ -203,7 +209,7 @@ var $rst = null;
 					foreach ($col as $value)
 					{
 						$line[$value] = $this->rst[$i]->col($value);
-						//echo $this->rst[$i]->col($value) . ";";
+						//echo"copy record: " . $this->rst[$i]->col($value) . ";";
 					}
 					//echo "\n";
 
@@ -333,7 +339,7 @@ var $rst = null;
 		$raw_parse = $this->automat->getResult();
 		$process = array();
 		$this->process($raw_parse, $process);
-		if(true)
+		if(false)
 		{
 		echo "------------------------------process---------------------------------\n";
 		//var_dump($result);
@@ -457,6 +463,10 @@ var $rst = null;
 		return $interval1;
 	}
 	
+	/**
+	*	
+	*
+	*/
 	private function hashValue($myarray, $attract)
 	{
 		if(count($attract) == 0)return hash('sha256', '0', false);
@@ -566,7 +576,7 @@ var $rst = null;
 
     	if(is_object($value))
 	{
-
+		
 		$this->rst[] = &$value;
 
 	}

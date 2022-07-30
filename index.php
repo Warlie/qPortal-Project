@@ -1,29 +1,33 @@
 <?PHP
-                                //definiert Startseite
+//ini_set('display_errors', 1);
+//ini_set('display_startup_errors', 1);
+//error_reporting(E_ALL);
+//definiert Startseite
                                 define('START_PAGE','index.php?i=');
                                 define('STD_URL','index.php?i=%s');
                                 define('CUR_PATH','');
-				define('INSTALL',true);
+				define('INSTALL',false);
 				define('REPORT',5); //Reportlevel [0,5]
 				define('MEMORY_USAGE', true);
 				define('TRACE', true);
 
 
-				//error_reporting(E_ALL ); //& ~E_NOTICE
-				ini_set('display_errors','1');
+				error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING & ~E_USER_WARNING);
+				ini_set('display_errors','0');
 
 				//ini_set('error_log','phplog.log');
 				//ini_set('memory_limit', '255M');
-				error_reporting(E_ERROR); // | E_WARNING | E_PARSE
+				//error_reporting(E_ERROR); // | E_WARNING | E_PARSE
 				//ini_set('display_er8ors','On');
 				//ini_set('memory_limit', '8M');
 
                                 include('classes/class_Contentgenerator_mod03.php');
+                                include('classes/init.php');
                                 include('mod_lib.php');
                                 
 				$logger_class->setImportance(REPORT, false, MEMORY_USAGE, TRACE);
 
-                                
+                              
                                 /* setzen der Cacheverwaltung auf 'private' */
 
                                 session_cache_limiter('public');
@@ -56,6 +60,7 @@
     $_SESSION['zaehler']++;
 }
 				//
+				if(!isset($_REQUEST['i']))$_REQUEST['i'] = '';
 				if(!isset($_REQUEST['i']))$_REQUEST['i'] = '';
 				if($_REQUEST['i'] == '__edit')
 				{
@@ -90,7 +95,7 @@
                                 $content = new ContentGeneratorMod03("","","");
 				
                                 
-                                if($_REQUEST['i'] == '__system')
+                if($_REQUEST['i'] == '__system')
 				{
 
 					//$_SESSION['@_mod'] = '';
@@ -139,14 +144,69 @@
 						htmlspecialchars($_REQUEST['URI']));
 					
 				}
-                                
-				else if($content->errno() == 0 && $_SESSION['@_mod']<>'install')
+                else if(isset($_SESSION['@_mod']) && $_SESSION['@_mod']=='install')
+				{
+					/*
+					*	Hell no
+					* TODO center config into a specific file  and find a more nicer solution for the db
+					*/
+						$load = implode('', file ('surface.sql'));
+					$content->injectSQL($load);
+					
+						
+						$lines = file ('index.php');
+						
+												// Durchgehen des Arrays und Anzeigen des HTML Source inkl. Zeilennummern
+						foreach ($lines as $line_num => $line) {
+							if(!(false  === ($tmp = strpos($line,'define(\'INSTALL\','))))
+							{
+								$start = (strpos($line,',',$tmp) + 1);
+								$stop = strpos($line,')',$start);
+								$lines[$line_num]= substr($line, 0, $start) . 'false' . substr($line, $stop);
+							
+							}
+							
+							if(!(false  === ($tmp = strpos($line,'define(\'CUR_PATH\','))))
+							{
+								$start = (strpos($line,',',$tmp) + 1);
+								$stop = strpos($line,')',$start);
+								$lines[$line_num]= substr($line, 0, $start) . "'" . $_REQUEST['directory'] . "'" . substr($line, $stop);
+							
+							}
+							}
+							
+													
+						   $fp = fopen("index.php","w");
+						   if ($fp)
+						   {
+							   flock($fp,2);
+							   fputs ($fp, implode('',$lines));
+
+
+							   flock($fp,3);
+							   fclose($fp);
+							   
+							   $_SESSION['@_mod'] = '';
+							   //way to system
+							   echo "<h1>Surface XML Generator</h1>
+							   <p>Now it is running, do you want to go to </p>
+							   <p><a href='index.php?i=__edit' >backend</a> or</p>
+							   <p><a href='index.php?i=__main' >frontend</a></p>";
+							   
+							   return null;
+						
+						   }
+						
+					}
+				
+				
+				else if($content->errno() == 0 )
 				{
 				
 				$content->setPageParam($_REQUEST);
                                 
                                 //$content->setXMLTemplate('template/text1.htm');
-                                if($_SESSION['@_mod']=='edit')
+                                if(isset($_SESSION['@_mod']) && $_SESSION['@_mod']=='edit')
 				$content->setXMLstructur('template/edit.xml');
                                 else
                                 {
@@ -212,115 +272,10 @@
                                 print($content->getoutput(SEND_HEADER,'ISO 8859-1'));
 				
 				}
-                                else
+                else
 				{
 					
-					if($_SESSION['@_mod']=='install')
-					{
-					
-						$load = implode('', file ('surface.sql'));
-					$content->injectSQL($load);
-					/*
-					$content->injectSQL("CREATE TABLE IF NOT EXISTS `attrib_collection` (
-  `autoid` int(11) NOT NULL auto_increment,
-  `id` varchar(20) NOT NULL default '',
-  `name` varchar(20) NOT NULL default '',
-  `value` varchar(100) NOT NULL default '',
-  PRIMARY KEY  (`autoid`),
-  KEY `id` (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;");
 
-$content->injectSQL("CREATE TABLE IF NOT EXISTS `connect_collection` (
-  `autoid` int(11) NOT NULL auto_increment,
-  `tagid` varchar(20) NOT NULL default '',
-  `attribid` varchar(20) NOT NULL default '',
-  PRIMARY KEY  (`autoid`),
-  KEY `tagid` (`tagid`),
-  KEY `attribid` (`attribid`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;");
-
-$content->injectSQL("CREATE TABLE IF NOT EXISTS `tag_collection` (
-  `id` varchar(20) NOT NULL default '',
-  `attrib` varchar(20) NOT NULL default '',
-  `content_ref` int(11) default NULL,
-  `type` varchar(20) NOT NULL default '',
-  `order` int(11) NOT NULL default '0',
-  `group` varchar(20) NOT NULL default '',
-  `ref` varchar(20) NOT NULL default '',
-  PRIMARY KEY  (`id`),
-  KEY `group` (`group`),
-  KEY `lang` (`content_ref`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;");
-
-
-$content->injectSQL("CREATE TABLE IF NOT EXISTS `tag_content` (
-  `id` int(11) NOT NULL auto_increment,
-  `lang` varchar(4) NOT NULL default '',
-  `content` text NOT NULL,
-  PRIMARY KEY  (`id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;");
-
-
-$content->injectSQL("CREATE TABLE IF NOT EXISTS `precache` (
-  `name` varchar(255) character set latin1 collate latin1_bin NOT NULL,
-  `best_before` timestamp NULL default NULL,
-  `value` text character set latin1 collate latin1_bin NOT NULL,
-  PRIMARY KEY  (`name`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;");
-
-
-$content->injectSQL("INSERT INTO `precache` (`name`, `best_before`, `value`) VALUES
-('none', '2008-10-25 22:35:18', 0x6669727374);");
-
-
-
-
-*/
-						
-						$lines = file ('index.php');
-						
-												// Durchgehen des Arrays und Anzeigen des HTML Source inkl. Zeilennummern
-						foreach ($lines as $line_num => $line) {
-							if(!(false  === ($tmp = strpos($line,'define(\'INSTALL\','))))
-							{
-								$start = (strpos($line,',',$tmp) + 1);
-								$stop = strpos($line,')',$start);
-								$lines[$line_num]= substr($line, 0, $start) . 'false' . substr($line, $stop);
-							
-							}
-							
-							if(!(false  === ($tmp = strpos($line,'define(\'CUR_PATH\','))))
-							{
-								$start = (strpos($line,',',$tmp) + 1);
-								$stop = strpos($line,')',$start);
-								$lines[$line_num]= substr($line, 0, $start) . "'" . $_REQUEST['directory'] . "'" . substr($line, $stop);
-							
-							}
-							}
-							
-													
-						   $fp = fopen("index.php","w");
-						   if ($fp)
-						   {
-							   flock($fp,2);
-							   fputs ($fp, implode('',$lines));
-
-
-							   flock($fp,3);
-							   fclose($fp);
-							   
-							   $_SESSION['@_mod'] = '';
-							   //way to system
-							   echo "<h1>Surface XML Generator</h1>
-							   <p>Now it is running, do you want to go to </p>
-							   <p><a href='index.php?i=__edit' >backend</a> or</p>
-							   <p><a href='index.php?i=__main' >frontend</a></p>";
-							   
-							   return null;
-						
-						   }
-						
-					}
 					
 					if($_REQUEST['user'] )
 					{

@@ -711,7 +711,7 @@ public function sessionIn($session_index,$value)
 	
 	public function set_name($name)
 	{
-	$this->page_id = $value;
+	$this->page_id = $name;
 	}
 	
 	public function get_client()

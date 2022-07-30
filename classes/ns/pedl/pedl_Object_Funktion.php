@@ -90,6 +90,7 @@ protected function event_readdata($own)
 		//echo ' in event_readdata( ';
 
 	global $logger_class;
+	//echo '             data in "' . $this->full_URI() . '" will read and causes an readdataevent ' . '(PEDL_Object_Funktion:event_readdata)' . "\n";
 	$logger_class->setAssert('             data in "' . $this->full_URI() . '" will read and causes an readdataevent ' . '(PEDL_Object_Funktion:event_readdata)' ,15);
 
 	//if(!$own)echo "not activ(" . $this->id_of_object . ") " . $this->mycount++ . " <br>\n";
@@ -117,13 +118,27 @@ protected function event_readdata($own)
 							//echo 'booh';
 							if($this->getRefnext($j)->is_Node('http://www.w3.org/2006/05/pedl-lib#Object_Parameter'))
 							{
+								//echo "call " . debug_print_backtrace ( 5) . " \n";
+								/*
+								if(is_object($this->getRefnext($j)->getdata(0)))
+									echo "is object" . get_class($this->getRefnext($j)->getdata(0)) . "\n";
+								else 
+									echo "is value: :" . $this->getRefnext($j)->getdata(0) . "\n";
+									*/
 								$tmp = &$this->getRefnext($j)->getdata(0);
 								if(is_object($tmp))
+								{
 									$all_values[] = &$tmp;
+									//echo "got an object:" . get_class( $tmp ) . "\n";
+								}
 								else
+								{
 									$all_values[] = $tmp;
+									//echo "got a value:$tmp\n";
+								}
 								//$all_values[] = &$this->getRefnext($j)->getdata(0); //count($all_values)
 				//echo 'gives out "' .  $this->getRefnext($j)->getdata(0) . '" prev class:' . $myarray[1]  . " (". get_Class($myarray[1]) . ")\n";
+				//var_dump($all_values);
 							}
 						}
 						//$result = &$method->invoke($myarray[1], $all_values);

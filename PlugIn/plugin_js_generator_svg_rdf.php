@@ -35,21 +35,15 @@ private $script_link = 'xlink:href';
 
 	function __construct(/* System.Content */ &$back, /* System.CurRef */ &$treepos)
 	{
-		
 		$this->back= &$back->getXMLObj();
-		
 		$this->treepos = &$value;
-		
 		$this->content = &$back;
-		//$this->id = $value; , &$id
-		
 	}
 	
 			
 	/**
 	*@func: MOVEFIRST = goes to first record
 	*/
-		
 	public function moveFirst()
 	{$this->pos = 0;}
 	
@@ -65,7 +59,7 @@ private $script_link = 'xlink:href';
 	*/
 	public function has_Tag()
 	{
-	
+	//wants template
 	if(is_null($this->template))
 	{
 		return 'false';
@@ -96,10 +90,11 @@ private $script_link = 'xlink:href';
 	
 	/**
 	*@parameter: LIST = gets an object to receive data
+	*TODO misses exeption
+	*@throws: Exception
 	*/
 	public function set_list(&$value)
 	{
-			//echo 'booh';
 	if(is_object($value))
 	{ 
 		if($value instanceof plugin_js )
@@ -123,7 +118,7 @@ private $script_link = 'xlink:href';
 	*/
 	public function &iter()
 		{
-		//echo 'booh' . $this->test++ . '<br>';
+
 		return $this;}
 
 
