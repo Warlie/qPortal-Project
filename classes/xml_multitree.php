@@ -1052,6 +1052,7 @@ function DOC_check($String)
      function change_URI($index)
    {
            
+   	   if(is_null($index))return false;
         $search = strtolower($index);
  
         for($i=0;count($this->loaded_URI) > $i;$i++)
@@ -1537,8 +1538,7 @@ function &convert_from_XML($myString)
 function convert_to_XML( $String , $format, $void = false)
         {
                 
-		if($void)return $String;
-		
+		if(is_null($String) || $void)return $String;		
 		if($format == '') $format = $this->MIME[$this->idx]['encoding'];
                 
                 $tmp;

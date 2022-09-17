@@ -164,8 +164,8 @@ class xml_ns extends xml_omni
 	   {
 		   //echo 'start' . $type . ' ' . count($this->looking_index[$this->idx][$type]) .  ' in ' . $this->idx .  "<br>\n";
 		   $toAdd = count($this->result_nodes);
-		   
-		   if((false === strpos($type,'#')) && !is_null($type))echo "please use full URI for '" . $type . "'<br>\n";
+
+		   if(!is_null($type) && (false === strpos($type,'#')))echo "please use full URI for '" . $type . "'<br>\n";
 		   
 		   $arg = null;
 			
