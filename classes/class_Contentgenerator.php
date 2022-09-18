@@ -47,13 +47,13 @@ var $spezial = array();
 
 var $namespace_main = '';
 
-var $heap = array(); //muss �berarbeitet werden, namenskonflikte
+var $heap = array(); //muss überarbeitet werden, namenskonflikte
 
 
-	function __construct( $URL, $User, $PWST )
+	function __construct( $URL, $User, $PWST, $db_name = "", $codeset = "")
 	{
 		
-		$this->dbAccess = new Database($URL, $User, $PWST);
+		$this->dbAccess = new Database($URL, $User, $PWST, $db_name, $codeset);
 		$this->XMLlist = new xml_presave_semantic($this);
 		
 

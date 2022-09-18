@@ -86,11 +86,13 @@ var $timestamp;
 *
 */
 
-function __construct($Server = "", $User = "", $pwt = ""){
+function __construct($Server = "", $User = "", $pwt = "", $db_name = "", $codeset = ""){
         
 	if($Server <> "")$this->Server = $Server;
 	if($User <> "")$this->User = $User;
 	if($pwt <> "")$this->pwt = $pwt;
+	if($db_name <> "")$this->db_name = $db_name;
+	if($codeset <> "")$this->mycodeset = $codeset;
 
         $this->open_db = new mysqli($this->Server, $this->User, $this->pwt);
 	$this->error_no = $this->open_db->errno;
@@ -99,7 +101,7 @@ function __construct($Server = "", $User = "", $pwt = ""){
     die('Connect Error (' . $this->open_db->connect_errno . ') '
             . $this->open_db->connect_error);
     	}
-	
+
         if(!$this->open_db->select_db ($this->db_name)){
                 echo "datenbank fehlt<p>";
 		$this->error_no = mysqli_errno();
@@ -465,7 +467,7 @@ return $rst;
 
 
         //gleicht auf wunsch felder der datenbank mit den des SQL-befehls zu und sortiert sie !
-        private function collect_mysql_col($table,$filter_in=null,$array_list=null, $db_obj){
+        private function collect_mysql_col($table,$filter_in=null,$array_list=null, $db_obj=null){
 
 		// * benoetigt alle tabellen -> filter wird abgestellt
 		if($filter_in == '*')$filter_in=null;

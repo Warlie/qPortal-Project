@@ -3,17 +3,34 @@
 //ini_set('display_startup_errors', 1);
 //error_reporting(E_ALL);
 //definiert Startseite
-                                define('START_PAGE','index.php?i=');
-                                define('STD_URL','index.php?i=%s');
-                                define('CUR_PATH','');
+
+define('CONFIG','config/config.ini');
+define('CONFIG_DEFAULT','config/default.ini');
+
+
+// Parse ini with sections
+if(file_exists(CONFIG))
+	$ini_array = parse_ini_file(CONFIG, true);
+else
+	$ini_array = parse_ini_file(CONFIG_DEFAULT, true);
+
+//print_r($ini_array);
+
+                define('START_PAGE',$ini_array["runtime"]["START_PAGE"]);
+                define('STD_URL','index.php?i=%s');
+                define('CUR_PATH','');
+                define('PLUG_IN_FOLDER',$ini_array["runtime"]['PLUG_IN_FOLDER']);
+				define('FRONTEND_INDEX',$ini_array["runtime"]["FRONTEND_INDEX"]);
+                define('EDIT_INDEX',$ini_array["runtime"]["EDIT_INDEX"]);
+
+                
 				define('INSTALL',false);
 				define('REPORT',5); //Reportlevel [0,5]
 				define('MEMORY_USAGE', true);
 				define('TRACE', true);
 
-
-				error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING & ~E_USER_WARNING);
-				ini_set('display_errors','0');
+				error_reporting($ini_array["error"]["ERROR"]);
+				ini_set('display_errors','1');
 
 				//ini_set('error_log','phplog.log');
 				//ini_set('memory_limit', '255M');
@@ -91,8 +108,13 @@
 				     $logger_class->setAssert("SESSION[$key]=$value\n ", 0) ;
 				} 
 
-                                
-                                $content = new ContentGeneratorMod03("","","");
+                                $content = new ContentGeneratorMod03(
+                                	$ini_array["database"]["URL"],
+                                	$ini_array["database"]["User"],
+                                	$ini_array["database"]["PWST"],
+                                	$ini_array["database"]["db_name"],
+                                	$ini_array["database"]["codeset"]
+                                	);
 				
                                 
                 if($_REQUEST['i'] == '__system')
@@ -207,10 +229,10 @@
                                 
                                 //$content->setXMLTemplate('template/text1.htm');
                                 if(isset($_SESSION['@_mod']) && $_SESSION['@_mod']=='edit')
-				$content->setXMLstructur('template/edit.xml');
+				$content->setXMLstructur(EDIT_INDEX);
                                 else
                                 {
-				$content->setXMLstructur('template/xml.xml');
+				$content->setXMLstructur(FRONTEND_INDEX);
 				}
 				
 				$content->setboolPanel(true);
@@ -372,81 +394,5 @@
 				     $logger_class->setAssert("SESSION[$key]=$value ", 0) ;
 				} 
 				$logger_class->setAssert($content->get_System_Overview() ,0);
-                                /*
-                                //xml-object
-                                $xml_parser = new XML();
-                                //laed seite
-                                $xml_parser->load('text1.htm');
-
-                                
-
-                                
-                                $xml_parser->load('own.xml');
-                                $xml_parser->change_idx(0);
-                                
-                                
-                                print($xml_parser->save_Stream("html"));
                         
-*/                        
-                               /* $db = new Database();
-
-                                $sql_main_string = "select IP_Address, Cookiecode, Timestamp, Ref from flirt_sign_in;";
-
-                                $rst = $db->get_rst($sql_main_string);
-                                $db->close_db();
-                                $rst->first_ds();
-
-
-                                echo $rst->value('flirt_sign_in.IP_Address'); */
-/*
-                                //xml-object
-                                $xml_parser = new XML();
-
-                                $xml_parser->load('own.xml');
-
-                                 $bool = $xml_parser->seek_node('INDEX:TREE',array("NAME" => 'left'));
-                                 //echo $xml_parser->show_cur_attrib('NAME');
-                                //testet, ob Angaben gemacht werden
-                                if(!is_null($path = $_REQUEST['path'])){
-                                        //bei nein
-
-
-
-
-
-
-
-                                               $xml_parser->only_child_node(true);
-                                               //echo $xml_parser->cur_node();
-                                $bool = $xml_parser->seek_node('tree',array("NAME" => $path)); }
-
-
-                                if(!$bool) echo 'kein treffer';
-                                                                $i = 100;
-                                                                $count = 0;
-                                $end = false;
-
-                                $reset=true;
-                                //echo "\n<ul class=\"main\" >\n";
-
-                                do{
-
-                                $xml_parser->child_node($xml_parser->show_pointer()+ 1);
-
-                                echo '<A style="position:absolute; top:' . (($count * 35) + 20) . 'px; left:25px; width:250px;  " HREF="javascript:parent.framework(' . $xml_parser->show_cur_attrib('FRAME') . ',\'' . $xml_parser->show_cur_attrib('LINK') . '\')"><div style=" padding-top:3px; width:250px; height:30px; line-height:20px; font-size:18px;  background-image:url(../images/bg_but.gif); background-repeat:no-repeat;" ><div Sytle=" position:absolute; top:5px; " >' . $xml_parser->show_cur_data() . "</div></div></A>\n";
-                                $xml_parser->parent_node();
-
-                                $count++;
-                                $i--;
-                                }while($xml_parser->show_pointer()<($xml_parser->index_child() - 1) && ($i>0));
-                                $xml_parser->reset_pointer();
-                                if($xml_parser->show_cur_attrib('NAME')!='left'){
-                                 $xml_parser->parent_node();
-                                echo '<A style="position:absolute; top:' . (($count * 35) + 20) . 'px; left:25px; width:250px;  " HREF="javascript:parent.framework(1,\'' . ((($data = $xml_parser->show_cur_attrib('NAME'))=='left')?'':$data) . '\')"><div style=" padding-top:3px; width:250px; height:30px; line-height:20px; font-size:18px;  background-image:url(../images/bg_but.gif); background-repeat:no-repeat;" ><div Sytle=" position:absolute; top:5px; " >zur&uuml;ck</div></div></A>' . "\n";
-                                }//echo "\n</ul>\n";
-
-*/
-
-
-
 ?>

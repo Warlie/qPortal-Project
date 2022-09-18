@@ -59,7 +59,7 @@ function obj_beha(&$xml)
 
 	$tmp = null;
 	
-	//läd *.php
+	//lï¿½d *.php
 	if(!is_Null($src = $xml->show_cur_attrib("SRC")))
 	{
 		//echo $src;
@@ -88,16 +88,16 @@ function obj_beha(&$xml)
 		
 		
 		eval('$tmp = new ' . $name . '();');
-		//übergibt das hauptmodul
+		//ï¿½bergibt das hauptmodul
 		$tmp->set("BACK",$this);
 		//speichert das neue Object im Baum
 		$xml->set_node_obj($tmp);
 		//echo get_class($tmp) . ' ' . $xml->cur_node() . ' ' . $xml->position_stamp();
-		//übergibt die Baumposition
+		//ï¿½bergibt die Baumposition
 		$tmp->set("TREEPOS",$xml->show_xmlelement());
 		$stamp = $xml->position_stamp();
 	
-		//übergibt id, wenn vorhanden
+		//ï¿½bergibt id, wenn vorhanden
 		if(!is_Null($id = $xml->show_cur_attrib("ID")))
 		{
 			
@@ -109,7 +109,7 @@ function obj_beha(&$xml)
 		
 	}
 	
-		//wird immer ausgeführt, durchläuft alle parameter
+		//wird immer ausgefÃ¼hrt, durchlÃ¤uft alle parameter
 		for($i = 0;$i < $xml->index_child(); $i++)
 		{
 		
@@ -204,61 +204,7 @@ function obj_beha(&$xml)
 			
 		}
 		
-		/* durchlauf richtung root, vermutlich unbrauchbar
-		while((!($xml->cur_node() == "TREE" || $xml->cur_node() == "FINAL")) && $xml->parent_node() )
 
-		if($xml->cur_node() == "PARAM")
-			{
-				if($obj = &$xml->show_xmlelement())
-				{
-					$obj->set("BACK",$this);
-				}
-				break;
-			}
-			
-		if($xml->cur_node() == "OBJECT")
-			{
-				if($obj = &$xml->show_xmlelement())
-				{
-					$obj->set("BACK",$this);
-				}
-				break;
-			}
-		*/
-		
-
-		
-	
-	
-	
-	/*
-	
-				$this->XMLlist->change_URI($this->structur);
-				for($i = 0;$i < $this->XMLlist->index_child(); $i++)
-				{
-					$this->XMLlist->child_node($i);
-					$stamp3 = $this->XMLlist->position_stamp();
-					if(
-					$this->XMLlist->cur_node() == "PARAM"
-					)
-					{
-					
-					$key = $this->XMLlist->show_cur_attrib('NAME');
-					$cont = $this->XMLlist->show_cur_data();
-					
-					
-
-					}
-			//echo $this->XMLlist->cur_node(); content
-					$this->XMLlist->go_to_stamp($stamp3);
-					$this->XMLlist->parent_node();
-				}
-				
-				
-				$this->XMLlist->change_URI($this->structur);
-	
-
-	*/
 	$empty = "";
 	if($tmp)
 	{
@@ -268,7 +214,7 @@ function obj_beha(&$xml)
 	{
 		echo "objekt nicht gefunden:" . $id;
 	}
-//echo "<br>" . get_class($tmp) . '<br>-------------------------';	
+
 }
 
 }

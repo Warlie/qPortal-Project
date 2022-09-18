@@ -761,7 +761,8 @@ $tmp = $ref;
         
         if (!($fp = fopen($tmp, "r"))) {
                 $this->err = 1;
-                        $this->load_Stream('<?xml version="1.0" encoding="iso-8859-1" standalone="yes" ?><ERR />');
+                		$res = '<?xml version="1.0" encoding="iso-8859-1" standalone="yes" ?><html>Error</html>';
+                        $this->load_Stream($res);
                 return $pos_in_array;
         }
 
