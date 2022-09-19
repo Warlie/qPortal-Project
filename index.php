@@ -30,7 +30,7 @@ else
 				define('TRACE', true);
 
 				error_reporting($ini_array["error"]["ERROR"]);
-				ini_set('display_errors','1');
+				ini_set('display_errors',$ini_array["error"]["SHOW_ERRORS"]);
 
 				//ini_set('error_log','phplog.log');
 				//ini_set('memory_limit', '255M');
