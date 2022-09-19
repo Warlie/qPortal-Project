@@ -7,6 +7,7 @@
 require_once('Interface_handle.php');
 require_once('XML_handle.php');
 require_once('CSV_handle.php');
+require_once('JSON_handle.php');
 require_once('PHP_handle.php');
 require_once('SVG_Overview_handle.php');
 
@@ -31,6 +32,8 @@ class My_Handle_factory
 			return new CSV_handle();
 			case 'PHP' :
 			return new PHP_handle();
+			case 'JSON' :
+			return new JSON_handle();
 			case 'SVG_OVERVIEW' :
 			return new SVG_Overview_handle();
 			default:

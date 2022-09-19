@@ -4,7 +4,7 @@
 *   
 */
 
-class CSV_handle extends Interface_handle 
+class JSON_handle extends Interface_handle 
 {
 	//var $attribute_values = array();
 	var $base_object = null;
