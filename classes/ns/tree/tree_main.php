@@ -128,9 +128,10 @@ function event_message_in($type,&$obj)
 				{
 					if(!(false === ($special = strpos($output_doc,';'))))
 					{
+						
 						$pre = substr($output_doc,0,$special);
 						$post = substr($output_doc,$special + 1);
-						
+
 						$obj->get_requester()->set_doc_out($pre);
 						//SPECIAL
 						$idx = $this->get_parser()->cur_idx();

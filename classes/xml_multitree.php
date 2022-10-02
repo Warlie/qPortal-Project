@@ -257,12 +257,36 @@ class xml  {
         }
 
         /* gibt die Menge der einzelnen Zeilen eines DatenFelds eines Knotens aus.*/
-        function many_cur_data(){
+        function many_cur_data($ignore_empty_strings = true){
            if(!isset($this->pointer[$this->idx]))
            {
            $this->pointer[$this->idx] = &$this->mirror[$this->idx];
            }
-           return count($this->pointer[$this->idx]->data);
+           if(!is_null($this->pointer[$this->idx]->data))
+           {
+           	   if(is_array($this->pointer[$this->idx]->data))
+           	   {
+           	   	   $lines = 0;
+           	   	   if(!$ignore_empty_strings)
+           	   	   {
+           	   	   	  
+           	   	   	   for($f = 0; count($this->pointer[$this->idx]->data) > $f;$f++)
+           	   	   	   {
+           	   	   	   	   if(isset($this->pointer[$this->idx]->data[$f]))
+           	   	   	   	   	   $lines += strlen(trim($this->pointer[$this->idx]->data[$f]));
+           	   	   	   }
+           	   	   if(!$lines)
+           	   	   	   return 0; 
+           	   	   }
+           	   	   	   
+           	   	   return count($this->pointer[$this->idx]->data);
+           	   }
+           	   else
+           	   		return 0;
+           }
+           else
+           return 0;
+           
         }
         
         /* gibt die Daten eines Knotens aus. Sie sind sortiert in der Reihenfolge, wie sie auch zwischen Knoten stehen */

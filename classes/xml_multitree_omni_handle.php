@@ -55,7 +55,7 @@ class xml_omni extends xml_objex
 	public function set_special($key, $value)
 	{
 		$this->SPECIAL[$this->idx][$key]= $value;
-		
+
 	}
 	
      /* läd ein XML-Dokument */
@@ -199,13 +199,13 @@ function save_file($format = '',$send_header=false, $filename = false)
    {
 	global $logger_class;
 		
-	   	
+
 	   		$obj = &My_Handle_factory::handle_factory($this->TYPE[$this->idx]);
 	   		//echo count($this->SPECIAL);
 			$obj->set_object($this);
-			if(is_Array($this->SPECIAL[$this->idx]))
+			if(is_Array($this->SPECIAL[$this->idx - 1]))
 			{
-			foreach($this->SPECIAL[$this->idx] as $key => $value)
+			foreach($this->SPECIAL[$this->idx - 1] as $key => $value)
 			{
 			//echo $key . ' ' . $value . ' ';
 			$obj->set_attribute(strtoupper($key),strtoupper($value));

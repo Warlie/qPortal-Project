@@ -1050,7 +1050,7 @@ function delete_index($index)
 			   
 				   echo "&lt;/<font color=\"#0000ee\">$key</font>&gt;<br>\n";
 		   }
-		   array_walk(debug_backtrace(),create_function('$a,$b','print "{$a[\'function\']}()(".basename($a[\'file\']).":{$a[\'line\']}); ";'));
+		   //array_walk(debug_backtrace(),create_function('$a,$b','print "{$a[\'function\']}()(".basename($a[\'file\']).":{$a[\'line\']}); ";'));
    }
    
    function index_consistence()

@@ -23,7 +23,7 @@ class My_Handle_factory
 			
 		}
 		
-		
+
 		switch(strtoupper($type))
 		{
 			case 'XML' :

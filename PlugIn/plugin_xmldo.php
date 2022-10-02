@@ -418,9 +418,13 @@ private $testmode = false;
 		  	  	  if($res == '')$res = $key;
 
 		  	  	$tmp = $this->rst->col( $key);
-		  	  	
 				if($bool )$res = $key;
-				$bool = $bool && $bool = (strcmp($tmp, $value) == 0);
+				
+				if(!is_null($tmp) && !is_null($value))
+				$bool = $bool && $bool = (!is_null($tmp) || !is_null($value)) && (strcmp($tmp, $value) == 0);
+				else
+					$bool = false;
+				
 				
 				$tbl[$key] = $tmp;
 		  	  	  

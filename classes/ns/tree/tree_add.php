@@ -78,7 +78,6 @@ function event_initiated()
 function event_message_in($type,&$obj)
 	{
 		
-
 		
 		//loads main template
 		//$obj->get_requester()->template = $this->getdata();
@@ -105,7 +104,7 @@ function event_message_in($type,&$obj)
 											
 			if($preload)
 			{
-													
+												
 				$this->get_parser()->TYPE[$this->get_parser()->idx] = $preload;
 											
 			}
@@ -128,9 +127,7 @@ function event_message_in($type,&$obj)
 				
 	
 			}
-										
-										
-		
+
 		
 		
 	}

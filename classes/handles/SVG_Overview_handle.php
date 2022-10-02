@@ -97,7 +97,7 @@ global $logger_class;
 		if( $this->attribute_values['OUTPUT'] == 'ALL')
 		{
 		$printall = true;
-		
+
 		}
       switch ($format)
       {
@@ -628,14 +628,14 @@ $foot_res .=   "  </g>";
 
 $foot_res .=  '  <g id="menu">
 
-	<rect
+	<!--<rect
        style="opacity:0.8;fill:#0000be;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
        id="rect2454"
        width="408.57144"
        height="445.71429"
        x="0.0"
        y="380.93362" onload=" de.auster_gmbh.xmleditor.service.setControlElement(this);" 
-       onclick="de.auster_gmbh.xmleditor.service.menueSwitch();" />
+       onclick="de.auster_gmbh.xmleditor.service.menueSwitch();" /> -->
 	<switch>
         <foreignObject x="100" y="200" width="600" height="440" onclick="de.auster_gmbh.xmleditor.service.menueSwitch();" >
             <body xmlns="http://www.w3.org/1999/xhtml" id="textfield" />
@@ -701,12 +701,18 @@ private function extractCDATAPartSVG( &$dom , $dblx , $dbly )
 {
 $res = '';
 
-if( ($many = $dom->many_cur_data()) > 0)
+if( ($many = $dom->many_cur_data(false)) > 0) //$dom->many_cur_data
   {
- 
+  	
+  	
+  	  
   	for($i = 1 ;$i <= $many;$i++)
   	{
   	 
+  	$data_text = trim($dom->show_cur_data($i - 1));
+  	
+  	if(strlen($data_text) > 20) $data_text = "long";
+  		
   	 $res .=  '
   	 <!-- Baumstruktur -->
   	     <line x1 ="' . ($dblx + (sin(( (2 * $i)/ $many ) * M_PI)  * 100.0)) . '" y1 ="' . ($dbly + 20 + (cos(( (2 * $i)/ $many ) * M_PI)  * 100.0)) . '" x2 ="' . $dblx . '" y2 ="' . ($dbly + 20.0) . '" style="stroke:#330011;stroke-width:5px;" />
@@ -727,7 +733,7 @@ if( ($many = $dom->many_cur_data()) > 0)
          id="tspan2389"
          x="' . ($dblx + (sin(( (2 * $i)/ $many ) * M_PI)  * 100.0)) . '"
          y="' . ($dbly + 20 + (cos(( (2 * $i)/ $many ) * M_PI)  * 100.0)) . '"
-         style="font-size:12px"><![CDATA[' . '' . ']]></tspan></text>'; //$dom->show_cur_data($i - 1)
+         style="font-size:12px"><![CDATA[' . $data_text . ']]></tspan></text>'; //$dom->show_cur_data($i - 1)
   	 
   	}
   }

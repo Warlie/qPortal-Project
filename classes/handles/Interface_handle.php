@@ -22,6 +22,7 @@ class Interface_handle
 	function set_attribute($key,$value)
 	{
 		$this->attribute_values[$key] = $value;
+
 	}
 	
 	function &get_attribute()
