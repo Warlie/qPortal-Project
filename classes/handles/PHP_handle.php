@@ -36,7 +36,7 @@ class PHP_handle extends Interface_handle
 	{
 	
 	               
-		
+		//var_dump($source);
 		$is_obj = ($source instanceof FileHandle );
 		
 		$str_source;	

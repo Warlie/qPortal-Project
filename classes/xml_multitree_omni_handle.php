@@ -102,7 +102,7 @@ class xml_omni extends xml_objex
    
    function set_definition_context($key,$content)
    {
-	        
+
 	if($key == 'MIME')
 	$this->MIME[$this->idx] = $this->MIME_check($content);
         if($key == 'DOC')        

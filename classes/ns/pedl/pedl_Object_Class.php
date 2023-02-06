@@ -54,6 +54,7 @@ var $type = 'none';
 var $namespace = 'none';
 private $id_of_object;
 private $executive = false;
+private $is_Class;
 
 function set_executive(){$this->executive = true;}
 function is_executive(){return $this->executive;}	
@@ -96,7 +97,7 @@ function event_initiated()
 	$this->id_of_object = $this->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#ID');
 	
 		for($i = 0; $this->index_max() > $i;$i++)
-		{
+		{	//echo "\n" . get_class($this->getRefnext($i));
 			$url = null;
 			if($this->getRefnext($i)->is_Node('http://www.w3.org/2006/05/pedl-lib#hasCodeResource'))
 			{
@@ -107,7 +108,7 @@ function event_initiated()
 			}
 		}
 			
-		
+
 			if(!is_null($url))
 				{
 				require_once($url);

@@ -34,6 +34,7 @@ private $list = array();
 private $emptyText = 'kein Datensatz';
 private $config= array('attribOnNull' => true);
 private $testmode = false;
+private $cdata;
 
 	function __construct(/* System.Parser */ &$back, /* System.CurRef */ &$treepos, /* System.Content */ &$content)
 	{
@@ -608,7 +609,8 @@ private $testmode = false;
     			//var_dump($tbl);
     			//echo $tbl[$i - 1][$value['name']] . "=" . $tbl[$i][$value['name']] . "\n";
     			//if(strcmp($tbl[$i - 1][$value['name']], $tbl[$i][$value['name']]) <> 0)echo "----------------leave on " . $value['name'] . " with box [" . $res[0] . ", " . $res[1] . "]---------------\n";
-    			if(strcmp($tbl[$i - 1][$value['name']], $tbl[$i][$value['name']]) <> 0)return $res;
+    			if(!is_null($tbl[$i - 1][$value['name']]) && !is_null($tbl[$i][$value['name']]))
+    				if(strcmp($tbl[$i - 1][$value['name']], $tbl[$i][$value['name']]) <> 0)return $res;
     		}
     		
     		if(!$has_entries)return null;
@@ -1101,6 +1103,7 @@ $until = "";
 	//echo $tmpName->position_stamp() . ' ' . $tmpName->name . "\n";		
 
 //*			
+
 if(DEBUG)
 {
 

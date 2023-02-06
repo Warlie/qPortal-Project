@@ -69,6 +69,7 @@ class xml_ns extends xml_omni
 	var $namespace_frameworks = array();
 	var $prefixes = array();
 	private $prefixes_inv = array();
+	private $cur_ns;
 	var $obj_stack = array();
 	var $loadmodus = 0;
 	
@@ -480,11 +481,13 @@ function delete_index($index)
 			}
 			else
 			{
+				/*
 				if($this->use_def_strict)
 				{
 					$this->test_consistence();
 					throw new ErrorException('actual namespace for "' .$full_ns . '#' . $nodename . '" for a node is not defined for "' . $name . '" in prefix sector.', 255, 75);
 				}
+				*/
 				//echo $full_ns . " nicht gefunden $nodename<br>" . "\n";
 				$this->namespace_frameworks[$full_ns]['node'][$nodename] = My_NameSpace_factory::alt_namespace_factory();
 				$this->has_new_node = true;
@@ -553,6 +556,7 @@ function delete_index($index)
 			}
 			else
 			{
+				/*
 				if($this->use_def_strict)
 				{
 					$this->test_consistence();
@@ -562,6 +566,7 @@ function delete_index($index)
 								         echo 'Namespace known!';
 					throw new ErrorException('actual namespace for "' .$full_ns . '#' . $nodename . '" for a node is not defined for "' . $name . '"', 255, 75);
 				}
+				*/
 				$this->namespace_frameworks[$glob_namespace]['node'][$nodename] = My_NameSpace_factory::alt_namespace_factory();
 				$this->has_new_node = true;
 				$node = $this->namespace_frameworks[$glob_namespace]['node'][$nodename]->new_Instance();
@@ -621,7 +626,7 @@ function delete_index($index)
 
 					}
 					else
-					{
+					{/*
 						if($this->use_def_strict)
 							{
 								$this->test_consistence();
@@ -631,7 +636,7 @@ function delete_index($index)
 								         echo 'Namespace known!';
 									 
 								throw new ErrorException('actual namespace for "' .$full_ns . '#' . $attribname . '" for an attribute is not defined for "' . $k . '" in prefix sector.', 255, 75);
-							}
+							} */
 						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory();
 						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
 					}
@@ -1094,6 +1099,10 @@ function delete_index($index)
    {
 	   return $this->cur_pointer[$this->idx]->get_QName();
    }
+   
+   /*
+   *	TODO don't look right to return a namespace
+   */
    function get_NS($namespace = null,$id = -1)
    {
 	   if(is_null($namespace))
@@ -1109,8 +1118,10 @@ function delete_index($index)
 		   if($id < 0)$id = $this->idx;
 		   if($namespace == '')
 		   {
+		   	   
 		   	   //var_dump($this->prefixes);
 		   	   //if(!isset($this->prefixes[$id]))echo "nope!";
+		   	   if(is_null($this->prefixes[$id]))throw  new ErrorException('native namespace is missing', 1124, 75);
 		   	   $inMyPos = count($this->prefixes[$id]) - 1;
 			   return $this->prefixes[$id][$inMyPos];
 		   }

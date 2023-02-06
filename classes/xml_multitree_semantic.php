@@ -48,6 +48,7 @@ class xml_presave_semantic extends xml_xPath_sParqle
 {
 	private $switch = false;
 	private $direkt = true;
+	public $heap;
 
 
 	public function load_Stream(&$source,$casefolding=1,$special="",$ref='')

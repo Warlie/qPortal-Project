@@ -295,7 +295,6 @@ private $seeGraphs = false;
                    	    	case 'shogra': type = 2;
                    	break;
                    	        case 'shoall': type = 3;
-                   	        alert('jo');
                    	break;
 			}
   			

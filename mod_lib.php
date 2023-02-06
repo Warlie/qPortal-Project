@@ -642,19 +642,19 @@ $rst->first_ds();
 
 if($rst->rst_num() > 0)
 {
-	
+
 	if(is_file( $rst->value('tbl_surface_doc_overview.txt_doc_URL'))) 
 	{
 
 				$system->setXMLstructur($rst->value('tbl_surface_doc_overview.txt_doc_URL'));
 				
 				$system->setboolPanel(false);
-                                
-                                if(is_Null($tmp = $_REQUEST['r']))$tmp = "";
+
+                if(is_Null($tmp = $_REQUEST['r']))$tmp = "";
                                 
                                 $system->setTreeNodeName($tmp);
                                 if(!$system->generate())
-				{
+                                {
 					       
 						if (!($fp = fopen('./error/404.html', "r"))) {
                 
@@ -677,11 +677,11 @@ if($rst->rst_num() > 0)
 				}
  				
  				$xmlobj = $system->getXMLObj();
- 				
+
  				$xmlobj->set_special('modus', 'trace');
- 				
-                                print($system->getoutput(SEND_HEADER,'UTF-8')); //ISO 8859-1
-	
+
+                print($system->getoutput(SEND_HEADER,'UTF-8')); //ISO 8859-1
+
 	//$xml->load( $rst->value('tbl_surface_doc_overview.txt_doc_URL'),0);
 		//	$xml->use_ns_def_strict(false);
 		

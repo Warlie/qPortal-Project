@@ -241,8 +241,8 @@ private function create_factory_class()
 	$this->get_parser()->change_URI('@registry_surface_system');
 	
 	//echo $this->get_parser()->save_Stream('UTF-8',false);
-	
-	
+	//print_r(get_declared_classes());
+	//echo "-" . $this->getRefprev()->get_QName() . "-";
 	$carrier[0] = new ReflectionClass($this->getRefprev()->get_QName());
 	//echo $carrier[0]->getName() . " is a class!\n";
 	//echo 'call_Instance';

@@ -192,9 +192,13 @@ public function ManyInstance()
 {
 return count($this->link_to_instance);
 }
-
+/*
+checks the current node to be a destination 
+*/
 public function is_Node($name)
 {
+	//echo $name . "=" . $this->full_URI() . "\n";
+
 	if(!(false === ($tmp = strpos($name,'?'))))
 	{
 		

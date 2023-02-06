@@ -79,6 +79,7 @@ var $error_no=0;
 
 var $timestamp;
 
+
 /** database :constructor
 * @param $Server : serveroverride
 * @param $User : override
@@ -941,6 +942,7 @@ var $edit=array();
 var $tmp = null;
 var $var_cur_pos=0;
 var $pos_in_array=0;
+public $table;
 
 function find($column, $value)
 {

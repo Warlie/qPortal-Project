@@ -128,6 +128,7 @@ public function setOrderBy($columnName, $sort = 'asc')
 	{
 
 		$this->orderby[] = $columnName;
+		if(is_null($sort))$sort = 'asc';
 		if(strtolower(substr($sort,0,3)) == 'asc' || !$sort)
 		  $this->asc[] = true;
 		else

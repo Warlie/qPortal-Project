@@ -44,6 +44,8 @@ var $static = false;
 var $menu = true;
 var $param = array();
 var $spezial = array();
+public $XMLlist = null;
+private $namespace_reg = null;
 
 var $namespace_main = '';
 

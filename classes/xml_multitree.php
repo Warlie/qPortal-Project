@@ -93,6 +93,7 @@ class xml  {
    var $err = 0;
    var $MIME = array();
    var $DOC = array();
+   var $INSTR = array();
    
    //config
    var $only_child_node = false;
@@ -1500,8 +1501,16 @@ return $res;
 //function for entities
    function tag_up_entity($parser, $open_entity_names , $base, $system_id, $public_id )
    {
-// var_dump($parser, $open_entity_names, $base, $system_id, $public_id);
+ var_dump($parser, $open_entity_names, $base, $system_id, $public_id);
    }
+   
+//function for instruction entries
+   function tag_instruction_entry($parser, $target, $data)
+   {
+   	   if(!array_key_exists($this->idx, $this->INSTR))$this->INSTR[$this->idx] = array();
+   	   array_push($this->INSTR[$this->idx],array('target'=>$target, 'data'=>$data));
+
+   }   
 
    function check(){
    if(isset($this->mirror[$this->idx])){
@@ -1544,7 +1553,7 @@ function &convert_from_XML($myString)
                 {
                 case 'UTF-8' :
 
-		$res = utf8_decode($String);
+		$res = mb_convert_encoding($String,'utf-8');
                 //echo 'ausgang bei utf8:' .$res . ";\n";
                 break;
                 case 'ISO-8859-1' :

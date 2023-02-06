@@ -25,7 +25,7 @@ class My_NameSpace_factory
 	{
 		$carry = array();
 		$ns = str_replace('#','',$ns);
-		
+
 		switch($ns)
 		{
 			

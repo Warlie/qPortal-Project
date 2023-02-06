@@ -32,6 +32,7 @@ private $documents = array();
 private $semantic_uri = array();
 private $type_script = 'text/ecmascript'; //text/javascript //text/ecmascript
 private $script_link = 'xlink:href';
+private $additional_files = [];
 
 	function __construct(/* System.Content */ &$back, /* System.CurRef */ &$treepos)
 	{
@@ -139,6 +140,10 @@ private $script_link = 'xlink:href';
 	public function set_Script_link( $type )
 	{
 		$this->script_link = $type;
+	}
+	
+	public function set_additive_js_file($file){
+	$this->additional_files[] = $file;
 	}
 	
 	public function set_loading_tag($uri,$tag_name, $tag_attib, $tag_attib_value)
@@ -391,7 +396,7 @@ private $script_link = 'xlink:href';
 
  	
  	this.fireEvent('init',obj);
- 	
+ 	de.auster_gmbh.semanticelement.tools.onLoadListener.call_listener();
  	};
  	
  	this.VALUE = 0;
@@ -651,8 +656,6 @@ de.auster_gmbh.graphicelement.svg.SVGImage(document.getElementById(de.auster_gmb
 	public function build_script()
 	{
 	
-
-	
 		$pos_stamp = $this->back->position_stamp();
 		$this->back->change_URI($this->uri);
 		//$save_old_Node = $this->back->show_xmlelement();
@@ -688,6 +691,14 @@ de.auster_gmbh.graphicelement.svg.SVGImage(document.getElementById(de.auster_gmb
   <script type="text/ecmascript" xlink:href="script/overview.js" />
   <script type="text/ecmascript" xlink:href="script/modifications.js" />
   */
+  
+  foreach ($this->additional_files as $value) {
+
+$this->back->create_Ns_Node('script', null, array('type' => $this->type_script, $this->script_link => $value), $posintree );
+$this->back->parent_node();
+}
+  
+  		//echo $this->back->cur_node();
  		for($i = 0 ; count($this->rst) > $i ; $i++)
 		{
 		
@@ -701,7 +712,9 @@ de.auster_gmbh.graphicelement.svg.SVGImage(document.getElementById(de.auster_gmb
 		}
 		
 		}
-  
+
+
+
 $this->back->create_Ns_Node('script', null, array('type' => $this->type_script, $this->script_link => 'script/modifications.js'), $posintree );
 $this->back->parent_node();
 $this->back->create_Ns_Node('script', null, array('type' => $this->type_script, $this->script_link => 'script/overview.js'), $posintree );
