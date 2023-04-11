@@ -82,7 +82,7 @@ function event_message_in($type,&$obj)
 				$result = true;
 
 		if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#sector') )		
-			$result = in_array($tmp, explode(';', trim($_SESSION['http://www.auster-gmbh.de/surface#sector'], ';')));
+			$result = in_array($tmp, explode(';', trim_with_null($_SESSION['http://www.auster-gmbh.de/surface#sector'], ';')));
 
 			//var_dump($tmp, $result);
 			//$this->giveOutOverview();

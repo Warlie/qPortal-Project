@@ -95,13 +95,23 @@ class xml_ns extends xml_omni
 	
 	public function get_ListenerList()
 	{
-	
+
+		if(!is_object($this->pointer[$this->idx]))
+		{	
+			$message = "inconcistency: " .  $this->idx . " is not a valid index for a wrong set pointer of " . $this->get_URI();
+			throw new ErrorException($message, 0);
+
+		}
 		return $this->pointer[$this->idx]->listOfListeners_stamp('0000.');
+	}
+	
+	public function is_valid_node()
+	{
+		return is_object($this->pointer[$this->idx]);
 	}
 	
 	public function get_Classstamp()
 	{
-	
 		return $this->pointer[$this->idx]->Class_stamp('0000.');
 	}
 
@@ -271,6 +281,7 @@ class xml_ns extends xml_omni
 			    {
 				    //echo $this->result_nodes[$respos + $toAdd]->full_URI() . " xxx<br>\n";
 				    $this->pointer[$this->idx] = &$this->result_nodes[($respos + $toAdd )];
+				    if(!$this->is_valid_node())echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
 			    }
 			    //echo "hier " . count($this->result_nodes) . " " ;
 		   return (count($this->result_nodes) > 0);
@@ -309,9 +320,8 @@ function delete_index($index)
    function &getInstance($name,$attributes,$obj_arg = null)
    {
 	global $logger_class;
-	
 	$logger_class->setAssert(' create node of type "' . $name . '"(xml_ns:getInstance)' ,2);
-	
+
 	//echo '-' . $name . "<br>\n";
  	if($obj_arg)
 	return parent::getInstance(
@@ -331,28 +341,29 @@ function delete_index($index)
 		$nativ = false;
 	   //findet die namespaces und legt die objekte in einem array ab
 	   if(is_array($attributes))
-	   {
+	   {//echo "\n"; var_dump($name, $attributes);
 		   //starts collecting namespaces
 		   foreach( $attributes as $key => $value)
 		   {
 		  
 			if(!(false === stripos(substr($key,0,5),'xmlns')))
 			{
-				 
+if(is_null($value))echo $key;
 				$value = str_replace('#','',$value);
 				
 				$obj = My_NameSpace_factory::namespace_factory($value);
-				
+
 				if(is_object($obj) && !is_array($this->namespace_frameworks[$value]) )
 				{
 
-				/*
+					/*
 				echo $value . " " . get_Class($obj) . "\n";
 				
 				foreach($obj->get_nodes() as $key3 => $value3)
 				{
 				echo $key3 . ', ';
 				}
+				echo "\n";
 				*/
 				
 				$this->namespace_frameworks[$value]['nativ'] = $obj->get_nativ();
@@ -371,6 +382,7 @@ function delete_index($index)
 					/*
 					* defines prefixes 
 					* all namespaces should be saved in a seperate objects
+					* TODO Prefix is specific for every document. 
 					*/
 					if(!(false === ($tmp = strpos($key,':'))))
 					{
@@ -415,7 +427,9 @@ function delete_index($index)
 							$this->prefixes_inv[$value][$this->idx] = '';
 						}
 					}
-				
+					
+				//var_dump($this->prefixes , "inv", $this->prefixes_inv);
+				//echo "\n";
 			}
 		   }
 		   reset($attributes); //sets arraypointer to start
@@ -431,13 +445,13 @@ function delete_index($index)
 	   
 	if(!(false === ($tmp = strpos($name,':'))))
 	{
-
+		//var_dump("mit doppelpunkt", $name);
 		$prefix = substr($name,0,$tmp);
 		$nodename = substr($name,$tmp + 1);
 		
 		//prefixes are in pair to full namespaces
 		$full_ns = $this->prefixes[$prefix][count($this->prefixes[$prefix]) - 1];
-		
+		//echo "$prefix:$nodename ($full_ns) \n";
 		//
 		if($nativ)
 		{
@@ -468,12 +482,12 @@ function delete_index($index)
 			}
 		}
 		else
-		{	
+		{	//var_dump($full_ns, $nodename);
 			//creates a namespaceentry
 			if($this->namespace_frameworks[$full_ns]['node'][$nodename])
 			{
 			
-				//echo $full_ns . " gefunden $nodename<br>" . "\n" ;
+				//echo "   " . $full_ns . " gefunden $nodename<br>" . "\n" ;
 				$node = $this->namespace_frameworks[$full_ns]['node'][$nodename]->new_Instance();
 				
 				$this->has_new_node = false;
@@ -507,7 +521,7 @@ function delete_index($index)
 	}
 	else
 	{
-		
+				//var_dump("ohne doppelpunkt", $name);
 		if($this->prefixes[$this->idx])
 			$glob_namespace = $this->prefixes[$this->idx][count($this->prefixes[$this->idx]) - 1];
 		else
@@ -795,7 +809,7 @@ function delete_index($index)
 
    function cdata($parser, $cdata)
    {
-   //echo "<b>$cdata</b>" . "\n";
+   //echo "-$cdata" . "\n";
      //if(trim($cdata) != '') echo trim($cdata) . "\n\n";                                      
 
    
@@ -917,6 +931,7 @@ function delete_index($index)
 	{$this->cur_pointer[$this->idx]->complete();
         if(isset($this->cur_pointer[$this->idx]->prev_el))        
 	 $this->cur_pointer[$this->idx] = &$this->cur_pointer[$this->idx]->getRefprev();
+ 	//if(!$this->is_valid_node())echo "aaaah";
                                                       //$this->cur_pointer[$this->idx]->final_data();
 	}
 	//echo "&lt;/<font color=\"#0000cc\">$tag</font>&gt;<br>\n";
@@ -1022,38 +1037,42 @@ function delete_index($index)
    
    function test_consistence()
    {
-   	   echo "<h1> uebersicht </h1>";
+   	   echo "<h1> uebersicht </h1>\n";
 	   foreach($this->namespace_frameworks as $key => $value)
 		   {
-			   echo "&lt;<font color=\"#00dd00\">$key</font>&gt;<br>\n";
+			   echo "<div style=\"color:#00dd00\">ns: $key<br/>\n";
+			   
 			   	   foreach($value as $key2 => $value2)
 				   {
 					   if($key2 == 'nativ')
 						   {
-							   echo "&#x2003;&lt;<font color=\"#00dd00\">$key2</font>&gt;";
-							   echo $value2->get_QName();
-							   echo "&lt;/<font color=\"#0000ee\">$key2</font>&gt;<br>\n";
+							   echo "<span style=\"color:lightblue\">$key2 (native)</span>";
+							   echo ":<span style=\"color:darkblue\"> " . $value2->full_URI() . "</span>";
+							   echo "<br/>\n";
 						   }
 					    if($key2 == 'node')
 					   {
-						   echo "&#x2003;&lt;<font color=\"#00dd00\">$key2</font>&gt;<br>\n";
-					   
+						   echo "<span style=\"color:black\">$key2 :</span><br/>\n";
+						   echo "<table style=\"border-collapse: collapse;border: dashed red;\" ><tr><th style=\"color:red\" >Key</th><th style=\"color:green\" >name</th><th style=\"color:blue\" >class</th></tr>";
+
 					   foreach($value2 as $key3 => $value3)
 					   {
 					   
-					   
-		   				echo "&#x2003;&#x2003;&lt;<font color=\"#00dd00\">$key3</font>&gt;";
-						if(get_Class($value3)!='')
-						echo $value3->get_QName() . ' (' .  get_Class($value3) . ")";
-						echo "&lt;/<font color=\"#0000ee\">$key3</font>&gt;<br>\n";
-					      
+					    echo "<tr>";
+		   				echo "<td style=\"color:red\">$key3</td>";
+						if(!is_null($value3) &&  get_Class($value3)!='')
+						echo "<td style=\"color:green\">" . $value3->full_URI() . "</td><td style=\"color:#00dd00\">" . get_Class($value3) . "</td>";
+						else
+						echo "<td style=\"color:blue\">n/a</td><td style=\"color:#00dd00\">n/a</td>";
+					    echo "</tr>";
 					   }
-					   echo "&#x2003;&lt;/<font color=\"#0000ee\">$key2</font>&gt;<br>\n";
+					   echo "</table><br/>\n";
 					   }
 					   
 				   }
 			   
-				   echo "&lt;/<font color=\"#0000ee\">$key</font>&gt;<br>\n";
+				   echo "</div>\n";
+
 		   }
 		   //array_walk(debug_backtrace(),create_function('$a,$b','print "{$a[\'function\']}()(".basename($a[\'file\']).":{$a[\'line\']}); ";'));
    }

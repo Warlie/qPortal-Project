@@ -95,9 +95,9 @@ return count($this->link_to_instance);
 function event_initiated()
 {
 	$this->id_of_object = $this->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#ID');
-	
+	//echo "new id $this->id_of_object " . $this->position_stamp() . "\n"; 	
 		for($i = 0; $this->index_max() > $i;$i++)
-		{	//echo "\n" . get_class($this->getRefnext($i));
+		{	//echo "\n" . get_class($this->getRefnext($i)) . " " . $this->getRefnext($i)->position_stamp() . "\n";
 			$url = null;
 			if($this->getRefnext($i)->is_Node('http://www.w3.org/2006/05/pedl-lib#hasCodeResource'))
 			{
@@ -108,14 +108,10 @@ function event_initiated()
 			}
 		}
 			
-
+//echo "i am here $url \n";
 			if(!is_null($url))
 				{
 				require_once($url);
-				
-				
-				
-				
 				}
 		
 	

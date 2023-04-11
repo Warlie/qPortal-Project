@@ -34,21 +34,21 @@ class RDFS_factory
 	{
 		
 			$this->nativ = new RDF_RDF();
-			$this->node['Resource'] = new RDFS_Resource();
-			$this->node['Literal'] = new RDFS_Literal();
-			$this->node['Class'] = new RDFS_Class();
-			$this->node['Datatype'] = new RDFS_Datatype();
-			$this->node['Container'] = new RDFS_Container();
-			$this->node['ContainerMembershipProperty'] = new RDFS_ContainerMembershipProperty();
-			$this->node['subClassOf'] = new RDFS_subClassOf();
-			$this->node['subPropertyOf'] = new RDFS_subPropertyOf();
-			$this->node['domain'] = new RDFS_domain();
-			$this->node['range'] = new RDFS_range();
-			$this->node['label'] = new RDFS_label();
-			$this->node['comment'] = new RDFS_comment();
-			$this->node['member'] = new RDFS_member();
-			$this->node['seeAlso'] = new RDFS_seeAlso();
-			$this->node['isDefinedBy'] = new RDFS_isDefinedBy();
+			$this->node['Resource'] = new RDFS_Resource('Resource','http://www.w3.org/2000/01/rdf-schema');
+			$this->node['Literal'] = new RDFS_Literal('Literal','http://www.w3.org/2000/01/rdf-schema');
+			$this->node['Class'] = new RDFS_Class('Class','http://www.w3.org/2000/01/rdf-schema');
+			$this->node['Datatype'] = new RDFS_Datatype('ResourceDatatype','http://www.w3.org/2000/01/rdf-schema');
+			$this->node['Container'] = new RDFS_Container('Container','http://www.w3.org/2000/01/rdf-schema');
+			$this->node['ContainerMembershipProperty'] = new RDFS_ContainerMembershipProperty('ContainerMembershipProperty','http://www.w3.org/2000/01/rdf-schema');
+			$this->node['subClassOf'] = new RDFS_subClassOf('subClassOf','http://www.w3.org/2000/01/rdf-schema');
+			$this->node['subPropertyOf'] = new RDFS_subPropertyOf('subPropertyOf','http://www.w3.org/2000/01/rdf-schema');
+			$this->node['domain'] = new RDFS_domain('domain','http://www.w3.org/2000/01/rdf-schema');
+			$this->node['range'] = new RDFS_range('range','http://www.w3.org/2000/01/rdf-schema');
+			$this->node['label'] = new RDFS_label('label','http://www.w3.org/2000/01/rdf-schema');
+			$this->node['comment'] = new RDFS_comment('comment','http://www.w3.org/2000/01/rdf-schema');
+			$this->node['member'] = new RDFS_member('member','http://www.w3.org/2000/01/rdf-schema');
+			$this->node['seeAlso'] = new RDFS_seeAlso('seeAlso','http://www.w3.org/2000/01/rdf-schema');
+			$this->node['isDefinedBy'] = new RDFS_isDefinedBy('isDefinedBy','http://www.w3.org/2000/01/rdf-schema');
 
 			
 			/*

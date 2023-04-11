@@ -107,11 +107,17 @@ private $read_sensity = true;
 var $position=-1;
 var $mark = false;
 
+public function __construct($type = 'rootnode', $namespace = "default")
+{
+	$this->type = $type;
+	$this->namespace = $namespace;
+}
+
 
 public function listOfListeners_stamp($add = '0000.')
 {
 $res = array();
-
+//echo $this->full_URI() . "\n";
 	for($i = 0;$i < count($this->way_out);$i++)
 	{
 	$res[$i] = $add .  $this->way_out[$i]->idx . $this->way_out[$i]->position_stamp();
@@ -804,20 +810,22 @@ public function giveOutOverview()
 	
 	Childelements :<br>
 	<ul>";
-	if( count($this->next_el) == 0 ) echo '<li>empty</li>';
+	if(is_null($this->next_el) || count($this->next_el) == 0 ) 
+		echo '<li>empty</li>';
+	else
 	for($i = 0;count($this->next_el) > $i;$i++)
 	{
 		if($this->next_el[$i] instanceof Interface_node)
 		{
-		echo '<li>' . $this->next_el[$i]->full_URI() . '</li>';
+		echo '<li>' . $this->next_el[$i]->full_URI() . "</li>\n";
 		}
 		elseif($this->next_el[$i] instanceof object)
 		{
-		echo '<li>' . get_Class($this->next_el[$i]) . '</li>';
+		echo '<li>' . get_Class($this->next_el[$i]) . "</li>\n";
 		}
 		else
 		{
-		echo '<li>' . $this->next_el[$i] . '</li>';
+		echo '<li>' . $this->next_el[$i] . "</li>\n";
 		}
 		
 	}
@@ -825,50 +833,58 @@ public function giveOutOverview()
 echo '</ul> Parentelement : ';
 if(is_object($this->prev_el)) echo $this->prev_el->full_URI();
 else echo 'no parent available';
-echo '<br>';
+echo "<br>\n";
 
-echo ' Attributes : (' . count($this->attrib) . ')<br><ul>';
-if(count($this->attrib) > 0)	 
+echo " Attributes : ";
+
+if(!is_null($this->attrib) && count($this->attrib) > 0)
+{
+	echo '(' . count($this->attrib) . ")<br/><ul>\n";
 	foreach($this->attrib as $key => $value)
 	{
-	echo '<li><i>' . $key  . '</i><b></b></li>';
-	}
+	echo '<li><i>' . $key  . "</i></li>\n";
+}
+}
 	else
 	{
-	echo '<li><i>empty</i><b></b></li>';
+	echo "<li><i>empty</i></li>\n";
 	}
-echo '</ul>';
+
+echo "</ul>\n";
 
 echo ' Attributes (ns) : (' . count($this->attrib_ns) . ')<br><ul>';
 if(count($this->attrib_ns) > 0)	 	 
 	foreach($this->attrib_ns as $key => $value)
 	{
-	echo '<li><i>' . $key  . '</i>-<b>' . $value->full_URI() . '</b></li>';
+	echo '<li><i>' . $key  . '</i>-<b>' . $value->full_URI() . "</b></li>\n";
 	}
 	else
 	{
 	echo '<li><i>empty</i><b></b></li>';
 	}
-echo '</ul>';
+echo "</ul>\n";
 	 
-echo ' Data : (' . count($this->data) . ')<br><ul>';	 
-if(count($this->data) > 0)	
+echo ' Data : ';	 
+if(!is_null($this->data) && count($this->data) > 0)
+{
+	echo '(' . count($this->data) . ')<br><ul>';
 	foreach($this->data as $key => $value)
 	{
-	echo '<li>(<i>' . $key  . '</i>) <b>' . $value . '</b></li>';
+	echo '<li>(<i>' . $key  . '</i>) <b>' . $value . "</b></li>\n";
 	}
+}
 	else
 	{
-	echo '<li><i>empty</i><b></b></li>';
+	echo "<li><i>empty</i><b></b></li>\n";
 	}
 echo '</ul>';
-if($this->cdata)echo 'CDATA aktive!<br>';
+if($this->cdata)echo "CDATA aktive!<br>\n";
 
-echo 'index is ' . $this->index . '<br>';
-echo "Type : $this->type <br>";
-echo "Namespace : $this->namespace <br>";
-echo "Parser : " . get_Class($this->parser). "<br>";
-echo "Kind of node : $this->kind_of_node <br>";
+echo 'index is ' . $this->index . "<br>\n";
+echo "Type : $this->type <br>\n";
+echo "Namespace : $this->namespace <br>\n";
+echo "Parser : " . get_Class($this->parser). "<br>\n";
+echo "Kind of node : $this->kind_of_node <br>\n";
 echo "Input/Output Ref. (" . count($this->way_in) . ")/(" . count($this->way_out) . ")<br> \n";
 if(  $this->is_Class() )
 { echo "<b> Is a class and owns "; 

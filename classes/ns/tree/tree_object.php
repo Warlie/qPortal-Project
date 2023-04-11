@@ -339,7 +339,9 @@ function event_message_in($type,&$obj)
 			
 				//echo "nicht gefunden";
 				$load_url = $this->get_attribute('src');
+				//var_dump($load_url);
 				if(!is_null($load_url))$parser->load($load_url,0,'PHP');
+				
 				
 				//echo $idx_num . ' --';
 			}

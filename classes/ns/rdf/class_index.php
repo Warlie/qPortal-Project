@@ -33,23 +33,23 @@ class RDF_factory
 	function __construct()
 	{
 		
-			$this->nativ = new RDF_RDF();
-			$this->node['RDF'] = new RDF_RDF();
-			$this->node['Alt'] = new RDF_Alt();
-			$this->node['first'] = new RDF_first();
-			$this->node['object'] = new RDF_object();
-			$this->node['Property'] = new RDF_Property();
-			$this->node['Statement'] = new RDF_Statement();
-			$this->node['type'] = new RDF_type();
-			$this->node['Bag'] = new RDF_Bag();
-			$this->node['rest'] = new RDF_rest();
-			$this->node['subject'] = new RDF_subject();
-			$this->node['value'] = new RDF_value();
+			$this->nativ = new RDF_RDF('rdf','http://www.w3.org/1999/02/22-rdf-syntax-ns');
+			$this->node['RDF'] = new RDF_RDF('RDF','http://www.w3.org/1999/02/22-rdf-syntax-ns');
+			$this->node['Alt'] = new RDF_Alt('Alt','http://www.w3.org/1999/02/22-rdf-syntax-ns');
+			$this->node['first'] = new RDF_first('first','http://www.w3.org/1999/02/22-rdf-syntax-ns');
+			$this->node['object'] = new RDF_object('object','http://www.w3.org/1999/02/22-rdf-syntax-ns');
+			$this->node['Property'] = new RDF_Property('Property','http://www.w3.org/1999/02/22-rdf-syntax-ns');
+			$this->node['Statement'] = new RDF_Statement('Statement','http://www.w3.org/1999/02/22-rdf-syntax-ns');
+			$this->node['type'] = new RDF_type('type','http://www.w3.org/1999/02/22-rdf-syntax-ns');
+			$this->node['Bag'] = new RDF_Bag('Bag','http://www.w3.org/1999/02/22-rdf-syntax-ns');
+			$this->node['rest'] = new RDF_rest('rest','http://www.w3.org/1999/02/22-rdf-syntax-ns');
+			$this->node['subject'] = new RDF_subject('subject','http://www.w3.org/1999/02/22-rdf-syntax-ns');
+			$this->node['value'] = new RDF_value('value','http://www.w3.org/1999/02/22-rdf-syntax-ns');
 			//$this->node['domain'] = new RDF_value();
-			$this->node['Description'] = new RDF_description();
-			$this->node['about'] = new RDF_about();
-			$this->node['ID'] = new RDF_ID();
-			$this->node['resource'] = new RDF_resource();
+			$this->node['Description'] = new RDF_description('Description','http://www.w3.org/1999/02/22-rdf-syntax-ns');
+			$this->node['about'] = new RDF_about('about','http://www.w3.org/1999/02/22-rdf-syntax-ns');
+			$this->node['ID'] = new RDF_ID('id','http://www.w3.org/1999/02/22-rdf-syntax-ns');
+			$this->node['resource'] = new RDF_resource('resource','http://www.w3.org/1999/02/22-rdf-syntax-ns');
 			/*
 				if($carry)
 				   if (is_array($carry)) 

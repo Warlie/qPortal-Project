@@ -19,6 +19,8 @@ require_once('tree_remote.php');
 require_once('tree_workspace.php');
 require_once('tree_SPARQL.php');
 require_once('tree_xpath.php');
+require_once('tree_document.php');
+require_once('tree_header.php');
 /*
 require_once('rdf_Alt.php');
 require_once('rdf_first.php');
@@ -62,6 +64,8 @@ class TREE_factory
 			$this->node['workspace'] = new TREE_workspace();
 			$this->node['sparql'] = new TREE_SPARQL();
 			$this->node['xpath'] = new TREE_xpath();
+			$this->node['document'] = new TREE_document('document','http://www.trscript.de/tree');
+			$this->node['header'] = new TREE_header('header','http://www.trscript.de/tree');
 			
 			/*
 			$this->node['template'] = new TREE_template();

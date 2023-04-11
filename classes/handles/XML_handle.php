@@ -12,7 +12,7 @@ class XML_handle extends Interface_handle
 	
 	function parse_document(&$source)
 	{
-	
+	//$this->base_object->test_consistence();
 		$is_obj = ($source instanceof FileHandle);
 		//$is_obj = is_subclass_of($source, 'FileHandle');
 		

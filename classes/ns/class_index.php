@@ -13,6 +13,7 @@ require_once('owl/class_index.php');
 require_once('ate/class_index.php');
 require_once('svg/class_index.php');
 require_once('xlink/class_index.php');
+require_once('xs/class_index.php');
 
 class My_NameSpace_factory 
 {
@@ -25,7 +26,7 @@ class My_NameSpace_factory
 	{
 		$carry = array();
 		$ns = str_replace('#','',$ns);
-
+		
 		switch($ns)
 		{
 			
@@ -57,9 +58,12 @@ class My_NameSpace_factory
 			case 'http://www.w3.org/1999/xlink' :
 			return new XLINK_factory ();
 			
+			case 'http://www.w3.org/2001/XMLSchema' :
+			return new XS_factory ();
+			
 			default :
 			
-			
+
 			
 			
 			return new My_NameSpace_factory();

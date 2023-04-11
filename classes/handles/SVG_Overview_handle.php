@@ -94,8 +94,9 @@ global $logger_class;
 		*/
 		
 		$printall = false;
-		if( $this->attribute_values['OUTPUT'] == 'ALL')
+		if( $this->attribute_values['OUTPUT'] == 'ALL' || true)
 		{
+
 		$printall = true;
 
 		}
@@ -427,9 +428,11 @@ $head2_res = '    </rdf:RDF>
 
 if($printall)
 {
+	//$this->base_object->ALL_URI();
 $start = 0;
-$stop = $this->base_object->doc_many();
-//echo $this->base_object->doc_many();
+$stop = $this->base_object->doc_many() + 1;
+//var_dump($start, $stop);
+//	$this->base_object->ALL_URI();
 }
 else
 {
@@ -440,6 +443,7 @@ $stop = $this->base_object->cur_idx() + 1;
 
 for($ic = $start;($ic < $stop) ; $ic++)
 {
+	//echo $ic . "\n";
 $end = false;
 	$this->base_object->change_idx($ic);
 
@@ -499,9 +503,13 @@ $modus['cur'] = $new;
    	if(-1 == $this->base_object->show_pointer()){ /* starts block 3 */
 
 		$modus['nodetype'] = 1; 
-
+//try{
 		$this->concatProcessState1($res, $modus, $dblx, $dbly);
 
+//} catch (Exception $e) {
+    //echo 'Caught exception: ',  $e->getMessage(), "\n";
+//    break;
+//}
 		$this->idx_on_table++;
 		$this->dbltable[$this->idx_on_table][0] = $dblx;
 		$this->dbltable[$this->idx_on_table][1] = ($dbly + 20.0);
@@ -670,7 +678,7 @@ return $head_res . $head2_res . $res . $foot_res;
 *
 */
 private function concatProcessState1(&$res, &$modus,&$dblx,&$dbly)
-{
+{ 
                 $res .= $this->extractNODEPartSVG( $this->base_object , $dblx , $dbly , 
                  $this->extractATTRIBPartSVG($this->base_object , $dblx , $dbly) ,
                  $this->extractCDATAPartSVG($this->base_object , $dblx , $dbly),
@@ -709,7 +717,11 @@ if( ($many = $dom->many_cur_data(false)) > 0) //$dom->many_cur_data
   	for($i = 1 ;$i <= $many;$i++)
   	{
   	 
-  	$data_text = trim($dom->show_cur_data($i - 1));
+  		if(is_object($dom->show_cur_data($i - 1)))
+  			$data_text = get_class($dom->show_cur_data($i - 1));
+  		else
+  			$data_text = (!is_null($dom->show_cur_data($i - 1))? trim($dom->show_cur_data($i - 1)):'');
+  			
   	
   	if(strlen($data_text) > 20) $data_text = "long";
   		
@@ -821,18 +833,27 @@ $res = '';
 	return $res;
 }
 	
-	
+private function replaceUmlaute($text) {
+    $search = array('Ä', 'Ö', 'Ü', 'ä', 'ö', 'ü', 'ß');
+    $replace = array('AE', 'OE', 'UE', 'ae', 'oe', 'ue', 'ss');
+    $text = str_replace($search, $replace, $text);
+    return $text;
+}
+
 	
 private function extractNODEPartSVG( &$dom , $dblx , $dbly, $attrib, $cdata, &$mode )
 {
 
 $pos = $dom->position_stamp();
 $color = 'ff0000';
+if(!is_object($dom->show_xmlelement()))$color = 'ffffff';
+else
+{
 if(get_class($dom->show_xmlelement()) == 'PEDL_Object_Constructor')$color = 'aa22aa';
 if(get_class($dom->show_xmlelement()) == 'PEDL_Object_Class')$color = '000000';
 if(get_class($dom->show_xmlelement()) == 'PEDL_Object_Funktion')$color = 'ff2222';
 if(get_class($dom->show_xmlelement()) == 'PEDL_Object_Parameter')$color = 'aaaa00';
-
+}
 $this->idxtable_nodePos[$pos]['x'] = $dblx;
 $this->idxtable_nodePos[$pos]['y'] = $dbly;
 /*
@@ -877,15 +898,17 @@ $modus['mathml'] = false;
 		}
 
 //---------------------------------------------------------
-$res = $cdata;
+$res = $this->replaceUmlaute($cdata);
 $res .= $attrib;
 
     $res .=  '    <line x1 ="' . $this->dbltable[ $this->idx_on_table][0] . '" y1 ="' . $this->dbltable[ $this->idx_on_table][1] . '" x2 ="' . $dblx . '" y2 ="' . ($dbly + 20.0) . '" style="stroke:#330011;stroke-width:2px;" />';
     
 
-    
-    $res .=  '    <circle cx ="' . $dblx . '" cy ="' . ($dbly + 20.0) . '" r ="20" style="fill:#' . $color . ';" onclick="de.auster_gmbh.xmleditor.service.onDoEvent(this,\'node\');" id="' . $dom->position_stamp() . '" name="' . get_class($dom->show_xmlelement()) . ':' . $dom->cur_node() . '" content="test" />';
-
+    if($dom->is_valid_node())
+    {
+    	    $res .=  '    <circle cx ="' . $dblx . '" cy ="' . ($dbly + 20.0) . '" r ="20" style="fill:#' . $color . ';" onclick="de.auster_gmbh.xmleditor.service.onDoEvent(this,\'node\');" id="' . $dom->position_stamp() . '" name="' . get_class($dom->show_xmlelement()) . ':' . $dom->cur_node() . '" content="test" />';
+	
+	
     $res .=  '<dataAboutNode id="' . $dom->position_stamp() . ":csv\" >TypeofLink;Linkname\nTypeofLink;Linkname</dataAboutNode>";
 
     $res .=  '    <text
@@ -898,9 +921,11 @@ $res .= $attrib;
          id="tspan2389"
          x="' . ($dblx + 10) . '"
          y="' . $dbly . '"
-         style="font-size:12px">' .  $dom->cur_node() . '</tspan><tspan style="font-size:8px">(' . get_class($dom->show_xmlelement()) . ')</tspan></text>';
-         
-         return $res;
+         style="font-size:12px">' .  $this->replaceUmlaute($dom->cur_node()) . '</tspan><tspan style="font-size:8px">(' . get_class($dom->show_xmlelement()) . ')</tspan></text>';
+    }
+    else
+    $res .=  '    <circle cx ="' . $dblx . '" cy ="' . ($dbly + 20.0) . '" r ="20" style="fill:#' . $color . ';" onclick="de.auster_gmbh.xmleditor.service.onDoEvent(this,\'node\');" id="XX" name="invalid node" content="test" />';
+    return $res;
 }
 	
 	

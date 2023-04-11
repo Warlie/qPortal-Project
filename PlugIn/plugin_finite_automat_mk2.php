@@ -7,7 +7,7 @@
 * @-------------------------------------------
 * @title:DBO
 * @autor:Stefan Wegerhoff
-* @description: Databaseobject, needs only a columndefinition to receive data from other object
+* @description: Finite State Machine
 *
 */
 require_once("plugin_interface.php");
@@ -39,6 +39,11 @@ var $rst = null;
 		
 		
 	}
+	
+	/*
+	*	@param name
+	*/
+	
 	
 	public function setNodes($names)
 	{

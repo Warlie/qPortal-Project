@@ -243,7 +243,13 @@ private function create_factory_class()
 	//echo $this->get_parser()->save_Stream('UTF-8',false);
 	//print_r(get_declared_classes());
 	//echo "-" . $this->getRefprev()->get_QName() . "-";
+	//try{
 	$carrier[0] = new ReflectionClass($this->getRefprev()->get_QName());
+	//}
+	//catch (Exception $e) {
+    //echo 'Caught exception: ',  $e->getMessage(), "\n";
+    //return;
+    //}
 	//echo $carrier[0]->getName() . " is a class!\n";
 	//echo 'call_Instance';
 	//echo count($all_values) . "-";

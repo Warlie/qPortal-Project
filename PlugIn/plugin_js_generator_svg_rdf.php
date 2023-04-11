@@ -27,6 +27,7 @@ private $full_uri = array();
 private $graphic_uri = array();
 private $content;
 private $node_container_id;
+private $tag_id;
 private $main_tag_id = '';
 private $documents = array();
 private $semantic_uri = array();

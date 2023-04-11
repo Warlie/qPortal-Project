@@ -37,6 +37,25 @@ function complete()
 
 	}
 
+function event_initiated()
+{
+	$new_namespace = $this->get_ns_attribute("http://www.w3.org/1999/02/22-rdf-syntax-ns#about");
+
+	//$obj = My_NameSpace_factory::namespace_factory('http://www.w3.org/2000/01/rdf-schema');
+	
+	if(is_object($obj) )
+	{
+
+
+					var_dump($new_namespace);
+				//$this->get_parser()->namespace_frameworks[$new_namespace]['nativ'] = $obj->get_nativ();
+				//$this->get_parser()->namespace_frameworks[$new_namespace]['node'] = array();
+				//$this->get_parser()->namespace_frameworks[$new_namespace]['attrib'] = array();
+	}
+
+
+}
+	
 }
 
 ?>

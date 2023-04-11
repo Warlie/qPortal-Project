@@ -1526,5 +1526,43 @@ function create_from_existing_Ontology()
 function create_system()
 {}
 
+function trim_with_null($element)
+{
+	if(is_null($element))
+		return "";
+	else
+		return trim($element);
+}
+
+/**
+used from 
+https://stackoverflow.com/questions/29176716/php-extract-string-between-delimiters-allow-duplicates
+TODO modify for more finds in array with missing torkens
+*/
+function getInnerSubstring($string,$start = null, $end = null){
+	
+	$addStart = 0;
+	$addEnd = 0;
+	if(is_null($start)){$start = substr($string, 0, 1); $addStart -= 1;}
+	if(is_null($end)){$end = substr($string, strlen($string) - 1, 1);$addEnd += 1;}
+//	var_dump($start , $addStart, $end, $addEnd, $string);
+//	echo "---------------------\n";
+    $s = array();
+        do
+         {
+             $startpos = strpos($string, $start) + strlen($start) + $addStart;
+             $endpos = strpos($string, $end, $startpos) + $addEnd;
+             $s[] = substr($string, $startpos, $endpos - $startpos);
+                //remove entire occurance from string:
+                $string =   str_replace(substr($string, strpos($string, $start), strpos($string, $end) +strlen($end)), '', $string);
+//var_dump($startpos, $endpos, $s, $string);
+//echo "#####################################\n";
+        }
+    while (strpos($string, $start)!== false && strpos($string, $end)!== false);
+
+
+    return $s;
+
+    }
 
 ?>

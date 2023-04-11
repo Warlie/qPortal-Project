@@ -14,7 +14,8 @@ class ContentGeneratorMod01 extends ContentGenerator
 
 var $pic_num = 1;
 var $next_field = 0;
-	//creates a menu
+
+//creates a menu
 	function createCotrolPanel($name, $link, $xml)
 	{
 		
@@ -68,15 +69,7 @@ var $next_field = 0;
 		//$xml->set_node_name("IMG");
 		//$xml->set_node_attrib("src","img/tab.png" );
 		//$xml->set_node_attrib("style","border-style:none;");
-		/*$myfont;
-		foreach (glob("*.TTF") as $filename) {
 
-			$myfont = $filename;
-
-		}
-		
-		If(strlen($link) < 3 ) echo "no *.ttf found";
-		*/
 		//echo "boooh " . CUR_PATH . 'ARIAL.TTF' . " :)";
 		//**************hier ist das Problem****************************
 		//$font = imagettfbbox(16,20,CUR_PATH . 'ARIAL.TTF',$link); //strlen($link)
@@ -153,7 +146,7 @@ ORDER BY tag_collection.order;";
 		}
 		
 	}
-	
+	/*
 	function function_call(&$rst,&$xml,&$field ,$stamp)
 	{
 		
@@ -166,5 +159,6 @@ ORDER BY tag_collection.order;";
 	
 	//for Objects embeded in db
 	function function_beha(&$rst,&$xml,&$field ,$stamp){}
-}
+*/
+	}
 ?>
