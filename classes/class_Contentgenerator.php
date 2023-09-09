@@ -57,7 +57,6 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		
 		$this->dbAccess = new Database($URL, $User, $PWST, $db_name, $codeset);
 		$this->XMLlist = new xml_presave_semantic($this);
-		
 
 	}
 	
@@ -1611,8 +1610,9 @@ ORDER  BY tag_collection.order */
 //echo  '<b>' . $this->heap['object']['reciepe']->lock . '</b><br>';
 
 	if($this->doc_out_template)$this->out_template = $this->doc_out_template;
-		if($this->out_template)
-		if(!$this->XMLlist->change_URI($this->out_template))echo "Das Dokument: '" . $this->out_template . "' nicht gefunden!";
+	//echo $this->out_template . " " . $this->XMLlist->ALL_URI();//
+	if($this->out_template)
+		if(!$this->XMLlist->change_URI($this->out_template))echo "Das Dokument: '" . $this->out_template . "' nicht gefunden!(getoutput)";
 		
 		if($type == "")$out = 'UTF-8';
 		else $out = $type;

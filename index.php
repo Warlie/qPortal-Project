@@ -38,7 +38,7 @@ else
 				//ini_set('display_er8ors','On');
 				//ini_set('memory_limit', '8M');
 
-                                include('classes/class_Contentgenerator_mod03.php');
+                                include('classes/class_Contentgenerator.php');
                                 include('classes/init.php');
                                 include('mod_lib.php');
                                 
@@ -108,7 +108,7 @@ else
 				     $logger_class->setAssert("SESSION[$key]=$value\n ", 0) ;
 				} 
 
-                                $content = new ContentGeneratorMod03(
+                                $content = new ContentGenerator(
                                 	$ini_array["database"]["URL"],
                                 	$ini_array["database"]["User"],
                                 	$ini_array["database"]["PWST"],
