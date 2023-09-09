@@ -320,7 +320,7 @@ class xml  {
 
 //        if(!is_null($this->cur_pos_array[$this->idx]))
 //                $string = implode($this->cur_pos_array[$this->idx],'.');
-	
+	if(is_null($this->pointer[$this->idx]))echo $this->idx; 
 	$string = $this->pointer[$this->idx]->position_stamp();
    return '0000.' . $this->idx . $string;}
    
@@ -1075,16 +1075,28 @@ function DOC_check($String)
         }
    }
    
-     function change_URI($index)
+     function change_URI($index, $case = false)
    {
-           
+       
+
    	   if(is_null($index))return false;
-        $search = strtolower($index);
+
+       $search = $index;
  
         for($i=0;count($this->loaded_URI) > $i;$i++)
         {
                 
-                
+        	if(!$case)
+        	{
+   	   //echo strtolower($this->loaded_URI[$i]) . "==" . strtolower($search) . "\n";        		
+                if(strtolower($this->loaded_URI[$i]) == strtolower($search))
+                {
+
+                        $this->idx = $i;
+                        return true;
+                }
+        	}
+            else
                 if($this->loaded_URI[$i] == $search)
                 {
 

@@ -155,11 +155,13 @@ function event_message_in($type,&$obj)
 		{
 	//------------------Allready existing name---------------------------
 			//gives out first existing instance to id
-			
+
 			$object = $parser->getControlUnit( "surface_tree_engine")->getObjectByID($instance_id);
 			
 			//echo "\n<br>my logic is undeniable!<br>\n";
-
+			
+			if(is_null($object->way_out))echo "check $instance_id (tree_object.php:163)";
+			
 			for($j = 0;$j<count($object->way_out);$j++)
 			{
 			if($object->way_out[$j]->name <> 'remote')
@@ -339,7 +341,9 @@ function event_message_in($type,&$obj)
 			
 				//echo "nicht gefunden";
 				$load_url = $this->get_attribute('src');
+				//var_dump($load_url);
 				if(!is_null($load_url))$parser->load($load_url,0,'PHP');
+				
 				
 				//echo $idx_num . ' --';
 			}

@@ -136,7 +136,7 @@ function event_message_in($type,&$obj)
 		if(is_file($tmp))
 		{
 			$this->get_parser()->load($tmp,0);
-			//$this->get_parser()->ALL_URI();
+		//$this->get_parser()->ALL_URI();
 			$this->get_parser()->seek_node('http://www.trscript.de/tree#final');
 			$this->get_parser()->show_xmlelement()->event_message_in($type,$obj);
 			return true;
