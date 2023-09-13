@@ -325,11 +325,13 @@ class xml  {
 
 //        if(!is_null($this->cur_pos_array[$this->idx]))
 //                $string = implode($this->cur_pos_array[$this->idx],'.');
+/*
 <<<<<<< HEAD
 	if(is_null($this->pointer[$this->idx]))echo $this->idx; 
 =======
 	if(!is_object($this->pointer[$this->idx]))return '0000.' . $this->idx . '.0';
 >>>>>>> a612fd4651a533137033b16aa12e793158a61ee7
+*/
 	$string = $this->pointer[$this->idx]->position_stamp();
    return '0000.' . $this->idx . $string;}
    
