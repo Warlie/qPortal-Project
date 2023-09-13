@@ -273,8 +273,13 @@ class xml  {
            	   	   	  
            	   	   	   for($f = 0; count($this->pointer[$this->idx]->data) > $f;$f++)
            	   	   	   {
-           	   	   	   	   if(isset($this->pointer[$this->idx]->data[$f]))
-           	   	   	   	   	   $lines += strlen(trim($this->pointer[$this->idx]->data[$f]));
+           	   	   	   	   if(array_key_exists($f, $this->pointer[$this->idx]->data))
+           	   	   	   	   {
+           	   	   	   	   	   if(is_object($this->pointer[$this->idx]->data[$f]))
+           	   	   	   	   	   	   $lines += strlen(get_class($this->pointer[$this->idx]->data[$f]));
+           	   	   	   	   	   else
+           	   	   	   	   	   		$lines += strlen(trim($this->pointer[$this->idx]->data[$f]));
+           	   	   	   	   }
            	   	   	   }
            	   	   if(!$lines)
            	   	   	   return 0; 
@@ -320,7 +325,11 @@ class xml  {
 
 //        if(!is_null($this->cur_pos_array[$this->idx]))
 //                $string = implode($this->cur_pos_array[$this->idx],'.');
+<<<<<<< HEAD
 	if(is_null($this->pointer[$this->idx]))echo $this->idx; 
+=======
+	if(!is_object($this->pointer[$this->idx]))return '0000.' . $this->idx . '.0';
+>>>>>>> a612fd4651a533137033b16aa12e793158a61ee7
 	$string = $this->pointer[$this->idx]->position_stamp();
    return '0000.' . $this->idx . $string;}
    
@@ -731,6 +740,14 @@ echo 'booh';
    }
    
    /* läd aus Datei */
+   /**
+   load new reasource
+   @param ref : path in directory
+   @param case_folder : parses case sensitive
+   @param spezial : specific type of resource
+   
+   
+   */
    function load($ref,$case_folder = 1,$spezial = 'XML')
    {
    global $logger_class;
@@ -742,18 +759,28 @@ if(false === stripos($ref,'.php'))
 {
         //echo $ref;
         //RDF:about func
+        $tmp2 = $ref;
         $tmp = $ref;
-        $tmp = str_replace('&amp;','&',$tmp);
-        /* TODO check the reason for the strtolower */
-        if(!(($token = strpos($ref,'#'))===False))
+
+
+        /*
+        	TODO commented out and should be removed in later review
+        	
+        	info 
+        	$tmp2 seems to be a modified version of filename as an index in array for loaded URI 
+        	
+        	$tmp = str_replace('&amp;','&',$tmp);
+        if(!(($token = strpos($ref,'#'))===false))
         {
+        	echo "show me $ref \n";
         $tmp2 = strtolower(substr($ref,0, - strlen($ref) + $token ));
         }
         else
         {
+        	echo "show me $ref \n";
         $tmp2 = strtolower($ref);
         }
-
+*/
         
         
         for($i=0;$i<count($this->loaded_URI);$i++)
@@ -783,7 +810,7 @@ $tmp = $ref;
 	//echo $this->idx;
 	
 }//End   
-        
+        // TODO throwing exception would be more useful
         if (!($fp = fopen($tmp, "r"))) {
                 $this->err = 1;
                 		$res = '<?xml version="1.0" encoding="iso-8859-1" standalone="yes" ?><html>Error</html>';
@@ -808,6 +835,8 @@ $tmp = $ref;
         //echo $pos_in_array . '+++++++++';
         //$this->change_idx($pos_in_array);
         //echo $pos_in_array . ' -+--: ';// . $this->URI($pos_in_array);
+           if(!isset($this->pointer[$this->idx])){$this->pointer[$this->idx] = &$this->mirror[$this->idx];}
+        	
         return $this->idx;
 
    }
@@ -1020,34 +1049,7 @@ function DOC_check($String)
                 $endtoken = strpos($String,">",$endtoken + 1);              
                 }
                 
-                /*
-                
-               $endfrange = strpos($String,">",0); 
-               $help = strpos($String,"[",$token);
-               $token2 = $token;
-               
-               if(!($help === false))
-               if(!($endofrange === false))
-               
-               while($help < $endofrange && !($help === false))
-               {
-               $help + 1;
-               
-               	$token2 = strpos($String,"]",$help);
-               	
-               	if($token2 === false)die('missing closed bracket to ' . $token);
-               	$endofrange = strpos($String,">",0); 
-               	$help = strpos($String,"[",$token2);
-               }
-               
-               $token2 = strpos($String,">",$token2);
-                //
-                
-                $doc = substr($String,$token ,$token2 - $token + 2);
-               	
-                $doc = str_replace("\"","'",$doc);
-//echo $doc . '<br>';
-*/
+
 		$doc = substr($String,$token ,$endtoken - $token + 1);
 		//echo "doc: $doc \n";
                 return $doc;
@@ -1131,14 +1133,14 @@ function DOC_check($String)
 
    function ALL_URI()
    {
-        echo '<ol>';
+        echo "<ol>\n";
         for($i=0;count($this->loaded_URI) > $i;$i++)
         {
 
-                echo '<li>' . $this->loaded_URI[$i] . '</li>';
+                echo '<li>' . $i . ':' . $this->loaded_URI[$i] . "</li>\n";
 
         }
-        echo '</ol>';
+        echo "</ol>\n";
 
    }
 
@@ -1146,7 +1148,8 @@ function DOC_check($String)
 
    function doc_many()
    {
-          return count($this->loaded_URI);
+   	  	return $this->max_idx;
+          //return count($this->loaded_URI);
    }
 
 

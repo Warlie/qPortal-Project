@@ -60,7 +60,6 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 
 	}
 	
-
 	function errno()
 	{
 		
@@ -104,8 +103,10 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 
 		$result = true;
 
-		if($tmp = $this->XMLlist->show_ns_attrib('http://www.trscript.de/tree#sector') )		
-			$result = in_array($tmp, explode(';', trim($_SESSION['http://www.auster-gmbh.de/surface#sector'], ';')));
+		if($tmp = $this->XMLlist->show_ns_attrib('http://www.trscript.de/tree#sector') )	
+			$result = in_array($tmp, explode(';',
+				(is_null($str = $_SESSION['http://www.auster-gmbh.de/surface#sector']) ? "" : trim($str, ';'))
+				));
 
 			//var_dump($tmp, $_SESSION['http://www.auster-gmbh.de/surface#sector'],  $result);
 				
@@ -508,10 +509,10 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		list($usec, $sec) = explode(" ", microtime());
 		return ((double)$usec + (double)$sec);
 	}
-	
-	function collect_templates(&$xml_obj)
+	/* darf weg*/
+	function collecdt_templates(&$xml_obj)
 	{
-	
+
 		$tmp = $xml_obj->list_child_node();
 		for($i=0;$i<count($tmp);$i++)
 		{
@@ -627,7 +628,7 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 										else
 										$doc_type = $xml_obj->show_cur_attrib('DOCTYPE');
 										
-										
+										var_dump($xml_obj->show_cur_attrib('OUTPUT'));
 										if($xml_obj->show_cur_attrib('OUTPUT'))$this->out_template = $xml_obj->show_cur_data();
 										
 										
@@ -1220,43 +1221,7 @@ $this->timestamp2 = $this->microtime_float();
 					
 				}
 				
-				/*
-					//if a node exist
-				if($this->XMLlist->index_child() > $i)
-				{
-					$this->XMLlist->child_node($i);
-					$stamp3 = $this->XMLlist->position_stamp();
-					
-					//*
-					if(
-					$this->XMLlist->cur_node() == "OBJECT" //objekte f�r die textknoten
-					)
-					{
-					//$real_pos++;
-							//$this->insertContent(); //!
-							//$this->writes_object_content($this->XMLlist);
-												
-							echo $this->XMLlist->show_cur_attrib('NAME') . ' - ';
-							echo $this->XMLlist->show_cur_obj() . "<br>";
-							
-							//object ermittelt
-							if(
-							!is_Null($obj = $this->XMLlist->show_cur_obj())
-							)
-							//{
-						
-								echo get_class($obj) . "<p>";
-								if(is_subclass_of($obj,'plugin'))
-								{
-								$data_array[$real_pos] .= $obj->out();
-								//echo $obj->out() . $obj->decription();
 
-								}
-							
-
-					//$pos_of_object++;		
-					}
-					*/
 					
 					if(
 					$this->XMLlist->cur_node() == "PARAM" //parameter f�r attribute

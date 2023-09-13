@@ -10,6 +10,7 @@ require_once('CSV_handle.php');
 require_once('JSON_handle.php');
 require_once('PHP_handle.php');
 require_once('SVG_Overview_handle.php');
+require_once('XML_handle_registry_output.php');
 
 class My_Handle_factory 
 {
@@ -36,6 +37,8 @@ class My_Handle_factory
 			return new JSON_handle();
 			case 'SVG_OVERVIEW' :
 			return new SVG_Overview_handle();
+			case 'REGISTRY' :
+			return new XML_handle_registry();
 			default:
 			throw new ErrorException('There is no "' .  strtoupper($type) . '";');
 		}

@@ -93,7 +93,7 @@ function event_message_in($type,&$obj)
 
 	//activates a child tree:Object object to receive its data later
 	$message = 'http://www.trscript.de/tree#object';
-	
+
 	$booh = null;
 	$Event = new EventObject('',$this,$booh);
 	$Event->set_node($obj->get_node());
@@ -131,7 +131,7 @@ function event_message_in($type,&$obj)
 
 protected function event_alterdata($own)
 	{
-	
+
 	global $logger_class;
 	$logger_class->setAssert('               calls a functioncall over remote "' . $this->get_attribute('name') . '"(tree_remote:event_alterdata)' ,15);
 		

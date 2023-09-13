@@ -61,7 +61,7 @@ function &new_Instance()
 				$obj = $this->get_Instance();
 				
 				$obj->link_to_class = &$this;
-				
+
 				return $obj;
 }
 

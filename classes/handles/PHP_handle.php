@@ -99,6 +99,7 @@ class PHP_handle extends Interface_handle
 			 
 			
 			$xmlPos = $this->base_object->position_stamp();
+			//echo " $xmlPos $document_stamp \n";
 			$this->base_object->go_to_stamp($document_stamp);
 			//echo $this->base_object->position_stamp() . '!! ' . $this->base_object->cur_node() . ' ';
 			$obj_class = new Obj_Class_Collection($result,$this->base_object); //finds pre defined values
@@ -421,6 +422,7 @@ class Obj_Class_Collection
 	*/
 	public function __construct( array $structure, xml_ns &$xml_model) 
 	{
+
 		$class_ref;
 		
 			foreach( $structure as $value)
@@ -491,6 +493,7 @@ class Obj_Class
 		$this->name = trim($name[1]);
 		
 		if($name[2] == "extends")$this->subClassOf = $name[3];
+
 	}
 	
 	public function add_function($array_tag ,  xml_ns &$xml_model)
@@ -505,7 +508,7 @@ class Obj_Class
 	
 	public function create_rdf_entry( xml_ns &$xml_model)
 	{
-		
+
 		$attrib = array('rdf:ID' => $this->name , 'pedl:name' => $this->name);
 		$xml_model->tag_open($this, "PhpClass", $attrib);
 		
@@ -523,7 +526,6 @@ class Obj_Class
 		//$xml_model->set_node_attrib('rdf:resource',trim($this->subClassOf));
 		//$xml_model->parent_node();
 		}
-		
 			$attrib = array('pedl:src' => $this->php_path);
 			$xml_model->tag_open($this, "pedl:hasCodeResource", $attrib);
 			$xml_model->tag_close($this, "pedl:hasCodeResource");

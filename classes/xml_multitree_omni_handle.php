@@ -51,6 +51,7 @@ class xml_omni extends xml_objex
 	var $TYPE = array();
 	public $SPECIAL = array();
 	var $PARAMETER = array();
+	public $NAMESPACES = array();
 	
 	public function set_special($key, $value)
 	{
@@ -71,9 +72,9 @@ class xml_omni extends xml_objex
                 $this->special = $special;
                 $this->MIME[$this->idx] = $this->MIME_check($source);
                 $this->DOC[$this->idx] = $this->DOC_check($source);
-		$this->TYPE[$this->idx] = strtok($special, ";");
+		$this->TYPE[$this->idx] = strtok($special, ";"); //strtok is a tokenizer. TODO Check using
 		
-		//var_dump($this->MIME, $this->DOC, $this->TYPE);
+		//var_dump($this->MIME, $this->DOC, $this->TYPE, $this->NAMESPACES);
 		//echo "\n--------------------------------------------------\n";
 		}
                        
@@ -133,10 +134,57 @@ class xml_omni extends xml_objex
 				
 				for($i = 1 ; $i < count($special_array);$i++)
 				{
+					$pos = 0;
+					$pair = null;
+					if(!(false === ($pos = strpos( strtoupper($special_array[$i]) ,'NAMESPACES' ))))
+					{
+						if(!isset($this->NAMESPACES[$this->idx])) $this->NAMESPACES[$this->idx] = array();
+						$structure = explode(',',
+						getInnerSubstring($special_array[$i],'(',')')[0]
+						);
+										
+						for($i = 0 ; $i < count($structure);$i++)
+						{
+
+						$content = getInnerSubstring($structure[$i],'\'','\'')[0];
+							$key =  str_replace(':', '', getInnerSubstring($structure[$i],null,'\'')[0]);
+
+
+							$pair = explode(':',$key);
+							if(strlen($key ) == 0)
+							{
+								$this->NAMESPACES[$this->idx]['@main'] = $content;
+										/*					
+								if(!isset($this->prefixes[$this->idx]))$this->prefixes[$this->idx] = array();
+								$this->prefixes[$this->idx][] = $content;
+							
+								$this->prefixes_inv[$content][$this->idx] = ''; */
+							}
+							else
+							{
+							$this->NAMESPACES[$this->idx][$key] = $content;
+							/*				
+							if(!isset($this->prefixes[$key]))$this->prefixes[$key] = array();
+							$this->prefixes[$key][] = $content;
+						*/
+						//$this->prefixes_inv[$value][$this->idx] = $postfix;
+							}
+
+
+							
+						}
+					//	var_dump($this->NAMESPACES);
+					}
+					else
+					{
+
+					//NAMESPACES
+					
 					$pair = explode(':',$special_array[$i]);
 					$this->SPECIAL[$this->idx][strtoupper($pair[0])] = strtoupper($pair[1]);
 					//echo strtoupper($pair[0]) . ' ' . strtoupper($pair[1]);
 					$obj->set_attribute(strtoupper($pair[0]),strtoupper($pair[1]));
+					}
 				}
 				
 			}
@@ -144,6 +192,7 @@ class xml_omni extends xml_objex
 			
 			$obj->parse_document($source);
 			$this->PARAMETER[$this->idx] = $obj->get_attribute();
+			
 			
 
    }

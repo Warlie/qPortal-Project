@@ -99,7 +99,7 @@ function event_message_in($type,&$obj)
 											
 		$this->get_parser()->load($this->getdata(),0,$doc_type);
 		if($this->get_parser()->error_num() <> 0)
-		echo $this->get_parser()->error_num() . ':' . error_desc();									
+		echo $this->get_parser()->error_num() . ':' . $this->get_parser()->error_desc();									
 										
 											
 			if($preload)

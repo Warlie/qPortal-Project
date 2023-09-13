@@ -32,18 +32,15 @@ class JSON_handle extends Interface_handle
 	
 	function parse_document(&$source)
 	{
-	               
+	    /* filehandle vs string */           
 		if( is_Object($source))
-		
 		$is_obj = is_subclass_of($source, 'FileHandle');
-		
 		else
-		
 		$is_obj = false;
 		
-		//if($is_obj)echo "ist ein object vom type FileHandle";
+		/* gives information to MIME note */
 		
-		$this->base_object->MIME[$this->base_object->idx]['name'] = 'xml';
+		$this->base_object->MIME[$this->base_object->idx]['name'] = 'json';
 		$this->base_object->MIME[$this->base_object->idx]['version'] = '1.0';
 		$this->base_object->MIME[$this->base_object->idx]['encoding'] = 'ISO-8859-1';
 		//var_dump($this->base_object->special);
@@ -55,13 +52,30 @@ class JSON_handle extends Interface_handle
 		$this->end_of_line = $pos_in[1];
 		}
 		
-		$end_of_line =  $this->base_object->TYPE[$this->base_object->idx] . ' ';
-
-			$this->base_object->tag_open($this, 'CSV',array('xmlns'=>'http://www.csv.de/csv') );
-			$this->base_object->cdata($this, '');
+		/* TYPE contains special */
+		$end_of_line =  $this->base_object->TYPE[$this->base_object->idx] . ' ';		
 
 			if(!$is_obj)
 			{
+
+				$json_array = json_decode($source);
+				
+				$native_attribute = array();
+
+				foreach ($this->base_object->NAMESPACES[$this->base_object->idx] as $key => $value)
+					if('@main' == $key) 
+						$native_attribute['xmlns'] = $value;
+					else
+						$native_attribute['xmlns:' . $key ] = $value;
+
+		//var_dump($this->base_object->TYPE[$this->base_object->idx]);
+		//var_dump($setOfArrays);
+				$this->base_object->tag_open($this, 'json',$native_attribute );
+				$this->parse_body($json_array);				
+				$this->base_object->tag_close($this, 'json');
+				
+
+				/*
 				$allRows = explode($this->end_of_line,$source); //Delimiter falsch
 				
 				$delimiter = $this->parse_Head($allRows[0]);
@@ -69,40 +83,19 @@ class JSON_handle extends Interface_handle
 				{
 					
 					$this->parse_body($allRows[$i],$delimiter,$i);
-				}
+				} 
+				echo "biib";
+				*/
 			}
 			else
 			{
+				echo "buub";
 				
 				//erstes setzen
 				if(!$this->base_object->PARAMETER[$this->base_object->idx]['LOADED_RECORDS'])$this->base_object->PARAMETER['LOADED_RECORDS'] = 0;
 				if($this->base_object->PARAMETER[$this->base_object->idx]['MODUS'])$modus = $this->base_object->PARAMETER[$this->base_object->idx]['MODUS'];
-				if($this->base_object->PARAMETER[$this->base_object->idx]['LOADED_RECORDS'] == 0 )
-				{
-				if(!$source->toPos(0))echo 'Error on reseting pointer in "CSV_handle" in line 61!';
-				$i = 1;
-				$limit = 150;
-				$delimiter = $this->parse_Head($source->get_line());
-				
-				}
-				else
-				{
-					
-					$this->heads = $this->base_object->PARAMETER[$this->base_object->idx]['HEADS'];
-						//foreach ($this->heads as $key => $value) {
-						//		echo $key . ' ' . $value . "\n";
 
-                                                //    }
-					
-					$delimiter = $this->base_object->PARAMETER[$this->base_object->idx]['DELIMITER'];
-					$i = $this->base_object->PARAMETER[$this->base_object->idx]['LOADED_RECORDS'];
-					
-					$limit =  $i + 150;
-					//if(!$source->eof())echo "offen" . $i . ":" . $limit . ' ' ;
-					
-					//echo $source->get_line();
-					
-				}
+
 				
 				
 				while(!$source->eof() && $i < $limit)
@@ -139,30 +132,7 @@ class JSON_handle extends Interface_handle
 			
 			//alle spaltennamen
 		//	$this->heads = explode(";",$allRows[0]); 
-		/*
-			for($i = 1;$i<count($allRows);$i++)
-			{
-				if(trim($allRows[$i])<>'')
-				{
-				$this->base_object->tag_open($this, 'ROW',array('NUM'=>$i) );
-				$cur_row = explode(";",$allRows[$i]);
-				
-							for($j = 0;$j<count($cur_row);$j++)
-							{
-								
-								//$this->base_object->tag_open($this, 'FIELD',array('NAME'=>$this->heads[$j]) );
-								$this->base_object->tag_open($this, trim($this->heads[$j]),array() );
-								$this->base_object->cdata($this, $cur_row[$j] );
-								//echo $cur_row[$j];
-								$this->base_object->tag_close($this, $this->heads[$j]);
-							}
-							
-				$this->base_object->tag_close($this, 'ROW');
-				}
-			}
-			
-			//$this->base_object->tag_close($this, 'CSV');
-			*/
+
 	}
 	
 	function parse_Head($line)
@@ -177,38 +147,49 @@ class JSON_handle extends Interface_handle
 		return $delimiter;
 	}
 	
-	function parse_body($line,$delimiter,$i)
-	{//echo $line . ' ' . $this->base_object->idx . "\n";
-				if(trim($line)<>'')
-				{
-				$this->base_object->tag_open($this, 'ROW',array('NUM'=>$i) );
-				$cur_row = explode($delimiter,$line);
-				
-							for($j = 0;$j<count($cur_row);$j++)
-							{
-								//echo $this->attribute_values['STORE'];
-								if($this->attribute_values['STORE'] == 'GENERIC')
-								{
-								
-								//$this->base_object->tag_open($this, 'FIELD',array('NAME'=>$this->heads[$j]) );
-								$this->base_object->tag_open2($this, trim($this->heads[$j]),array() );
-								$this->base_object->cdata2($this, $cur_row[$j] );
-								//echo $cur_row[$j];
-								$this->base_object->tag_close2($this, $this->heads[$j]);
-								}
-								else
-								{
-									//echo $this->heads[$j] . ' ' . $cur_row[$j] . "\n";
-								$this->base_object->tag_open($this, trim($this->heads[$j]),array() );
-								$this->base_object->cdata($this, $cur_row[$j] );
-								//echo $cur_row[$j];
-								$this->base_object->tag_close($this, $this->heads[$j]);
-								}
-							}
-							
-				$this->base_object->tag_close($this, 'ROW');
-				}
+	private function replaceUmlaute($text) {
+    $search = array('Ä', 'Ö', 'Ü', 'ä', 'ö', 'ü', 'ß');
+    $replace = array('AE', 'OE', 'UE', 'ae', 'oe', 'ue', 'ss');
+    $text = str_replace($search, $replace, $text);
+    return $text;
+}
+	
+	function parse_body($setOfArrays)
+	{
 
+		//var_dump($setOfArrays);
+		if(is_array($setOfArrays))
+			foreach ($setOfArrays as $key => $value)
+			{
+
+				var_dump("array", $key , $value);
+			}
+		elseif(is_object($setOfArrays))
+			foreach ($setOfArrays as $key => $value)
+			{
+				if(is_array($value))
+					foreach ($value as $key2 => $value2)
+					{
+						
+						$this->base_object->tag_open($this, $key, array() );
+						$this->parse_body($value2);				
+						$this->base_object->tag_close($this, $key);
+
+					}
+				else
+					{
+
+						$this->base_object->tag_open($this, $key, array() );
+						$this->base_object->cdata($this,  $this->replaceUmlaute($value));		
+						$this->base_object->tag_close($this, $key);						
+					}
+				
+			}
+		else
+			{
+				var_dump("element", $setOfArrays);
+			}
+		
 	}
 	
 	function convert_to_XML( $String , $format)

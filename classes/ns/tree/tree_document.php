@@ -38,20 +38,17 @@
 * &cloning(&$prev_obj) : add node with all branches to the prev node 
 */
 
-class TREE_workspace extends Interface_node
+class TREE_document extends Interface_node
 {
 var $name = 'empty';
 var $type = 'none';
 var $namespace = 'none';
 	
-function __construct()
-{
 
-}
 
 function &get_Instance()
 {
-return new TREE_workspace();
+return new TREE_document();
 }
 
 
@@ -77,10 +74,7 @@ function event_initiated()
 							$src = $this->get_ns_attribute('http://www.trscript.de/tree#src');
 							$id = $this->get_ns_attribute('http://www.trscript.de/tree#id');
 	
-	require_once($src);
-	
-	
-	$instance = new $name($this->get_parser(),$id);
+//var_dump($src, $id);
 
 	
 }
