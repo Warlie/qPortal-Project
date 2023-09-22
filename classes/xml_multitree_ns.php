@@ -90,35 +90,9 @@ class xml_ns extends xml_omni
 		$this->exception_collection = new ExceptionCollection($this);
 	}
 	
-	public function &get_ExceptionManager(){return $this->exception_collection;}
-	public function catchException(Exception &$exc){$this->exception_collection->catchException(exc);}
-	
-	public function get_ListenerList()
-	{
-
-		if(!is_object($this->pointer[$this->idx]))
-		{	
-			$message = "inconcistency: " .  $this->idx . " is not a valid index for a wrong set pointer of " . $this->get_URI();
-			throw new ErrorException($message, 0);
-
-		}
-		return $this->pointer[$this->idx]->listOfListeners_stamp('0000.');
-	}
-	
 	public function is_valid_node()
 	{
 		return is_object($this->pointer[$this->idx]);
-	}
-	
-	public function get_Classstamp()
-	{
-		return $this->pointer[$this->idx]->Class_stamp('0000.');
-	}
-
-	public function get_Class_stamp()
-	{
-	//echo $this->pointer[$this->idx]->get_classes();
-		return ''; //$this->pointer[$this->idx]->listOfClass_stamp('0000.');
 	}
 	
 	public function &get_context_generator()
@@ -135,11 +109,6 @@ class xml_ns extends xml_omni
 	public function use_ns_def_strict( $strict)
 	{
 		$this->use_def_strict = $strict;
-	}
-	
-	public function get_wayOut_Many()
-	{
-		
 	}
 	
 	public function show_index()
@@ -188,15 +157,6 @@ class xml_ns extends xml_omni
 		   
 			   if(($arg = &$this->looking_index[$this->idx][$type]) == null)
 			   {
-			  /* echo $type;
-			   
-		   	foreach($this->looking_index[$this->idx] as $key => $value )
-		   	{
-		   		for($k = 0;$k < count($this->looking_index[$this->idx][$key]);$k++)
-		   		{ 
-		   			echo "(" . $this->idx . "):" .  $this->looking_index[$this->idx][$key][$k]->full_URI() . "\n" ;
-		   		}
-		   	}*/
 		   		
 				   return false;
 			   }
@@ -225,7 +185,7 @@ class xml_ns extends xml_omni
 
 		    $check = true;
 		    $value = null; 
-//echo $type . ' ' . count($arg) . '' . "<br>\n";
+
 		   //-----------------------
 		   //echo $type . ' ' . count($arg) . "<br>\n";
 		   for($i = 0; count($arg) > $i ; $i++)
@@ -240,29 +200,17 @@ class xml_ns extends xml_omni
 				   	   	   echo "invalid string element found for: $type (" . $this->idx . ":$i) }\n";
 				   	   	   return false;
 				   	   }
-					   //echo '" == "' . $arg[$i]->get_ns_attribute($att_key) . '" in "' . $arg[$i]->full_URI() . "\";<br>\n"; 
-					   //$arg[$i]->get_ns_attribute($att_key);
 
 						   $check = ($value = $arg[$i]->get_ns_attribute($att_key));
-						   
-						   //if($check) echo "attribname taken <br>\n";
+
 						   
 						   if(!is_Null($att_value))
 						   {
 							   $check = $check && ($value == $att_value);
 						   }
-					   //if($check) echo "attribvalue taken complete <br>\n";   
+ 
 				   }
-				  /* echo "element to check " . $arg[$i]->full_URI() . " <br>\n"; 
-				   
-				   echo $type . ' ' . count($arg) . '';
-				   if($check)
-					   echo 'true';
-				   else
-				   	echo 'false';
-					   
-					   echo  '' . "<br>\n";
-				*/	   
+  
 				
 					   
 				if($check)
@@ -341,7 +289,7 @@ function delete_index($index)
 		$nativ = false;
 	   //findet die namespaces und legt die objekte in einem array ab
 	   if(is_array($attributes))
-	   {//echo "\n"; var_dump($name, $attributes);
+	   {
 		   //starts collecting namespaces
 		   foreach( $attributes as $key => $value)
 		   {
@@ -356,15 +304,7 @@ if(is_null($value))echo $key;
 				if(is_object($obj) && !is_array($this->namespace_frameworks[$value]) )
 				{
 
-					/*
-				echo $value . " " . get_Class($obj) . "\n";
-				
-				foreach($obj->get_nodes() as $key3 => $value3)
-				{
-				echo $key3 . ', ';
-				}
-				echo "\n";
-				*/
+
 				
 				$this->namespace_frameworks[$value]['nativ'] = $obj->get_nativ();
 				$this->namespace_frameworks[$value]['node'] = $obj->get_nodes();
@@ -428,8 +368,6 @@ if(is_null($value))echo $key;
 						}
 					}
 					
-				//var_dump($this->prefixes , "inv", $this->prefixes_inv);
-				//echo "\n";
 			}
 		   }
 		   reset($attributes); //sets arraypointer to start
@@ -437,22 +375,18 @@ if(is_null($value))echo $key;
 	   
 	   $node;
 	   $null = null;
-	   
-	   
-	   /*
-	   *
-	   */
+
 	   
 	if(!(false === ($tmp = strpos($name,':'))))
 	{
-		//var_dump("mit doppelpunkt", $name);
+
 		$prefix = substr($name,0,$tmp);
 		$nodename = substr($name,$tmp + 1);
 		
 		//prefixes are in pair to full namespaces
 		$full_ns = $this->prefixes[$prefix][count($this->prefixes[$prefix]) - 1];
-		//echo "$prefix:$nodename ($full_ns) \n";
-		//
+
+
 		if($nativ)
 		{
 			//wenn der Knoten nicht existiert, gibt es einen Standardknoten
@@ -468,21 +402,13 @@ if(is_null($value))echo $key;
 			}
 			else
 			{
-				/*
-				$this->namespace_frameworks[$full_ns]['nativ'] = My_NameSpace_factory::alt_namespace_factory();
-				$node = My_NameSpace_factory::alt_namespace_factory();
-				
-				$node->name = $name;
-				$node->type = $nodename;
-				$node->namespace = $full_ns;
-				$node->set_parser($this);
-				*/
+
 				if($this->use_def_strict)throw new ErrorException('actual namespace for "' .$full_ns . '#" for natives is not defined.', 433, 75);
 				echo "fehler xml_multitree_ns.php Zeile 272, $full_ns nicht gefunden!";
 			}
 		}
 		else
-		{	//var_dump($full_ns, $nodename);
+		{	
 			//creates a namespaceentry
 			if($this->namespace_frameworks[$full_ns]['node'][$nodename])
 			{
@@ -495,13 +421,7 @@ if(is_null($value))echo $key;
 			}
 			else
 			{
-				/*
-				if($this->use_def_strict)
-				{
-					$this->test_consistence();
-					throw new ErrorException('actual namespace for "' .$full_ns . '#' . $nodename . '" for a node is not defined for "' . $name . '" in prefix sector.', 255, 75);
-				}
-				*/
+
 				//echo $full_ns . " nicht gefunden $nodename<br>" . "\n";
 				$this->namespace_frameworks[$full_ns]['node'][$nodename] = My_NameSpace_factory::alt_namespace_factory();
 				$this->has_new_node = true;
@@ -550,14 +470,7 @@ if(is_null($value))echo $key;
 			{	
 				if($this->use_def_strict)throw new ErrorException('actual namespace for "' .$full_ns . '#" for natives is not defined.', 255, 75);
 				echo "fehler xml_multitree_ns.php Zeile 328";
-				/*
-				//echo "nicht gefunden in main $nodename<br>" . "\n" ;
-				$node = My_NameSpace_factory::alt_namespace_factory();
-				$node->name = $name;
-				$node->type = $nodename;
-				$node->namespace = $this->prefixes['_main'][count($this->prefixes['_main']) - 1];
-				$node->set_parser($this);
-				*/
+
 			}
 		}
 		else
@@ -570,17 +483,7 @@ if(is_null($value))echo $key;
 			}
 			else
 			{
-				/*
-				if($this->use_def_strict)
-				{
-					$this->test_consistence();
-								if(!$this->namespace_frameworks[$full_ns])
-									echo 'Namespace not known!';
-								else
-								         echo 'Namespace known!';
-					throw new ErrorException('actual namespace for "' .$full_ns . '#' . $nodename . '" for a node is not defined for "' . $name . '"', 255, 75);
-				}
-				*/
+
 				$this->namespace_frameworks[$glob_namespace]['node'][$nodename] = My_NameSpace_factory::alt_namespace_factory();
 				$this->has_new_node = true;
 				$node = $this->namespace_frameworks[$glob_namespace]['node'][$nodename]->new_Instance();
@@ -592,15 +495,9 @@ if(is_null($value))echo $key;
 			$node->set_idx($this->idx);
 			$node->namespace = $glob_namespace;
 			$node->set_parser($this);
-			//echo "nicht nativ: " . $node->full_URI() . " (2)\n";
 		}
 		
-	}
-	//echo $prefix . " : " . $nodename . "<br>\n";
-	
-
-		
-	
+	}	
 	   
 	   $asd = 0;
 	   
@@ -640,17 +537,7 @@ if(is_null($value))echo $key;
 
 					}
 					else
-					{/*
-						if($this->use_def_strict)
-							{
-								$this->test_consistence();
-								if(!$this->namespace_frameworks[$full_ns])
-									echo 'Namespace not known!';
-								else
-								         echo 'Namespace known!';
-									 
-								throw new ErrorException('actual namespace for "' .$full_ns . '#' . $attribname . '" for an attribute is not defined for "' . $k . '" in prefix sector.', 255, 75);
-							} */
+					{
 						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory();
 						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
 					}
@@ -721,12 +608,7 @@ if(is_null($value))echo $key;
 	 if(!$node->get_parser())echo $node->full_URI() . " has no parser \n";
 	
 	return $node;
-	/*
-	return parent::getInstance(
-   	$name,
-	$attributes,
-	$node);
-	*/
+
 	}
    }
 
@@ -809,15 +691,13 @@ if(is_null($value))echo $key;
 
    function cdata($parser, $cdata)
    {
-   //echo "-$cdata" . "\n";
-     //if(trim($cdata) != '') echo trim($cdata) . "\n\n";                                      
+                                  
 
    
                                         if(isset($this->cur_pointer[$this->idx])){
                                                 $tmp = $this->cur_pointer[$this->idx]->index_max();
                                                 
-                                        //$this->cur_pointer[$this->idx]->setdata($this->convert_from_XML($cdata),$this->cur_pointer[$this->idx]->index_max());
-                                        //echo $this->convert_from_XML($cdata);
+
 					
 					$res;
 						if(is_Null($cdata))
@@ -846,12 +726,12 @@ if(is_null($value))echo $key;
 					if($clazz2->getRefnext($i)->full_URI() == 'http://www.w3.org/2000/01/rdf-schema#range' )
 					{
 					
-					//$clazz2->getRefnext($i)->giveOutOverview();
+
 					$resource = &$clazz2->getRefnext($i)->get_ns_attribute_obj('http://www.w3.org/1999/02/22-rdf-syntax-ns#resource');
 					
 						if( is_object( $resource  ))
 						{
-						//$resource->giveOutOverview();
+
 						$resource_tag = &$resource->get_out_ref();
 						if(is_array($resource_tag))
 							{
@@ -860,10 +740,9 @@ if(is_null($value))echo $key;
 							{
 							if($resource_tag[0]->ManyInstance() == 1)
 							{
-								//$text_type_name = $resource_tag[0]->linkToInstance(0)->full_URI();
+
 								
 								$data = &$resource_tag[0]->linkToInstance(0);
-								//echo $data->name  . ' ' . $data->type . ' ' . $data->namespace . ' ---------';
 								
 								$newobj = &$resource_tag[0]->linkToInstance(0)->new_Instance();
 								$newobj->name = $data->name;
@@ -909,15 +788,12 @@ if(is_null($value))echo $key;
    
    function cdata_ref($parser, &$cdata)
    {
-   //echo "<b>$cdata</b>" . "\n";
-                                           
+                                       
 
    
                                         if(isset($this->cur_pointer[$this->idx])){
                                                 $tmp = $this->cur_pointer[$this->idx]->index_max();
-                                                
-                                        //$this->cur_pointer[$this->idx]->setdata($this->convert_from_XML($cdata),$this->cur_pointer[$this->idx]->index_max());
-                                        //echo $this->convert_from_XML($cdata);
+
 					
 					$this->cur_pointer[$this->idx]->setdata($cdata,$tmp);
                                         }
@@ -964,7 +840,6 @@ if(is_null($value))echo $key;
 	   if(is_String($full_ns))
 	   {
 		   $ns = explode('#',$full_ns);
-		   //echo $ns[0] . "-" . $ns[1] . "\n";
 		   if($ns[0] && $ns[1])
 		   {
 			   
@@ -1012,8 +887,7 @@ if(is_null($value))echo $key;
 			  unset($this->ticketlist[$namespace]);
 		  }
 	   }
-	   //$this->set_new_index($obj); //echo $obj->full_URI() . "\n";
-//$this->test_consistence();
+
 	   
    }
 
@@ -1074,7 +948,6 @@ if(is_null($value))echo $key;
 				   echo "</div>\n";
 
 		   }
-		   //array_walk(debug_backtrace(),create_function('$a,$b','print "{$a[\'function\']}()(".basename($a[\'file\']).":{$a[\'line\']}); ";'));
    }
    
    function index_consistence()
@@ -1138,8 +1011,7 @@ if(is_null($value))echo $key;
 		   if($namespace == '')
 		   {
 		   	   
-		   	   //var_dump($this->prefixes);
-		   	   //if(!isset($this->prefixes[$id]))echo "nope!";
+
 		   	   if(is_null($this->prefixes[$id]))throw  new ErrorException('native namespace is missing', 1124, 75);
 		   	   $inMyPos = count($this->prefixes[$id]) - 1;
 			   return $this->prefixes[$id][$inMyPos];
@@ -1202,37 +1074,6 @@ if(is_null($value))echo $key;
 		   return $this->position_stamp();
 	   }
 	   
-	   //$this->obj_stack[count($this->obj_stack)] = &$obj;
-
-	
-	   
-	   /**
-	                        $var = $this->getInstance($prefix_Q_name,array());
-				echo $var->name;
-			if(!isset($this->mirror[$this->idx]->next_el)){
-
-                                
-                                $this->mirror[$this->idx]->setRefnext($var);
-                                $this->cur_pointer[$this->idx] = &$this->mirror[$this->idx]->getRefnext($this->mirror[$this->idx]->index_max() - 1 ,true);
-                                //schliesst cdata ab
-                                //$this->cur_pointer[$this->idx]->final_data();
-                                $this->cur_pointer[$this->idx]->setRefprev($this->mirror[$this->idx]);
-                                
-                                
-                                
-                                
-                        }else{
-
- 				$var->setRefprev($this->cur_pointer[$this->idx]);
-                                $this->cur_pointer[$this->idx]->setRefnext($var);
-                                //schliesst cdata ab
-                                $this->cur_pointer[$this->idx]->final_data();
-                                $this->cur_pointer[$this->idx] = &$this->cur_pointer[$this->idx]->getRefnext($this->cur_pointer[$this->idx]->index_max() - 1 ,true);
-                
-                        }
-			$this->cur_pointer[$this->idx]->complete();
-*/
-
    }
    
    
@@ -1285,11 +1126,6 @@ public function goto_Attribute($uri)
   	  else
   	  echo "append ohne clone ist noch nicht Implementiert";
   }
-   
-	public function get_Statistics()
-	{
-		
-	}
 
     public function __toString()
      {

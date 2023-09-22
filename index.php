@@ -393,6 +393,6 @@ else
 				foreach( $_SESSION as $key => $value ) {
 				     $logger_class->setAssert("SESSION[$key]=$value ", 0) ;
 				} 
-				$logger_class->setAssert($content->get_System_Overview() ,0);
+
                         
 ?>

@@ -44,7 +44,7 @@
 require_once('xml_multitree_SPARQL.php');
 
 
-class xml_xPath_sParqle extends xml_sparqle
+class xml_xPath_sParqle extends xml_ns //xml_sparqle
 {
 private $cloneList = false;
 private $xpath_sec_result = array();

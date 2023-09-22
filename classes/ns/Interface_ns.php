@@ -71,9 +71,11 @@ define('SHOW','show');
 define('OK',true);
 
 
-class Interface_node extends XMLelement_objex
+class Interface_node
 {
 
+
+	
 public $next_el;
 var $prev_el;
 var $name = '';
@@ -107,10 +109,42 @@ private $read_sensity = true;
 var $position=-1;
 var $mark = false;
 
+	var $obj = null;
+
+function setobj(&$data)
+	{
+       $this->obj = &$data;
+
+        }
+	
+function &getobj()
+	{
+		return $this->obj;
+
+        }
+
+
+
 public function __construct($type = 'rootnode', $namespace = "default")
 {
 	$this->type = $type;
 	$this->namespace = $namespace;
+}
+
+function get_data_many()
+{
+	if(!is_null($this->data))
+		return count($this->data);
+	else
+		return 0;
+}
+	
+function free_data($pos = null)
+{
+	     if(!is_null($pos) && is_numeric($pos))
+             $this->data[$pos] = '';
+             else
+             $this->data = null;
 }
 
 

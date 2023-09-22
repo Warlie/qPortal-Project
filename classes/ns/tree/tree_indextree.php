@@ -37,7 +37,6 @@ function &new_Instance()
 				$obj = $this->get_Instance();
 				
 				$obj->link_to_class = &$this;
-				
 				return $obj;
 }
 
@@ -47,6 +46,13 @@ function complete()
 
 	}
 
+	function event_message_in($type,&$obj)
+	{
+	
+		echo "wubwub";
+	
+	}
+	
 }
 
 ?>
