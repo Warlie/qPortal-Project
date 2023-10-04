@@ -3,7 +3,7 @@
 //ini_set('display_startup_errors', 1);
 //error_reporting(E_ALL);
 //definiert Startseite
-
+require_once __DIR__ . '/vendor/autoload.php';
 define('CONFIG','config/config.ini');
 define('CONFIG_DEFAULT','config/default.ini');
 
