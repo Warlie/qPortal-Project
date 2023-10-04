@@ -1,0 +1,9 @@
+[submodule "dependency/finite"]
+	path = dependency/finite
+	url = git@github.com:yohang/Finite.git
+[submodule "dependency/jquery-xpath"]
+	path = dependency/jquery-xpath
+	url = git@github.com:ilinsky/jquery-xpath.git
+[submodule "dependency/jquery"]
+	path = dependency/jquery
+	url = git@github.com:jquery/jquery.git
