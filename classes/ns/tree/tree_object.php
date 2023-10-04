@@ -194,25 +194,8 @@ function event_message_in($type,&$obj)
 							$booh = null;
 							$Event = new EventObject('',$this,$booh);
 							$Event->set_node($this->getRefnext($i));
-//echo 'boohme' ."<b/>\n";
-							//echo "und eierabend :)";
+
 							$this->send_messages($send,$Event);
-							//echo "ende";
-							//for($j = 0;$j<count($this->getRefnext($i)->way_out);$j++)
-							//{
-							//echo '-' . $this->getRefnext($i)->way_out[$j]->name . ':' .  $this->getRefnext($i)->way_out[$j]->get_attribute('name') . "<br>\n";			
-							//}
-							
-							
-
-							//for($l = 0;count($this->way_out) > $l;$l++)
-							//{
-							//echo $this->way_out[$l]->full_URI() . ' ';
-							//}
-							//$this->getRefnext($i)->event_alterdata(true);
-							
-
-		
 							
 						}
 					}
@@ -223,10 +206,7 @@ function event_message_in($type,&$obj)
 			
 			}
 			
-			//for($j = 0;$j<count($this->way_out);$j++)
-			//{
-			//echo '-' . $this->way_out[$j]->name . ':' .  $this->way_out[$j]->get_attribute('name') . " my logic...<br>\n";
-			//}
+
 			$booh = null;
 			unset($Event);
 			$Event = new EventObject('',$this,$booh);
@@ -318,13 +298,6 @@ function event_message_in($type,&$obj)
 		$class_Name = $this->get_attribute('name');
 		$instance_id = $this->get_attribute('id');
 		
-//echo $idx_num . ' --';
-		
-		//echo $class_Name . '0000.' . $this->get_idx() . $this->position_stamp();
-		//
-		//$parser->test_consistence();
-		//$parser->ALL_URI();
-//echo '"' .  $parser->cur_idx() . '"';	
 
 		/*
 		* looks in tree for allready existing classdescriptions and adds it if not exist
@@ -482,11 +455,7 @@ function event_message_in($type,&$obj)
 
 			}
 			
-			
-		//echo $this->get_attribute('name');
-		//$parser->index_consistence();
-		
-	//echo $type . ' ' . get_Class($obj);
+
 	}
 	
 	public function __toString()

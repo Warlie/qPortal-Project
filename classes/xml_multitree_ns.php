@@ -58,7 +58,7 @@
 
 require_once('exceptions/exception_collection.php');
 require_once('xml_multitree_omni_handle.php');
-//require_once('xml_multitree_ns_gen.php');
+require_once('search_model/index_model.php');
 require_once('class_EventObject.php');
 require_once('ns/class_index.php');
 //require_once('exceptions/Not_defined_Namespace_Exception.php');
@@ -138,6 +138,14 @@ class xml_ns extends xml_omni
 	{
 		return $this->pointer[$this->idx]->posInPrev();
 	} 
+
+	/**
+	*	Universal search engine model
+	*/
+	public function seek_by_model($model)
+	{
+		return My_Model_factory::model_factory($model, $this);
+	}
 	
 	   /* durchsucht den Baum nach Inhalten (keine direkte optimierung)*/
    	   public function seek_node( $type = null, array $attrib = null, array $data = null, $respos = 0)

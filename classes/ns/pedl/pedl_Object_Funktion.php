@@ -93,7 +93,6 @@ protected function event_readdata($own)
 	//echo '             data in "' . $this->full_URI() . '" will read and causes an readdataevent ' . '(PEDL_Object_Funktion:event_readdata)' . "\n";
 	$logger_class->setAssert('             data in "' . $this->full_URI() . '" will read and causes an readdataevent ' . '(PEDL_Object_Funktion:event_readdata)' ,15);
 
-	//if(!$own)echo "not activ(" . $this->id_of_object . ") " . $this->mycount++ . " <br>\n";
 		if($own)
 		{
 
@@ -103,8 +102,7 @@ protected function event_readdata($own)
 		//echo get_Class($myarray[0]);
 		
 		$methodname = $this->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#name');
-		//echo '--' . $methodname . "---";
-		//echo get_Class($myarray);
+
 		if(strlen(trim($methodname)) == 0)return false;
 		if($method = $myarray[0]->getMethod($methodname)) 
 			{
@@ -118,13 +116,7 @@ protected function event_readdata($own)
 							//echo 'booh';
 							if($this->getRefnext($j)->is_Node('http://www.w3.org/2006/05/pedl-lib#Object_Parameter'))
 							{
-								//echo "call " . debug_print_backtrace ( 5) . " \n";
-								/*
-								if(is_object($this->getRefnext($j)->getdata(0)))
-									echo "is object" . get_class($this->getRefnext($j)->getdata(0)) . "\n";
-								else 
-									echo "is value: :" . $this->getRefnext($j)->getdata(0) . "\n";
-									*/
+
 								$tmp = &$this->getRefnext($j)->getdata(0);
 								if(is_object($tmp))
 								{
@@ -136,42 +128,14 @@ protected function event_readdata($own)
 									$all_values[] = $tmp;
 									//echo "got a value:$tmp\n";
 								}
-								//$all_values[] = &$this->getRefnext($j)->getdata(0); //count($all_values)
-				//echo 'gives out "' .  $this->getRefnext($j)->getdata(0) . '" prev class:' . $myarray[1]  . " (". get_Class($myarray[1]) . ")\n";
-				//var_dump($all_values);
+
 							}
 						}
-						//$result = &$method->invoke($myarray[1], $all_values);
-						//echo get_Class($result);
-						//if(is_Array($result))
-						//$result[0];
-						//else
+
 						$result;
 						
 					//echo $method->getName() . " \n";
 					$this->set_alter_event(false);
-					/*
-					if(is_Object($result))
-					{
-						$this->setdata($result,0);
-						$this->send_messages('http://www.trscript.de/tree#remote',new EventObject('',$this,$result));
-					}
-					else
-					{
-						$tmp = $result;
-						$this->setdata($tmp,0);
-						$this->send_rev_messages('http://www.trscript.de/tree#remote?__set_data=0',new EventObject('',$this,$tmp));
-					
-					}
-					*/
-					//echo 'boohX:' . $myarray[1];
-					//echo $method->invoke($myarray[1], $all_values);
-					//echo ' activate(';
-					//var_dump($myarray[1]);
-					//var_dump($myarray[0]);
-					//echo "\n" . $myarray[0]->getName();
-					//var_dump($all_values);
-					//var_dump($method);
 					
 					// contains a reflectionClass and a SQL String
 					try{
@@ -183,12 +147,7 @@ protected function event_readdata($own)
 						$this->parser->get_ExceptionManager()->catchException($e);
 					}
 					$this->setdata($refl,0);
-					//echo ') ';
-					//$booh = 'hallo';
-					//unset($this->data);
-					//$this->data[0] = $booh;
-					//$booh,0);
-					//$this->setdata($booh,0);
+
 					
 
 					

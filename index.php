@@ -39,7 +39,6 @@ else
 				//ini_set('memory_limit', '8M');
 
                                 include('classes/class_Contentgenerator.php');
-                                include('classes/init.php');
                                 include('mod_lib.php');
                                 
 				$logger_class->setImportance(REPORT, false, MEMORY_USAGE, TRACE);

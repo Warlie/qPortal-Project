@@ -27,7 +27,7 @@ var $prohib;
 //cross_seek
 var $cross_seek = false;
 
-//Variablen für den durchlauf
+//Variablen fï¿½r den durchlauf
 var $start_path;
 var $table;
 var $fin_list;
@@ -40,17 +40,17 @@ var $fin_list;
   // | function add_path
   // +-----------------------------------------------------------------------
 
-        //fügt einen Pfad hinzu, der durchsucht werden soll
+        //fuegt einen Pfad hinzu, der durchsucht werden soll
         function add_path($path)
         {
 
 
                 $path = implode('/',
-                                $this->reduce_array(  //normiert den pfadname für bessere Vergleichbarkeit
+                                $this->reduce_array(  //normiert den pfadname fï¿½r bessere Vergleichbarkeit
                                 explode('/',$path)
                                 ));
 
-                //validiert das Verzeichnis auf gültigkeit und Redundanz
+                //validiert das Verzeichnis auf gï¿½ltigkeit und Redundanz
                 if(is_dir($this->start_path . $path)){
 
                         $this->paste_check($this->start_path . $path,true);
@@ -62,7 +62,7 @@ var $fin_list;
   // | function prohib_path
   // +-----------------------------------------------------------------------
 
-        //fügt einen Pfad hinzu, der nicht durchsucht werden soll
+        //fuegt einen Pfad hinzu, der nicht durchsucht werden soll
         function prohib_path($path)
         {
 
@@ -79,7 +79,7 @@ var $fin_list;
   // | function add_tag
   // +-----------------------------------------------------------------------
 
-        //Fügt der Suchwortliste ein Suchwort hinzu
+        //Fuegt der Suchwortliste ein Suchwort hinzu
         function add_tag($tag)
         {
                 if(is_array($this->tag))
@@ -91,7 +91,7 @@ var $fin_list;
   // +-----------------------------------------------------------------------
   // | function add_fix
   // +-----------------------------------------------------------------------
-        //fügt suchkriterien, wie "*.*,*.php,index.php,index.*" der liste hinzu
+        //fuegt suchkriterien, wie "*.*,*.php,index.php,index.*" der liste hinzu
         function add_fix($myfix)
         {
                 if(is_array($this->fix))
@@ -120,7 +120,7 @@ var $fin_list;
   // +-----------------------------------------------------------------------
   // | function flash
   // +-----------------------------------------------------------------------
-        //löscht das bisherige ergebniss
+        //loescht das bisherige ergebniss
         function flash()
         {
                 $this->fin_list = null;
@@ -129,16 +129,16 @@ var $fin_list;
   // +-----------------------------------------------------------------------
   // | function relative_path
   // +-----------------------------------------------------------------------
-        //berücksichtigt alle Angeben unter relativem oder absolutem Bezug
+        //berï¿½cksichtigt alle Angeben unter relativem oder absolutem Bezug
         function relative_path($bool)
         {
                 if(!$bool)
                 {
 
-                        $this->start_path = str_repeat(        //gibt einen Verzeichnissrücklauf an
-                                                '../',   //rücklauf um ein verzeichniss
+                        $this->start_path = str_repeat(        //gibt einen Verzeichnissrï¿½cklauf an
+                                                '../',   //rï¿½cklauf um ein verzeichniss
                                                 -1 +     //basisverzeichniss ist menge minus 1
-                                                count(   //menge der verzeichnisse zählen
+                                                count(   //menge der verzeichnisse zï¿½hlen
                                                 explode( //verzeichnisse aufsplitten
                                                 ((false === strpos(getcwd(),chr(92)))? chr(47):chr(92)) //testet typ nach / u. \
                                                 ,getcwd()   //
@@ -157,7 +157,7 @@ var $fin_list;
   // +-----------------------------------------------------------------------
   // | function seeking
   // +-----------------------------------------------------------------------
-        //fürt die Suche mit den eingestellten Parametern durch
+        //fuert die Suche mit den eingestellten Parametern durch
         function seeking()
         {
 
@@ -203,7 +203,7 @@ var $fin_list;
                                 foreach (glob( $this->start_path . $this->path[$i] . $this->fix[$j] ) as $filename)
                                 {
 
-                                           //weiche für arraybildung
+                                           //weiche fï¿½r arraybildung
                                            if(is_array($table_array))
 
                                                 $table_array[count($table_array)] = $filename;
@@ -254,7 +254,7 @@ var $fin_list;
   // +-----------------------------------------------------------------------
   // | function reduce_array
   // +-----------------------------------------------------------------------
-        //tricky, rekursives Reduzieren von überflüssigen Verzeichniselementen
+        //tricky, rekursives Reduzieren von ueberfluessigen Verzeichniselementen
         // zb.  ../v1/v2/../index.php zu  ../v1/index.php
         function reduce_array($folder_array,$pos=null)
         {
@@ -265,7 +265,7 @@ var $fin_list;
                 //stoppt die rekursion
                 if($pos < 0)return $res;
 
-                //weiche für vor oder rücklauf
+                //weiche fï¿½r vor oder rï¿½cklauf
                 if($folder_array[$pos] == '..')
                 {
                         for($i=($pos-1);$i> -1 ; $i--)
@@ -319,7 +319,7 @@ var $fin_list;
                                         {
 
 echo $lower . "<br>\n";
-                                       //fügt Linktags der suchliste über parse_check hinzu
+                                       //fï¿½gt Linktags der suchliste ï¿½ber parse_check hinzu
 
                                                 if(!(false===($pos1 = stripos($lower,$this->tag[$h],$idx0))))
                                                 {
@@ -338,12 +338,12 @@ echo $lower . "<br>\n";
                                         }
 
                                  $con++;
-                                }while(!($pos1===false));   //wiederholt den vorgang für Konstrukte wie : i_nclude("xxx");i_nclude("yyy");
+                                }while(!($pos1===false));   //wiederholt den vorgang fï¿½r Konstrukte wie : i_nclude("xxx");i_nclude("yyy");
                                 $idx0=0;
                                 $pos1=0;
                                 
-                                //könnte ausgelagert werden, um sie zum Vererben zu überschreiben
-                                /*for($h=0;$h<count($this->tag);$h++) //alle tags werden auf die Zeile ausgeführt (iterativ)
+                                //kï¿½nnte ausgelagert werden, um sie zum Vererben zu ï¿½berschreiben
+                                /*for($h=0;$h<count($this->tag);$h++) //alle tags werden auf die Zeile ausgefï¿½hrt (iterativ)
                                 {
 
                                         if(!(false===($posx = strpos($lower,strtolower($this->tag[$h]) ))))
@@ -380,17 +380,17 @@ echo $lower . "<br>\n";
   // +-----------------------------------------------------------------------
   // | function paste_check
   // +-----------------------------------------------------------------------
-        //Sucht redundante inhalte in in den prohiblisten und den path-listen, funktion auch für Dateien verfügbar
+        //Sucht redundante inhalte in in den prohiblisten und den path-listen, funktion auch fï¿½r Dateien verfuegbar
         function paste_check($file_name_uri,$bool_dir=false)
         {
 
              if($bool_dir)
              {
-                //erlaubt hinzufügen des Verzeichnisses
+                //erlaubt hinzufuegen des Verzeichnisses
                 $write_enable = true;
-                //prüft auf redundanzen in path
+                //prï¿½ft auf redundanzen in path
                 if(is_array($this->path))$write_enable = !in_array($file_name_uri,$this->path);
-                //prüft auf bad-list
+                //prï¿½ft auf bad-list
                 if(is_array($this->prohib) && $write_enable)$write_enable = !in_array($file_name_uri,$this->prohib);
                 if($write_enable)
                 {
@@ -403,7 +403,7 @@ echo $lower . "<br>\n";
                 }
              }
              else
-             { //für Dateien
+             { //fï¿½r Dateien
 
                 if(!in_array($file_name_uri,$this->table) &&
                         is_file($file_name_uri) &&

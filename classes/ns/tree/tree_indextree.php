@@ -46,10 +46,13 @@ function complete()
 
 	}
 
+	function event_message_check($type,&$obj){parent::event_message_check($type,$obj);}
+	
 	function event_message_in($type,&$obj)
 	{
-	
-		echo "wubwub";
+
+		//$this->event_message_check($type,$obj);
+		//return parent::event_message_in($type,$obj);
 	
 	}
 	

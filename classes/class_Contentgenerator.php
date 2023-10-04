@@ -329,6 +329,19 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		$treeEngine->load_structur($this->structur,'@registry_surface_system');
 				
 				
+		$this->XMLlist->cur_node();
+		echo $this->XMLlist->get_URI() . " ";
+
+				$booh = null;
+		
+
+		if($this->XMLlist->show_xmlelement())
+		{
+//model=xpath_model&query="wubb"&
+			$this->XMLlist->show_xmlelement()->event_message_check('*?__find_node(model=xpath_model,namespace=\'\',query=\'wubb\')',new EventObject('',$this,$booh));
+			//$this->XMLlist->show_xmlelement()->event_message_in('*?start',new EventObject('',$this,$booh));
+		}
+		
 		if($this->nodeName == "")
 		$this->XMLlist->seek_node('http://www.trscript.de/tree#final');
 		else
@@ -336,11 +349,11 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		$booh = null;
 		
 
-		if(!$this->XMLlist->show_xmlelement())return true;
+		//if(!$this->XMLlist->show_xmlelement())return true;
 		
 	//	try {
 
-			$this->XMLlist->show_xmlelement()->event_message_in('*?start',new EventObject('',$this,$booh));
+		$this->XMLlist->show_xmlelement()->event_message_in('*?start',new EventObject('',$this,$booh));
 			
 	//	} catch (Exception $e) {
    // echo 'Exception abgefangen: ',  $e->getMessage(), "\n";

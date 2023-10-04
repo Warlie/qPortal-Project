@@ -178,10 +178,7 @@ protected function event_alterdata($own)
 							$this->send_messages($send,$Event2);
 							$this->set_alter_event(true);
 							
-							//for($i = 0;count($this->way_out) > $i;$i++)
-							//{
-							//echo $this->way_out[$i]->full_URI() . ' ';
-							//}
+
 						
 						}
 					}
@@ -211,30 +208,14 @@ protected function event_alterdata($own)
 
 			
 			$this->send_messages($send,$Event);
-			
-			//call for value
-			//$send = $this->connect . '?__get_data=0';
-			//$send = 'http://www.w3.org/2006/05/pedl-lib#Object_Funktion?__get_data=0'; //http://www.trscript.de/tree#name
-			//get content
-			//$Event = new EventObject('',$this,$booh);
-	
-				//echo "rabusch123 ";			
-			//$this->send_messages($send,$Event);
-			//echo "<br>\n}<br>\n"; 
+
 			}
 			
 			}//End of activ dataaltering
 		else
 		{
 				$logger_class->setAssert('               not own(tree_remote:event_alterdata)' ,15);
-		/*
-				if(!is_null($text = &$this->getdata(0)))
-				{
-					if($this->getRefprev()->is_Node('http://www.trscript.de/tree#object'))
-					{
-					$this->getRefprev()->setdata($text,0);
-					}
-				} */
+
 		}
 //echo "exit<br>\n";
 	}
