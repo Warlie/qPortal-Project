@@ -125,7 +125,7 @@ function &getobj()
 
 
 
-public function __construct($type = "rootnode", $namespace = "default")
+public function __construct($type = 'rootnode', $namespace = "default")
 {
 	$this->type = $type;
 	$this->namespace = $namespace;
@@ -256,9 +256,14 @@ public function is_Node($name)
 	if($name == $this->full_URI())return true;
 	
 	if(is_object($this->link_to_class))
+	{
+		
 		return $this->link_to_class->is_Node($name);
+	}
 	else
+	{
 		return false;
+	}
 
 }
 
@@ -267,9 +272,6 @@ public function is_Command($name,$funcName)
 	//echo '(' . $name . ')<br>';
 if($this->is_Node($name))
 	{
-		
-		return !(false === ($tmp = strpos($name,$funcName)));
-		
 		//echo $name . ' !<br>';
 			if(!(false === ($tmp = strpos($name,'?'))))
 			{
@@ -277,8 +279,6 @@ if($this->is_Node($name))
 				if(false === ($tmp2 = strpos($name,'=')))
 					$tmp2 = strpos($name,'&');
 					
-				
-				
 				if(!(false === $tmp2))
 				{
 					//echo '1 ' . $funcName . ' == ' .  substr($name,$tmp + 1 ,$tmp2 - ($tmp + 1)) . ' ';
@@ -1075,8 +1075,6 @@ function event_attribute($name,&$message)
 * @function event_message_check
 * @param $type : commandline
 * @param $obj : context of Eventobject
-*
-* checks a node to be the currect one.
 */
 
 protected function event_message_check($type,&$obj)
@@ -1089,12 +1087,11 @@ global $logger_class;
 		
 		//echo get_class($this->way_out[$i]);
 		$this->check_list[$i]->event_attribute($type,$obj);
-		//echo get_class($this->check_list[$i]) . "\n";
 		
 	}
-	if(true){
+	if(!true){
 	echo "check of " . $this->full_URI() .  " ( " .  get_Class($this) .  ") gets: type:\"" . $type . '"  Event: Request' . $obj->get_request() ;
-	echo "\n";
+
 	if($obj->get_requester())
 		if(is_string($obj->get_requester()))
 		echo " Requester:"  . $obj->get_requester() . "(String) ";
@@ -1102,7 +1099,7 @@ global $logger_class;
 		echo " Requester:"  . get_Class($obj->get_requester()) . " ";
 	else
 		echo " keine Requester ";
-	echo "\n";	
+	
 	if($obj->get_context())
 		if(is_string($obj->get_context()))
 		echo " Context:"  . $obj->get_context() . "(String) ";
@@ -1113,40 +1110,15 @@ global $logger_class;
 		echo " Context:"  . get_Class($obj->get_context()) . " ";
 	else
 		echo " keine Context ";
-	echo "\n";	
+	
 	if($obj->get_node())
 		echo "Daten:" . $obj->get_node()->full_URI() . "\n";
 	else
 		echo " keine Daten \n";
-		
-		echo "\n";	
-		
 	}
-	
-	/*
-	* EventObject
-	*/
 	if($obj instanceof EventObject && !$obj->get_locked())
 	{
-		echo "\n" . $type . "\n";
-		/*
-		*	
-		*/
-		if($this->is_Command($type,'__find_node'))
-		{
-			//create list of commands
-			$com_elemnet = $this->parseCommand($type);
-			// model und statement
-			if($parser = $this->get_parser()) $parser->seek_by_model($model, $statement);
-			//party
-			//$this->send_messages($com_elemnet->get_Command(0,1),$obj) ;
-			return true;
-			
-		}
-		echo "\n" . $type . "\n";
-		/*
-		*	
-		*/
+		
 		if($this->is_Command($type,'__redirect_node'))
 		{
 		$logger_class->setAssert('  Redirect was send to "' . $this->full_URI() . '"(Interface_node:event_message_check)' ,5);
@@ -1175,16 +1147,15 @@ global $logger_class;
 		if($this->is_Command($type,'__set_data'))
 		{
 			
-			//create list of commands as object
 			$com_elemnet = $this->parseCommand($type);
-			
-			//supress fireing event
 			$this->set_alter_event(false);
+			//echo $type . ' (' . $obj->get_context() .  ')  <b>cur.element</b> ' . $this->full_URI() . ' <b>requ.element</b> ' . $obj->get_requester()->full_URI() . '<br>';
+//echo $obj->get_context() . ' ' . $obj->get_requester()->full_URI() . ' <br>';
 			
-			//
+			$logger_class->setAssert('  set_data of content "' . $obj->get_context() . '" was send to "' . $this->full_URI() . '  ' . '"(Interface_node:event_message_check)' ,5);
+			
 			$this->setdata($obj->get_context(),$com_elemnet->get_Command(0,1));
 			
-			//enable fireing event
 			$this->set_alter_event(true);
 			
 			//$this->event_alterdata(false);
@@ -1228,10 +1199,10 @@ $logger_class->setAssert('__get_data of requester "' . $obj->get_requester()->fu
 		}
 		
 		
-
+		//echo 'booh-------------' . get_Class($this) . ' ' . $type . "<br>\n";
+		//echo $type;
 		if($this->is_Node($type))
 		{
-			echo $type;
 		$logger_class->setAssert('  Command was send to "' . $this->full_URI() . '  ' . '"(Interface_node:event_message_check)' ,5);
 		
 		
@@ -1248,7 +1219,7 @@ protected function event_message_in($type,&$obj)
 protected function set_to_out(&$obj)
 {
 	
-	$this->way_out[] = &$obj;
+	$this->way_out[count($this->way_out)] = &$obj;
 	$obj->set_to_in($this);
 
 	
@@ -1361,8 +1332,28 @@ function &cloning(&$prev_obj)
                                 $obj->attrib = $this->attrib;
                                 $obj->data =  $this->data;
                                 $obj->namespace =  $this->namespace;
-                                $obj->type =  $this->type;                               
+                                $obj->type =  $this->type;
 
+                                // if(!$this->get_parser())throw new ErrorException( $this->full_URI() . " needs a backref to its parser", 1332, 75);
+                                
+                                //$this->giveOutOverview();
+                                //if($this->get_parser())$this->giveOutOverview();
+                                
+                                //$obj->idx = $this->idx;
+                                //$obj->res_idx =  $this->res_idx;
+                                //if(!is_null($this->ref))$obj->ref =  &$this->ref;
+
+                                //echo '<span style="color:blue;" >' . $obj->get_type() . ' - ' . $obj->get_name() . ' mit dem index ' . $obj->res_idx . '</span><br>';
+                                                           //instances_down[$z]
+
+                                //$obj->instances_down = &$this->instances_down;
+                                
+                                /*
+                                if(is_object($this->one_to_many))
+                                $obj->one_to_many = &$this->one_to_many;
+                                else
+                                $obj->one_to_many = $this->one_to_many;
+                                */
                                 if(!is_null($this->next_el))
                                 	for($i = 0;$i < count($this->next_el);$i++)
                                 	{
@@ -1478,44 +1469,22 @@ class Command_Object
 
 	function __construct($command) 
 	{
-		$result;
-		$command;
-		$value;
-		$param;
 
 			if(!(false === ($tmp = strpos($command,'?'))))
 			{
 				$this->node_URI = substr($command,0,$tmp);
 				$commandstr = substr($command,$tmp + 1);
-
-				$result = explode('&',$commandstr);
+				$this->commands = explode('&',$commandstr);
 				
-				
-				
-				for($i = 0;$i<count($result);$i++)
+				for($i = 0;$i<count($this->commands);$i++)
 				{
-
-					// Regulärer Ausdruck, um den Text zwischen Klammern zu extrahieren
-					preg_match('/\((.*?)\)/', $result[$i], $param);
-					// Regulärer Ausdruck, um den Text hinter dem letzten Gleichheitszeichen zu extrahieren
-					preg_match('/=([^=]*)$/', $result[$i], $value);
-					// Regulärer Ausdruck, um den Text vor einem Gleichheitszeichen oder einer offenen Klammer zu extrahieren
-					preg_match('/([^=()]*)(?:=|\()/', $result[$i], $command);
-					
-
-					if($command == '__redirect_node')
+					$this->commands[$i] = explode('=',$this->commands[$i]);
+					if($this->commands[$i][0] == '__redirect_node')
 					{
-						$value = base64_decode(rawurldecode($value));
-
+						$this->commands[$i][1] = base64_decode(rawurldecode($this->commands[$i][1]));
 					}
-					
-					$this->commands[$i] = array();
-					$this->commands[$i][] = $command[1];
-					if(! strpos($value[1],')') )$this->commands[$i][] = $value[1]; else $this->commands[$i][] = '';
-					$this->commands[$i][] = $param[1];
-					
 				}
-var_dump($this->commands);
+
 			}
 
 	}

@@ -330,7 +330,7 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 				
 				
 		$this->XMLlist->cur_node();
-		echo $this->XMLlist->get_URI() . " ";
+		//echo $this->XMLlist->get_URI() . " ";
 
 				$booh = null;
 		
