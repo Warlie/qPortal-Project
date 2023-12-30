@@ -15,15 +15,15 @@ class File_Scan
 {
 
 //Verzeichniss-Liste
-var $path;
+var $path = [];
 
 //Tag-Liste
-var $tag;
+var $tag = [];
 
 //Liste der erlaubten Dateibeschreibungen
-var $fix;
+var $fix = [];
 //liste von Verzeichnissen, die nicht durchsucht werden
-var $prohib;
+var $prohib = [];
 //seperater DokumentenString
 private $document = null;
 
@@ -31,9 +31,9 @@ private $document = null;
 private $cross_seek = array();
 
 //Variablen f�r den durchlauf
-var $start_path;
+var $start_path = '';
 var $table;
-var $fin_list;
+var $fin_list = [];
 var $path_parameter;
 
 //----------------------------------------------------------------------
@@ -43,12 +43,14 @@ var $path_parameter;
   // +-----------------------------------------------------------------------
   // | function add_path
   // +-----------------------------------------------------------------------
-
+//TODO Exceptions
         //f�gt einen Pfad hinzu, der durchsucht werden soll
-        function add_path($path)
+        function add_path($path, $deep = 0)
         {
 
 
+        	
+        	
                 $path = implode('/',
                                 $this->reduce_array(  //normiert den pfadname f�r bessere Vergleichbarkeit
                                 explode('/',$path)
@@ -57,6 +59,17 @@ var $path_parameter;
                 //validiert das Verzeichnis auf g�ltigkeit und Redundanz
                 if(is_dir($this->start_path . $path)){
 
+
+                	if($deep != 0)
+                	foreach (array_filter(glob($path . '*'), 'is_dir') as $dir)
+                                {
+                                	
+
+                                	$this->add_path($dir . '/', $deep - 1);
+
+
+                                }
+                	
                         $this->paste_check($this->start_path . $path,true);
                 }else
                         echo "<p><b>" . $this->start_path . $path . "</b> is not an correct directory!<p>";
@@ -201,6 +214,7 @@ var $path_parameter;
 
 			for($i=0;$i<count($this->table);$i++)
 			{
+
 				//durchsucht jede angegebene Datei nach tags
 				$this->seek_in_file($this->table[$i]);
 			}
@@ -241,29 +255,32 @@ function loading_size($value)
         function file_listing()
         {       //doppelte iteration
         	
-                $table_array;
+
+        	
+                $table_array = [];
                 for($i=0;$i<count($this->path);$i++)
                 {
 			
+                	
                         for($j=0;$j<count($this->fix);$j++)
                         {
 				
+                        	if($this->start_path == '')
+                        			$dir_str = str_replace('//', '/',$this->path[$i] . '/' . $this->fix[$j]);
+                        		else
+                        			$dir_str = str_replace('//', '/',((substr($this->start_path, -1) == '/')? $this->start_path : $this->start_path . '/' ) . $this->path[$i] . '/' . $this->fix[$j]);
+
                                 //listet alle dateien auf
-                                foreach (glob( $this->start_path . $this->path[$i] . $this->fix[$j] ) as $filename)
+                                foreach (glob( $dir_str ) as $filename)
                                 {
-                                           //weiche f�r arraybildung
-                                           if(is_array($table_array))
-
-                                                $table_array[count($table_array)] = $filename;
-
-                                           else
-                                           
-                                                $table_array[0] = $filename;
+                                	$table_array[] = $filename;
 
                                 }
 
                         }
                 }
+                
+
                 return $table_array;
         }
 
@@ -355,31 +372,33 @@ function loading_size($value)
         {
 		
                 if(is_null($file_uri))
-		{
-			$file_content = explode("\n",$this->document);
-			$file_uri = $this->path_parameter;
-			
-		}
-		else
-		{
-
-			if(false === ($file_content = file($file_uri)))echo '<b>' . $file_uri . ' is not a valid URL! Current path is "' . getcwd ( ) . "\"</b><br>\n";
+                {
+                	$file_content = explode("\n",$this->document);
+                	$file_uri = $this->path_parameter;
 			
                 }
-		
+                else
+                {
+
+                	if(false === ($file_content = file($file_uri)))
+                		echo '<b>' . $file_uri . ' is not a valid URL! Current path is "' . getcwd ( ) . "\"</b><br>\n";
+			
+                }
+                        $idx0=0;		
                 //trivial case, no tag exists
-		if(count($this->tag) == 0)
-		{
+                if(count($this->tag) == 0)
+                
 			//echo $file_uri . ' -- ';
-			$this->save_entry('no tag parameter',0,$file_uri);
-		}
+					$this->save_entry('no tag parameter',0,$file_uri);
 
-                        $idx0=0;
+				else
 
-                        for($r=0;$r<count($file_content);$r++)
-                        {
+
+
+                for($r=0;$r<count($file_content);$r++)
+                {
                         	
-                                $this->add_cross_seek($file_content[$r],$file_uri);
+                	$this->add_cross_seek($file_content[$r],$file_uri);
 				
 				//tauscht R_quire mit I_nclude aus. Die Klasse soll sich nicht  selber finden!
                                 $lower = $file_content[$r];
@@ -415,16 +434,8 @@ function loading_size($value)
                                 $pos1=0;
                                 
                                 //k�nnte ausgelagert werden, um sie zum Vererben zu �berschreiben
-                                /*for($h=0;$h<count($this->tag);$h++) //alle tags werden auf die Zeile ausgef�hrt (iterativ)
-                                {
 
-                                        if(!(false===($posx = strpos($lower,strtolower($this->tag[$h]) ))))
-                                        {
-                                                     save_entry(substr($lower,$posx),$r,$file_uri);
-                                        }
-                                        
-                                } */
-                        }
+                        } 
 
         }
 
@@ -468,19 +479,7 @@ function loading_size($value)
         //auslagerung der Wertespeicherung
         function save_entry($tag,$pos,$file)
         {
-                if(is_array($this->fin_list))
-                                                             {
-                                                                        $el_pos = count($this->fin_list);
-                                                                        $this->fin_list[$el_pos]['tag']= trim($tag);
-                                                                        $this->fin_list[$el_pos]['pos']= $pos;
-                                                                        $this->fin_list[$el_pos]['file']= $file;
-                                                             }
-                                                                else
-                                                                {
-                                                                        $this->fin_list[0]['tag']=$tag;//substr($lower,$posx);
-                                                                        $this->fin_list[0]['pos']= $pos;
-                                                                        $this->fin_list[0]['file']= $file;
-                                                                 }
+                $this->fin_list[] = ['tag' => trim($tag), 'pos' => $pos,'file' =>  $file];
         }
 
   // +-----------------------------------------------------------------------
@@ -503,7 +502,7 @@ function loading_size($value)
 			
                   if(is_array($this->path))
                         {
-                                $this->path[ count($this->path) ] = $file_name_uri;
+                                $this->path[] = $file_name_uri;
 
                         }else
                                 $this->path[0]= $file_name_uri;

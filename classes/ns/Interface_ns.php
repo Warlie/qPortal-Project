@@ -54,7 +54,7 @@
 * is_Command($nodename,$funcname)
 * parseCommand($command);
 */
-
+use Finite\Elements\{Acceptor,TransitionType , Transducer, TransduceProjectionBehavior, TransduceInformationHarvest};
 /*
 * TODO
 * clean up and set more comments
@@ -139,7 +139,7 @@ function get_data_many()
 		return 0;
 }
 	
-function free_data($pos = null)
+function free_data_($pos = null)
 {
 	     if(!is_null($pos) && is_numeric($pos))
              $this->data[$pos] = '';
@@ -148,7 +148,7 @@ function free_data($pos = null)
 }
 
 
-public function listOfListeners_stamp($add = '0000.')
+public function listOfListeners_stamp_($add = '0000.')
 {
 $res = array();
 //echo $this->full_URI() . "\n";
@@ -159,7 +159,7 @@ $res = array();
 	return $res;
 }
 
-public function Class_stamp($add)
+public function Class_stamp_($add)
 {
 
 	if($this->link_to_class)
@@ -179,7 +179,7 @@ public function get_NodeType()
 	return $this->kind_of_node;
 }
 
-function get_classes()
+function get_classes_()
 {
 echo $this->full_URI() . "<br>\n";
 if($this->link_to_class)$this->link_to_class->get_classes();
@@ -299,7 +299,7 @@ return new Command_Object($command);
 }
 
 /* returns last stamp element */
-public function position_last_stamp()
+public function position_last_stamp_()
 {
 	
 
@@ -384,7 +384,7 @@ function position_stamp()
 * creates a hashnumber, depending on the path, back to the root.
 * @param stamp : (callbyRef) String to create a std. stamp without an idx  
 */
-function position_hash_map(&$stamp)
+function position_hash_map_(&$stamp)
 {
  	$mult = $this->get_NodeType() + 1;
  
@@ -411,7 +411,7 @@ function position_hash_map(&$stamp)
 }
 
 
-function posInPrev()
+function posInPrev_()
 {
 	
 
@@ -439,7 +439,7 @@ function posInPrev()
 
 
 //removes all branches
-function exhaustion()
+function exhaustion_()
 {
 	unset($this->next_el);
 	$this->next_el = array();
@@ -742,7 +742,7 @@ protected function set_read_event($bool)
 	$this->read_sensity = $bool;
 }
 
-public function freedata(){return true;}
+public function freedata_(){return true;}
 //orginal
 function setdata(&$data,$pos = null){
 
@@ -1016,10 +1016,11 @@ function event($type,&$obj)
 //way to send messages
 function send_messages($type,&$obj)
 {	//echo ' - ' . count($this->way_out);
+	if(is_null($type))throw new Exception("null found");
 	//echo 'booooooooooooooooooooooooooooooh' . count($this->way_out);
 	//�bermittelt den event an alle Knoten, die an diesem Knoten h�ngen
 	//send message to all nodes, which has been sign in over set_to_out
-	//echo $type . ' ' . get_Class($this) . ' bin drin ' . count($this->way_out) . '<br>';
+	//echo $type . ' ' . get_Class($this) . ' bin drin ' . count($this->way_out) . "<br>\n";
 	for($i = 0;count($this->way_out) > $i;$i++)
 	{
 		
@@ -1118,16 +1119,50 @@ global $logger_class;
 	}
 	if($obj instanceof EventObject && !$obj->get_locked())
 	{
+
+	$com_elemnet = $this->parseCommand($type);
 		
 		if($this->is_Command($type,'__redirect_node'))
 		{
 		$logger_class->setAssert('  Redirect was send to "' . $this->full_URI() . '"(Interface_node:event_message_check)' ,5);
-			$com_elemnet = $this->parseCommand($type);
+			//$com_elemnet = $this->parseCommand($type);
 			//echo $com_elemnet->get_Command(0,1) . ' ' . get_Class($obj->get_Node()) . ' ' . get_Class($this) . ' <br>';
+			if(is_null($com_elemnet->get_Command(0,1)))throw new Exception("Null detected: " . $com_elemnet->get_Insert());
 			$this->send_messages($com_elemnet->get_Command(0,1),$obj) ;
 			return true;
 			
 		}
+
+		if($com_elemnet->matchesCommand('__find_node'))
+		{
+			$structur = $com_elemnet->get_Result_Array();
+			//echo get_class($this->parser) . "\n";
+			//var_dump($structur);
+			$structur['Command']['Attribute']['json'] = base64_decode($structur['Command']['Attribute']['json']);
+			$structur['Command']['Value'] = base64_decode($structur['Command']['Value']);
+			$json = json_decode($structur['Command']['Attribute']['json'], true);
+			$name = null;
+			$attribute = null;
+			$value = $structur['Command']['Value'];
+			if(array_key_exists('attribute', $json))$attribute =  $json['attribute'];
+			if(array_key_exists('name', $json))$name =  $json['name'];
+			//var_dump(json_decode($structur['Command']['Attribute']['json'], true));
+			
+			if($this->parser->seek_node($name,$attribute))
+			{
+				//var_dump($name,$attribute,$this->parser->show_xmlelement()->full_URI());
+				$this->parser->show_xmlelement()->event_message_in($value,$obj) ;
+			}
+			//var_dump($name,$attribute,$this->parser->show_xmlelement()->full_URI(), $value);
+			//$com_elemnet = $this->parseCommand($type);
+			//echo $com_elemnet->get_Command(0,1) . ' ' . get_Class($obj->get_Node()) . ' ' . get_Class($this) . ' <br>';
+			//if(is_null($com_elemnet->get_Command(0,1)))throw new Exception("Null detected: " . $com_elemnet->get_Insert());
+
+			return true;
+			
+		}
+		
+		
 		
 		if($this->is_Command($type,'__add_in_object'))
 		{
@@ -1147,7 +1182,7 @@ global $logger_class;
 		if($this->is_Command($type,'__set_data'))
 		{
 			
-			$com_elemnet = $this->parseCommand($type);
+			//$com_elemnet = $this->parseCommand($type);
 			$this->set_alter_event(false);
 			//echo $type . ' (' . $obj->get_context() .  ')  <b>cur.element</b> ' . $this->full_URI() . ' <b>requ.element</b> ' . $obj->get_requester()->full_URI() . '<br>';
 //echo $obj->get_context() . ' ' . $obj->get_requester()->full_URI() . ' <br>';
@@ -1169,7 +1204,7 @@ global $logger_class;
 			
 
 			
-			$com_elemnet = $this->parseCommand($type);
+			//$com_elemnet = $this->parseCommand($type);
 			$obj->get_requester()->set_alter_event(false);
 						
 			
@@ -1203,8 +1238,8 @@ $logger_class->setAssert('__get_data of requester "' . $obj->get_requester()->fu
 		//echo $type;
 		if($this->is_Node($type))
 		{
-		$logger_class->setAssert('  Command was send to "' . $this->full_URI() . '  ' . '"(Interface_node:event_message_check)' ,5);
-		
+		//$logger_class->setAssert('  Command was send to "' . $this->full_URI() . '  ' . '"(Interface_node:event_message_check)' ,5);
+		//echo 'booh-------------' . get_Class($this) . ' ' . $type . "<br>\n";
 		
 		$this->event_message_in($type,$obj);
 		}
@@ -1259,7 +1294,7 @@ function to_listener()
 	{
 	$this->prev_el->set_to_out($this);
 	
-	//echo "habe Knoten " . $this->full_URI() . " " . $this->index_max() . " <br>" ;
+	//echo "habe Knoten " . $this->full_URI() . " in " . $this->prev_el->full_URI() . " eingetragen <br>\n" ;
 	
 	}
 	else
@@ -1462,35 +1497,50 @@ var $back;
 	}
 }
 
-class Command_Object
+class Command_Object extends qp_workflow 
 {
 	private $node_URI;
+	private $insert;
 	private $commands = array();
+	private $commands1 = array();
+	private $pair = array();
+	private $pos_command = 0;
+	private $current_node = '';
+	private $node_stack = array();
+	
+	private $struct_tree = array();
+	
+
 
 	function __construct($command) 
 	{
 
-			if(!(false === ($tmp = strpos($command,'?'))))
-			{
-				$this->node_URI = substr($command,0,$tmp);
-				$commandstr = substr($command,$tmp + 1);
-				$this->commands = explode('&',$commandstr);
-				
-				for($i = 0;$i<count($this->commands);$i++)
-				{
-					$this->commands[$i] = explode('=',$this->commands[$i]);
-					if($this->commands[$i][0] == '__redirect_node')
-					{
-						$this->commands[$i][1] = base64_decode(rawurldecode($this->commands[$i][1]));
-					}
-				}
-
-			}
+		//if(is_null()) var_dump(DEBUG_BACKTRACE_PROVIDE_OBJECT|DEBUG_BACKTRACE_IGNORE_ARGS));
+		//if(is_null($command))$command ='';
+		$this->insert = $command;
+		//echo ">$command<\n";
+		parent::__construct($command);
 
 	}
 	
-	public function get_URI(){return $this->node_URI;}
-	public function get_Command($num,$index){return $this->commands[$num][$index];}
+	
+	public function get_URI(){return $this->listOfInformation['Identifire'];}
+	public function get_Command($num,$index)
+	{
+
+	if($index == 0)return $this->listOfInformation["Command"]['Name'];
+		return $this->listOfInformation["Command"]['Value'];
+		//echo "-------------------------------------------------------\n";
+	
+	//echo "-------------------------------------------------------\n";
+
+	}
+	
+	public function get_Insert(){return $this->insert;}
+
+	public function get_Result_Array(){return $this->listOfInformation;}
+	
+	public function matchesCommand( string $Command){return $this->listOfInformation["Command"]['Name'] == $Command;}
 
 }
 ?>

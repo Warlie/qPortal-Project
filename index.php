@@ -22,8 +22,9 @@ else
                 define('PLUG_IN_FOLDER',$ini_array["runtime"]['PLUG_IN_FOLDER']);
 				define('FRONTEND_INDEX',$ini_array["runtime"]["FRONTEND_INDEX"]);
                 define('EDIT_INDEX',$ini_array["runtime"]["EDIT_INDEX"]);
+                define('ROOT_DIR',($ini_array["runtime"]["ROOT_DIR"]!=""? $ini_array["runtime"]["ROOT_DIR"] : __DIR__));
 
-                
+
 				define('INSTALL',false);
 				define('REPORT',5); //Reportlevel [0,5]
 				define('MEMORY_USAGE', true);
@@ -38,8 +39,18 @@ else
 				//ini_set('display_er8ors','On');
 				//ini_set('memory_limit', '8M');
 
+				require_once('classes/finite_state_machine/enums.php');
+				require_once('classes/finite_state_machine/class_Transducer.php');
+				require_once('classes/finite_state_machine/class_Acceptor.php');
+				require_once('classes/search_model/index_model.php');
+
+				require_once('classes/fs_parser/qp_workflow.php');
+				//require_once('classes/class_compute_internal_statements.php');
+				
                                 include('classes/class_Contentgenerator.php');
                                 include('mod_lib.php');
+                                
+				
                                 
 				$logger_class->setImportance(REPORT, false, MEMORY_USAGE, TRACE);
 
@@ -114,6 +125,9 @@ else
                                 	$ini_array["database"]["db_name"],
                                 	$ini_array["database"]["codeset"]
                                 	);
+                                
+				                 //SearchingModelObject::$treeRef = $content;
+                                 //SearchingModelObject::init_models();
 				
                                 
                 if($_REQUEST['i'] == '__system')
@@ -264,6 +278,8 @@ else
 					
 				}
  
+				
+
 				             
 						} catch (NoPermissionException $e) {
 							
@@ -382,6 +398,9 @@ else
 					</form>";
 					}
 				}
+				
+				
+				
 				
 				$boobibooh = '';
 				foreach( $_SESSION as $key => $value ) {

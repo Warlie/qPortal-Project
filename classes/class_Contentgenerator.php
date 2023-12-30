@@ -337,11 +337,19 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 
 		if($this->XMLlist->show_xmlelement())
 		{
-//model=xpath_model&query="wubb"&
-			$this->XMLlist->show_xmlelement()->event_message_check('*?__find_node(model=xpath_model,namespace=\'\',query=\'wubb\')',new EventObject('',$this,$booh));
+//model=xpath_model&query="wubb"& //model=xpath_model,namespace=\'\',query=\'wubb\'
+		if($this->nodeName == "")
+			$this->XMLlist->show_xmlelement()->event_message_check('*?__find_node(json=' . 
+				base64_encode( '{"name":"http://www.trscript.de/tree#final"}' ) . ')=' . 
+				base64_encode( '*?start' ),new EventObject('',$this,$booh));
+			else
+
+			$this->XMLlist->show_xmlelement()->event_message_check('*?__find_node(json=' . 
+				base64_encode( '{"name":"http://www.trscript.de/tree#tree", "attribute":{ "http://www.trscript.de/tree#name":"' . $this->nodeName . '" }}' ) . ')=' . 
+				base64_encode( '*?start' ),new EventObject('',$this,$booh)); 
 			//$this->XMLlist->show_xmlelement()->event_message_in('*?start',new EventObject('',$this,$booh));
 		}
-		
+		/*
 		if($this->nodeName == "")
 		$this->XMLlist->seek_node('http://www.trscript.de/tree#final');
 		else
@@ -354,7 +362,7 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	//	try {
 
 		$this->XMLlist->show_xmlelement()->event_message_in('*?start',new EventObject('',$this,$booh));
-			
+			*/
 	//	} catch (Exception $e) {
    // echo 'Exception abgefangen: ',  $e->getMessage(), "\n";
     	//	}

@@ -190,7 +190,7 @@ var $fin_list;
   // | function file_listing
   // +-----------------------------------------------------------------------
         //listet alle zu durchsuchenden Dateien auf
-        function file_listing()
+        private function file_listing() : array
         {       //doppelte iteration
                 $table_array;
                 for($i=0;$i<count($this->path);$i++)
@@ -223,7 +223,7 @@ var $fin_list;
   // | function directory_listing
   // +-----------------------------------------------------------------------
         //listet alle zu durchsuchenden Verzeichnisse auf
-        function directory_listing($path)
+        private function directory_listing(string  $path) : void
         {
         // '' wird nicht gefunden
         if('' == $path)$path = './';
@@ -256,7 +256,7 @@ var $fin_list;
   // +-----------------------------------------------------------------------
         //tricky, rekursives Reduzieren von ueberfluessigen Verzeichniselementen
         // zb.  ../v1/v2/../index.php zu  ../v1/index.php
-        function reduce_array($folder_array,$pos=null)
+        private function reduce_array($folder_array,$pos=null) : array
         {
         if(is_null($pos))$pos=(count($folder_array)-1);
         $switch = 1;
@@ -298,7 +298,7 @@ var $fin_list;
   // | function seek_in_file
   // +-----------------------------------------------------------------------
         //Sucht inhalte in der Datei
-        function seek_in_file($file_uri)
+        private function seek_in_file($file_uri)
         {
 
                 $file_content = file($file_uri);
@@ -360,7 +360,7 @@ echo $lower . "<br>\n";
   // | function save_entry
   // +-----------------------------------------------------------------------
         //auslagerung der Wertespeicherung
-        function save_entry($tag,$pos,$file)
+        private function save_entry($tag,$pos,$file)
         {
                 if(is_array($this->fin_list))
                                                              {
@@ -381,7 +381,7 @@ echo $lower . "<br>\n";
   // | function paste_check
   // +-----------------------------------------------------------------------
         //Sucht redundante inhalte in in den prohiblisten und den path-listen, funktion auch f�r Dateien verfuegbar
-        function paste_check($file_name_uri,$bool_dir=false)
+        private function paste_check($file_name_uri,$bool_dir=false)
         {
 
              if($bool_dir)
@@ -419,7 +419,7 @@ echo $lower . "<br>\n";
   // | function split_uri
   // +-----------------------------------------------------------------------
         //spaltet eine Uri in einen Array mit dateiname und Pfad
-        function split_uri($file_name_uri)
+        private function split_uri($file_name_uri)
         {
                 $tmp = explode('/',$file_name_uri);
                 $res['data'] = $tmp[(count($tmp)-1)];

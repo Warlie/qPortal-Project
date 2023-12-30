@@ -38,7 +38,7 @@
 * &cloning(&$prev_obj) : add node with all branches to the prev node
 */
 
-class TREE_tree extends Interface_node
+class TREE_sub extends Interface_node
 {
 var $name = 'empty';
 var $type = 'none';
@@ -51,7 +51,7 @@ function __construct()
 
 function &get_Instance()
 {
-return new TREE_tree();
+return new TREE_sub();
 }
 
 
@@ -59,10 +59,20 @@ function &new_Instance()
 {
                                 
 				$obj = $this->get_Instance();
-				
+
 				$obj->link_to_class = &$this;
 				
 				return $obj;
+}
+
+//primar call after finishing object, ther wont be an existing childnode
+function event_initiated()
+{
+	//echo $this->getRefprev()->full_URI() . ' ' ;
+	//echo $this->get_attribute('value') . "<br>\n";
+
+	$this->to_listener();
+
 }
 
 function complete()
@@ -78,7 +88,7 @@ function event_message_in($type,&$obj)
 	{
 
 		global $_SESSION;
-		
+
 				$result = true;
 
 		if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#sector') )		
@@ -102,41 +112,17 @@ function event_message_in($type,&$obj)
 
 		
 		if(!$result) throw new NoPermissionException('not Allowed');
-		/*
-		
-		if ($att_sector = $this->get_attribute('sector'))
-		{
-		if (false === strpos($_SESSION['http://www.auster-gmbh.de/surface#sector'],';' . $att_sector . ';' )); //return false;
-		}
-		
-		
-		if ($att_security = $this->get_attribute('securitylevel'))
-		{
-		if ((intval($_SESSION['http://www.auster-gmbh.de/surface#securityclass']) < intval($att_security)) 
-		&& 
-		(intval($att_security) <> -1)  )
-		{
-		; //return false;
-		}
-		
-		if (($_SESSION['http://www.auster-gmbh.de/surface#securityclass']) 
-		&& 
-		(intval($att_security) == -1)  )
-		{
-		; //return false;
-		}
-		}
-		
-		*/
+
 	
 		//echo $this->get_attribute('name') . ' ' . $type . "<br>\n";
 	//echo $type . ' ' . $obj->get_request() . ' ' . $this->name .  '<br>';
 	if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#src'))
 	{
-		$tmp = str_replace( '%ROOT_DIR%', ROOT_DIR, $tmp);
-				 
+
+		 $tmp = str_replace( '%ROOT_DIR%', ROOT_DIR, $tmp);
 		if(is_file($tmp))
 		{
+
 			$this->get_parser()->load($tmp,0);
 		//$this->get_parser()->ALL_URI();
 			$this->get_parser()->seek_node('http://www.trscript.de/tree#final');

@@ -7,6 +7,7 @@
 
 require_once('tree_indextree.php');
 require_once('tree_tree.php');
+require_once('tree_sub.php');
 require_once('tree_content.php');
 require_once('tree_program.php');
 require_once('tree_first.php');
@@ -53,6 +54,7 @@ class TREE_factory
 			$this->node['indextree'] = new TREE_INDEXTREE();
 			$this->node['final'] = new TREE_tree();
 			$this->node['tree'] = new TREE_tree();
+			$this->node['sub'] = new TREE_sub('sub','http://www.trscript.de/tree');
 			$this->node['template'] = new TREE_template();
 			$this->node['main'] = new TREE_main();
 			$this->node['add'] = new TREE_add();
