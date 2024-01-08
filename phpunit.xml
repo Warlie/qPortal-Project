@@ -3,6 +3,7 @@
 <testsuites>
   <testsuite name="My Test Suite">
     <directory>test/Unit</directory>
+    <directory>test/Unit/PlugInTest</directory>
   </testsuite>
 </testsuites>
 </phpunit>

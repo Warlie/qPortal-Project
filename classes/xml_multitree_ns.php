@@ -90,6 +90,9 @@ class xml_ns extends xml_omni
 		$this->exception_collection = new ExceptionCollection($this);
 	}
 	
+	public function &get_ExceptionManager(){return $this->exception_collection;}
+	public function catchException(Exception &$exc){$this->exception_collection->catchException(exc);}
+	
 	public function is_valid_node()
 	{
 		return is_object($this->pointer[$this->idx]);
