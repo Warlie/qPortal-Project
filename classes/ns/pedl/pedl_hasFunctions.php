@@ -48,10 +48,6 @@ var $namespace = 'none';
 private $mycount = 0;
 private $id_of_object;
 
-function __construct()
-{
-
-}
 
 function &get_Instance()
 {

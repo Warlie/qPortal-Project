@@ -30,7 +30,7 @@ class RDF_factory
 	var $node = array();
 	var $attrib;
 	
-	function __construct()
+	function __construct($ns)
 	{
 		
 			$this->nativ = new RDF_RDF('rdf','http://www.w3.org/1999/02/22-rdf-syntax-ns');
@@ -50,6 +50,12 @@ class RDF_factory
 			$this->node['about'] = new RDF_about('about','http://www.w3.org/1999/02/22-rdf-syntax-ns');
 			$this->node['ID'] = new RDF_ID('id','http://www.w3.org/1999/02/22-rdf-syntax-ns');
 			$this->node['resource'] = new RDF_resource('resource','http://www.w3.org/1999/02/22-rdf-syntax-ns');
+			
+			
+			$this->nativ->set_is_Class();
+			foreach ($this->node as $value)
+				$value->set_is_Class();
+			
 			/*
 				if($carry)
 				   if (is_array($carry)) 

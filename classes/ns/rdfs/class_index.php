@@ -30,10 +30,10 @@ class RDFS_factory
 	var $node = array();
 	var $attrib;
 	
-	function __construct()
+	function __construct($ns)
 	{
 		
-			$this->nativ = new RDF_RDF();
+			$this->nativ = new RDF_RDF('rdfs', 'http://www.w3.org/2000/01/rdf-schema');
 			$this->node['Resource'] = new RDFS_Resource('Resource','http://www.w3.org/2000/01/rdf-schema');
 			$this->node['Literal'] = new RDFS_Literal('Literal','http://www.w3.org/2000/01/rdf-schema');
 			$this->node['Class'] = new RDFS_Class('Class','http://www.w3.org/2000/01/rdf-schema');
@@ -50,7 +50,9 @@ class RDFS_factory
 			$this->node['seeAlso'] = new RDFS_seeAlso('seeAlso','http://www.w3.org/2000/01/rdf-schema');
 			$this->node['isDefinedBy'] = new RDFS_isDefinedBy('isDefinedBy','http://www.w3.org/2000/01/rdf-schema');
 
-			
+			$this->nativ->set_is_Class();
+			foreach ($this->node as $value)
+				$value->set_is_Class();			
 			/*
 				if($carry)
 				   if (is_array($carry)) 

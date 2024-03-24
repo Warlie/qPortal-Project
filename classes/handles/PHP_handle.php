@@ -411,6 +411,10 @@ function send_header()
 
 }
 
+
+/*
+
+*/
 class Obj_Class_Collection
 {
 	private $collection_Array = array();
@@ -418,6 +422,8 @@ class Obj_Class_Collection
 	
 	/**
 	* Collects all entries to describe a plenty of classes
+	* @param filescan result
+	* @param parser 
 	*
 	*/
 	public function __construct( array $structure, xml_ns &$xml_model) 
@@ -434,8 +440,8 @@ class Obj_Class_Collection
 					$this->cur_node = null;
 					
 					
-					
-					$this->collection_Array[count($this->collection_Array)] = $this->cur_node = new Obj_Class( $value );
+					//
+					$this->collection_Array[] = $this->cur_node = new Obj_Class( $value );
 				}
 				
 				if(!(false === stripos($value['tag'],'function ')))

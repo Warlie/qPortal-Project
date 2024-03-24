@@ -1,6 +1,7 @@
 <?php
 
-/**  Aufstellung der functionen des XML Literal
+/**  TREE_tree
+*
 * full_URI() : Gives out full Namespace with nodetype delimited with #
 * position_stamp() : standard position stamp based on the index of spezific tree
 * exhaustion() : (needs to be updated) removes all branches for this object
@@ -34,10 +35,10 @@
 * to_check_list() : add to checklist node (for attributes)
 * &get_Instance() // a simple row instance
 * &new_Instance() //advanced instance with connection to classobject and could be a subtree
-* &cloning(&$prev_obj) : add node with all branches to the prev node 
+* &cloning(&$prev_obj) : add node with all branches to the prev node
 */
 
-class TREE_content extends Interface_node
+class TREE_subtree extends Interface_node
 {
 var $name = 'empty';
 var $type = 'none';
@@ -50,7 +51,7 @@ function __construct()
 
 function &get_Instance()
 {
-return new TREE_content();
+return new TREE_subtree();
 }
 
 
@@ -58,7 +59,7 @@ function &new_Instance()
 {
                                 
 				$obj = $this->get_Instance();
-				
+
 				$obj->link_to_class = &$this;
 				
 				return $obj;
@@ -67,52 +68,28 @@ function &new_Instance()
 //primar call after finishing object, ther wont be an existing childnode
 function event_initiated()
 {
-	$uri = $this->getRefprev()->full_URI();
-	if( $uri == 'http://www.trscript.de/tree#program'
-		||  $uri == 'http://www.trscript.de/tree#tree' ||  $uri == 'http://www.trscript.de/tree#final')
-	{
+	//echo $this->getRefprev()->full_URI() . ' ' ;
+	//echo $this->get_attribute('value') . "<br>\n";
+
 	$this->to_listener();
-	
-	}
+
 }
 
 function complete()
 	{
 		parent::complete();
+		
 
 	}
 
+
+	
 function event_message_in($type,&$obj)
 	{
-		
-		global $_SESSION;
-		
-		// requests the permission to enter a special sector tag
-		if ($att_sector = $this->get_attribute('sector'))
-		{
-		if (false === strpos($_SESSION['http://www.auster-gmbh.de/surface#sector'],';' . $att_sector . ';' ))return false;
-		}
-		
-		// controls securitylevel
-		if ($att_security = $this->get_attribute('securitylevel'))
-		{
-		if ((intval($_SESSION['http://www.auster-gmbh.de/surface#securityclass']) < intval($att_security)) 
-		&& 
-		(intval($att_security) <> -1)  )
-		{
-		return false;
-		}
-		
-		// controls securityclass
-		if (($_SESSION['http://www.auster-gmbh.de/surface#securityclass']) 
-		&& 
-		(intval($att_security) == -1)  )
-		{
-		return false;
-		}
-		}
-		
-		// ---------------------- Start with progress --------------------
+
+
+	
+				// ---------------------- Start with progress --------------------
 		
 		if($obj instanceof EventObject )
 		{
@@ -152,16 +129,20 @@ function event_message_in($type,&$obj)
 				$tag_array[$tmp->get_attribute('name')] = $tmp->getdata();
 			}
 		}
-	
+
 	$this->get_parser()->change_URI($template);
 	$this->get_parser()->flash_result();
 	if($this->get_parser()->seek_node($tag_name,$tag_array) )
 	{
-		
-	$obj->set_node($this->get_parser()->show_xmlelement());
+
+		//var_dump("addtree",$obj->get_node(), "for cloning", $this->get_parser()->show_xmlelement());
+		$this->get_parser()->show_xmlelement()->cloning($obj->get_node());
+		//echo "cloning done";
+		//$this->get_parser()->index_consistence();
+	//$obj->set_node($this->get_parser()->show_xmlelement());
 	//echo $this->get_parser()->show_xmlelement()->name;
 	//echo $obj->name;
-	$this->send_messages('*',$obj); 
+	//$this->send_messages('*',$obj); 
 	}
 	else
 	{
@@ -171,7 +152,45 @@ function event_message_in($type,&$obj)
 	}
 	//echo $type . ' ' . get_Class($obj);
 	}
-	}//end of if obj == EventObject
+	/*		
+________
+		if(count($this->documentForInsert) > 0)
+		{
+		
+	        $tmpstamp = $this->back->position_stamp();
+		
+		if(!$this->back->change_URI($this->content->get_out_template()))
+		echo $new_template . ' isn\'t a available documentident (generateEmptyTree)';
+		
+		$tmpName = $this->back->show_xmlelement();
+		$this->documentForInsert[0]->set_parser($this->back);
+		for($i = 0;$i < $many; $i++)
+			$this->documentForInsert[0]->cloning($this->back->show_xmlelement());
+		}
+
+	  $this->back->go_to_stamp($tmpstamp);
+		
+
+	
+		//echo $this->get_attribute('name') . ' ' . $type . "<br>\n";
+	//echo $type . ' ' . $obj->get_request() . ' ' . $this->name .  '<br>';
+	if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#src'))
+	{
+
+		 $tmp = str_replace( '%ROOT_DIR%', ROOT_DIR, $tmp);
+		if(is_file($tmp))
+		{
+
+			$this->get_parser()->load($tmp,0);
+		//$this->get_parser()->ALL_URI();
+			$this->get_parser()->seek_node('http://www.trscript.de/tree#final');
+			$this->get_parser()->show_xmlelement()->event_message_in($type,$obj);
+			return true;
+		}
+		
+	}
+	*/
+	}
 }
 
 ?>

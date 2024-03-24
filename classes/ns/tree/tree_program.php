@@ -72,11 +72,12 @@ function &new_Instance()
 //primar call after finishing object, ther wont be an existing childnode
 function event_initiated()
 {
+
 	$uri = $this->getRefprev()->full_URI();
 	if( $uri == 'http://www.trscript.de/tree#program' || $uri == 'http://www.trscript.de/tree#content'
-	)
+		||  $uri == 'http://www.trscript.de/tree#tree' ||  $uri == 'http://www.trscript.de/tree#final')
 	{
-	
+
 	$this->to_listener();
 	
 	}

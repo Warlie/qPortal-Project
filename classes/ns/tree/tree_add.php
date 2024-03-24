@@ -42,11 +42,8 @@ class TREE_add extends Interface_node
 var $name = 'empty';
 var $type = 'none';
 var $namespace = 'none';
+private $caseFolding = XML_CASE_FOLDING_DEFAULT;
 	
-function __construct()
-{
-
-}
 
 function &get_Instance()
 {
@@ -78,42 +75,59 @@ function event_initiated()
 function event_message_in($type,&$obj)
 	{
 		
-		
-		//loads main template
-		//$obj->get_requester()->template = $this->getdata();
-		//$obj->get_requester()->maintemplate = $this->getdata();
-		//$obj->get_requester()->out_template = $this->getdata();
+
 		if(is_Null($this->get_attribute('doctype')))
 		$doc_type = 'XML';
 		else
 		$doc_type = $this->get_attribute('doctype');
 										
+
 										
-										
-			//echo $this->get_attribute('case_folding') . '------------------------';					
-		if($this->get_attribute('case_folding')=="0")
-		{
-		$preload = $this->get_attribute('doctype_out');
-											
-											//echo 'no-casefold';
-											
-		$this->get_parser()->load($this->getdata(),0,$doc_type);
+		//case-folding
+		if($this->get_attribute('case_folding')) 
+			$this->caseFolding = intval($this->get_attribute('case_folding'));
+
+		//var_dump($this->getdata());
+		
+				if(is_null($this->getdata())){
+					
+					if($method = $this->get_attribute('method') && $id = $this->get_attribute('id') )
+					{
+						//var_dump($_PUT);
+
+
+
+						$output = file_get_contents('php://input');
+						
+
+						$this->get_parser()->setNewTree($id);
+						//var_dump($output, $doc_type);
+						$this->get_parser()->load_Stream($output,$this->caseFolding,$doc_type,$id);
+
+						$obj->get_requester()->set_template($this->get_attribute('id'),$this->get_attribute('id'));
+						return;
+
+					}else
+
+					return ;
+				}
+				else
+				{
+		
+		
+		//calls specific parser based on doc-type									
+		$this->get_parser()->load($this->getdata(),$this->caseFolding,$doc_type);
+		
+		//TODO expands parser with Exceptions
 		if($this->get_parser()->error_num() <> 0)
-		echo $this->get_parser()->error_num() . ':' . $this->get_parser()->error_desc();									
+			throw new ErrorException($this->get_parser()->error_num() . ':' . $this->get_parser()->error_desc());									
 										
-											
-			if($preload)
-			{
-												
+			// saves output format					
+			if($preload = $this->get_attribute('doctype_out'))							
 				$this->get_parser()->TYPE[$this->get_parser()->idx] = $preload;
+
 											
-			}
-											
-		}
-		else
-		{
-			$this->get_parser()->load($this->getdata(),1,$doc_type);
-		}
+
 		$this->get_parser()->set_first_node();
 		
 		
@@ -127,7 +141,7 @@ function event_message_in($type,&$obj)
 				
 	
 			}
-
+}
 		
 		
 	}

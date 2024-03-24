@@ -97,6 +97,7 @@ class xml  {
    
    //config
    var $only_child_node = false;
+   public $heap=[];
    
    
    
@@ -673,11 +674,12 @@ echo 'booh';
         $this->used_parser = false;
    }
 //-------------------------------------------------------------------------------------------
-     /* läd ein XML-Dokument */
+//seems to be never used again omni_handle does an override
+		/* läd ein XML-Dokument */
       function load_Stream(&$source,$casefolding=1,$special="",$ref='')
         {
 
-	
+
 
 		$this->idx = $this->max_idx;
                 $this->special = $special;
@@ -754,7 +756,7 @@ echo 'booh';
    {
    global $logger_class;
    $res;
-   $logger_class->setAssert("start(load) with ref=\"$ref\", case_folder=\"$case_folder\", spezial=\"$spezial\"" ,0);
+
 //echo '--' . $ref . "---\n\n";
 
 if(false === stripos($ref,'.php'))
@@ -764,27 +766,8 @@ if(false === stripos($ref,'.php'))
         $tmp2 = $ref;
         $tmp = $ref;
 
-
-        /*
-        	TODO commented out and should be removed in later review
-        	
-        	info 
-        	$tmp2 seems to be a modified version of filename as an index in array for loaded URI 
-        	
-        	$tmp = str_replace('&amp;','&',$tmp);
-        if(!(($token = strpos($ref,'#'))===false))
-        {
-        	echo "show me $ref \n";
-        $tmp2 = strtolower(substr($ref,0, - strlen($ref) + $token ));
-        }
-        else
-        {
-        	echo "show me $ref \n";
-        $tmp2 = strtolower($ref);
-        }
-*/
         
-        
+        //looking for allready existing file name
         for($i=0;$i<count($this->loaded_URI);$i++)
         {
         if($this->loaded_URI[$i] == $tmp2)
@@ -796,7 +779,7 @@ if(false === stripos($ref,'.php'))
         }
 
         
-   
+   //creates a new identifire to index correlation
 	$this->setNewTree($tmp2);
 
 
@@ -833,10 +816,9 @@ $tmp = $ref;
         //save new file
 
         $this->load_Stream($res,$case_folder,$spezial,$ref);
-        //$this->max_idx = $pos_in_array;
-        //echo $pos_in_array . '+++++++++';
-        //$this->change_idx($pos_in_array);
-        //echo $pos_in_array . ' -+--: ';// . $this->URI($pos_in_array);
+
+        
+        	//looks unnessesary, makes no difference if commented out
            if(!isset($this->pointer[$this->idx])){$this->pointer[$this->idx] = &$this->mirror[$this->idx];}
         	
         return $this->idx;
@@ -845,13 +827,15 @@ $tmp = $ref;
 //-----------------------------------------------------------------
 //--------------------------setNewTree-----------------------------
 
-function setNewTree($ident)
+function setNewTree($ident, $namespaces = [])
 {
 	$this->max_idx = count($this->loaded_URI);
 
         $this->loaded_URI[$this->max_idx] = $ident;
 
         $this->idx =  $this->max_idx;
+        
+       // $this->NAMESPACES[$this->base_object->idx] = $namespaces;
 }
 //----------------Datei laden--------------------------------------
 //----------------http laden---------------------------------------
@@ -1418,7 +1402,7 @@ return $res;
 	   
    return $obj;
    }
-
+//seems to be never used again override in ns
    function tag_open($parser, $tag, $attributes)
    {
 
@@ -1561,7 +1545,7 @@ function &convert_from_XML($myString)
                         
                 */
 		
-                $String = $myString;
+                $String = (is_null($myString)? '': $myString);
                 //echo strtoupper($this->MIME[$this->idx]['encoding']);
                 if (strtoupper($this->special) == "URLENCODE") $String = urldecode($String);
                 

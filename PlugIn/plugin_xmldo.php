@@ -32,9 +32,13 @@ private $relation = array();
 private $strucEl = array();
 private $list = array();
 private $emptyText = 'kein Datensatz';
-private $config= array('attribOnNull' => true);
+private $config= array('attribOnNull' => true, 'actsAsCollector' => false);
 private $testmode = false;
 private $cdata;
+
+private $table = [];
+
+private $template_json;
 
 	function __construct(/* System.Parser */ &$back, /* System.CurRef */ &$treepos, /* System.Content */ &$content)
 	{
@@ -45,21 +49,7 @@ private $cdata;
 		//$this->id = $value; , &$id
 	}
 	
-			
-	/**
-	*@function: MOVEFIRST = goes to first record
-	*/
-		
-	public function moveFirst()
-	{$this->pos = 0;}
 	
-	/**
-	*@function: MOVELAST = goes to last record
-	*/
-	public function moveLast()
-	{$this->pos = count($this->table) - 1;}
-	
-
 	/**
 	*@function: ITER = gives out a object to LIST-parameter
 	*/
@@ -78,6 +68,7 @@ private $cdata;
 	public function setXMLTemplate($new_template, $use_at_tag)
 	{
 		
+		$this->template_json = "{\"new_template\" : \"$new_template\", \"use_at_tag\" : \"$use_at_tag\"}";
 		$tmpstamp = $this->back->position_stamp();
 		
 		$this->template = $new_template;
@@ -134,15 +125,83 @@ private $cdata;
 		
 	}
 	
-
-
-	/**
-	* COLLECTION
-	*
-	*/
-	public function setCollection()
+	public function configuration($json)
 	{
-		$this->collection = $value;
+		$confi = json_decode($json, true, 512, JSON_THROW_ON_ERROR); // TODO Exception for NULL
+		
+		if(array_key_exists("serial",$confi))$this->processSerialConfiguration($confi["serial"]);
+		
+
+	}
+	
+	private function processSerialConfiguration(array $confi)
+	{
+		if(array_key_exists("config",$confi))
+			foreach ($confi["config"] as $function => $set)
+			{
+				//var_dump($set);
+				
+				switch ($function) {
+		/*		case "attribOnNull":
+					$this->config['attribOnNull'] = $set;
+					break; */
+				case "setCDATAmode":
+					$this->cdata = true;
+					break;
+				case "setEmptyCaseText":
+					$this->setEmptyCaseText($set);
+					break;
+				default:
+					$this->config[$function] = $set;
+
+				}
+				
+			}
+
+		//if(array_key_exists("template",$confi))
+		//if(array_key_exists("template",$confi))
+		if(array_key_exists("template",$confi))$this->setXMLTemplate(...$confi["template"]);
+		if(array_key_exists("structure",$confi))
+		{//$this->setXMLTemplate(...$confi["template"]);
+			foreach ($confi["structure"] as $command) {
+				$type = $command["type"];
+				unset($command["type"]);
+				if($type == "Branch")
+				
+					$this->setBranch(...$command);
+				
+				else
+					$this->setCrotch(...$command);
+				}
+			//var_dump($confi["structure"]);
+		}
+		
+		if(array_key_exists("definition",$confi))  //define_tag
+		{			//var_dump($confi["structure"]);
+			foreach ($confi["definition"] as $command) {
+
+					$this->define_tag(...$command);
+
+
+			}
+		}
+		if(array_key_exists("process",$confi))  //define_tag
+			switch ($confi["process"]) {
+			case "Branch":
+				$this->generateBranchTree();
+				break;
+			case "Tag":
+				$this->generateTagTree();
+				break;
+			}
+
+	}
+	
+
+	
+	public function actsAsCollector($bool)
+	{
+		$this->config['actsAsCollector'] = $bool;
 	}
 	
 	/**
@@ -151,6 +210,7 @@ private $cdata;
 	*/
 	public function setEmptyCaseText($text)
 	{
+		$this->config['setEmptyCaseText'] = $text;
 		$this->collectionemptyText = $text;
 	}
 	
@@ -160,7 +220,7 @@ private $cdata;
 	*/
 	public function setCDATAmode()
 	{
-			
+			$this->config['setCDATAmode'] = true;
 			$this->cdata = true;
 			
 			
@@ -180,8 +240,9 @@ private $cdata;
 	* SETTAG
 	*
 	*/
-	public function define_tag($name, $xpath, $attrib_data, $pos, $prefix, $postfix, $value, $group, $branch)
+	public function define_tag($name, $xpath, $attrib_data = null, $pos = null, $prefix = null, $postfix = null, $value = null, $group = null, $branch = null)
 	{	
+
 		$cur_pos = count($this->verification);
 		$this->verification[$cur_pos] = array();
 		$this->verification[$cur_pos]['name'] = $name; /* name to call*/
@@ -196,9 +257,7 @@ private $cdata;
 	}
 	
 	
-		public function col($columnName)
-		{
-		}
+
 		/*
 		if($type == "COL")
 		{
@@ -262,14 +321,16 @@ private $cdata;
 	* 
 	* @param child_pos: 
 	*/
-	public function setCrotch( $child_pos, $xpath, $group, $level)
+	public function setCrotch( $child_pos, $xpath, $group)
 	{
+
 	  $this->level[] = array('type'=> 0, 'child_pos' => intval($child_pos),  'xpath' => $xpath, 'group' => $group);
 	
 	}
 	
 	public function setBranch($child_pos, $xpath, $group)
 	{
+
 	  $this->level[] = array('type'=> 1, 'child_pos' => intval($child_pos),  'xpath' => $xpath, 'group' => $group);
 	}
 	 
@@ -284,114 +345,7 @@ private $cdata;
 
 	}
 	
-/*
-	private function setData( &$node, $verificationNum, $pos)
-	{
 
-		if($this->back->freexpath($this->verification[$verificationNum]['xpath'], $node) == 0)
-                {
-	           		echo "bad xpath:" . $this->verification[$verificationNum]['xpath'] . " \n";
-                		return ;
-                }
-              
-                $obj_ref_array = &$this->back->get_xpath_Result();
-                $this->back->free_xpath_Result();
-                $note_use =  &$obj_ref_array[0];
-                unset($obj_ref_array);
-
-	
-	  $tmp = $note_use->index_max();
-		
-	  if(!is_null($this->rst))$datarec = $this->rst->col($this->verification[$verificationNum]['name']);
-		    
-		   //echo "schreibe $datarec !\n";
-	   
-          $note_use->setdata($datarec,$tmp);
-          $note_use->set_bolcdata($this->cdata);
-
-          unset($tmp);
-	  unset($datarec);
-	}	
-	*/
-/*	
-	private function setAttrib(  &$node, $verificationNum)
-	{
-		
-	
-		if($this->back->freexpath($this->verification[$verificationNum]['xpath'], $node) == 0)
-                {
-	           		echo "bad xpath:" . $this->verification[$verificationNum]['xpath'] . " \n";
-                		return ;
-                }
-              
-                $obj_ref_array = &$this->back->get_xpath_Result();
-                $this->back->free_xpath_Result();
-                $note_use =  &$obj_ref_array[0];
-                unset($obj_ref_array);
-
-	$postfix = $this->verification[$verificationNum]['postfix'];
-	
-	if(!$this->verification[$verificationNum]['prefix'] )
-	$full_uri = ($prefix = $this->content->get_Main_NS()) . '#' . $postfix;
-	else
-	$full_uri = ($prefix = $this->verification[$verificationNum]['prefix']) . '#' . $postfix ;
-	
-	$prefix = $this->back->get_Prefix($prefix,$note_use->get_idx());
-
-	if( strlen( $prefix ) == 0 )
-	  $prefix .= $prefix;
-	else
-	  $prefix .= $prefix . ':';
-	
-	
-	
-	
-	$myattrib = &$this->back->get_Object_of_Namespace( $full_uri );
-	
-	$myattrib2 = &$this->back->get_Object_of_Namespace( $full_uri );
-	
-	//If($myattrib === $myattrib2) echo "sind gleich \n";
-	
-	//echo " prepost " . $prefix . ":" . $postfix . "--";
-	
-	if($prefix . ":" . $postfix == ":src")
-	{ //./images/02.png
-			If($myattrib === $myattrib2) echo "sind gleich \n";
-		if($this->machwasmit++ % 2 == 1 )
-		$datarec = "./images/03.png";	
-		else
-		$datarec = "./images/02.png";
-		
-		//echo $datarec . "\n";
-	$myattrib->setdata($datarec,0);
-	
-	
-	$note_use->attribute($prefix . $postfix, $myattrib);
-
-	  unset($myattrib);
-	  unset($note_use);
-		
-		return;
-	}
-	
-	$datarec = "";
-	
-	if(!is_null($this->rst))$datarec = $this->rst->col($this->verification[$verificationNum]['name']);
-
-	//echo $datarec . " booho \n";
-	
-	$myattrib->setdata($datarec,0);
-	
-	unset($datarec);
-	$note_use->attribute($prefix . $postfix, $myattrib);
-	
-	  unset($myattrib);
-	  unset($note_use);
-	
-
-	}	
-	
-	*/
 
 	/**
 	* creates an assoziatied array and set all entries to null
@@ -489,7 +443,7 @@ private $cdata;
                 	}
     }
     
-       	private function &build_element($xpath, &$Node,  &$Root, $last = true)
+    private function &build_element($xpath, &$Node,  &$Root, $last = true)
 	{
 		//$in = "in";
 		//$Root->setdata($in,0);
@@ -498,13 +452,7 @@ private $cdata;
                 	{
 
                 		$obj_ref_array = &$this->back->get_xpath_Result();
-                		/*
-                		echo "(";
-                		for($i = 0; $i < count($obj_ref_array);$i++)
-                			echo $obj_ref_array[$i]->position_stamp() . "-";
-                		
-                		echo ")";
-                		*/
+
                 		$this->back->free_xpath_Result();
                 		$pos = 0;
                 		$cur_deep = substr_count($obj_ref_array[0]->position_stamp(),'.');
@@ -571,11 +519,7 @@ private $cdata;
 
     private function defineBlock( $range, &$tbl, &$groups)
     {
-    	/*
-    	echo "start box [" . $range[0] . "-" . $range[1] . "] with group " . $groups[0]['group'] . " with :\n";
-    	foreach ($groups as  $value)
-    		echo $value['name'] . "\n";
-    	echo "\n"; */
+
     	//echo "  for tbl and groups \n";
     	$has_entries = false;
     	$res = $range;
@@ -585,13 +529,8 @@ private $cdata;
    			{
     			$has_entries = !is_null($tbl[$range[0]][$value['name']]);
     			if($has_entries)break;
-    			/*
-    			echo  "tbl[" . $range[0] . "][" . $value['name'] . "]=" . $tbl[$range[0]][$value['name']] . "(" . gettype($tbl[$range[0]][$value['name']]) . ")";
-    			if($has_entries)
-    					echo "gotcha\n";
-    				else
-    					echo "\n";*/
-    	  		}
+
+    	  	}
     		if(!$has_entries)
     		{
     			//echo "raus";
@@ -604,11 +543,7 @@ private $cdata;
     		$has_entries = false;
     		  foreach ($groups as  $value)
     		{
-    			//echo $value['name'] . " in " . $i . ": ";
     			$has_entries = !$has_entries || !is_null($tbl[$i - 1][$value['name']]);
-    			//var_dump($tbl);
-    			//echo $tbl[$i - 1][$value['name']] . "=" . $tbl[$i][$value['name']] . "\n";
-    			//if(strcmp($tbl[$i - 1][$value['name']], $tbl[$i][$value['name']]) <> 0)echo "----------------leave on " . $value['name'] . " with box [" . $res[0] . ", " . $res[1] . "]---------------\n";
     			if(!is_null($tbl[$i - 1][$value['name']]) && !is_null($tbl[$i][$value['name']]))
     				if(strcmp($tbl[$i - 1][$value['name']], $tbl[$i][$value['name']]) <> 0)return $res;
     		}
@@ -897,6 +832,85 @@ private $cdata;
 
 	}
     
+	public function showConfiguration()
+	{
+		$structure = [];
+		$definition = [];
+		$config = [];
+		$process = $this->config['setTreeType'];
+
+
+		foreach ($this->config as $key => $value) 
+		{		
+			if(is_bool($value))
+			$config[] = "\"$key\" : " . ($value? "true": "false");
+			elseif(is_int($value))
+			$config[] = "\"$key\" : $value";
+			else
+			$config[] = "\"$key\" : \"$value\"";
+
+
+
+		}
+		
+		foreach ($this->verification as $asso){
+		$one_line = [];		
+		foreach ($asso as $key => $value) 
+		{		
+			if(!is_null($value))
+			if(is_numeric($value))
+			$one_line[] = "\"$key\" : $value";
+			else
+			$one_line[] = "\"$key\" : \"$value\"";
+
+
+		}
+			$definition[] = "{" . implode(", ", $one_line) . " }";
+		}
+		//$structure[] = "{ " . implode(",\n", $one_line) . " }";
+
+		
+		foreach ($this->level as $asso){
+		$one_line = [];		
+		foreach ($asso as $key => $value) 
+		{		
+			
+			if($key == 'type')
+			$one_line[] = "\"$key\" : " . ($value == 0? "\"Crutch\"": "\"Branch\"");
+			elseif(is_int($value))
+			$one_line[] = "\"$key\" : $value";
+			else
+			$one_line[] = "\"$key\" : \"$value\"";
+
+
+		}
+			$structure[] = "{" . implode(", ", $one_line) . " }";
+		}		
+		
+		//$this->level[] = array('type'=> 1, 'child_pos' => intval($child_pos),  'xpath' => $xpath, 'group' => $group);
+		
+	$res = '{"serial" :{
+	"config":{
+	' . implode(",\n	", $config) . '
+	},
+	"template":' . $this->template_json . ",\n";
+	
+	if($process == "Branch")
+	$res .= '	"structure":[
+	' . implode(",\n	", $structure) . '
+	],'. "\n";
+	
+	$res .= '	"definition":[
+	' . implode(",\n	", $definition) . '
+	],
+	"process":"' . $process . '"
+	}}';
+
+	
+	echo $res;
+	
+	}
+	
 	/**
 	*	requirements:
 	*	this->rst : DB Datasource
@@ -907,29 +921,8 @@ private $cdata;
 	*	this->deepCollect( bool, array[][], xmlElement)
 	*/
 	
-	public function generateBranchTree()
+	private function createGroupArray(&$verification, &$relation, &$level)
 	{
-
-		$this->show_content();
-		
-		/*moveFirst*/
-		if(!(is_null($this->rst) || $this->rst->moveFirst()))
-		{
-			//echo " no static data or recordset ";
-			return '';
-		}
-		
-		/* check verification */
-		if(count($this->verification) == 0)
-		{
-			echo "need Infomation about branches, please use define_tag";
-			return;
-		}
-		
-		/* create an index of all grouppositions */
-		// TODO check whole consistence
-		
-		//$hold = $this->verification[0]['group'];
 		/* ------------------------------------------ groups ------------------------------------------------------*/
 		$groups = array();
 		/* -----------------------------------------------------------------------------------------------------------*/
@@ -942,7 +935,8 @@ private $cdata;
 		
 		$tmp = array();
 		$iter = -1;
-		foreach ($this->verification as $key => $value) 
+		
+		foreach ($verification as $key => $value) 
 		{		
 			
 			if(!in_array($value['group'], $tmp)) 
@@ -952,55 +946,37 @@ private $cdata;
 			}
 
 		}
-		if(!count($this->relation))		
-			foreach ($tmp as $key => $value) $this->relation[++$iter] = array('level' => $iter, 'group' => $value, 'condition' => "" );
+		if(!count($relation))		
+			foreach ($tmp as $key => $value) $relation[++$iter] = array('level' => $iter, 'group' => $value, 'condition' => "" );
 		unset($tmp);
-		
-		//var_dump($groups);
-		//Fehlannahme, die gruppen koennen nicht so einfach gebaut werden, weil "Verification" nicht zwingend sortiert ist
-		//var_dump($this->verification);
-		//$this->verification = array_sort($this->verification, 'group', SORT_ASC);
-		
-		for($i = 0; count($this->verification) > $i; $i++ )$permutation[$this->verification[$i ]['group']][] = $this->verification[$i ] ;
+				
+		for($i = 0; count($verification) > $i; $i++ )$permutation[$verification[$i ]['group']][] = $verification[$i ] ;
 
 		//var_dump($permutation);
 		
-		$names[$this->verification[0]['name']]  = $this->verification[0]['group']; 
-		for($i = 1; count($this->verification) > $i; $i++ )
+		$names[$verification[0]['name']]  = $verification[0]['group']; 
+		for($i = 1; count($verification) > $i; $i++ )
 		{
-			$names[$this->verification[$i]['name']] = $this->verification[$i]['group'];  
+			$names[$verification[$i]['name']] = $verification[$i]['group'];  
 			
-			if($hold != $this->verification[$i]['group'])
+			if($hold != $verification[$i]['group'])
 			{
-			  $hold = $this->verification[$i]['group'];
-			  //$groups[$hold] = array($i);
+			  $hold = $verification[$i]['group'];
+
 			}
-			//else
-			 //$groups[$hold][] = $i;
+
 		}	
 		//ToDo for only on element in group
 
 
-		$empty = $this->verification[count($this->verification) - 1 ]['group'];
+		$empty = $verification[count($verification) - 1 ]['group'];
 		if(is_numeric($empty))
 		$names[''] = $empty + 1;  
 		else
 		$names[''] = 1;
 
 		asort($names);
-		/*
-		foreach ($names as $k => $v)
-		{
-			$names[$this->verification[$i]['name']] = $this->verification[$i]['group'];  
-			if($hold != $this->verification[$i]['group'])
-			{
-			  $hold = $this->verification[$i]['group'];
-			  $groups[$hold] = array($i);
-			}
-			else
-			 $groups[$hold][] = $i;
-		}	
-		*/
+
 		
 /* ----------------------------------------------------------------------------------------------------------------------------
 * Bucketsort
@@ -1008,15 +984,15 @@ private $cdata;
 * -----------------------------------------------------------------------------------------------------------------------------
 */
 		// Verification
-		foreach ($this->verification as $key => $value) 
+		foreach ($verification as $key => $value) 
 		{		
 		
-			$groups[$value['group']]['data'][] = &$this->verification[$key];
+			$groups[$value['group']]['data'][] = &$verification[$key];
 
 		}
 		
 		//level
-		foreach ($this->level as $key => $value) 
+		foreach ($level as $key => $value) 
 		{		
 
 			$tmp = explode(',', $value['group']);
@@ -1032,7 +1008,7 @@ private $cdata;
 							$groups[trim($value2)][$type[$value['type']]] = &$this->level[$key];
 							else
 							{
-								var_dump($groups[trim($value2)]);
+								//var_dump($groups[trim($value2)]);
 							//echo "oh, doof";
 							throw new Exception($value2); //$groups[trim($value2)]['branch']
 							}
@@ -1043,9 +1019,75 @@ private $cdata;
 
 		}
 		
+/* ----------------------------------------------------------------------------------------------------------------------------
+* Bucketsort
+*
+* -----------------------------------------------------------------------------------------------------------------------------
+*/
 		
-//var_dump($groups);
+		                // appends branch and crotch to groups
+                		
+        for($i = 0; count($this->level) > $i; $i++ )
+		{
+			$arr = explode(',', $this->level[$i]["group"]);
+			for($j = 0; count($arr) > $j; $j++ )
+			{
+				if($this->level[$i]["type"] == 0)
+				{
+					$groups[$arr[$j]]['crotch'] = &$this->level[$i];
+				}
+				else
+				{
+					$groups[$arr[$j]]['branch'] = &$this->level[$i];
+				}
+			}
 
+		}	
+		
+		return [$groups, $permutation];
+	}
+	
+	public function generateBranchTree()
+	{
+
+		/* check verification */
+		if(count($this->verification) == 0)
+		{
+			echo "need Infomation about branches, please use define_tag";
+			return;
+		}
+		
+		if($this->config['actsAsCollector'])
+		{
+			$this->collectData();
+			return;
+		}
+		
+		$this->show_content();
+		$this->config['setTreeType'] = "Branch";
+		
+		/*moveFirst*/
+		if(!(is_null($this->rst) || $this->rst->moveFirst()))
+		{
+			//echo " no static data or recordset ";
+			return '';
+		}
+		
+
+		
+		/* create an index of all grouppositions */
+		// TODO check whole consistence
+		
+		//$hold = $this->verification[0]['group'];
+		/* ------------------------------------------ groups ------------------------------------------------------*/
+		$groups = array();
+		$permutation= array();
+		/* -----------------------------------------------------------------------------------------------------------*/
+
+
+$tmp = $this->createGroupArray($this->verification, $this->relation, $this->level);
+$groups = $tmp[0];
+$permutation = $tmp[1];
 
 //var_dump($names);
 		//TODO bugfix Wenn sich der zweite Eintrag einer gruppe geaendert hat, stimmt die gruppe nicht
@@ -1054,9 +1096,13 @@ private $cdata;
 
 		$this->create_tbl($tbl);
 		
+
+		
 		$this->rst->moveFirst();
-$res = "";
-$until = "";
+		
+		
+		$res = "";
+		$until = "";
 		//var_dump($tbl);
 
 
@@ -1088,8 +1134,7 @@ $until = "";
 
 		
 		//TODO feld erstellen, das der Menge der Gruppen entspricht
-		//
-		//TODO 
+
 		
 		$this->back->freexpathresult();
 		
@@ -1097,10 +1142,7 @@ $until = "";
 		if(!$this->back->change_URI($this->content->get_out_template()))
 		echo $new_template . ' isn\'t a available documentident';
 		
-	//echo $this->back->position_stamp() . "\n";		
-
-		//$tmpName = $this->back->show_xmlelement();
-	//echo $tmpName->position_stamp() . ' ' . $tmpName->name . "\n";		
+	
 
 //*			
 
@@ -1153,31 +1195,10 @@ if(DEBUG)
 *
 * -----------------------------------------------------------------------------------------------------------------------------
 */
-/*
-	$bucketsort = array();
-	
-	$lvl_description = array();
-	
-                foreach ($this->relation as $key => $value) 
-		{	
-			if(in_array($value))
-			if(!is_array($lvl_description[$value['level']])) $lvl_description[$value['level']] = array();
-				//$lvl_description[$value['level']][$value[]] = 
-				
-		echo " $key = {";
-			foreach ($value as $key1 => $value1)
-			echo " $key1 : $value1;";
-		echo "}\n";
-		*/
-	//	}
-//var_dump($lvl_description);
-
-
-                //var_dump($this->level);
-  // */             
-                // appends branch and crotch to groups
+         
+   /*             // appends branch and crotch to groups
                 		
-                for($i = 0; count($this->level) > $i; $i++ )
+        for($i = 0; count($this->level) > $i; $i++ )
 		{
 			$arr = explode(',', $this->level[$i]["group"]);
 			for($j = 0; count($arr) > $j; $j++ )
@@ -1194,7 +1215,7 @@ if(DEBUG)
 
 		}	
 
-					
+		*/			
 	$curHold = array();
 
 
@@ -1208,8 +1229,8 @@ if(DEBUG)
 		
 		if(DEBUG)
 		{
-			$len = 5;
-			foreach($tbl as $key => $value)$len = max($len, strlen($key));
+		$len = 5;
+		foreach($tbl as $key => $value)$len = max($len, strlen($key));
 
 		foreach($tbl as $key => $value)
 		{
@@ -1245,10 +1266,12 @@ if(DEBUG)
 		}
 		do{
 			// ------ update table ------
-			$res = $this->test_alter($tbl) ;
-			$until = $this->last_col($tbl);
-			
-			$fulltbl[$pos++] = $this->buildRow($tbl);
+			$res = $this->test_alter($tbl) ; //fills table with current values
+			$until = $this->last_col($tbl); // finds first null element and returns its key
+
+			$fulltbl[$pos++] = $this->buildRow($tbl); //builds up the full table
+
+
 			// -------------------------------
 			
 		if(DEBUG)
@@ -1293,13 +1316,6 @@ if(DEBUG)
 		}
 		while($this->rst->next());
 		
-		
-		//var_dump($fulltbl);
-		
-		   	//var_dump($box);
-    	// results current groupname
-    		//$subBranch = &$this->back->show_xmlelement();
-
     	//set new box
     	//var_dump($groups);
     		$hasSubLvl = $this->hasNextlvl($fulltbl, $groups, array(0, count($fulltbl) - 1), 0);
@@ -1309,7 +1325,7 @@ if(DEBUG)
     	
     		//if($hasSubLvl)
     		//der gibt doch knoten zuruck, springt der da ueberhaupt hin?
-    			$this->buildCrotch($groups, $this->gotoGroup(0, $fulltbl));
+    	$this->buildCrotch($groups, $this->gotoGroup(0, $fulltbl));
     		
 
     	
@@ -1319,35 +1335,178 @@ if(DEBUG)
 
 		$this->processingBox($fulltbl, $groups, array(0, count($fulltbl) - 1), 0);
 		if(DEBUG)echo "}\n";
-		/*
-		for($i = 0; $i <  $pos;i++)
-		{
-				foreach($tbl as $key => $value){		
-					
-				//$value ($key)
-			  }	
-		}
-		*/
-                
-		//$curHold[1]->giveOutOverview();
+
+
 		
                 /* check level */
 		//TODO gruppen einzeln durchtesten und für mehrere Gruppen pro Tiefe auslegen
-		/*
-		if(count($groups) !== count($this->level))
-		{
-			echo "level und gruppenanzahl passen nicht zusammen";
-			return;
-		}
-*/
+
                 
-                /* return to former page */
-                $this->back->go_to_stamp($tmpstamp);
+        /* return to former page */
+        $this->back->go_to_stamp($tmpstamp);
                 
                 
 
 	}
 	
+	
+	private function collectData()
+	{
+		
+		$tmpstamp = $this->back->position_stamp();
+		
+		/* chose page to collect templates */
+		if(!$this->back->change_URI($this->content->get_template($this->template)))
+		{
+			echo $this->template . ' isn\'t a available documentident';
+			return;
+		}
+		$this->back->set_first_node();
+
+    		//var_dump($groups[$name]['branch']);
+
+		
+		/* ------------------------------------------ groups ------------------------------------------------------*/
+		$groups = array();
+		$permutation= array();
+		/* -----------------------------------------------------------------------------------------------------------*/
+
+
+$tmp = $this->createGroupArray($this->verification, $this->relation, $this->level);
+$groups = $tmp[0];
+$permutation = $tmp[1];
+
+
+//var_dump($names);
+		//TODO bugfix Wenn sich der zweite Eintrag einer gruppe geaendert hat, stimmt die gruppe nicht
+		$tbl = array();
+		$fulltbl = array();
+
+		$this->create_tbl($tbl);
+		
+		$this->collectDataFromDocument($fulltbl, $tbl, $groups);
+		
+        $this->back->go_to_stamp($tmpstamp);
+
+	}
+	
+	
+	private function collectDataFromDocument(&$fulltbl, $tbl, $groups)
+	{
+		reset($groups);
+		//var_dump($tbl, $groups);
+		
+		$fulltbl[] = $tbl;
+		$this->internal_table_values = $this->iterateGroupsBranch($tbl, $fulltbl, $groups, $this->back->show_xmlelement());
+		//var_dump($this->internal_table_values);
+	}
+	
+	/**
+	*	
+	*
+	*/
+	private function iterateGroupsBranch($tbl,  &$fulltbl,  &$groups, $root_object)
+	{
+
+		//preparation
+		$this->back->set_xmlelement($root_object);	
+		$branch = &current($groups)['branch'];
+		$data = &current($groups)['data'];
+		$resultTbl = [];
+		$newTbl = $tbl;
+		//echo "-----------" . $branch['xpath'] . "------------------\n";		
+		//var_dump($branch, $data);
+
+		//goto branch
+    	$this->back->complete_list(true);
+    	$this->back->set_xmlelement($this->back->xpath($branch['xpath']));
+
+		$result = &$this->back->get_xpath_Result();
+		
+		if(count($result) == 0)$resultTbl[] = $tbl;
+
+		foreach ($result as $value)
+		{
+		//var_dump($value->full_URI() . "-go");
+		$this->back->complete_list(false);		
+		$newTbl = [];
+		
+		if(next($groups))
+		{
+			//echo "next groups\n";
+			$newTbl = $this->iterateGroupsBranch($tbl, $fulltbl, $groups, $value);
+			//var_dump($newTbl);
+			//echo "bekomme " . count($newTbl) . " eine dings\n";
+			$this->iterateGroupsData($newTbl, $data, $value);
+		}
+		else
+		{
+			//echo "erzeuge eine dings\n";
+			$newTbl[] = $tbl;
+			$this->iterateGroupsData($newTbl, $data, $value);
+		}
+
+		$resultTbl = array_merge($resultTbl, $newTbl);
+
+
+		reset($data);
+		
+			
+		}
+		//echo "ausgabe\n";
+		//var_dump($resultTbl);
+		return $resultTbl;
+	}
+	
+	/**
+	*	subfunc collects data out of every data section array.
+	*	It starts at the specific buttom of every collection and fills out every 
+	*	table in the table section
+	*	@param tbl array[mixed] : result array with empty fields to fill 
+	*	@param dataset array[mixed]] : array with description how to fill the result array
+	*	@param root_object Interface_NS : basement node for statirng with
+	*/
+	private function iterateGroupsData(&$tbl, &$dataset, $root_object)
+	{
+
+		//sets root node
+		$this->back->set_xmlelement($root_object);
+		// gives current data section part to the data variable
+		$data = current($dataset);
+		//echo "GroupsData:" . $data["xpath"] . " in " . $root_object->full_URI() .   "\n";
+		//var_dump($tbl);
+		foreach ($tbl as &$value)
+		{
+
+		//applies a xpath statement on the root node
+    	if(!$res = &$this->back->xpath($data["xpath"]))
+    		{
+    			//echo $data["xpath"] . " in " . $root_object->full_URI() . " not found";
+    			continue;
+    		}
+//echo "--" . $data["xpath"] . ':' . $data['attrib_data'] . "--\n";
+		if($data['attrib_data']== 'data')
+    		{
+//echo "!!!";
+    			//collects an data entry
+    			$value[$data['name']] = $res->getdata();
+
+    		}
+    		else
+    		{
+    			//echo "???";
+    			//collects an attribute entry
+    			if(($value[$data['name']] = $res->get_ns_attribute($data['prefix'] . '#' . $data['postfix'])) === false)
+    			$value[$data['name']] = null;
+    				 	 	 		
+    		}
+//var_dump($value);    		
+		}
+
+		//applies same func rekursivly with next dataset section
+		if(next($dataset))$this->iterateGroupsData($tbl, $dataset, $root_object);
+
+	}
 	
 	public function generateEmptyTree($many)
 	{
@@ -1373,6 +1532,8 @@ if(DEBUG)
 	{
 
 		$this->show_content();
+		
+				$this->config['setTreeType'] = "Tag";
 		
 		if(is_null($this->rst) || $this->rst->moveFirst())
 		{
@@ -1498,6 +1659,14 @@ if(DEBUG)
 		}
 		return $this->collectionemptyText;
 	}
+	//public function moveFirst(){parent::moveFirst();}
+	//public function moveLast(){parent::moveFirst();}
+    	//is never used
+    	//abstract public function getAdditiveSource();
+
+
+	public function prev(){return parent::prev();}
+	public function next(){return parent::next();}
 	
 	public function reset()
 	{

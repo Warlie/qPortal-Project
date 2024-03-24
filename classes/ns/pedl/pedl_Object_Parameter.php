@@ -43,11 +43,7 @@ class PEDL_Object_Parameter extends Interface_node
 var $name = 'empty';
 var $type = 'none';
 var $namespace = 'none';
-	
-function __construct()
-{
 
-}
 
 function &get_Instance()
 {

@@ -44,10 +44,7 @@ var $name = 'empty';
 var $type = 'none';
 var $namespace = 'none';
 	
-function __construct()
-{
 
-}
 
 function &get_Instance()
 {
@@ -71,6 +68,7 @@ function event_initiated()
 	$uri = $this->getRefprev()->full_URI();
 	if($uri == 'http://www.trscript.de/tree#template' )
 	{
+
 	$this->to_listener();
 	
 	}
@@ -78,7 +76,7 @@ function event_initiated()
 
 function event_message_in($type,&$obj)
 	{
-		
+
 		//loads main template
 		//$obj->get_requester()->template = $this->getdata();
 		//$obj->get_requester()->maintemplate = $this->getdata();

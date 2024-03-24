@@ -201,27 +201,37 @@ class xml_ns extends xml_omni
 		   //echo $type . ' ' . count($arg) . "<br>\n";
 		   for($i = 0; count($arg) > $i ; $i++)
 		   {
-		   	 
+				$check = true;   
+		   	   
 			if(!is_null($attrib))
 				foreach($attrib as $att_key => $att_value )
 				   {
-				   	   //echo '"' . $att_key . '"=>"' . $att_value;
+//echo "===================";
+		//				   var_dump($check);
+				   	   
+	//			   	   echo '"' . $att_key . '"=>"' . $att_value . "\n";
 				   	   if(is_string($arg[$i]) )
 				   	   {
 				   	   	   echo "invalid string element found for: $type (" . $this->idx . ":$i) }\n";
 				   	   	   return false;
 				   	   }
-
+// var_dump($arg[$i], $arg[$i]->get_ns_attribute($att_key));
 						   $check = ($value = $arg[$i]->get_ns_attribute($att_key));
 
-						   
+	//					   var_dump($check, $value);
+//echo "===================";						   
 						   if(!is_Null($att_value))
 						   {
 							   $check = $check && ($value == $att_value);
 						   }
  
 				   }
+  /*
   
+  $obj->attrib = $this->attrib;
+                                $obj->attrib_ns
+  
+  */
 				
 					   
 				if($check)
@@ -230,7 +240,7 @@ class xml_ns extends xml_omni
 				$this->result_nodes[count($this->result_nodes)] = &$arg[$i];
 				}
 				    
-				$check = true;   
+
 		   }
 		   
 
@@ -434,7 +444,7 @@ if(is_null($value))echo $key;
 			{
 
 				//echo $full_ns . " nicht gefunden $nodename<br>" . "\n";
-				$this->namespace_frameworks[$full_ns]['node'][$nodename] = My_NameSpace_factory::alt_namespace_factory();
+				$this->namespace_frameworks[$full_ns]['node'][$nodename] = My_NameSpace_factory::alt_namespace_factory($nodename,  $full_ns);
 				$this->has_new_node = true;
 				$node = $this->namespace_frameworks[$full_ns]['node'][$nodename]->new_Instance();
 
@@ -495,7 +505,7 @@ if(is_null($value))echo $key;
 			else
 			{
 
-				$this->namespace_frameworks[$glob_namespace]['node'][$nodename] = My_NameSpace_factory::alt_namespace_factory();
+				$this->namespace_frameworks[$glob_namespace]['node'][$nodename] = My_NameSpace_factory::alt_namespace_factory($nodename,  $full_ns);
 				$this->has_new_node = true;
 				$node = $this->namespace_frameworks[$glob_namespace]['node'][$nodename]->new_Instance();
 
@@ -549,7 +559,7 @@ if(is_null($value))echo $key;
 					}
 					else
 					{
-						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory();
+						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory($nodename,  $full_ns);
 						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
 					}
 					//	echo 	$k . "\n";
@@ -589,7 +599,7 @@ if(is_null($value))echo $key;
 							
 							throw new ErrorException('actual namespace for "' .$full_ns . '#' . $attribname . '" for an attribute is not defined for "' . $k . '".', 255, 75);
 						}
-						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory();
+						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory($nodename,  $full_ns);
 						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
 						
 					}
@@ -625,13 +635,15 @@ if(is_null($value))echo $key;
 
 
    
-   public function set_new_index(&$node)
+   public function set_new_index(&$node, int $idx = -1)
    {
-	   	if(!$this->looking_index[$node->get_idx()][$node->full_URI()])
-		$this->looking_index[$node->get_idx()][$node->full_URI()] = array();
+   	   $internal_idx = ($idx == -1?$node->get_idx():$idx);
+   	   
+	   	if(!$this->looking_index[$internal_idx][$node->full_URI()])
+		$this->looking_index[$internal_idx][$node->full_URI()] = array();
 	
 	
-	$this->looking_index[$node->get_idx()][$node->full_URI()][count($this->looking_index[$node->get_idx()][$node->full_URI()])] = &$node;
+	$this->looking_index[$internal_idx][$node->full_URI()][] = &$node;
    }
    
 
@@ -836,12 +848,12 @@ if(is_null($value))echo $key;
 			   if($tmp = &$this->namespace_frameworks[$ns[0]]['node'][$ns[1]]->new_Instance())
 			   return $this->namespace_frameworks[$ns[0]]['node'][$ns[1]]->new_Instance();
 			   else
-			   return My_NameSpace_factory::alt_namespace_factory();
+			   return My_NameSpace_factory::alt_namespace_factory($ns[1], $ns[0]);
 		   }
 		   else
 		   {
 			   
-			   return My_NameSpace_factory::alt_namespace_factory();
+			   return My_NameSpace_factory::alt_namespace_factory($ns[1], $ns[0]);
 		   }
 	   }
    }

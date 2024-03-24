@@ -44,10 +44,6 @@ var $name = 'empty';
 var $type = 'none';
 var $namespace = 'none';
 	
-function __construct()
-{
-
-}
 
 function &get_Instance()
 {

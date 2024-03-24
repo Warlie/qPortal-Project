@@ -282,25 +282,16 @@ function service_log_in( &$system , $user , $key)
                                
                                 $unlocked = login($system, $user, $key);
                                 
-				//echo $_SESSION['http://www.auster-gmbh.de/surface#user'];
-				//$content->setPageParam($_REQUEST);
-                                
-                                //$content->setXMLTemplate('template/text1.htm');
-                                //if($_SESSION['@_mod']=='edit')
-				//$content->setXMLstructur('template/edit.xml');
-                                //else
+
                                 if($_SESSION['@_mod']=='edit')
 				$system->setXMLstructur('template/edit.xml');
                                 else
 				$system->setXMLstructur('template/xml.xml');
 				
-				$system->setboolPanel(true);
-                                $system->setControlElement("div",  array('id'=>"bars"));
 
-                                $system->setTreeNodeName('');
                                if($unlocked && is_Null($tmp = $_REQUEST['URL']))$tmp = "";
                                if(!$unlocked && is_Null($tmp = $_REQUEST['URLalt']))$tmp = "";
-                               
+
                                 $system->setTreeNodeName($tmp);
                                 if(!$system->generate())
 				{
@@ -432,135 +423,7 @@ $xml = $system->getXMLObj();
 
 
 		$xml->tag_close($this, "rdfs:Class");
-		/*
-		$attrib = array('rdf:ID' => 'PhpClass');
-		$xml->tag_open($this, "pedl:Object_Class", $attrib);
-		$xml->tag_close($this, "pedl:Object_Class");
-		
-		$attrib = array('rdf:ID' => 'PhpMethod');
-		$xml->tag_open($this, "pedl:Object_Funktion", $attrib);
-		$xml->tag_close($this, "pedl:Object_Funktion");
-		
-		$attrib = array('rdf:ID' => 'PhpConstructor');
-		$xml->tag_open($this, "pedl:Object_Constructor", $attrib);
-		$xml->tag_close($this, "pedl:Object_Constructor");
-		
-		$attrib = array('rdf:ID' => 'PhpParameter');
-		$xml->tag_open($this, "pedl:Object_Parameter", $attrib);
-		$xml->tag_close($this, "pedl:Object_Parameter");
-		
-		$attrib = array('rdf:ID' => 'System');
-		$xml->tag_open($this, "PhpClass", $attrib);
-		$xml->tag_close($this, "PhpClass");
-		
-		$attrib = array('rdf:ID' => 'Variable');
-		$xml->tag_open($this, "PhpParameter", $attrib);
-		$xml->tag_close($this, "PhpParameter");
-		
-		$attrib = array('rdf:ID' => 'System.Parser');
-		$xml->tag_open($this, "Variable", $attrib);
-		$xml->tag_close($this, "Variable");
-		
-		$attrib = array('rdf:ID' => 'System.FuncTree');
-		$xml->tag_open($this, "Variable", $attrib);
-		$xml->tag_close($this, "Variable");
-		
-		$attrib = array('rdf:ID' => 'System.Content');
-		$xml->tag_open($this, "Variable", $attrib);
-		$xml->tag_close($this, "Variable");
-		
-		$attrib = array('rdf:ID' => 'System.CurRef');
-		$xml->tag_open($this, "Variable", $attrib);
-		$xml->tag_close($this, "Variable");
-		
-		$attrib = null;
-		$xml->tag_open($this, "System", $attrib);
-				
-				$xml->tag_open($this, "System.Parser", $attrib);
-				$xml->cdata_ref($this,$xml);
-				$xml->tag_close($this, "System.Parser");
-				
-				$xml->tag_open($this, "System.FuncTree", $attrib);
-				$xml->cdata_ref($this,$this);
-				$xml->tag_close($this, "System.FuncTree");
-				
-				$xml->tag_open($this, "System.Content", $attrib);
-				$xml->cdata_ref($this,$system);
-				$xml->tag_close($this, "System.Content");
-				
-				$xml->tag_open($this, "System.CurRef", $attrib);
-				$xml->cdata($this,null);
-				$xml->tag_close($this, "System.CurRef");
-		$xml->tag_close($this, "PhpParameter");
-		
-		$attrib = array('rdf:ID' => 'Class_Collection');
-		$xml->tag_open($this, "owl:Class", $attrib);
-		$xml->tag_close($this, "owl:Class");
-		
-		$attrib = array('rdf:ID' => 'Class_Instance');
-		$xml->tag_open($this, "owl:Class", $attrib);
-		$xml->tag_close($this, "owl:Class");
-		
-		
-		//$xml->create_Ns_Node("owl:Class");
-		//$xml->set_node_attrib('rdf:ID','Class_Collection');
-		//$xml->parent_node();
-		
-		$attrib = array('rdf:about' => '#has_method');
-		$xml->tag_open($this, "rdf:Property", $attrib);
-		
-			$attrib = array('rdf:resource' => '#PhpClass');
-			$xml->tag_open($this, "rdfs:domain", $attrib);
-			$xml->tag_close($this, "rdfs:domain");
 
-			$attrib = array('rdf:resource' => '#PhpMethod');
-			$xml->tag_open($this, "rdfs:range", $attrib);
-			$xml->tag_close($this, "rdfs:range");
-			
-		$xml->tag_close($this, "rdf:Property");
-		
-		$attrib = array('rdf:about' => '#has_constructor');
-		$xml->tag_open($this, "rdf:Property", $attrib);
-		
-			$attrib = array('rdf:resource' => '#PhpClass');
-			$xml->tag_open($this, "rdfs:domain", $attrib);
-			$xml->tag_close($this, "rdfs:domain");
-
-			$attrib = array('rdf:resource' => '#PhpConstructor');
-			$xml->tag_open($this, "rdfs:range", $attrib);
-			$xml->tag_close($this, "rdfs:range");
-			
-		$xml->tag_close($this, "rdf:Property");
-
-		$attrib = array('rdf:about' => '#has_parameter');
-		$xml->tag_open($this, "rdf:Property", $attrib);
-		
-			$attrib = array('rdf:resource' => '#PhpMethod');
-			$xml->tag_open($this, "rdfs:domain", $attrib);
-			$xml->tag_close($this, "rdfs:domain");
-
-			$attrib = array('rdf:resource' => '#PhpParameter');
-			$xml->tag_open($this, "rdfs:range", $attrib);
-			$xml->tag_close($this, "rdfs:range");
-			
-		$xml->tag_close($this, "rdf:Property");
-		
-		
-		$attrib = null;
-		$xml->tag_open($this, "Class_Collection", $attrib);
-		
-			$xml->tag_open($this, "rdf:Bag", $attrib);
-			$xml->tag_close($this, "rdf:Bag");
-
-		$xml->tag_close($this, "Class_Collection");
-		
-		$xml->tag_open($this, "Class_Instance", $attrib);
-		
-			$xml->tag_open($this, "rdf:Bag", $attrib);
-			$xml->tag_close($this, "rdf:Bag");
-
-		$xml->tag_close($this, "Class_Instance");
-		*/
 		$xml->use_ns_def_strict(false);
 		
 		print($xml->save_Stream('UTF-8',true));

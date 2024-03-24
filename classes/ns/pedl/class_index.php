@@ -32,25 +32,30 @@ class PEDL_factory
 	var $node = array();
 	var $attrib;
 	
-	function __construct()
+	function __construct($ns)
 	{
 
-			$this->nativ = new RDF_RDF();
-			$this->node['create_alt_field'] = new PEDL_Create_Alt_Field();
-			$this->node['convert'] = new PEDL_Convert();
-			$this->node['script'] = new PEDL_Script();
+			$this->nativ = new RDF_RDF('rdfs', $ns);
+			$this->node['create_alt_field'] = new PEDL_Create_Alt_Field('create_alt_field', $ns);
+			$this->node['convert'] = new PEDL_Convert('convert', $ns);
+			$this->node['script'] = new PEDL_Script('script', $ns);
 
-			$this->node['Object_Class'] = new PEDL_Object_Class();
-			$this->node['hasFunktions'] = new PEDL_hasFunctions();
-			$this->node['Funktions'] = new PEDL_Functions();
-			$this->node['hasParameter'] = new PEDL_hasFunctions();
-			$this->node['ParameterCollection'] = new PEDL_Functions();
-			$this->node['Object_Funktion'] = new PEDL_Object_Funktion();
-			$this->node['Object_Constructor'] = new PEDL_Object_Constructor();
-			$this->node['Object_Parameter'] = new PEDL_Object_Parameter();
-			$this->node['hasCodeResource'] = new PEDL_hasCodeResource();
-			$this->node['src'] = new PEDL_Object_Parameter();
-			$this->node['name'] = new PEDL_name();
+			$this->node['Object_Class'] = new PEDL_Object_Class('Object_Class', $ns);
+			$this->node['hasFunktions'] = new PEDL_hasFunctions('hasFunktions', $ns);
+			$this->node['Funktions'] = new PEDL_Functions('Funktions', $ns);
+			$this->node['hasParameter'] = new PEDL_hasFunctions('hasParameter', $ns);
+			$this->node['ParameterCollection'] = new PEDL_Functions('ParameterCollection', $ns);
+			$this->node['Object_Funktion'] = new PEDL_Object_Funktion('Object_Funktion', $ns);
+			$this->node['Object_Constructor'] = new PEDL_Object_Constructor('Object_Constructor', $ns);
+			$this->node['Object_Parameter'] = new PEDL_Object_Parameter('Object_Parameter', $ns);
+			$this->node['hasCodeResource'] = new PEDL_hasCodeResource('hasCodeResource', $ns);
+			$this->node['src'] = new PEDL_Object_Parameter('src', $ns);
+			$this->node['name'] = new PEDL_name('name', $ns);
+			
+			$this->nativ->set_is_Class();
+			foreach ($this->node as $value)
+				$value->set_is_Class();
+			
 			/*
 			$this->node['template'] = new TREE_template();
 			$this->node['main'] = new TREE_main();

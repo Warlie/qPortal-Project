@@ -18,6 +18,8 @@ private $dbclazz = null;
 private $bool_op = array();
 private $rst = null;
 
+private $save_result = [];
+
 private $obj = null;
 private $dbencode = "utf8"; //ISO-8859-1
 private $tag = array();
@@ -175,7 +177,7 @@ public function execute()
 
 			$my_lvl = 0; $i = 0;
 	
-			
+
 			
 			$this->dbclazz->set_db_encode($this->dbencode);
 
@@ -240,7 +242,7 @@ public function execute()
 
 			$sql .= $this->last . ';';
 			//echo $sql . "\n";
-			$logger_class->setAssert("execute $sql \n",0);
+
 			$this->rst = $this->dbclazz->get_rst($sql);
 			$this->rst->first_ds();
 		}
@@ -368,7 +370,7 @@ return $this;}
 
 public function test(){echo "test (" . $this->many() . ")";}
 
-public function setTestmode($bool){	$this->testmode = $bool;	}
+public function setTestmode($bool){	$this->testmode = boolval($bool);	}
 		/**
 		*@parameter: COL = gives out data to an field
 		*/
@@ -414,133 +416,112 @@ public function entry_exists($column, $value)
 	{
 		return ($this->rst->find($column, $value) !== false)?'true':'false';
 	}
-		
+
+public function set_mode($mode)
+{
+
+	if($mode == 'UpdateAndInsert')$this->rst->set_mode(WorkModes::WMUpdateAndInsert);
+	if($mode == 'Update')$this->rst->set_mode(WorkModes::WMUpdate);
+	if($mode == 'Insert')$this->rst->set_mode(WorkModes::WMInsert);
+	if($mode == 'Delete')$this->rst->set_mode(WorkModes::WMDelete);
+}
+	
 public function saves_dataset_back()
 		{
 		 global $logger_class;
 
 		 //if($this->testmode)
-		//	$this->rst->show_content();
-		 
+			//$this->rst->show_content();
+
 
 		// starts, when a plugin is connected
 		if(!is_Null($this->obj))
 		{
+
 			if(!$this->obj->moveFirst())return false;
-			
+
 			        //moves to first recordset
 				$this->rst->first_ds();
 				
 				$h = 0;
 				$field = array();
 				
-				//echo "tag\n";
-				//var_dump($this->tag);
-				//echo "order\n";
-				//var_dump($this->order);
-				
+
+				// create an associative list of values
 				do{
 
 				$field[$h] = array();
 				for($i=0;$i < count($this->order);$i++)
-				{
-				
-					//echo $this->tag[$this->order[$i]]['content'] . " ";
-				        //
-				        //echo "content: " . $this->tag[$this->order[$i]]['content'] . " (" . $this->order[$i] . ")[$i] \n";
-				        //Der Fehler ist wo anders. Es gibt Referenzprobleme der der Function_parameter Objekte
+
+
+					// runns through all names and checks their type to be content, which calls it's value and the static value
 					if(!is_null($this->tag[$this->order[$i]]['content']) && is_null($this->tag[$this->order[$i]]['value']))
-					{
-					
-					//var_dump($this->tag);
-					//echo " und die order 66 '" . $this->order[$i] . "' \n";
-					//echo "key '" . $this->tag[$this->order[$i]]['content'] . "' =" . $this->obj->col($this->tag[$this->order[$i]]['content']) . "\n";
-					$field[$h][$this->tag[$this->order[$i]]['field']] = $this->convert($this->obj->col($this->tag[$this->order[$i]]['content']),  $this->rst->type($this->tag[$this->order[$i]]['field']));
-					//echo  "\nfield[" . $this->order[$i] . "=" . $this->tag[$this->order[$i]]['field'] . "\n";
-					
-					}
-					else //if(!is_null($this->tag[$this->order[$i]]['value']))
-					{
-					//echo "value[" . $this->order[$i] . "]=" . $this->tag[$this->order[$i]]['value'] . "\n";
-					//echo $this->rst->type($this->tag[$this->order[$i]]['field']);
-					$field[$h][$this->tag[$this->order[$i]]['field']] = $this->convert( $this->tag[$this->order[$i]]['value'],  $this->rst->type($this->tag[$this->order[$i]]['field']) );
-					//echo  "field[" . $this->order[$i] . "]=" . $this->tag[$this->order[$i]]['field'] . "\n";
-					}
-					
-				}
+
+						//content case
+						$field[$h][$this->tag[$this->order[$i]]['field']] = $this->convert($this->obj->col($this->tag[$this->order[$i]]['content']),  $this->rst->type($this->tag[$this->order[$i]]['field']));
+
+					else
+						//value case
+						$field[$h][$this->tag[$this->order[$i]]['field']] = $this->convert( $this->tag[$this->order[$i]]['value'],  $this->rst->type($this->tag[$this->order[$i]]['field']) );
+
+
 					
 					
 					$h++;
 				}while($this->obj->next());
-				//var_dump($field);
-				$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: $h rows effected",0);
+
+
 				
 				$prim = $this->rst->prim_field();
+
 				
-			//echo 	count($field);
-		//durchlauf
+		/*
+		*	cycle, that runs over an array ([num][column-name] = value) of collected data. 
+		*/
 		for($hr = 0;$hr < count($field);$hr++)
 		{			
-		//echo "<br>\n ----- ";
-		//foreach($field[$hr] as $key => $value) echo $key . ' ' . $value . ', '; 
-		
-		//var_dump($field);
-		
-		//echo '(' . $prim[0] . ') >' . $field[$hr][$prim[0]] . '< ';
-		//echo "Field: $hr prim:" . $prim[0] . "\n";
-		//var_dump($field);
+
 		/*
 		* TODO case, new prim value
 		*/
+					/*
+		// in case prime field is empty (null || '')  choose the second one
 		$is_new_prim = true;
 		if(!(is_null($field[$hr][$prim[0]]) || ($field[$hr][$prim[0]] == '')))
 			{
-			$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: prim",0);
-			
+
+
 			$this->rst->first_ds();
-			//var_dump($field);
+
 			//l�uft bis zum ende der liste
 			while(!$this->rst->EOF())
 				{
-					
-			//echo "booho";	
-				
-$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: " . $this->rst->value($prim[0]) . "==" . $field[$hr][$prim[0]],0);
+									
 
-				//fragt prim ab
+				//makes a test for the primary key
 				if($this->rst->value($prim[0])==$field[$hr][$prim[0]])
 					{
 						
 						$is_new_prim = false;
-						$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: write " . count($this->order) ,0);
 
+							// saves record set as edit variable
 							for($i=0;$i < count($this->order);$i++)
 							{
 				
-								//echo $prim[0] . "----------------"; 
-							//if( $prim[0] <> $this->tag[$this->order[$i]]['field'])
+
 							$this->rst->setValue(
 								$this->tag[$this->order[$i]]['field'],
 								$field[$hr][$this->tag[$this->order[$i]]['field']],
 								$this->rst->rst_cur_num()
 								);
-							//var_dump($field[$hr][$this->tag[$this->order[$i]]['field']]);
-							/*
-							echo "speichert " . $this->tag[$this->order[$i]]['field'] . ' ,'
-								. $field[$this->rst->rst_cur_num()][$this->tag[$this->order[$i]]['field']] . ' '
-								. $this->rst->rst_cur_num() . "\n"; */
-							$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: write " . $this->tag[$this->order[$i]]['field'] . ' ,'
-								. $field[$this->rst->rst_cur_num()][$this->tag[$this->order[$i]]['field']] . ' '
-								. $this->rst->rst_cur_num() ,0); 
-					
+
 							
 							}
-							//echo " \n uuuund speichern ";
+
 							$this->rst->update();
 							break;
 						}
 
-$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: hier",0);
 						$this->rst->next_ds();
 					}
 					
@@ -549,17 +530,14 @@ $logger_class->setAssert("plugin_dbo.php#saves_dataset_back: hier",0);
 						{
 							$is_new_prim = false;
 							for($i=0;$i < count($this->order);$i++)
-								{
 									
-												
+								// saves a new data
 								$this->rst->setValue(
 									$this->tag[$this->order[$i]]['field'],
 									$field[$hr][$this->tag[$this->order[$i]]['field']]								
 									);
 												
-							
-								}
-								
+
 							$this->rst->update();
 						}
 						
@@ -568,34 +546,47 @@ $logger_class->setAssert("plugin_dbo.php#saves_dataset_back: hier",0);
 					
 				}
 				else
-				{
-					$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: no prim",0);
+				{ 
+							//in case primary key is empty 
 							for($i=0;$i < count($this->order);$i++)
 							{
-				
-							$logger_class->setAssert("rumbsbums " . $this->tag[$this->order[$i]]['field'] . " " . $field[$hr][$this->tag[$this->order[$i]]['field']]	 ,0);
-//var_dump($field[$hr]);
 								$this->rst->setValue(
-									$this->tag[$this->order[$i]]['field'],
-									$field[$hr][$this->tag[$this->order[$i]]['field']]								
+									$this->tag[$this->order[$i]]['field'], //Tag contains the field name in relation to it's tag name 
+									$field[$hr][$this->tag[$this->order[$i]]['field']]	// and its value						
 									);
-							
-								
-					
-							
+
 							}
 							$this->rst->update();
 
 					
 				}
-				
+				*/
 	
+							for($i=0;$i < count($this->order);$i++)
+							{
+								$this->rst->setValue(
+									$this->tag[$this->order[$i]]['field'], //Tag contains the field name in relation to it's tag name 
+									$field[$hr][$this->tag[$this->order[$i]]['field']]	// and its value						
+									);
+
+							}
+							$this->rst->update();
+				
 			}	
-			
+
 			if($this->testmode)
-			$this->rst->show_content();
+;
+			//$this->rst->show_content();
 			else
-			$this->dbclazz->insert_rst($this->rst);
+			{
+				$res = $this->dbclazz->insert_rst($this->rst);
+				
+				foreach($res as $line)
+					{
+						$this->save_result[$line['tbl']] = $line['ID'];
+					}
+			}
+
 			
 		}
 		else
@@ -603,7 +594,16 @@ $logger_class->setAssert("plugin_dbo.php#saves_dataset_back: hier",0);
 				
 	}
 		
+	public function is_new_record($tbl)
+	{
+		return array_key_exists($tbl,$this->save_result ) && $this->save_result[$tbl] != 0;
+	}
 
+	public function next_ID($tbl)
+	{
+		return $this->save_result[$tbl];
+	}
+	
 	private function convert($in, $dataset)
 	{
 		/*

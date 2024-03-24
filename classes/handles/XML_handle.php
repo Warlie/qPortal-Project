@@ -16,12 +16,12 @@ class XML_handle extends Interface_handle
 		$is_obj = ($source instanceof FileHandle);
 		//$is_obj = is_subclass_of($source, 'FileHandle');
 		
-		if(!$is_obj)
+//		if(!$is_obj)
 		
 		$this->parser = xml_parser_create(); //'UTF-8'
 
             xml_parser_set_option( $this->parser, XML_OPTION_CASE_FOLDING, $this->attribute_values['XML_OPTION_CASE_FOLDING'] );
-			xml_parser_set_option( $this->parser, XML_OPTION_TARGET_ENCODING, 'ISO-8859-1' );
+			//xml_parser_set_option( $this->parser, XML_OPTION_TARGET_ENCODING, 'ISO-8859-1' );
             xml_set_object($this->parser, $this->base_object);
 			
 			

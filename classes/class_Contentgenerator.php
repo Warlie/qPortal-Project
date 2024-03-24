@@ -121,23 +121,18 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 			
 			$result = $result  &&  ((($tmp == -1) &&  ($sec == -1)) || (($tmp != -1) &&  ($sec >= $tmp))) ; 
 		}	
+			//var_dump($this->XMLlist->show_ns_attrib('http://www.trscript.de/tree#name'));
+		$result = $result && ( false !== $this->XMLlist->show_ns_attrib('http://www.trscript.de/tree#value'));
 			
 		if ( !(false === ($hidden = strpos( $this->XMLlist->show_ns_attrib('http://www.trscript.de/tree#name'), '.' ) ) )
-		&& intval($hidden) == 0 )
-		{
-
-
-		$result =false;
-		
-		
-		}
+		&& intval($hidden) == 0 )$result =false;
 		
 		// Abfrage client
 		if($tmp = $this->XMLlist->show_ns_attrib('http://www.trscript.de/tree#device') )		
 			$result = $result && ((strtoupper($tmp) == 'MOBILE') xor  !$this->isMobileDevice() ) ;
 		
 
-		
+		//var_dump($result);
 
 		//if($result)echo $this->XMLlist->show_ns_attrib('http://www.trscript.de/tree#device');
 		//echo $this->isMobileDevice();
@@ -338,34 +333,24 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		if($this->XMLlist->show_xmlelement())
 		{
 //model=xpath_model&query="wubb"& //model=xpath_model,namespace=\'\',query=\'wubb\'
+// '*?__find_node(json=' . base64_encode( '{"name":"http://www.trscript.de/tree#final"}' ) . ')=' . base64_encode( '*?start' )
 		if($this->nodeName == "")
-			$this->XMLlist->show_xmlelement()->event_message_check('*?__find_node(json=' . 
-				base64_encode( '{"name":"http://www.trscript.de/tree#final"}' ) . ')=' . 
-				base64_encode( '*?start' ),new EventObject('',$this,$booh));
+			
+			$this->XMLlist->show_xmlelement()->event_message_check( 
+				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> '*?start']]
+				,new EventObject('',$this,$booh));
 			else
-
-			$this->XMLlist->show_xmlelement()->event_message_check('*?__find_node(json=' . 
+/*
+'*?__find_node(json=' . 
 				base64_encode( '{"name":"http://www.trscript.de/tree#tree", "attribute":{ "http://www.trscript.de/tree#name":"' . $this->nodeName . '" }}' ) . ')=' . 
-				base64_encode( '*?start' ),new EventObject('',$this,$booh)); 
+				base64_encode( '*?start' )
+*/
+			$this->XMLlist->show_xmlelement()->event_message_check(
+				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{ "attribute":{"http://www.trscript.de/tree#name":"' . $this->nodeName . '"}}'], "Value"=> '*?start']]
+				,new EventObject('',$this,$booh)); //  "name":"http://www.trscript.de/tree#tree",
 			//$this->XMLlist->show_xmlelement()->event_message_in('*?start',new EventObject('',$this,$booh));
 		}
-		/*
-		if($this->nodeName == "")
-		$this->XMLlist->seek_node('http://www.trscript.de/tree#final');
-		else
-		if(!$this->XMLlist->seek_node(null,array('http://www.trscript.de/tree#name'=>$this->nodeName)))return false;
-		$booh = null;
 		
-
-		//if(!$this->XMLlist->show_xmlelement())return true;
-		
-	//	try {
-
-		$this->XMLlist->show_xmlelement()->event_message_in('*?start',new EventObject('',$this,$booh));
-			*/
-	//	} catch (Exception $e) {
-   // echo 'Exception abgefangen: ',  $e->getMessage(), "\n";
-    	//	}
     		
 		
 

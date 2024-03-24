@@ -34,7 +34,7 @@ var $rst = null;
 	
 	public function col($columnname)
 	{
-
+		//echo $columnname . "\n";
 	if($this->rst)
 	{
 		

@@ -47,11 +47,29 @@ var $type = 'none';
 var $namespace = 'none';
 private $mycount = 0;
 private $id_of_object;
+private $shortcut;
+private $lambda = "undefined";
+/*
+private array $functions = [ 'param_out' => function ($obj,$array) {return $obj->param_out(...$array);}
+	, 'xml'=> function ($obj,$array) {return $obj->xml(...$array);}
+	,  'moveFirst'=> function ($obj,$array) {return $obj->moveFirst(...$array);}
+	, 'moveLast'=> function ($obj,$array) {return $obj->moveLast(...$array);}
+	, 'getAdditiveSource'=> function ($obj,$array) {return $obj->getAdditiveSource(...$array);}
+	, 'set_list'=> function ($obj,$array) {return $obj->set_list(...$array);}
+	, 'configuration'=> function ($obj,$array) {return $obj->configuration(...$array);}
+	, 'next'=> function ($obj,$array) {return $obj->next(...$array);}
+	, 'reset'=> function ($obj,$array) {return $obj->reset(...$array);}
+	, 'col'=> function ($obj,$array) {return $obj->col(...$array);}
+	, 'datatype'=> function ($obj,$array) {return $obj->datatype(...$array);}
+	, 'fields'=> function ($obj,$array) {return $obj->fields(...$array);}
+	, 'out'=> function ($obj,$array) {return $obj->out(...$array);}
+	, '__toString'=> function ($obj,$array) {return $obj->__toString(...$array);}
+	];
+*/
+/* param_out(&$param) &xml() moveFirst() moveLast() getAdditiveSource() set_list configuration($json)  next() reset() col($columnname) datatype($columnname) fields() &out()  __toString(){return 'Plug_in:' . get_Class($this);}*/
 
-function __construct()
-{
 
-}
+
 
 function &get_Instance()
 {
@@ -63,6 +81,7 @@ function set_id_name($id)
 	$this->id_of_object = $id;
 }
 
+public function set_Shortcut($name, $shortcut){$this->lambda = $name; $this->shortcut = $shortcut;}
 
 function &new_Instance()
 {
@@ -101,9 +120,23 @@ protected function event_readdata($own)
 		$reflectionObject = $myarray[0];
 		//echo get_Class($myarray[0]);
 		
+		$function_name = $this->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#ID');
 		$methodname = $this->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#name');
 
 		if(strlen(trim($methodname)) == 0)return false;
+		/*
+		var_dump($methodname);
+		if($myarray[1] instanceof plugin && array_key_exists($methodname, $this->functions))
+		{
+			
+			
+			
+			$myarray[1]
+			echo $methodname; 
+			
+		}
+		*/
+		
 		if($method = $myarray[0]->getMethod($methodname)) 
 			{
 
@@ -136,8 +169,22 @@ protected function event_readdata($own)
 						
 					//echo $method->getName() . " \n";
 					$this->set_alter_event(false);
+	//var_dump($all_values);				
+					//if($myarray[1] instanceof plugin && in_array())echo "es";
+					//else
+//echo "nope";
+						//
 					
 					// contains a reflectionClass and a SQL String
+
+
+					if( PEDL_Object_Class::Is_ShortCuts($this->name)){
+						//$example = function ($instance, $array){return $instance->configuration(...$array);};
+						
+						$refl = PEDL_Object_Class::GiveShortCuts($this->name)($myarray[1], $all_values);
+					//$refl = $myarray[1]->configuration(...$all_values);
+					}
+					else
 					try{
 					$refl = $method->invokeArgs($myarray[1], $all_values);
 					}

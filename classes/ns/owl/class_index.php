@@ -32,14 +32,14 @@ class OWL_factory
 	var $node = array();
 	var $attrib;
 	
-	function __construct()
+	function __construct($ns)
 	{
 
-			$this->nativ = new OWL_Ontology();
-			$this->node['Ontology'] = new OWL_Ontology();
-			$this->node['Class'] = new OWL_Class();
-			$this->node['imports'] = new OWL_imports();
-			$this->node['DatatypeProperty'] = new OWL_DatatypeProperty();
+			$this->nativ = new OWL_Ontology('owl', $ns);
+			$this->node['Ontology'] = new OWL_Ontology('Ontology', $ns);
+			$this->node['Class'] = new OWL_Class('Class', $ns);
+			$this->node['imports'] = new OWL_imports('imports', $ns);
+			$this->node['DatatypeProperty'] = new OWL_DatatypeProperty('DatatypeProperty', $ns);
 			//$this->node['literal'] = new RDFS_Literal();
 			//$this->node['class'] = new RDFS_Class();
 			//$this->node['datatype'] = new RDFS_Datatype();
@@ -55,6 +55,9 @@ class OWL_factory
 			//$this->node['seealso'] = new RDFS_seeAlso();
 			//$this->node['isdefinedby'] = new RDFS_isDefinedBy();
 
+			$this->nativ->set_is_Class();
+			foreach ($this->node as $value)
+				$value->set_is_Class();
 			
 			/*
 				if($carry)

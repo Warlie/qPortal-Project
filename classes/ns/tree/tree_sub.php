@@ -70,7 +70,14 @@ function event_initiated()
 {
 	//echo $this->getRefprev()->full_URI() . ' ' ;
 	//echo $this->get_attribute('value') . "<br>\n";
-
+/*
+			if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#method') )		
+				if($_SERVER['REQUEST_METHOD'] === strtoupper($tmp))
+				{
+					echo "add";
+					$this->to_listener();
+				}
+	*/
 	$this->to_listener();
 
 }
@@ -96,7 +103,10 @@ function event_message_in($type,&$obj)
 
 			//var_dump($tmp, $result);
 			//$this->giveOutOverview();
-				
+
+		if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#method') )		
+			if($_SERVER['REQUEST_METHOD'] !== strtoupper($tmp))return;
+			
 		if($tmp =  intval($this->get_ns_attribute('http://www.trscript.de/tree#securitylevel')) )
 		{
 			

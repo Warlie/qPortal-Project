@@ -63,6 +63,41 @@ var $tag;
 	  throw new ObjectBlockException('Recordset is missing');
 	}
 	
+	public function configuration($json)
+	{
+		$confi = json_decode($json, true, 512, JSON_THROW_ON_ERROR); // TODO Exception for NULL
+		
+		if(array_key_exists("config",$confi))
+			foreach ($confi as $function => $set)
+			{
+				//var_dump($set);
+				
+				switch ($function) {
+				case "compare":
+					$this->compare($column1, $column2, $result);
+					break;
+				case "setCDATAmode":
+					$this->setValue($column, $value);
+					break;
+				case "setEmptyCaseText":
+					$this->setEmptyCaseText($set);
+					break;
+
+				}
+				
+			}
+		
+/*
+
+	public function setTrue($value)
+	{
+	  	  $this->iftrue = $value;	
+	}
+	
+	public function setFalse($value)
+*/
+	}
+	
 	private function forExcept($columnname)
 	{
 		$tmp = null;

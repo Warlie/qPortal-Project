@@ -8,6 +8,7 @@
 require_once('tree_indextree.php');
 require_once('tree_tree.php');
 require_once('tree_sub.php');
+require_once('tree_addtree.php');
 require_once('tree_content.php');
 require_once('tree_program.php');
 require_once('tree_first.php');
@@ -47,30 +48,34 @@ class TREE_factory
 	var $node = array();
 	var $attrib;
 	
-	function __construct()
+	function __construct($ns)
 	{
 		
-			$this->nativ = new TREE_INDEXTREE();
-			$this->node['indextree'] = new TREE_INDEXTREE();
-			$this->node['final'] = new TREE_tree();
-			$this->node['tree'] = new TREE_tree();
-			$this->node['sub'] = new TREE_sub('sub','http://www.trscript.de/tree');
-			$this->node['template'] = new TREE_template();
-			$this->node['main'] = new TREE_main();
-			$this->node['add'] = new TREE_add();
-			$this->node['program'] = new TREE_program();
-			$this->node['first'] = new TREE_first();
-			$this->node['content'] = new TREE_content();
-			$this->node['element'] = new TREE_element();
-			$this->node['object'] = new TREE_object();
-			$this->node['param'] = new TREE_param();
-			$this->node['remote'] = new TREE_remote();
-			$this->node['workspace'] = new TREE_workspace();
-			$this->node['sparql'] = new TREE_SPARQL();
-			$this->node['xpath'] = new TREE_xpath();
-			$this->node['document'] = new TREE_document('document','http://www.trscript.de/tree');
-			$this->node['header'] = new TREE_header('header','http://www.trscript.de/tree');
+			$this->nativ = new TREE_INDEXTREE('indextree', $ns);
+			$this->node['indextree'] = new TREE_INDEXTREE('indextree', $ns);
+			$this->node['final'] = new TREE_tree('final', $ns);
+			$this->node['tree'] = new TREE_tree('tree', $ns);
+			$this->node['sub'] = new TREE_sub('sub', $ns);
+			$this->node['subtree'] = new TREE_subtree('subtree', $ns);
+			$this->node['template'] = new TREE_template('template', $ns);
+			$this->node['main'] = new TREE_main('main', $ns);
+			$this->node['add'] = new TREE_add('add', $ns);
+			$this->node['program'] = new TREE_program('program', $ns);
+			$this->node['first'] = new TREE_first('first', $ns);
+			$this->node['content'] = new TREE_content('content', $ns);
+			$this->node['element'] = new TREE_element('element', $ns);
+			$this->node['object'] = new TREE_object('object', $ns);
+			$this->node['param'] = new TREE_param('param', $ns);
+			$this->node['remote'] = new TREE_remote('remote', $ns);
+			$this->node['workspace'] = new TREE_workspace('workspace', $ns);
+			$this->node['sparql'] = new TREE_SPARQL('sparql', $ns);
+			$this->node['xpath'] = new TREE_xpath('xpath', $ns);
+			$this->node['document'] = new TREE_document('document', $ns);
+			$this->node['header'] = new TREE_header('header', $ns);
 			
+			$this->nativ->set_is_Class();
+			foreach ($this->node as $value)
+				$value->set_is_Class();
 			/*
 			$this->node['template'] = new TREE_template();
 			$this->node['main'] = new TREE_main();

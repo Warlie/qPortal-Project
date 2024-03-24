@@ -409,7 +409,7 @@ function process_exist_xhtml(&$obj,$attrib)
 					
 					$attrib->setdata($value,0);
 		
-							if(strlen($prefix) > 0)
+							if(is_string($prefix) && strlen($prefix) > 0)
 							{
 								$attrib->name = $prefix . ':' . $postfix;
 								$cur_element->attribute( $prefix . ':' . $postfix, $attrib);

@@ -89,11 +89,6 @@ function &new_Instance()
 				return $obj;
 }
 
-function complete()
-	{
-		parent::complete();
-
-	}
 /**
 *
 */
@@ -189,13 +184,16 @@ function event_message_in($type,&$obj)
 							
 							//
 							$this->getRefnext($i)->connect_uri($node_func);
-							$send = '*?__redirect_node='
-							. rawurlencode( base64_encode( $node_func . '?__add_in_object' )) ; //http://www.trscript.de/tree#name
+							
+							//$send = '*?__redirect_node='
+							//. rawurlencode( base64_encode( $node_func . '?__add_in_object' )) ; //http://www.trscript.de/tree#name
+							$add = ["Identifire"=>$node_func, "Command"=> ["Name"=> "__add_in_object", "Attribute"=>[], "Value"=> null]];
+							$send2 = ["Identifire"=>"*", "Command"=> ["Name"=> "__redirect_node", "Attribute"=>[], "Value"=> $add /*$node_func . "?__add_in_object" */]];
 							$booh = null;
 							$Event = new EventObject('',$this,$booh);
 							$Event->set_node($this->getRefnext($i));
 
-							$this->send_messages($send,$Event);
+							$this->send_messages($send2,$Event);
 							
 						}
 					}
@@ -210,7 +208,7 @@ function event_message_in($type,&$obj)
 			$booh = null;
 			unset($Event);
 			$Event = new EventObject('',$this,$booh);
-			$send = 'http://www.trscript.de/tree#remote';
+			$send = ["Identifire"=>"http://www.trscript.de/tree#remote", "Command"=> ["Name"=> null, "Attribute"=>[], "Value"=> null]]; //'http://www.trscript.de/tree#remote';
 			//!!!!!überprüfen
 
 			$Event->set_node($obj->get_node());
@@ -410,15 +408,21 @@ function event_message_in($type,&$obj)
 							
 							
 							$this->getRefnext($i)->connect_uri($node_func);
-							$send = $node_obj->full_URI() . '?__redirect_node='
-							. rawurlencode( base64_encode( $node_func . '?__add_in_object=0' )) ; //http://www.trscript.de/tree#name
-							$logger_class->setAssert('               redirect to "' . $node_obj->full_URI() . '" to sent a direct connection betweens "' . $node_func . '?__add_in_object=0" and ' . $this->getRefnext($i)->full_URI() . ' ("' . $this->get_attribute('name') . '")(tree_object:event_message_in)' ,5);
-							
+// @registry_surface_system#Menue.configuration.json
+							$add = ["Identifire"=>$node_func, "Command"=> ["Name"=> "__add_in_object", "Attribute"=>[], "Value"=> "0"]];
+							$send2 = ["Identifire"=>$node_obj->full_URI(), "Command"=> ["Name"=> "__redirect_node", "Attribute"=>[], "Value"=> $add]];
+							//$send = $node_obj->full_URI() . '?__redirect_node=' $node_func ."?__add_in_object=0"
+					//		.  $node_func . '?__add_in_object=0'  ; //http://www.trscript.de/tree#name
+					//echo "\n--->\n";
+					//		var_dump($send, $send2);
+					//echo "\n<---\n";
+						//	$send = $node_obj->full_URI() . '?__redirect_node='
+						//	. rawurlencode( base64_encode( $node_func . '?__add_in_object=0' )) ; //http://www.trscript.de/tree#name
 							$booh = null;
 							$Event = new EventObject('',$this,$booh);
 							$Event->set_node($this->getRefnext($i));
 							
-							$this->send_messages($send,$Event);
+							$this->send_messages($send2,$Event);
 						
 							/*
 							* call of alterdata in 
@@ -436,7 +440,9 @@ function event_message_in($type,&$obj)
 			unset($Event);
 			$Event = new EventObject('',$this,$booh);
 			$send = 'http://www.trscript.de/tree#remote';
-			$this->send_messages($send,$Event);
+			$send2 = ["Identifire"=>"http://www.trscript.de/tree#remote", "Command"=> ["Name"=> null, "Attribute"=>[], "Value"=> null ]];
+
+			$this->send_messages($send2,$Event);
 		
 			//$parser->go_to_stamp($instance_stamp);
 			if($this->index_max() > 0)

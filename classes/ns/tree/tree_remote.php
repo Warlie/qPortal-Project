@@ -92,7 +92,7 @@ function event_message_in($type,&$obj)
 	global $logger_class;
 
 	//activates a child tree:Object object to receive its data later
-	$message = 'http://www.trscript.de/tree#object';
+	$message = ["Identifire"=>"http://www.trscript.de/tree#object", "Command"=> ["Name"=> null, "Attribute"=>[], "Value"=> null]]; // 'http://www.trscript.de/tree#object'
 
 	$booh = null;
 	$Event = new EventObject('',$this,$booh);
@@ -103,7 +103,7 @@ function event_message_in($type,&$obj)
 	$this->send_messages($message,$Event);
 	
 	//gets its value from a linked node of type "http://www.trscript.de/tree#object"
-	$send = 'http://www.trscript.de/tree#object?__get_data=0'; 
+	$send = ["Identifire"=>"http://www.trscript.de/tree#object", "Command"=> ["Name"=> "__get_data", "Attribute"=>[], "Value"=> "0"]]; // 'http://www.trscript.de/tree#object?__get_data=0' 
 	$this->send_messages($send,$Event);
 	
 	
@@ -115,7 +115,7 @@ function event_message_in($type,&$obj)
 	$booh = null;
 	
 	//writes data to a linked Parameterobject
-	$send = 'http://www.w3.org/2006/05/pedl-lib#Object_Parameter?__set_data=0'; 
+	$send = ["Identifire"=>"http://www.w3.org/2006/05/pedl-lib#Object_Parameter", "Command"=> ["Name"=> "__set_data", "Attribute"=>[], "Value"=> "0"]] ;  // 'http://www.w3.org/2006/05/pedl-lib#Object_Parameter?__set_data=0'
 	
 	
 	$Event = new EventObject('',$this,$booh);
@@ -123,7 +123,7 @@ function event_message_in($type,&$obj)
 	$this->send_messages($send,$Event);
 	
 	//receive date from a funtion object, if there is a function-object, it causes a alterdataevent
-	$send = 'http://www.w3.org/2006/05/pedl-lib#Object_Funktion?__get_data=0'; 			
+	$send = ["Identifire"=>"http://www.w3.org/2006/05/pedl-lib#Object_Funktion", "Command"=> ["Name"=> "__get_data", "Attribute"=>[], "Value"=> "0"]]; //  'http://www.w3.org/2006/05/pedl-lib#Object_Funktion?__get_data=0' 			
 	$this->send_messages($send,$Event);
 
 	

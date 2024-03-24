@@ -198,21 +198,13 @@ protected $complete_list = false;
 		
 		$hit = true;
 		$attrib = $this->xPath_attrib($name);
-		//echo "in xfind2 ";
-		//var_dump($attrib);
-		//echo " \n";
-		//echo $xml_obj->name . "<br>\n\n";
+
 		
 		if(count($attrib) <> 0)
 		{
 					
 		foreach ($attrib as $key => $value) {
-			//echo $key . ' ' . $value . "\n";
-		/*	if($xml_obj->attrib[$key])
-			echo "untersucht:" . $xml_obj->name . "=>[$key]'" . $xml_obj->get_attribute($key) . "'  \n";
-			else
-			echo "untersucht:" . $xml_obj->name . "\n";
-		*/	
+
 			
 			$hit =  (($xml_obj->get_attribute($key) == $value) && $hit);
                                                     }
@@ -220,9 +212,7 @@ protected $complete_list = false;
 		
 		if($xml_obj->name == $this->xPath_name($name) && $hit)
                 {
-                //echo "speichert(hit):" . $xml_obj->name . " (" . $xml_obj->full_URI() . ") " . "\n";
-			
-                	//count($this->resultlist)
+
                 	$this->resultlist[] = &$xml_obj;
                 }
 	

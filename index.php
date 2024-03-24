@@ -13,6 +13,8 @@ if(file_exists(CONFIG))
 	$ini_array = parse_ini_file(CONFIG, true);
 else
 	$ini_array = parse_ini_file(CONFIG_DEFAULT, true);
+	
+	$shortCut = [];
 
 //print_r($ini_array);
 
@@ -23,6 +25,11 @@ else
 				define('FRONTEND_INDEX',$ini_array["runtime"]["FRONTEND_INDEX"]);
                 define('EDIT_INDEX',$ini_array["runtime"]["EDIT_INDEX"]);
                 define('ROOT_DIR',($ini_array["runtime"]["ROOT_DIR"]!=""? $ini_array["runtime"]["ROOT_DIR"] : __DIR__));
+                
+                define('LANGUAGE_INPUT_DEFAULT', ($ini_array["default"]["LANGUAGE_INPUT"]!=""? $ini_array["default"]["LANGUAGE_INPUT"] : "XML"));
+                define('LANGUAGE_OUTPUT_DEFAULT', ($ini_array["default"]["LANGUAGE_OUTPUT"]!=""? $ini_array["default"]["LANGUAGE_OUTPUT"] : "XML"));
+
+                define('XML_CASE_FOLDING_DEFAULT', ($ini_array["default"]["XML_CASE_FOLDING"]!=""? $ini_array["default"]["XML_CASE_FOLDING"] : "1"));
 
 
 				define('INSTALL',false);
@@ -30,6 +37,8 @@ else
 				define('MEMORY_USAGE', true);
 				define('TRACE', true);
 
+				set_time_limit(600);
+				
 				error_reporting($ini_array["error"]["ERROR"]);
 				ini_set('display_errors',$ini_array["error"]["SHOW_ERRORS"]);
 
@@ -45,7 +54,9 @@ else
 				require_once('classes/search_model/index_model.php');
 
 				require_once('classes/fs_parser/qp_workflow.php');
+				require_once('classes/array_merge_recursive_distinct.php');
 				//require_once('classes/class_compute_internal_statements.php');
+				require_once('classes/exceptions/not_a_fieldname_exception.php');
 				
                                 include('classes/class_Contentgenerator.php');
                                 include('mod_lib.php');
@@ -168,8 +179,8 @@ else
 					
 					if($_REQUEST['modus'] == 'APPLY_CODE')
 					service_applyCode($content,
-						htmlspecialchars($_REQUEST['CODE']), 
-						htmlspecialchars($_REQUEST['URI']));
+						htmlspecialchars((is_null($_REQUEST['CODE'])? '': $_REQUEST['CODE']) ), 
+						htmlspecialchars((is_null($_REQUEST['URL'])? '': $_REQUEST['URL'])));
 
 					
 					if($_REQUEST['modus'] == 'CREATE_NEW_CODE')

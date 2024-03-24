@@ -72,26 +72,21 @@ function event_initiated()
 	$uri = $this->getRefprev()->full_URI();
 	if($uri == 'http://www.trscript.de/tree#tree' || $uri == 'http://www.trscript.de/tree#final')
 	{
-	$this->to_listener();
+		$this->to_listener();
 	
 	}
 }
 
 function event_message_in($type,&$obj)
 	{
-	
-	$this->succesful = $bool;
-	//echo $type . ' ' . get_Class($obj) . '------';
+
 	$this->send_messages($type,$obj);
 	
 	//$obj->get_requester()->;
 	
 	}
 
-	function succesful($bool)
-	{
-		if($this->succesful)$this->succesful = $bool;
-	}
+
 
 }
 

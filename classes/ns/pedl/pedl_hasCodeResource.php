@@ -43,11 +43,7 @@ class PEDL_hasCodeResource extends Interface_node
 var $name = 'empty';
 var $type = 'hasCodeResource';
 var $namespace = 'http://www.w3.org/2006/05/pedl-lib';
-	
-function __construct()
-{
 
-}
 
 function &get_Instance()
 {

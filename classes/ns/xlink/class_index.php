@@ -17,12 +17,15 @@ class XLINK_factory
 	var $node = array();
 	var $attrib;
 	
-	function __construct()
+	function __construct($ns)
 	{
 
 			$this->nativ = new RDF_RDF();
-			$this->node['href'] = new XLINK_href();
+			$this->node['href'] = new XLINK_href('href', $ns);
 			
+			$this->nativ->set_is_Class();
+			foreach ($this->node as $value)
+				$value->set_is_Class();
 
 			
 	}

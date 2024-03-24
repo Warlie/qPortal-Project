@@ -65,7 +65,7 @@ private $logout = true;
 	function __construct(/* System.Parser */ &$back, /* System.Content */ &$content)
 	{
 		global $_SESSION;
-		
+
 		$this->back= &$back;
 		$this->content = &$content;
 		
@@ -137,6 +137,48 @@ private $logout = true;
 	//var_dump($this->jump_address);
 	}
 	
+	
+	public function configuration($json)
+	{
+		$confi = json_decode($json, true); // TODO Exception for NULL
+		
+		//if(array_key_exists("serial",$confi))$this->processSerialConfiguration($confi["serial"]);
+		//var_dump($confi);
+		if(array_key_exists("config",$confi))
+			foreach ($confi["config"] as $function => $set)
+			{
+				//var_dump($set);
+				
+				switch ($function) {
+				case "root":
+					$this->root = $set;
+					break;
+				case "back":
+					if($set['active'])
+					{	
+						unset($set['active']);
+						$this->back_in_tree(...$set);
+					}
+					else
+					$this->goback = true;
+					break;
+
+				}
+				
+			}
+		//if(array_key_exists("back_in_tree",$confi))$this->setXMLTemplate(...$confi["template"]);
+		//back_in_tree($name, $url)
+		if(array_key_exists("structure",$confi))
+		{//$this->setXMLTemplate(...$confi["template"]); {"name" : "n1", "url" : "u1"},
+			foreach ($confi["structure"] as $command) {
+				$this->setLevelName(...$command);
+		}
+		
+
+		$this->collect_Content();
+}
+	}
+	
 	/**
 	* @param $columnname 
 	* @see plugin
@@ -171,7 +213,7 @@ private $logout = true;
 	
 	function show_root(){$this->root  = true;}
 	
-	function back_in_tree($name, $url)
+	function back_in_tree($name = null, $url = null)
 	{
 
 		if(!$name && !$url)
@@ -257,6 +299,9 @@ private $logout = true;
        
 	}
 	
+	/**
+	*	runns trough all lines
+	*/
 	private function find_line_start(&$arr, $deep = 0)
 	{
 		$many = $this->back->index_child();
@@ -268,68 +313,17 @@ private $logout = true;
 		
 		$this->back->child_node($i);
 		
-		//echo $this->back->show_ns_attrib('http://www.trscript.de/tree#name') . "\n";
+
 		if($this->back->cur_node() == 'tree')
 		{
-		/* Collect name and value of the tree-tags */
-		
-		/*
-		if ($att_sector = $this->back->show_ns_attrib('http://www.trscript.de/tree#sector'))
-		{
-		if (false === strpos($_SESSION['http://www.auster-gmbh.de/surface#sector'],$att_sector )) //';' . $att_sector . ';' 
-		{
-			//echo $_SESSION['http://www.auster-gmbh.de/surface#sector'] . " ";
-			//echo "kicked(sector)\n";
-			$locked = true;
-		}
-		}
-		*/
-		//if ($att_sector = $this->back->show_ns_attrib('http://www.trscript.de/tree#sector'))
-		//if (!$this->content->getAccess())$locked = true;
+
 		$locked = !$this->content->getAccess();
 		
-		/*
-		if ($att_security = $this->back->show_ns_attrib('http://www.trscript.de/tree#securitylevel'))
-		{
-
-		if ((intval($_SESSION['http://www.auster-gmbh.de/surface#securityclass']) < intval($att_security)) 
-		&& 
-		(intval($att_security) <> -1)  )
-		{
-			//echo "kicked(<)\n";
-		$locked = true;
-		}
 		
-		if (($_SESSION['http://www.auster-gmbh.de/surface#securityclass']) 
-		&& 
-		(intval($att_security) == -1)  )
-		{
-			//echo "kicked(sec -1)\n";
-		$locked = true;
-		}
-		}
-
-		
-
-		
-		if ( !(false === ($hidden = strpos( $this->back->show_ns_attrib('http://www.trscript.de/tree#name'), '.' ) ) )
-		&& intval($hidden) == 0 )
-		{
-
-//echo "kicked (.)\n";
-		$locked = true;
-		
-		
-		}
-*/		
 		if(!$locked)
 		{
 		  $deep++;
-		
-		 //echo $this->back->show_ns_attrib('http://www.trscript.de/tree#name') . " is saved{\n";
-		    
-		    //var_dump($arr);
-		    	//echo "}\n";
+
 		  
 		  if($this->back->index_child() == 0 || count($this->level) == ($deep + 1) )
 		  	  $arr[] = array('stamp' => $this->back->position_stamp(), 'deep' => $deep);
@@ -338,34 +332,12 @@ private $logout = true;
 
 		   $deep--;
 		}
-		//else
-		//{
 
-		//echo $this->back->show_ns_attrib('http://www.trscript.de/tree#name') . " is locked{\n";
-		    
-		   // var_dump($arr);
-		    //	echo "}\n";
-		//}
 		
 				$locked = false;
 		
 		}
-/*
-		if(!$locked)
-		{ 
-		  $deep++;
-		  if($this->back->index_child() == 0 || count($this->level) == ($deep + 1) )
-		    $arr[] = array('stamp' => $this->back->position_stamp(), 'deep' => $deep);
-		  else
-		    $this->find_line_start($arr,$deep);
-		  
-		   $deep--;
-		}
-		
-				$locked = false;
-		
-		}
-*/
+
 		$this->back->parent_node();
 	}
 
@@ -398,7 +370,6 @@ private $logout = true;
 	    $this->back->parent_node();
 	    $res[$this->level[$i]['URL']] = str_replace('%s', 
 	    $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),STD_URL);
-	    // $this->back->show_ns_attrib('http://www.trscript.de/tree#name');
 	    $res[$this->level[$i]['Name']] = $this->back->show_ns_attrib('http://www.trscript.de/tree#value');
 	  }
 	  
@@ -407,6 +378,10 @@ private $logout = true;
 	 return $res;
 	}
 	
+	/**
+	*	collects all specified lines and creates a recordset 
+	*
+	*/
 	public function collect_Content() 
 	{
 	
@@ -422,8 +397,10 @@ private $logout = true;
 	/* change to control tree */
 	$this->back->change_URI($structur);
 	
+	/* saves current position */
 	$stamp_structur = $this->back->position_stamp();
 	
+	/* checks the current position to be the root */
 	$this->is_final = ($this->back->get_NS_QName() == 'final');
 	if(!$this->is_final)
 	{
@@ -471,6 +448,8 @@ private $logout = true;
 
 	}
 
+	//var_dump($this->res);
+	
        //Todo hier sollte das Logout hingehören
        if( $this->logout && (intval($_SESSION['http://www.auster-gmbh.de/surface#securityclass'])  > 0))$this->res[] = &$this->add_logout_line();
        if(!$this->root)$this->res[] = &$this->add_goback_line();

@@ -131,6 +131,11 @@ public function __construct($type = 'rootnode', $namespace = "default")
 	$this->namespace = $namespace;
 }
 
+public function alter_name($type = 'rootnode', $namespace = "default")
+{
+	$this->type = $type;
+	$this->namespace = $namespace;
+}
 function get_data_many()
 {
 	if(!is_null($this->data))
@@ -195,8 +200,11 @@ function get_idx()
 	return $this->idx;
 }
 
-protected function set_is_Class()
+public function set_is_Class()
 { $this->is_Class = true ;}
+
+public function set_is_Instance()
+{ $this->is_Class = false ;}
 
 public function is_Class()
 {return $this->is_Class;}
@@ -237,7 +245,7 @@ checks the current node to be a destination
 */
 public function is_Node($name)
 {
-	//echo $name . "=" . $this->full_URI() . "\n";
+	//echo $name . "=" . $this->full_URI() . "(240)\n";
 
 	if(!(false === ($tmp = strpos($name,'?'))))
 	{
@@ -257,11 +265,12 @@ public function is_Node($name)
 	
 	if(is_object($this->link_to_class))
 	{
-		
+		//echo "deeper\n";
 		return $this->link_to_class->is_Node($name);
 	}
 	else
 	{
+		//echo "false\n";
 		return false;
 	}
 
@@ -584,6 +593,7 @@ function attribute($name,&$value){
 		
 		if($uri<>'')
 		{ 
+
 		if(is_object($this->attrib_ns[$uri]))
 			
 						if($this->attrib_ns[$uri] instanceof Interface_node)
@@ -1015,23 +1025,29 @@ function event($type,&$obj)
 
 //way to send messages
 function send_messages($type,&$obj)
-{	//echo ' - ' . count($this->way_out);
+{	//echo $this->full_URI() . ' - ' . count($this->way_out) . ":[\n";
+	
 	if(is_null($type))throw new Exception("null found");
 	//echo 'booooooooooooooooooooooooooooooh' . count($this->way_out);
 	//�bermittelt den event an alle Knoten, die an diesem Knoten h�ngen
 	//send message to all nodes, which has been sign in over set_to_out
 	//echo $type . ' ' . get_Class($this) . ' bin drin ' . count($this->way_out) . "<br>\n";
+
+	$com = $this->parseCommand($type);
+	
 	for($i = 0;count($this->way_out) > $i;$i++)
 	{
 		
-		//echo get_class($this->way_out[$i]) . ' ist das aktuelle objekt <br>';
+		//echo $this->way_out[$i]->full_URI() . "(" . get_class($this->way_out[$i]) . ") ist das aktuelle objekt <br>\n";
 		//echo ' send_messages(';
-		$this->way_out[$i]->event_message_check($type,$obj);
+		if($com->is_Node($this->way_out[$i]))
+		$this->way_out[$i]->event_message_check($com,$obj);
 		
 		///echo $this->way_out[$i]->getRefprev()->full_URI() . ' ' ;
 		//echo $this->way_out[$i]->get_attribute('value') . "<br>\n";
 		//echo ') ';
 	}
+	//echo"]\n\n";
 }
 
 //way to send messages
@@ -1040,12 +1056,14 @@ function send_rev_messages($type,&$obj)
 	//echo 'booooooooooooooooooooooooooooooh' . count($this->way_out);
 	//�bermittelt den event an alle Knoten, die an diesem Knoten h�ngen
 	//send message to all nodes, which has been sign in over set_to_out
+	$com = $this->parseCommand($type);
 	
 	for($i = 0;count($this->way_in) > $i;$i++)
 	{
 		
 		//echo get_class($this->way_in[$i]);
-		$this->way_in[$i]->event_message_check($type,$obj);
+		if($com->is_Node($this->way_in[$i]))
+		$this->way_in[$i]->event_message_check($com,$obj);
 		///echo $this->way_out[$i]->getRefprev()->full_URI() . ' ' ;
 		//echo $this->way_out[$i]->get_attribute('value') . "<br>\n";
 	}
@@ -1081,7 +1099,10 @@ function event_attribute($name,&$message)
 protected function event_message_check($type,&$obj)
 {
 global $logger_class;
-
+	//if(is_array($type) || is_string($type))$com_elemnet = $this->parseCommand($type);
+	//else
+	//$com_elemnet = $type;
+	$com_elemnet = $this->parseCommand($type);
 	$bool=true;
 	for($i = 0;count($this->check_list) > $i;$i++)
 	{
@@ -1120,9 +1141,9 @@ global $logger_class;
 	if($obj instanceof EventObject && !$obj->get_locked())
 	{
 
-	$com_elemnet = $this->parseCommand($type);
+
 		
-		if($this->is_Command($type,'__redirect_node'))
+		if($com_elemnet->matchesCommand('__redirect_node'))
 		{
 		$logger_class->setAssert('  Redirect was send to "' . $this->full_URI() . '"(Interface_node:event_message_check)' ,5);
 			//$com_elemnet = $this->parseCommand($type);
@@ -1134,13 +1155,15 @@ global $logger_class;
 		}
 
 		if($com_elemnet->matchesCommand('__find_node'))
-		{
+		{//var_dump($com_elemnet);
 			$structur = $com_elemnet->get_Result_Array();
 			//echo get_class($this->parser) . "\n";
 			//var_dump($structur);
-			$structur['Command']['Attribute']['json'] = base64_decode($structur['Command']['Attribute']['json']);
-			$structur['Command']['Value'] = base64_decode($structur['Command']['Value']);
+			//$structur['Command']['Attribute']['json'] = $structur['Command']['Attribute']['json'];
+			//$structur['Command']['Value'] = $structur['Command']['Value'];
+			
 			$json = json_decode($structur['Command']['Attribute']['json'], true);
+			//var_dump($json);
 			$name = null;
 			$attribute = null;
 			$value = $structur['Command']['Value'];
@@ -1164,7 +1187,7 @@ global $logger_class;
 		
 		
 		
-		if($this->is_Command($type,'__add_in_object'))
+		if($com_elemnet->matchesCommand('__add_in_object'))
 		{
 			if(is_Object($myNode = &$obj->get_node()))
 			{
@@ -1179,7 +1202,7 @@ global $logger_class;
 			
 		}
 		
-		if($this->is_Command($type,'__set_data'))
+		if($com_elemnet->matchesCommand('__set_data'))
 		{
 			
 			//$com_elemnet = $this->parseCommand($type);
@@ -1198,7 +1221,7 @@ global $logger_class;
 			
 		}
 		
-		if($this->is_Command($type,'__get_data'))
+		if($com_elemnet->matchesCommand('__get_data'))
 		{
 			//echo ' in __get_data(';
 			
@@ -1207,7 +1230,8 @@ global $logger_class;
 			//$com_elemnet = $this->parseCommand($type);
 			$obj->get_requester()->set_alter_event(false);
 						
-			
+			//if(!is_object($this->getdata($com_elemnet->get_Command(0,1))))
+				//var_dump($this->getdata($com_elemnet->get_Command(0,1)));
 
 			if(!is_null($tmp = &$this->getdata($com_elemnet->get_Command(0,1))))
 			{
@@ -1236,13 +1260,13 @@ $logger_class->setAssert('__get_data of requester "' . $obj->get_requester()->fu
 		
 		//echo 'booh-------------' . get_Class($this) . ' ' . $type . "<br>\n";
 		//echo $type;
-		if($this->is_Node($type))
-		{
+		//if($this->is_Node($type))
+		//{
 		//$logger_class->setAssert('  Command was send to "' . $this->full_URI() . '  ' . '"(Interface_node:event_message_check)' ,5);
 		//echo 'booh-------------' . get_Class($this) . ' ' . $type . "<br>\n";
 		
 		$this->event_message_in($type,$obj);
-		}
+		//}
 	}
 }
 
@@ -1347,13 +1371,13 @@ function &new_Instance()
                 	//else
                 	//	echo "!Parser!";
 
-	
-                                $obj = &$this->get_Instance();
+
+                $obj = &$this->get_Instance();
 				$obj->link_to_class = &$this;
 				$this->link_to_instance[] = &$obj; //count($this->link_to_instance)
 				$this->is_Class = true;
 				//echo "\n <br/>---" . $this->position_stamp() . "---<br/> \n";
-				
+		
 				//$obj->set_parser($this->get_parser());
 				return $obj;
 }
@@ -1365,6 +1389,7 @@ function &cloning(&$prev_obj)
                                 if($prev_obj) $obj->set_idx($prev_obj->get_idx());
                                 $obj->name =  $this->name;
                                 $obj->attrib = $this->attrib;
+                                $obj->attrib_ns = $this->attrib_ns;
                                 $obj->data =  $this->data;
                                 $obj->namespace =  $this->namespace;
                                 $obj->type =  $this->type;
@@ -1442,11 +1467,33 @@ function &cloning(&$prev_obj)
                                
                                 //echo "-------------------------------------------------------------------------------------------\n";
                                 }
+                                //echo "-------------------------------------------------------------------------------------------\n";
+                                //var_dump($prev_obj, $this, $obj);
+                                //echo "-------------------------------------------------------------------------------------------\n";
                                 return $obj;
                 }
 		
 
 //public function __toString(){return 'interface_node';}
+public function __debugInfo(){
+	$way_from= [];
+	
+	for($i = 0;count($this->way_out) > $i;$i++)
+		$way_from[$i] = $this->way_out[$i]->full_URI();
+	
+	$way_to = [];
+	
+	for($i = 0;count($this->way_in) > $i;$i++)
+		$way_to[$i] = $this->way_in[$i]->full_URI();
+
+	
+	return  ['idx'=>$this->get_idx(), 'type'=>$this->type,'is_Class'=> $this->is_Class(), 'namespace'=>$this->namespace, 'name'=>$this->name, 'attribute_ns'=>$this->attrib_ns , 'way_out'=>$way_from, 'way_in'=>$way_to]; /*                              $obj->name =  $this->name;
+                                $obj->attrib = $this->attrib;
+                                $obj->data =  $this->data;
+                                $obj->namespace =  $this->namespace;
+                                $obj->type =  $this->type;
+                                $this->attrib_ns[$key]->getdata()
+$this->full_URI()*/} 
 }
 
 
@@ -1495,6 +1542,8 @@ var $back;
 	{
 		return new Interface_attrib();
 	}
+	
+	public function __debugInfo(){return [];}
 }
 
 class Command_Object extends qp_workflow 
@@ -1514,12 +1563,50 @@ class Command_Object extends qp_workflow
 
 	function __construct($command) 
 	{
-
+		//if(strlen($command) < 5)throw new ErrorException( $command );
 		//if(is_null()) var_dump(DEBUG_BACKTRACE_PROVIDE_OBJECT|DEBUG_BACKTRACE_IGNORE_ARGS));
 		//if(is_null($command))$command ='';
+		//var_dump($command);
 		$this->insert = $command;
-		//echo ">$command<\n";
-		parent::__construct($command);
+		if($command instanceof Command_Object)
+			{
+				$this->listOfInformation = $command->get_Result_Array();
+			
+			
+			}
+		elseif(is_array($command) )
+		{
+			//var_dump($command);
+			$this->listOfInformation = $command;
+			//echo "drin";
+		}
+		/*if(is_object($command) )
+			$this->listOfInformation = $command->get_Result_Array(); */
+		elseif($command == '*?start')
+			$this->listOfInformation = ["Identifire"=>"*", "Command"=> ["Name"=>"start", "Attribute"=>[], "Value"=> null]];
+		elseif($command == '')
+			$this->listOfInformation = ["Identifire"=>"*", "Command"=> ["Name"=> null, "Attribute"=>[], "Value"=> null]];
+		elseif($command == '*')
+			$this->listOfInformation = ["Identifire"=>"*", "Command"=> ["Name"=> null, "Attribute"=>[], "Value"=> null]];
+		elseif($decode = json_decode($command, true))
+			$this->listOfInformation = $decode;
+		else
+		{
+			parent::__construct($command);
+			if($this->listOfInformation["Command"]['Name'] != '__add_in_object' && true)
+			{
+			echo "->$command<-\n";
+			
+
+			$this->outputArray();
+			echo "\n";
+			throw new ErrorException( $command );
+			}
+
+		}
+			
+			
+			if($this->listOfInformation["Command"]['Name'] == '__find_node2')throw new ErrorException( );
 
 	}
 	
@@ -1541,6 +1628,60 @@ class Command_Object extends qp_workflow
 	public function get_Result_Array(){return $this->listOfInformation;}
 	
 	public function matchesCommand( string $Command){return $this->listOfInformation["Command"]['Name'] == $Command;}
+	
+	public function is_Node($node)
+	{
+	//echo "->" . $this->listOfInformation['Identifire'] . "=>" . $node->full_URI() . "\n";
+//var_dump("search:", $node);
+	if($this->listOfInformation['Identifire'] == '*')return true;
+	if($this->listOfInformation['Identifire'] == $node->full_URI())return true;
+
+	if(is_object($node->link_to_class))
+	{
+		//echo "!!->" . $this->listOfInformation['Identifire'] . "==" . $node->link_to_class->full_URI() . "\n";
+//var_dump($node->link_to_class);
+		return $this->is_Node($node->link_to_class);
+	}
+	else
+	{
+		//echo "not found\n";
+		return false;
+	}
+
+	}
+
+	
+	public function __toString()
+	{ 
+		//$param = '(' . implode(',',) . ')';
+		$name = $this->listOfInformation["Command"]['Name'];
+		$attibute = [];
+
+		foreach ($this->listOfInformation["Command"]["Attribute"] as $key => $content)
+			$attibute[] = "$key:$content";
+
+		$value = $this->listOfInformation["Command"]['Value'];
+		
+		return $this->listOfInformation['Identifire'] . (is_null($name) ? '' : "?$name" ) 
+			. (count($attibute) != 0 ? '(' . implode(',',$attibute) . ')' : '' )
+			. (is_null($value)? '' : "=$value" );
+	}
+	
+	public function outputArray()
+	{
+		$name = $this->listOfInformation["Command"]['Name'];
+		$attibute = [];
+
+		foreach ($this->listOfInformation["Command"]["Attribute"] as $key => $content)
+			$attibute[] = "\"$key\" => \"$content\"";
+
+		$value = $this->listOfInformation["Command"]['Value'];
+		
+		echo '["Identifire"=>"' . $this->listOfInformation['Identifire'] 
+		. '", "Command"=> ["Name"=> ' . (is_null($name) ? 'null' : '"' . $name . '"' )
+		. ', "Attribute"=>[' . implode(',',$attibute) . '], "Value"=> ' . (is_null($value)? 'null' : "\"$value\"" ) . ']]';
+
+	}
 
 }
 ?>

@@ -262,6 +262,7 @@ function save_file($format = '',$send_header=false, $filename = false)
 			}
 
 			$obj->set_attribute('XML_OPTION_CASE_FOLDING',$casefolding);
+
 			if($get_header)$obj->send_header();
 			
 			        	

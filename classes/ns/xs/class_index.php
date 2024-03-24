@@ -19,11 +19,13 @@ class XS_factory
 	var $node = array();
 	var $attrib;
 	
-	function __construct()
+	function __construct($ns)
 	{
 
 			$this->nativ = new XS_schema('schema','http://www.w3.org/2001/XMLSchema');
+			
 			$this->node['string'] = new XS_String('string','http://www.w3.org/2001/XMLSchema');
+			/*
 			$this->node['boolean'] = new Interface_node();
 			$this->node['height'] = new Interface_node();
 			$this->node['boolean'] = new Interface_node();
@@ -64,8 +66,10 @@ class XS_factory
 			$this->node['NMTOKEN'] = new Interface_node();
 			$this->node['Name'] = new Interface_node();
 			$this->node['NCName'] = new Interface_node();
-
-			
+*/
+			$this->nativ->set_is_Class();
+			foreach ($this->node as   $value)
+				$value->set_is_Class();
 	}
 	
 	function &get_nodes()

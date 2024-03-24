@@ -52,18 +52,84 @@ class PEDL_Object_Class extends Interface_node
 var $name = 'empty';
 var $type = 'none';
 var $namespace = 'none';
+
+private $collectionFunctionElements = [];
+
 private $id_of_object;
 private $executive = false;
 private $is_Class;
+private $file = '';
+private $newList = false;
+private $list_Of_functions = [];
+
+const CONSTRUCTOR = 0;
+const METHOD = 1;
+
+static array $ShortCuts = [];
+public static function AddShortCuts($key, $lambda) {
+
+    PEDL_Object_Class::$ShortCuts[$key] = $lambda;
+
+  }
+  
+public static function GiveShortCuts($key) {
+
+    return PEDL_Object_Class::$ShortCuts[$key];
+
+  }
+ 
+public static function Is_ShortCuts($key) { return array_key_exists($key, PEDL_Object_Class::$ShortCuts);}
 
 function set_executive(){$this->executive = true;}
 function is_executive(){return $this->executive;}	
 	
-function __construct()
-{
 
+function __destruct() {
+	
+	if($this->newList)
+	{
+	$helpfile = str_replace('.', '_shortcut.', realpath($this->file));
+        file_put_contents($helpfile,
+        	"<?PHP\n" . $this->create_Shortcuts($this->list_Of_functions) . "\n?>");
+    }
+    
+    }
+    
+private function set_Class_Elements($full_name, $method, $type = 1)
+{
+	if(strlen($method) > 0)
+	{
+	$this->newList |= !PEDL_Object_Class::Is_ShortCuts($full_name);
+	$this->list_Of_functions[] = [$full_name, $method, $type];
+	}
 }
 
+private function create_Shortcuts(array $list)
+{
+	$res = [];
+	foreach($list as $value)
+	$res[] = 'PEDL_Object_Class::AddShortCuts("' . $value[0] . 
+		'",function ($instance, $arg){return $instance->' . $value[1] . '(...$arg);});';
+	
+/*
+				$file = $this->getRefnext($i)->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#src');
+				if(is_file($file))
+				{
+					$std_content = file_get_contents('/home/warlie/qportal/qPortal-Project/PlugIn/shortcut_template.php');
+					
+					$std_content = str_replace(['key'], [ hash_file('sha256', realpath($file))], $std_content);
+					
+					$helpfile = str_replace('.', '_shortcut.', realpath($file));
+					file_put_contents($helpfile, $std_content);
+					if(!is_file($helpfile))echo "no file";
+					echo $std_content;
+					//echo hash_file('sha256', realpath($file));
+				echo realpath($this->getRefnext($i)->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#src'));
+				}
+*/
+	return implode("\n", $res);
+}
+    
 function &get_Instance()
 {
 return new PEDL_Object_Class();
@@ -89,6 +155,52 @@ function &new_Instance()
 public function ManyInstance()
 {
 return count($this->link_to_instance);
+}
+
+
+/**
+* @function event_message_check
+* @param $type : commandline
+* @param $obj : context of Eventobject
+*/
+
+protected function event_message_check($type,&$obj)
+{
+	
+	for($i = 0;count($this->check_list) > $i;$i++)
+	{
+		
+		//echo get_class($this->way_out[$i]);
+		$this->check_list[$i]->event_attribute($type,$obj);
+		
+	}
+
+	if($obj instanceof EventObject && !$obj->get_locked())
+	{
+		if($type->matchesCommand('__redirect_node'))
+		{
+
+			if(is_null($type->get_Command(0,1)))throw new Exception("Null detected: " . $type->get_Insert());
+			
+			$com = $this->parseCommand($type->get_Command(0,1));
+			//var_dump("schuld", $type->get_Command(0,1));
+			
+			$elem = explode('#', $com->get_URI());
+			//var_dump('rummsbumms', $elem[1],$this->collectionFunctionElements);
+			
+			if(array_key_exists( $elem[1], $this->collectionFunctionElements))
+				{ 
+					$this->collectionFunctionElements[$elem[1]]->event_message_check($com,$obj);
+					return true;
+				}
+			else
+			$this->send_messages($com,$obj) ;
+			return true;
+			
+		}
+	}
+	
+	parent::event_message_check($type,$obj);
 }
 
 //primar call after finishing object, ther wont be an existing childnode
@@ -129,6 +241,8 @@ function event_parseComplete()
 //$this->ManyInstance() . 'booh';
 }
 
+protected function addToFunctionList($list){$this->collectionFunctionElements = $list;}
+
 function event_Instance(&$instance,$type,&$obj)
 {
 	/*
@@ -140,10 +254,11 @@ function event_Instance(&$instance,$type,&$obj)
 					
 	//echo "pedl_Object_Class.php 144\n";
 	
-	//echo $this->full_URI(). " " . "\n";
-	
+	//echo $this->full_URI(). " in instance " . "\n";
+
 	$res = array();
 	$go = false;
+	$result = [];
 	/*
 	* starts, when there are childnodes
 	* 
@@ -155,9 +270,34 @@ function event_Instance(&$instance,$type,&$obj)
 			$basic_obj = &$parser->show_xmlelement();
 			//echo $basic_obj->full_URI();
 			
-	
 	for($i = 0; $this->index_max() > $i;$i++)
 		{
+			
+			//collect file path
+			if($this->getRefnext($i)->is_Node('http://www.w3.org/2006/05/pedl-lib#hasCodeResource'))
+			{
+				$file = $this->getRefnext($i)->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#src');
+				if(is_file($file))
+				{
+					
+					$this->file = realpath($file);
+					
+					$helpfile = str_replace('.', '_shortcut.', realpath($this->file));
+					
+					if(is_file($helpfile))require_once($helpfile);
+					
+				}
+
+			}
+		}
+	
+			
+			
+	for($i = 0; $this->index_max() > $i;$i++)
+		{
+			
+
+			
 			//collects all Object_functions and lists it up 
 			if($this->getRefnext($i)->is_Node('http://www.w3.org/2006/05/pedl-lib#Object_Funktion'))
 				{
@@ -165,6 +305,10 @@ function event_Instance(&$instance,$type,&$obj)
 					$func = &$this->getRefnext($i);
 					$function_name = $func->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#ID');
 					$pedl_name = $func->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#name');
+
+					if(PEDL_Object_Class::Is_ShortCuts($function_name))
+						$func->set_Shortcut($function_name, PEDL_Object_Class::GiveShortCuts($function_name));
+					
 					
 					$tmp = new Function_Object($pedl_name,$function_name,0);
 					
@@ -213,10 +357,13 @@ function event_Instance(&$instance,$type,&$obj)
 				
 		}
 
+
 		//after collection 
 		foreach($res as $key => $value)
 			{
 					
+					$this->set_Class_Elements($value->q_name(), $value->pedl_name());
+				
 					$attrib = array('pedl:name' => $value->pedl_name());
 					
 					if(!$pos = $parser->create_Ns_Node($value->q_name(),$new_stamp,$attrib))
@@ -226,7 +373,11 @@ function event_Instance(&$instance,$type,&$obj)
 						else
 						{
 							//echo $instance->get_id_name();
-							$parser->show_xmlelement()->set_id_name($instance->get_id_name());
+							$func_obj = $parser->show_xmlelement();
+							$func_obj->set_id_name($instance->get_id_name());
+							//echo $value->q_name() . " " . $func_obj->full_URI() . " \n";
+							$result[$value->q_name()] = &$func_obj;
+							unset($func_obj);
 							//$parser->go_to_stamp($pos);
 							
 							//$parser->goto
@@ -250,7 +401,11 @@ function event_Instance(&$instance,$type,&$obj)
 							{
 								$param_obj = &$parser->show_xmlelement();
 								//echo $param_obj->full_URI();
+								//echo $value->getParam_name() . " " . $param_obj->full_URI() . " \n";
+								$result[$value->getParam_name()] = &$param_obj;
 								$basic_obj->set_to_out($param_obj);
+								unset($param_obj);
+								
 							}
 							
 						}
@@ -263,6 +418,8 @@ function event_Instance(&$instance,$type,&$obj)
 	
 
 	$parser->go_to_stamp($new_stamp);
+	$instance->addToFunctionList( $result );
+	//foreach($this->collectionFunctionElements as $key => $value)echo "$key =>" . $value->full_URI() . " \n";
 
 	
 	}
@@ -285,6 +442,9 @@ private function find_functions(&$class, array &$result,$priority = 1)
 					$func = &$class->getRefnext($i);
 					$function_name = $func->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#ID');
 					$pedl_name = $func->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#name');
+					
+					if(PEDL_Object_Class::Is_ShortCuts($function_name))
+						$func->set_Shortcut($function_name, PEDL_Object_Class::GiveShortCuts($function_name));
 					
 					//voids redundant functionnames
 					$bool_ok = !is_object($result[$pedl_name]);
@@ -391,8 +551,8 @@ class Function_Object
 	public function pushParam($param,$pedl)
 	{
 		
-		$this->param_name[count($this->param_name)] = $param;
-		$this->param_pedl[count($this->param_pedl)] = $pedl;
+		$this->param_name[] = $param;
+		$this->param_pedl[] = $pedl;
 	}
 	
 	public function getParam_name()
@@ -420,6 +580,8 @@ class Function_Object
 	{
 		return $this->priority;
 	}
+	
+	public function __debugInfo() {return [ "q_name" =>	$this->q_name, "pedl" => $this->pedl_name, "priority" => $this->priority];}
 }
 
 ?>

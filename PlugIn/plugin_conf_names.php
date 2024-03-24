@@ -46,9 +46,10 @@ var $tag;
 	{
 	  if(strtoupper($this->column) == strtoupper($columnname))
 	  {//echo $columnname . " :"  . strtoupper(substr($this->rst->col($this->forename),0,1)) . "." . ucfirst($this->rst->col($this->surname)) . "(Converter:1)\n";
-	  	  
-	  	  $for = strtoupper(substr($this->rst->col($this->forename),0,1));
-	  	  $sur = ucfirst($this->rst->col($this->surname));
+	  	  $arg_for = $this->rst->col($this->forename);
+	  	  $arg_sur = $this->rst->col($this->surname);
+	  	  $for = strtoupper(substr((is_null($arg_for)? '' : $arg_for ),0,1));
+	  	  $sur = ucfirst((is_null($arg_sur)? '' : $arg_sur ));
 	  	  
 	  	  if($for)
 	  	  	  if($sur)

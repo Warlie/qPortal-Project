@@ -102,10 +102,12 @@ return new RDF_resource();
 				 $this->obj = $this->get_parser()->get_Class_of_Namespace($namespace);
 				 if(is_object($this->obj->linkToClass()))
 				 {
+				 	 /*
 				 $logger_class->setAssert('          0000.' . $this->obj->linkToClass()->get_idx() . 
 				 $this->obj->linkToClass()->position_stamp() . '  ' . 
 				 $this->obj->linkToClass()->type . ' '
 				 . $this->obj->linkToClass()->index_max() .  '(RDF_resource:event_initiated)' ,10);
+				 */
 				 $this->set_to_out($this->obj->linkToClass());
 				}
 				else
@@ -186,40 +188,7 @@ return new RDF_resource();
 			}
 	}
 
-/*
-	
-	//wird bei der initialisierung aufgerufen
-	function start()
-	{
-		$this->to_listener();
-	}
-	//wird bei u.a. beim Ende des Parsens aufgerufen
-	function event($event = '')
-	{
-		if('complete'==$event)
-			{
-				
-						    if(!(false === ($tmp = strpos($this->value,'#'))))
-							{
-				
-								$prefix = substr(strtolower($this->value),0,$tmp);
-								$attribname = substr(strtolower($this->value),$tmp + 1);
-								
-								if('' <> trim($attribname))
-								{
-									$obj = &$this->back->parser->namespace_frameworks[$prefix]['node'][$attribname];
-									//echo $this->back->name;
-									
-									$this->back->event_attribute($this->name,&$this,&$obj);
-								}
-							}
-								
-				//
-				
-				//
-			}
-	}
-	*/
+
 		
 }
 

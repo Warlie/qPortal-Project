@@ -20,14 +20,17 @@ class SVG_factory
 	var $node = array();
 	var $attrib;
 	
-	function __construct()
+	function __construct($ns)
 	{
 
-			$this->nativ = new RDF_RDF();
-			$this->node['image'] = new SVG_image();
-			$this->node['width'] = new SVG_width();
-			$this->node['height'] = new SVG_height();
+			$this->nativ = new RDF_RDF('svg', $ns);
+			$this->node['image'] = new SVG_image('image', $ns);
+			$this->node['width'] = new SVG_width('width', $ns);
+			$this->node['height'] = new SVG_height('height', $ns);
 
+			$this->nativ->set_is_Class();
+			foreach ($this->node as $value)
+				$value->set_is_Class();
 			
 	}
 	

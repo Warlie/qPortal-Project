@@ -54,10 +54,6 @@ var $name = 'empty';
 var $type = 'none';
 var $namespace = 'none';
 	
-function __construct()
-{
-
-}
 
 function &get_Instance()
 {
@@ -187,8 +183,12 @@ function event_Instance(&$instance,$type,&$obj)
 	//otherweise PEDL-Class-Object is not able to connect instance of descripted class
 	$instance->set_to_out($instance);
 	
-	//$this->set_to_out();
-	$instance->send_messages('http://www.w3.org/2006/05/pedl-lib#Object_Constructor?construct',new EventObject('',$this,$booh));
+	//$this->set_to_out();  ["Identifire"=>"http://www.w3.org/2006/05/pedl-lib#Object_Constructor", "Command"=> ["Name"=> 'construct', "Attribute"=>[], "Value"=> null]]
+// ["Identifire"=>"http://www.w3.org/2006/05/pedl-lib#Object_Constructor", "Command"=> ["Name"=> 'construct', "Attribute"=>[], "Value"=> null]]
+	$send = ["Identifire"=>"http://www.w3.org/2006/05/pedl-lib#Object_Constructor", "Command"=> ["Name"=> "construct", "Attribute"=>[], "Value"=> null]];
+//var_dump($send);
+	$instance->send_messages( $send /*'http://www.w3.org/2006/05/pedl-lib#Object_Constructor?construct' */ 
+		,new EventObject('',$this,$booh));
 	}
 	
 	
@@ -227,7 +227,7 @@ private function create_factory_class()
 				if(is_Object($this->getRefnext($j)->getdata(0)))
 				{
 				//echo 'booh';
-				$all_values[count($all_values)] = &$this->getRefnext($j)->getdata(0);
+				$all_values[] = &$this->getRefnext($j)->getdata(0);
 				//echo get_Class($this->getRefnext($j)->getdata(0));
 				}
 				//echo $this->getRefnext($j)->getdata(0) . ' istdrin';

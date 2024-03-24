@@ -50,6 +50,13 @@ function sql_in_array($array,$value,$table){
         return false;
 
         }
+        
+enum WorkModes {
+    case WMUpdateAndInsert;
+    case WMUpdate;
+    case WMInsert;
+    case WMDelete;
+}
 
 /**
 *
@@ -89,20 +96,26 @@ var $timestamp;
 
 function __construct($Server = "", $User = "", $pwt = "", $db_name = "", $codeset = ""){
         
+	// set SQL Server settings
 	if($Server <> "")$this->Server = $Server;
 	if($User <> "")$this->User = $User;
 	if($pwt <> "")$this->pwt = $pwt;
 	if($db_name <> "")$this->db_name = $db_name;
 	if($codeset <> "")$this->mycodeset = $codeset;
 
-        $this->open_db = new mysqli($this->Server, $this->User, $this->pwt);
+	// opens a server connection
+    $this->open_db = new mysqli($this->Server, $this->User, $this->pwt);
+    
+    // makes errors public
 	$this->error_no = $this->open_db->errno;
 	
+	// dies with a error message
 	if ($this->open_db->connect_error) {
     die('Connect Error (' . $this->open_db->connect_errno . ') '
             . $this->open_db->connect_error);
     	}
 
+    	// uses specific db with error handling
         if(!$this->open_db->select_db ($this->db_name)){
                 echo "datenbank fehlt<p>";
 		$this->error_no = mysqli_errno();
@@ -114,10 +127,6 @@ function __construct($Server = "", $User = "", $pwt = "", $db_name = "", $codese
                 }
                 
 
-           //mysqli_query($db, "SET CHARACTER SET 'utf8'");
-
-
-		
         }
 
 	/** errno
@@ -162,20 +171,26 @@ function __construct($Server = "", $User = "", $pwt = "", $db_name = "", $codese
                         if(is_object($this->table_db)) $this->table_db->free_result();
                         $this->table_db = mysqli_query($this->open_db, $SQLString);
                         if(mysqli_errno($this->open_db)<>0)echo "Fehler ist aufgetreten \n<br>" . '(' . $SQLString . ")\n<br>" . mysqli_error($this->open_db);                        
-                                                
+
+                        return ["Effected_rows" => mysqli_affected_rows($this->open_db), "Last_ID" => mysqli_insert_id($this->open_db)];
                                                 }
 
 
+    //load bulk 
 	public function loadfile($filename)
 	{$this->injectSQL(implode('', file ('surface.sql')));}
 	
+	/**
+	* processes a bunch of requests with no response
+	*
+	* @param $SQLString string : SQL string
+	*/
 	public function injectSQL($SQLString)
 	{
 		
 		//echo $SQLString;
 		
-		$teile = explode(";
-", $SQLString);
+		$teile = explode(";\n", $SQLString);
 		for($i = 0; count($teile)>$i;$i++)
 		{
 
@@ -184,6 +199,34 @@ function __construct($Server = "", $User = "", $pwt = "", $db_name = "", $codese
 
 	}
 
+	/**
+	* processes a bunch of requests with no response
+	*
+	* @param $SQLString string : SQL string
+	*/
+	public function injectArraySQL($SQLArray)
+	{
+		
+		//echo $SQLString;
+		
+		foreach($SQLArray as &$line )
+		{
+			   
+			$line['ID'] = $this->SQL($line['SQL'])['Last_ID'];
+		}
+		
+		return $SQLArray;
+
+		/*
+		$teile = explode(";\n", $SQLString);
+		for($i = 0; count($teile)>$i;$i++)
+		{
+
+		if(strlen(trim($teile[$i]))>2)$this->SQL($teile[$i] . ';');
+		}
+*/
+	}
+	
 	/** create_table
 	* @param $table : String for tablename
 	* @param $fieldname : Array of Fieldnames
@@ -208,10 +251,9 @@ function __construct($Server = "", $User = "", $pwt = "", $db_name = "", $codese
 
 
 
-	/** get_rst
+	/** gives back a rst object, based on the sql request
 	* @param sql : SQL String
 	* @return rst Object with selected data
-	* creates a rst Object to access db data
 	*/
 function get_rst($sql){
 global $logger_class;
@@ -224,7 +266,6 @@ global $logger_class;
 	* @param mysec
 	*/
 
-	$logger_class->setAssert("compute statement: "  . $sql,0);
 			
 if(!function_exists('extract_table')){
 
@@ -237,38 +278,33 @@ if(!function_exists('extract_table')){
 		// copy sql in lower case
                 if(is_null($low_sql))$low_sql = strtolower($sql);
 		//position of next join or from
-		//echo $low_sql . "\n";
-                //$low_sql = str_replace('left join' , '     join', $low_sql);
-		//$low_sql = str_replace('right join' , '      join', $low_sql);
 
-		//echo $low_sql . "\n";
 		$pos = strpos($low_sql,$sign, $pos)+4;
 		
                 $tmp = $pos;
 		
 				
 		//geht zur letzten offenen klammer
-                do{                
+                do{              
 			//rotate
 			$pos = $tmp;
 			//finds last opening bracket
 			$tmp = strpos($sql,'(',$tmp + 1);
                 }while(!($tmp===false || ($pos+4)< $tmp));
 
+                
 		//adds 2 to point the tablename
                 $pos += 2;
 		//
-        if(($end_word = strpos($sql,' ',$pos+1)) == false){
-        	if(($end_word = strpos($sql,';',$pos+1)) == false)$end_word = strlen($sql);}
+        if(($end_word = strpos($sql,' ',$pos+1)) == false)
+        	if(($end_word = strpos($sql,';',$pos+1)) == false)$end_word = strlen($sql);
        
                 $my_array[$pointer]=substr($sql,$pos-1 ,1 +$end_word-$pos);
 		
 
 		
-                //$my_array[$pointer]=substr($sql,$pos-1 ,1 +$end_word-$pos);
-		
                 $pointer++;
- 
+
                 if(!(false === strpos($low_sql,' join ',$pos))&& $pos > 0 && $mysec<10)return extract_table($sql,$low_sql,$pos,$my_array,$pointer,++$mysec);
                 else return $my_array;}
 
@@ -316,19 +352,8 @@ if(!function_exists('extract_table')){
                 return $res;}        
                 
 
-
-
-
-
-
-
-
-
         //gibt alle dateninhalte in das rst_object ein 
         
-        
-
-
 }
 
 //strpos()
@@ -340,45 +365,27 @@ if(!function_exists('extract_table')){
 	//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 	//                                                 programm
 	//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-		//$this->timestamp = $this->microtime_float();
 
-                                //erstellt neuen rst()
-                                $rst = new rst();
+
+                 //erstellt neuen rst()
+                 $rst = new rst($listOfTBLs = extract_table($sql)
+                 	 , 	$this->define_rst_fields(
+                 	 	 $listOfTBLs,
+                 	 	 ($cols = /* zeile 151 findet alle felder */ extract_col($sql)),
+                 	 	 $this->open_db
+                 	 	 )
+                 	 );
                                                      
-                                //uebergibt alle tabellennamen
-                                 $rst->table = extract_table($sql); //zeile 125
-                                 //$tmp_fields = extract_col($sql);
+                 //uebergibt alle tabellennamen
+                 //$rst->table = extract_table($sql); //zeile 125
 
-		 //echo "abfragemessung 0.3 " . ($this->microtime_float() - $this->timestamp) . "\n";	
-
-                                //uebergibt die feldnamen
-                                 $rst->field = 
-				 /* zeile 254 findet alle eigenschaften der Felder */ 
-				 $this->define_rst_fields(
-				 $rst,
-				 ($cols = /* zeile 151 findet alle felder */ extract_col($sql)),
-				 $this->open_db
-				 );
-				 
-				//echo "abfragemessung 0.6 " . ($this->microtime_float() - $this->timestamp) . "\n";
 				 
                  $res = /* zeile 445 */ $this->load_field_rst($rst,$sql,($cols == '*')?false:true,$this->mycodeset);
-		 
+                 
+                 
+		 //$rst->show_content();
 		 return $res;
-//$array1[0] = 'mikos2_list_frecency.frecuency';
-//$array1[1] = 'mikos2_list_inner_doors.inner_doors';
-
-
-
- //if(sql_in_array($array1,'frecuency','mikos2_list_frecency'))echo '<p>OK</p>';else echo '<p>nicht OK</p>';
-
-//echo 'auch noch kein fehler';
-
-                //$tmp = mysql_result($this->table_db,$num,$fieldname);
-                
-                  //              echo ''; 
-                  //             return $rst; 
-                                }
+}
 
                                 
 //------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -397,62 +404,44 @@ private function load_field_rst($rst,$sql,$add_pri,$encode = 'UTF-8'){
           if(is_null($rst->field)){echo '<b>Recordset besitzt noch keine tabellennamen</b>';return false;}
           if(is_null($sql)){echo '<b>Es wurde kein SQL-String uebergeben</b>';return false;}
 
-              $prim = $rst->prim_field();
+          $prim = $rst->prim_field(); // prim problem
 	      
-
 	      if($add_pri && (false ===(strpos(strtoupper($sql),'DISTINCT'))))
 	      {
-             	if(!$prim)echo "no primary key definiert \n";
+             	if(!$prim)throw InvalidArgumentException("no primary key definiert");
               	$sql = 'SELECT ' . implode(',',$prim) . ',' . substr($sql,7);
 	      }
-	     //echo $sql;
-             //echo '<p>' . implode($prim,',') . '</p>';
-                    $fdresult = $this->open_db->query($sql); 
-                             if($this->open_db->errno <>0)echo 'Fehler aufgetreten: ' . $this->open_db->errno . '(' . $sql . ")\n";                              
-                   //echo 'noch kein fehler<p>';
 
-while ($zeile = $fdresult->fetch_row()) {
+	      // sql request with worse error handling
+          $fdresult = $this->open_db->query($sql); 
+          if($this->open_db->errno <>0)echo 'Fehler aufgetreten: ' . $this->open_db->errno . '(' . $sql . ")\n";                              
 
-	
+          // fetch all over the result
+          while ($zeile = $fdresult->fetch_row()) {
 
                 reset($rst->field);
-		
-                
-		//for($i = 1 ; $i < count($zeile);$i++)
-		while (!is_null($key = key($zeile) )  )
-		{
+
+                while (!is_null($key = key($zeile) )  )
+                {
                                          
-		 $field_list = $fdresult->fetch_fields(); //$key
+                	$field_list = $fdresult->fetch_fields(); //$key
 
-                 
-		 //echo "$key \n";
-	if($field_list[$key]->table)
-		 $new_key = $field_list[$key]->table . '.' . $field_list[$key]->name;
-         else
-         	$new_key = $field_list[$key]->name;
+                	if($field_list[$key]->table)
+                		$new_key = $field_list[$key]->table . '.' . $field_list[$key]->name;
+                	else
+                		$new_key = $field_list[$key]->name;
          	
-         	$value = $zeile[$key];
-		next($zeile);
-		 //echo '<p>' . $new_key . ' ' . $value . "</p>\n";
-                 
-		 /*
-                  if($encode == 'UTF-8')
-		 $value = utf8_decode($value);
-		 */
-		 
-                                $rst->setValue($new_key,$value,null,true);
+                	$value = $zeile[$key];
+                	next($zeile);
 
-                 next($rst->field);}
+                    $rst->setValue($new_key,$value,null,true);
+
+                 	next($rst->field);}
                                 
-                  $rst->update();
-                                
+                 	$rst->update();
+          		}
 
-                                }
-                                //$rst->update();
-
-
-
-return $rst;
+          	return $rst;
 }
 
       /** private function collect_mysql_col
@@ -467,76 +456,61 @@ return $rst;
 	*/
 
 
-        //gleicht auf wunsch felder der datenbank mit den des SQL-befehls zu und sortiert sie !
-        private function collect_mysql_col($table,$filter_in=null,$array_list=null, $db_obj=null){
+//gleicht auf wunsch felder der datenbank mit den des SQL-befehls zu und sortiert sie !
+private function collect_mysql_col($table,$filter_in=null,$array_list=null, $db_obj=null){
 
 		// * benoetigt alle tabellen -> filter wird abgestellt
 		if($filter_in == '*')$filter_in=null;
 
-
-                                   $fdresult = $this->open_db->query("SHOW COLUMNS FROM $table;");
-                                   //printf("Select returned %d rows.\n", $fdresult->num_rows);
-                           if($this->open_db->errno <>0)echo "<p>Fehler ist aufgetreten: " . mysqli_error() . "<p>bei SQL_String: SHOW COLUMNS FROM $table;";
+		$fdresult = $this->open_db->query("SHOW COLUMNS FROM $table;");
+		if($this->open_db->errno <>0)echo "<p>Fehler ist aufgetreten: " . mysqli_error() . "<p>bei SQL_String: SHOW COLUMNS FROM $table;";
                                  //filterfunction
-                                 $filter = (is_null($filter_in))? false : true ;
+        $filter = (is_null($filter_in))? false : true ;
 
+        //setzt bestehendes datenfeld vorne an
+        if(!is_null($array_list))$res = $array_list;
 
-                                //setzt bestehendes datenfeld vorne an
-                                if(!is_null($array_list))$res = $array_list;
+        // Die Datensaetze werden einzeln gelesen
+        while($zeile = $fdresult->fetch_assoc())
+        {
 
-
-
-
-                        //if($filter)echo 'filter an';else echo 'filter aus';
-
-
-                // Die Datensaetze werden einzeln gelesen
-                   while($zeile = $fdresult->fetch_assoc())  //
-                           {
- //echo $filter_in;
- 
-				//echo $table . '.' . $zeile['Field'] . ' ' .  $zeile['Type'] . ' ' . $zeile['Key'] . "\n";
-                                //fragt ab, ob dieses Feld auch gef                        
-                                if($filter)$filter_res = (sql_in_array($filter_in,$zeile['Field'],$table)|| $zeile['Key']=='PRI');
-                                        else $filter_res= true;
+        	//fragt ab, ob dieses Feld auch gef                        
+        	if($filter)
+        		$filter_res = (sql_in_array($filter_in,$zeile['Field'],$table)|| $zeile['Key']=='PRI');
+        	else 
+         		$filter_res= true;
                                                                 
-                                if($filter_res){        
-                                        //echo $table . '.' . $zeile['Field'] . ' ' .  $zeile['Type'] . ' ' . $zeile['Key'] . "\n";
-                                                $res[$table . '.' . $zeile['Field']]['single_name'] = $zeile['Field'];
-                                                $res[$table . '.' . $zeile['Field']]['Table_name'] = $table;
-                                                $res[$table . '.' . $zeile['Field']]['Type']=$zeile['Type'];
-                                                $res[$table . '.' . $zeile['Field']]['Null']=$zeile['Null'];
-                                                $res[$table . '.' . $zeile['Field']]['Key']=$zeile['Key'];
-                                                $res[$table . '.' . $zeile['Field']]['Default']=$zeile['Default'];
-                                                $res[$table . '.' . $zeile['Field']]['Extra']=$zeile['Extra']; 
-                                        }    
-                           }
+         		if($filter_res){        
+         			$res[$table . '.' . $zeile['Field']]['single_name'] = $zeile['Field'];
+         			$res[$table . '.' . $zeile['Field']]['Table_name'] = $table;
+         			$res[$table . '.' . $zeile['Field']]['Type']=$zeile['Type'];
+         			$res[$table . '.' . $zeile['Field']]['Null']=$zeile['Null'];
+         			$res[$table . '.' . $zeile['Field']]['Key']=$zeile['Key'];
+         			$res[$table . '.' . $zeile['Field']]['Default']=$zeile['Default'];
+         			$res[$table . '.' . $zeile['Field']]['Extra']=$zeile['Extra']; 
+         		}    
+         }
                    
 			   //Alias fuer join noch nicht gesichert
 		if(!is_Null($filter_in))
 			   foreach($filter_in as $line )
 		            {
- 
-				  
-                                                                                   
-                                if(!(false === strpos($line,'@'))){
+		            	if(!(false === strpos($line,'@'))){
 					
-						$line = substr($line,1);
-						//$table . '.' . 
-                                        //echo $zeile['Field'] . ' ' .  $zeile['Type'] . ' ' . $zeile['Key'] . "\n";
-                                                $res[$line]['single_name'] = $line;
-                                                $res[$line]['Table_name'] = $table;
-                                                $res[$line]['Type']='generic';
-                                                $res[$line]['Null']='';
-                                                $res[$line]['Key']='';
-                                                $res[$line]['Default']='';
-                                                $res[$line]['Extra']='generic'; 
-                                        }    
-                           }			   
+		            		$line = substr($line,1);
+
+		            		$res[$line]['single_name'] = $line;
+		            		$res[$line]['Table_name'] = $table;
+		            		$res[$line]['Type']='generic';
+		            		$res[$line]['Null']='';
+		            		$res[$line]['Key']='';
+		            		$res[$line]['Default']='';
+		            		$res[$line]['Extra']='generic'; 
+                        }    
+                    }			   
 			
-                  return $res;
- 
-                }
+          return $res;
+}
 
         /** private function collect_mysql_col
 	* @param rst: recordset
@@ -545,112 +519,89 @@ return $rst;
 	*
 	*/
                         //gesicherte Hilfsfuntion. vereinigt die resultate von collect_mysql_col()
-        function define_rst_fields($rst,$fields_to_add, $db){
-                if(is_null($rst))return null;
-                if(is_null($rst->table))return null;
+function define_rst_fields($tbl,$fields_to_add, $db){
+	//if(is_null($rst))return null;
+	//if(is_null($rst->table))return null;
 
-                foreach ($rst->table as $value){$res = $this->collect_mysql_col( $value,$fields_to_add,$res, $db);}
+	foreach ($tbl as $value){$res = $this->collect_mysql_col( $value,$fields_to_add,$res, $db);}
 
-                        return $res;
-
-                }
+	return $res;
+}
                 
 //--------------------------------------
                                 
 //---------------------------------------------------------------------------------------------------------------
-	function microtime_float()
-	{
-		list($usec, $sec) = explode(" ", microtime());
-		return ((double)$usec + (double)$sec);
-	}
+
 
 	
 	//---------------------------------------------------------------------------------------------------------------
 
-         private function update_data($rst,$pos){
-         	 global $logger_class;
-         	 $logger_class->setAssert("call update_data ",0);
+private function update_data($rst,$pos){
 
-                         $len = count($rst->edit);
-                         $prim = $rst->prim_field($rst->table[$pos]);
+	$len = count($rst->edit);
+	$prim = $rst->prim_field($rst->table[$pos]);
 
-			 
-//echo "booho";
-                    //menge der aufgaben
-                     for($k=0;$k < $len;$k++){
+    //menge der aufgaben
+    for($k=0;$k < $len;$k++){
 
-//echo $rst->edit[$k]['table']  . '<br>';
-                  //�berpr�ft, ob diese Anfrage f�r die aktuelle Tabelle zutrifft
-                  if($rst->edit[$k]['table'] == $rst->table[$pos] && $rst->edit[$k]['pos'] < $rst->rst_num()){
+    	//checks the request to be relevant for the current table
+    	if($rst->edit[$k]['table'] == $rst->table[$pos] && $rst->edit[$k]['pos'] < $rst->rst_num()){
 
+    		if($rst->edit[$k]['value'] <> '')
+    		{
 
+    			$sign1 = database::sql_type_sign($rst->type($rst->edit[$k]['field']));
+    			$sign2 = database::sql_type_sign($rst->type($prim[0]));
 
-			  if($rst->edit[$k]['value'] <> '')
-			  {
-
-			  $sign1 = database::sql_type_sign($rst->type($rst->edit[$k]['field']));
-			  $sign2 = database::sql_type_sign($rst->type($prim[$pos]));
-//str_replace(array('\'',chr(12),chr(13)),array('\'\'','\\r','\\n'),)
-//var_dump($this->open_db);
-//echo  $this->open_db->real_escape_string($rst->edit[$k]['value']);
-                $sql_string = 'update ' . $rst->table[$pos];
-                $sql_string .= ' set ' . $rst->edit[$k]['field'] . ' = ' . $sign1 . $this->open_db->real_escape_string($rst->edit[$k]['value']) . $sign1;
-                $sql_string .= ' where ' . $prim[0] . ' = ' . $sign2 . $rst->value($rst->edit[$k]['pos'],$prim[0]) . $sign2 . ';';
-
-		
-               //speichert einen Datensatz, der neu geschieben wurde
-               //echo $sql_string . '
-	       //';        
-	       $logger_class->setAssert("updates exist data: "  . $sql_string,0);
-	       $fdresult = $this->open_db->query($sql_string);
-                       if($this->open_db->errno<>0)echo 'Fehler aufgetreten: ' . '(' . $sql_string . ')' . $this->open_db->error;
-			  }
-                                  }
-                                  }
-                 }
+    			$sql_string = 'update ' . $rst->table[$pos];
+    			$sql_string .= ' set ' . $rst->edit[$k]['field'] . ' = ' . $sign1 . $this->open_db->real_escape_string($rst->edit[$k]['value']) . $sign1;
+    			$sql_string .= ' where ' . $prim[0] . ' = ' . $sign2 . $rst->value($rst->edit[$k]['pos'],$prim[0]) . $sign2 . ';';
+      
+//echo $sql_string;
+    			$fdresult = $this->open_db->query($sql_string);
+    			if($this->open_db->errno<>0)echo 'Fehler aufgetreten: ' . '(' . $sql_string . ')' . $this->open_db->error;
+    		}
+    	}
+	}
+}
 
 function insert_rst($rst){
-        global $logger_class;
+//echo "--------------------result-------------------------------\n";
+//var_dump($rst->get_insert_array_statements());
+//var_dump($rst->get_update_array_statements());
+//var_dump($rst->get_insert_statements());
+//var_dump($rst->get_update_statements());
+//var_dump($rst->get_delete_statements());
 
-	$logger_class->setAssert("insert_rst: \n" . $rst->get_log() ,0);
+	$res = array_merge(
+		$this->injectArraySQL($rst->get_insert_array_statements()),
+		$this->injectArraySQL($rst->get_update_array_statements()),
+		$this->injectArraySQL($rst->get_delete_array_statements()));
 	
-
+    //    $this->injectSQL($rst->get_insert_statements());
+    //    $this->injectSQL($rst->get_update_statements());
+    //    $this->injectSQL($rst->get_delete_statements());
+     //   var_dump($res);
+        return $res ;
+        
+//var_dump($rst->edit);
 	//tabellenname �bernommen
         $table = $rst->table;
-	
-	//alle feldnamen
-        //$fields = $rst->db_field_list();
+
+	   $prim_tbl = $rst->prim_field2(); //$table[$i]
         
-	//keine schleife, 
-       // $dumdi = $rst->prim_field($table[$i]);
-       // $autoinc = (''==$rst->type($dumdi[$i],'Extra'));
+    //jede tabelle wird einzeln abgefragt
+	for($i=0;$i<count($table);$i++)
+	{
 
-        //echo $rst->type($dumdi[$i],'Extra');
-
-//jede tabelle wird einzeln abgefragt
-for($i=0;$i<count($table);$i++)
-   {
-	   
-	   
 	   //ein prim pro durchlauf
-    $prim = $rst->prim_field($table[$i]);
-    //var_dump($prim);
-   // $type = $rst->type($prim, 'Extra');
-   
-   //
-   $autoinc = (''==$rst->type( $prim[$i] ,'Extra'));
+	   $prim = $rst->prim_field(); //$table[$i]
 
-        $sql_string = 'SELECT ' .  implode(', ', $this->filter_table( $rst,$table[$i],true));
-        $sql_string .= ' FROM ' . $table[$i];
-         $sql_string .= ' ORDER BY ' . $prim[$i] . ';';
+	   $autoinc = (''==$rst->type( $prim[$i] ,'Extra'));
 
-             //Vorsicht, hierdurch wird der Primarykey ausgeblendet
-
-             
-	
-                                           //echo "<br>erlaubt=$autoinc-<br>";
-             
-					   //for($te=0;$te<count($fields);$te++)echo '<p>' . $fields[$te] . '</p>';
+       $sql_string = 'SELECT ' .  implode(', ', $this->filter_table( $rst,$table[$i],true));
+       $sql_string .= ' FROM ' . $table[$i];
+       $sql_string .= ' ORDER BY ' .implode(', ', $prim_tbl[$table[$i]] ) . ';'; //$sql_string .= ' ORDER BY ' . $prim[$i] . ';';
 
 					   //echo $sql_string;
 	$fdresult = mysqli_query($this->open_db, $sql_string);
@@ -659,200 +610,131 @@ for($i=0;$i<count($table);$i++)
 
        //Abfrage �ber alle elemente einer tabelle erstellt
 
-       		//ermittelt die anzahl der zeilen
-             if(!is_null($prim))
-	     { 
-		     $loop = mysqli_num_rows($fdresult);
-//echo '<h1>' . $loop . '</h1>';
+       //ermittelt die anzahl der zeilen	
+    	if(!is_null($prim_tbl[$table[$i]]))
+	    { 
+	    	// abschnitt 
+		     $loop = mysqli_num_rows($fdresult); //amount of rows
+		     
+		     //prepares all the big_list for containing the values of the primary keys
+
 		     //array mit allen primwerten zum abgleichen
 		     $j = 0;
 		     $keys = explode( '.', $prim[$i] );
+
 		     $pos = count($keys) - 1;
 		     $big_list = array();
-		     			while($zeile = $fdresult->fetch_assoc())$big_list[$j++] = $zeile[$keys[$pos]];
+		     while($zeile = $fdresult->fetch_assoc())$big_list[$j++] = $zeile[$keys[$pos]];
 
-		     			/*
-                                       for($j=0;$j<$loop;$j++)
-				       {
-					       //nimmt alle prims aus der aktuellen db
-					       $big_list[$j] = mysqli_result($fdresult, $j, $prim[$i]);
 
-                                       }*/
-                                      //} //end if
-                                       //for($te=0;$te<count($big_list);$te++)echo '<p>' . $big_list[$te] . '</p>';
-                                               //durchsicht in der datenbank
+             //x zeichnet auch auf, wieviele elemente gespeichert wurde
+             $x=0; //non speaking name variable
+             // easier way with while and foreach
 
-                                        //x zeichnet auch auf, wieviele elemente gespeichert wurde
-                                        $x=0;
-                                        //                       echo 'hier1' . $rst->rst_num();
-                                        $fields = $this->filter_table( $rst,$table[$i],false);
+            // var_dump($rst->db_field_list()[1]);
+             
+             $fields = $this->filter_table( $rst,$table[$i],false);
+//var_dump($fields);
+			for($j=0;$j<($rst->rst_num());$j++)
+			{
+				if(count($fields)>0)
+				{  //triviale abfrage
 
-					//echo implode((filter_table( $rst,$table[$i],false)),', ');
-					//echo '<h2>-' . $rst->value(414,'gewerbeimmobilien.gml_layer') . '-</h2>';
-					//var_dump($rst->rst_num());
-					for($j=0;$j<($rst->rst_num());$j++)
+					//testet ob es diesen schl�ssel bereits gibt oder ob er leer ist
+					if(!in_array($rst->value($j,$prim[$i]),$big_list) || 
+						is_null($rst->value($j,$prim[$i])) || 
+						$rst->value($j,$prim[$i]) == '' )
 					{
-							
-                                          //echo '-<b>' . $prim[$i] . '</b>-<br>';
-                                          //var_dump($fields);
-							if(count($fields)>0)
-						       {  //triviale abfrage
-							       
-							      //echo '-<b>"' . $rst->value($j,$prim[$i]) . '" on pos(' . $j .  ')</b>-<br>';
-							      //var_dump($big_list);
-							       //testet ob es diesen schl�ssel bereits gibt oder ob er leer ist
-							       if(!in_array($rst->value($j,$prim[$i]),$big_list) || is_null($rst->value($j,$prim[$i])) || $rst->value($j,$prim[$i]) == '' )
-							       {
-								       //echo '----------------------------------------------------------------';
-								       $map[$x++]=$j;
-							       }//end if
+
+						$map[$x++]=$j;
+					}//end if
 
 
-                                                       }
-						       else
-						       {
-							       $map[$x++]=$j;
-						       } //end if
+				}
+				else
+				{
+					$map[$x++]=$j;
+				} //end if
                                          
 
-                                       }//end loop
+            }//end loop
 
 				       //alle positionen  f�r neue prims gefunden
 				       //-bei autoincrement sind sie leer
 				       
 				       //menge aller  existierender felder
-                                       $len = count($fields);
+             $len = count($fields);
 
                                        
-                                       //erstellt SQLs f�r die Datens�tze, die keinen oder einen noch nicht existierenden WErt habe
-                                       for($j=0;$j<$x;$j++)
-				       {//loop1
-					       
-					       //echo count($fields) . " " . implode($fields,', ') . '<br>';
-					       //SQL-Statement
-					       $sql_string = 'insert ' . $table[$i] . ' ( ' . implode(', ', $fields) . ') values (';
+             //erstellt SQLs f�r die Datens�tze, die keinen oder einen noch nicht existierenden WErt habe
+             for($j=0;$j<$x;$j++)
+             {//loop1
 
-					       $komma = '';
+				//SQL-Statement
+				$sql_string = 'insert ' . $table[$i] . ' ( ' . implode(', ', $fields) . ') values (';
+				$komma = '';
                                       //
-                                      		for($l=0;$l<count($fields);$l++)
-						{
+                for($l=0;$l<count($fields);$l++)
+				{
+					$tmp = $this->sql_type_sign($rst->type($fields[$l]));
+					$string = $this->open_db->real_escape_string($rst->value($map[$j],$fields[$l]));
 							
-							$tmp = $this->sql_type_sign($rst->type($fields[$l]));
+					if( $tmp == '' && (('' == $string) || is_null( $string )  )) $string = 'NULL';
 
-							
-								$string = $this->open_db->real_escape_string($rst->value($map[$j],$fields[$l]));
-							
-								if( $tmp == '' && (('' == $string) || is_null( $string )  )) $string = 'NULL';
+					if($tmp <> '\'')
+						$sql_string .= ' ' . $komma . str_replace(',','.',$string)  . ' ';
+					else
+						$sql_string .= ' ' . $komma . $tmp . $string . $tmp . ' ';
 
-							if($tmp <> '\'')
-							$sql_string .= ' ' . $komma . str_replace(',','.',$string)  . ' ';
-							else
-							$sql_string .= ' ' . $komma . $tmp . $string . $tmp . ' ';
-							
-							//echo $l . ': '. $komma . $tmp . $string . $tmp . ' <br>';
-                                                 	$komma = ', ';
-						}
-							$sql_string .= ');';
-							//$rst->show_content();
+					$komma = ', ';
+				}
+				
+				$sql_string .= ');';
 
-							
-							//echo $sql_string . "<br>\n";
-			   				//speichert einen Datensatz, der neu geschieben wurde
-			   				
-			   				$logger_class->setAssert("saves new data: "  . $sql_string,0);
-                           				$fdresult = $this->open_db->query($sql_string);
-							if($this->open_db->errno<>0)
-							{
-								//var_dump($this->open_db);
-								echo '<br>Fehler aufgetreten (' . $sql_string . '): ' . $this->open_db->error . '</br>';
-								//debug_print_backtrace (0,5);
-							}
-				       	}//end loop1
+				
+				
+				//var_dump($sql_string);
+				
+			   	//speichert einen Datensatz, der neu geschieben wurde
+                $fdresult = $this->open_db->query($sql_string);
+				if($this->open_db->errno<>0)
+				{
+
+					echo '<br>Fehler aufgetreten (' . $sql_string . '): ' . $this->open_db->error . '</br>';
+
+				}
+			}//end loop1
 
          //schleife f�r aktualisieren ge�nderter daten
          $this->update_data($rst,$i);
 
-
-
-         
-	     }
-
-
- 
-
-
-                
-//update fp
-//   set preis = 300
-//   where hersteller = 'IBM';                
-//-----------------------------------------------------------------------------------------------------------------------------------------------------
-//schleife f�r aktualisieren ge�nderter daten
-/*
-        $len = count($rst->edit);
-
-        for($i=0;$i < $len;$i++){
-
-                $sign1 = $this->sql_type_sign($rst->type($rst->edit[$i]['field']));
-                $sign2 = $this->sql_type_sign($rst->type($rst->prim_field($table[$i])));
-
-                $sql_string = "update " . $table[$i] . " ";
-                $sql_string .= 'set ' . $rst->edit[$i]['field'] . ' = ' . $sign1 . $rst->value($rst->edit[$i]['pos'],$rst->edit[$i]['field']) . $sign1;
-                $sql_string .= ' where ' . $rst->prim_field($table[$i]) . ' = ' . $sign2 . $rst->value($rst->edit[$i]['pos'],$rst->prim_field()) . $sign2 . ';';
-
-               echo 'hier2';
-	       echo $sql_string;
-
-                           $fdresult = mysqli_query($sql_string);
-                            if(mysqli_errno()<>0)echo 'Fehler aufgetreten: ' . mysqli_error();
-
-                }
-		*/
-}
+	    }
+	}
 }
 
 
 
          //------------------------------------------------------------------------------------------------------
          //filtert alle spaltennamen heraus, die nichts mit der Tabelle zu tun haben
-private  function filter_table($rst,$tablename,$boolPrimary=true){
+private  function filter_table($rst,$tablename,$boolPrimary=true)
+{
+	$loop = 0;
+	$res = [];
 
-         $loop = 0;
-         $res = [];
-
-	     reset($rst->field);
-             while ($key = key($rst->field)  ) {
+	reset($rst->field);
+	while ($key = key($rst->field)  ) 
+	{
 		
+		$except = ($rst->field[$key]['Extra']<>'auto_increment') || $boolPrimary;
 
-             $except = ($rst->field[$key]['Extra']<>'auto_increment') || $boolPrimary;
-            // echo '!!!!!!!!!!!!!!!!!!!!!!!!' . $except . "?$boolPrimary??????????????????????????";
-	     
-	     			
-	     
-             if(($rst->field[$key]['Table_name']==$tablename) && $except){$res[$loop++] = $key;}
-             next($rst->field);
-                               }
-                               
-
-             return $res;
-             }
+       	if(($rst->field[$key]['Table_name']==$tablename) && $except)
+       		{$res[$loop++] = $key;}
+       	next($rst->field);
+	}
+	return $res;
+}
              
 
-         //------------------------------------------------------------------------------------------------------
-         //
-
-
-
-
-
-                 
-                 
-         //function
-
-//--------------------------------------------------------------------------------------------------
-//speichert neue Daten
-private function newdata($posarray,$rst){
-
-	}
 
 
 
@@ -873,7 +755,7 @@ function sql_type_sign($string){
 				case 'times':
 				case 'longt':
 				case 'longb':
-                                case 'char(': 
+                case 'char(': 
 				case 'varch':
                                         $div = "'";        
                                 break;
@@ -895,16 +777,15 @@ function sResult($num,$fieldname){
         		$this->table_db->data_seek($num)
         	)
         	{
-        	$zeile = $this->table_db->fetch_assoc();
-        	
-        		//if(is_null($zeile[$col[1]]))echo $col[1] . " is not a valid key \n"; 
+        		$zeile = $this->table_db->fetch_assoc();
+
         		// needs entry in log
         		return $zeile[$col[1]];
         	}
-        	
-
         }
-        return null;}
+	return null;
+}
+
 
 function sEffectNum()
 {
@@ -914,6 +795,8 @@ return mysqli_num_rows($this->table_db);
 function __toString(){return 'Class:database';}
 
 }
+
+
 
 /**
 * first_ds() : goes to first dataset
@@ -939,10 +822,85 @@ var $name;
 var $field;
 var $value;
 var $edit=array();
+var $new = [];
+var $prim_fields;
 var $tmp = null;
 var $var_cur_pos=0;
 var $pos_in_array=0;
 public $table;
+private $index;
+
+private $workmode = WorkModes::WMUpdateAndInsert;
+
+private $update = [];
+private $insert = [];
+private $delete = [];
+
+function __construct($tbl, $fields) {
+	$this->table = $tbl;
+	$this->field = $fields;
+	
+	foreach($this->table as $value)
+	{
+		$this->index[$value] = [];
+		$this->update[$value] = [];
+		$this->insert[$value] = [];
+		$this->delete[$value] = [];
+	}
+	$this->prim_fields = $this->prim_field2(); 
+}
+
+public function set_mode($mode){$this->workmode = $mode;}
+
+private function set_index(array $record, int $pos)
+{
+	
+	foreach($this->table as $value)
+	{
+		
+		$idx = '';
+		foreach($this->prim_fields[$value] as $prims)
+		{
+			if(is_null($record[$prims]))break;
+			$idx .= "{\"" .  $record[$prims] . "\":";
+
+		}
+		
+		$idx .= strval($pos);
+		$idx .= str_repeat("}",count($this->prim_fields[$value]));
+
+		if(!is_null($arr = json_decode($idx,true)))
+			$this->index[$value] = array_merge_recursive_distinct($this->index[$value], $arr);
+		 //if($value =='tbl_orga_EmplToJob') var_dump($idx, $arr,  $this->index[$value]);
+	}
+	
+
+}
+
+/**
+*	uses the index to shortcut the table
+*
+*/
+private function get_row_position(array $record, string $tableName)
+{
+	$next_element = function ($arr, $key ) { return $arr[ $key ];};
+	
+
+	$idx = $this->index[$tableName];
+
+//if($tableName =='tbl_orga_EmplToJob') var_dump($idx);	
+			foreach($this->prim_fields[$tableName] as $prims)
+			{
+				if(is_null($record[$prims]) ||is_null($idx = $next_element($idx, $record[$prims])))
+				{
+
+					return false;
+				}
+			}
+					
+	return $idx;
+	
+}
 
 function find($column, $value)
 {
@@ -957,40 +915,100 @@ function find($column, $value)
 function next_ds(){$this->var_cur_pos++;}
 
 function update(){
-    //echo 'update ' . $this->pos_in_array;
-       global $logger_class;
 
-	$logger_class->setAssert("update \n",0);
-    	if(is_null($this->tmp))
+    if(is_null($this->tmp))
 	{
-		//??
+		
+		$this->set_index( $this->value[$this->pos_in_array] , $this->pos_in_array);
+		
 		$this->pos_in_array++; 
 		}
 		else
 		{
 			//echo "\n tmp \n";
-			//var_dump($this->tmp);
+			$completeRow = [];
+			$sortedRow = [];
+			foreach($this->table as $value)
+				$sortedRow[$value] = [ 'pos'=>0, 'tbl'=>[] ];
 			//echo "saves " .  count($this->tmp) . " Objects in edit\n";
 		for($i= 0 ; $i < count($this->tmp);$i++)
 		{
 			
 			//updates werden abrufbar gemacht
-			$this->value[$this->tmp[$i]['pos']][$this->tmp[$i]['field']]=$this->tmp[$i]['value'];
+			//$this->value[$this->tmp[$i]['pos']][$this->tmp[$i]['field']]=$this->tmp[$i]['value'];
 
 			//
-			if(is_array($this->edit))$len = count($this->edit);else$len = 0;
+			//if(is_array($this->edit))$len = count($this->edit);else$len = 0;
 
+			
+				//$completeRow[$this->tmp[$i]['field']] = $this->tmp[$i]['value'];
+				
+				$sortedRow[$this->tmp[$i]['table']]
+				['tbl']
+				[$this->tmp[$i]['field']] =  $this->tmp[$i]['value'];
+				
+/*
+		
                 $this->edit[$len]['pos']=$this->tmp[$i]['pos']; 
                 $this->edit[$len]['field']=$this->tmp[$i]['field']; 
                 $this->edit[$len]['value']=$this->tmp[$i]['value'];
                 $this->edit[$len]['table']=$this->tmp[$i]['table'];
 		
-                
+  */              
 		
 		}
 		
+		//var_dump($this->workmode);
+		
+		$myUpdate = [];
+		
+		foreach($this->table as $value)
+		{
+			
+
+			if(false !== ($pos = $this->get_row_position($sortedRow[$value]['tbl'] , $value)))
+			{
+
+				if($this->workmode == WorkModes::WMUpdateAndInsert ||
+					$this->workmode == WorkModes::WMUpdate){ 
+
+					$this->update[$value][] =  $sortedRow[$value]['tbl'];
+
+					}
+
+				if($this->workmode == WorkModes::WMDelete )
+					$this->delete[$value][] =  $sortedRow[$value]['tbl'];				
+				
+				$sortedRow[$value]['pos'] = $pos;
+				//var_dump($sortedRow[$value]);
+			}
+			else
+			{
+
+				if($this->workmode == WorkModes::WMUpdateAndInsert ||
+					$this->workmode == WorkModes::WMInsert )
+				{
+					$this->set_index($sortedRow[$value]['tbl'], -1);
+					$this->insert[$value][] = $sortedRow[$value]['tbl'];
+				}
+				
+				if($this->workmode == WorkModes::WMDelete )
+					$this->delete[$value][] =  $sortedRow[$value]['tbl'];				
+				
+
+				
+				$sortedRow[$value]['pos'] = false;
+				//var_dump($sortedRow[$value]);
+			}
+		}
+		
 		$this->tmp = null;
+//var_dump($this->value);
 	}
+//	            "@attributes": {
+//                "id": "9"
+//            },
+
 }
 
 function prev_ds(){$this->var_cur_pos--;}
@@ -1002,83 +1020,57 @@ function last_ds(){$this->var_cur_pos=$this->pos_in_array;return $this->pos_in_a
 function EOF(){return !($this->var_cur_pos<$this->pos_in_array);}
 
 function setValue($Field,&$Value,$num=null,$editable=false){
-
+	 //if($Value == '36')throw new RuntimeException("booh ");
+//var_dump($Field,$Value,$num,$editable);
 		if(is_object($Value) )
 		$conv_value = &$Value;
 		else
 		$conv_value = $Value;
 //if(!$editable) echo 'Invalue in value:<i>' . $this->pos_in_array . '</i><b>' . $Field . '</b> ' . $Value .  "<p>\n";
 			//es existieren keine Felder zum bef�llen
-        		if(!is_null($this->field)){
-								//var_dump($this->field);
-                                                                //testet,ob es ein feld gibt
-                                                                if(!is_Null($this->field[$Field]))
-								{
-                                                                        
-                                                                        //entscheidet, ob
-                                                                        if(($this->value[$field]['Extra']<>'auto_increment') || $editable)
-									{        
-                                                                       
-                                                                                if(is_null($num))
-										{
-                                                        // echo 'saves in value:<i>' . $this->pos_in_array . '</i><b>' . $Field . '</b> ' . $Value .  "<p>\n";
-							 			$this->value[$this->pos_in_array][$Field]=$conv_value;
-										
-										
-										
-                                                                                }
-										else
-										{
-							//echo 'saves in tmp:<i>' . $num . '</i><b>' . $Field . '</b> ' . $Value .  "<p>\n";
-											if(is_null($this->tmp))$this->tmp = array();
-											
-											$pos_in_temp = count($this->tmp);
-											
-                                                                                        $this->tmp[$pos_in_temp]['pos']=$num;
-											$this->tmp[$pos_in_temp]['table'] = isolate_tbl_nm($Field);
-                                                                                        $this->tmp[$pos_in_temp]['field']=$Field;
-                                                                                        $this->tmp[$pos_in_temp]['value']=$conv_value;
-											//var_dump($this->tmp);
-											//echo "$pos_in_temp -" . $this->tmp[$pos_in_temp]['field']. ' ' . $this->tmp[$pos_in_temp]['value'] .'-<br>';
-                                                                                }
+        if(is_null($this->field)) throw new RuntimeException("noch keine Felder definiert");
 
-                                                                        }
-									else
-									{
-                                                                                echo '<br><b>PrimaryKey is auto_increment</b>!<p>';
-                                                                                
-                                                                        }
-                                                                }
-								else
-								{
-									echo '<br><i>Feld nicht vorhanden:</i><b>' . $Field . '</b>!<p>';
-                                                                }
-                                                                
-                                              }
-					      else
-					      {
-						      echo '<br><b>noch keine Felder definiert</b>!<p>';
-					      }
+                                //testet,ob es ein feld gibt
+        if(is_Null($this->field[$Field])) throw new RuntimeException("Feld nicht vorhanden: $Field ");
+								
+                                                                        
+                                     //entscheidet, ob
+        if(!($this->value[$field]['Extra']<>'auto_increment' || $editable)) throw new RuntimeException("PrimaryKey is auto_increment");
+									       
+    // $new                                                                   
+        if($editable) //if(is_null($num))
+		{//throw new RuntimeException(" neu ");
+			 //echo 'saves in value:<i>' . $this->pos_in_array . '</i><b>' . $Field . '</b> ' . $Value .  "<p>\n";
+			 //var_dump($this->prim_fields[isolate_tbl_nm($Field)]);
+			//if(in_array($Field,$this->prim_fields[isolate_tbl_nm($Field)]))echo "$Field\n"; 
+            $this->value[$this->pos_in_array][$Field]=$conv_value;
+		}
+		else
+		{
+
+			if(is_null($this->tmp))$this->tmp = array();
+											//var_dump($Field,$Value,$num,$editable);
+			$pos_in_temp = count($this->tmp);
+            $this->tmp[$pos_in_temp]['pos']=$num;
+            $this->tmp[$pos_in_temp]['table'] = isolate_tbl_nm($Field);
+            $this->tmp[$pos_in_temp]['field']=$Field;
+            $this->tmp[$pos_in_temp]['value']=$conv_value;
+
+         }
+
 
 }
 
 function setField($Field,$Type,$Null,$Key,$Default,$Extra){
-        //ask arraylenght
 
-        if(!is_Null($this->field[$Field]['Type'])){
-                                 echo 'Daten bereits vorhanden ' . $Field . '<p>';
-                                 return false;
-                }
+
+        if(!is_Null($this->field[$Field]['Type']))
+        	throw new RuntimeException("Daten bereits vorhanden $Field ");
+
 
                 //isoliert table und field
                 $element = explode ( '.' ,$Field );
-                //var_dump($element);
-                //if(count$element[1]){
-                //    $element[1]=$element[0];
-                //    $element[0]=$this->table[0];
-                //    }
 
-                //
 
                                 $this->field[$Field]['single_name'] = trim($element[1]);
                                 $this->field[$Field]['Table_name'] = trim($element[0]);
@@ -1106,21 +1098,30 @@ function &value($num,$field=null){
     }
 
 function type($field,$element='Type'){
-//echo "$field,$element<br>";
+
         return $this->field[$field][$element];}
 
 function db_field_list(){
        
-                        $run_num = 0;
-                        $res = array();
-                        reset($this->field);
-                        while ($key = key($this->field) ) {
-                        $res[$run_num] = $key;
-                        $run_num++;
-                        next($this->field);
-                        }
-                        return $res;
-                                }
+
+                        $res_all = [];
+                        $res_sorted_by_tbl = [];
+                       // reset($this->field);
+                        foreach($this->field as $key => $value ) {
+                        	
+                        	$tbl = $value['Table_name'];
+                        
+                        	if(!$res_sorted_by_tbl[$tbl])
+                        		$res_sorted_by_tbl[$tbl] = [$key];
+                        	else
+                        		$res_sorted_by_tbl[$tbl][] = $key;
+                        	
+                        		$res_all[] = $key;
+
+                        //next($this->field);
+       }
+       return [$res_all, $res_sorted_by_tbl];
+     }
 
 function rst_num(){return $this->pos_in_array; } 
 
@@ -1128,95 +1129,387 @@ function rst_cur_num(){return $this->var_cur_pos; }
 
 function prim_field($tablename = null){
 
-         $field;
-         $pointer=0;
-             //echo '<ul>';
-                reset($this->field);
-                while (!is_null($key = key($this->field)))
-                             {
-                      //echo '<li>' . $key . ' : ';
-                     if(!is_null($tablename)){
+	$field;
+	$pointer=0;
 
-                       if($this->field[$key]['Key']=='PRI' && $this->field[$key]['Table_name']==$tablename){$field[$pointer++] = $key;}
+	reset($this->field);
+	while (!is_null($key = key($this->field))){
 
-                       //echo 'hallo ' . $this->field[$key]['Table_name'] . ' ' . $tablename . ' </li>';
-                 }else{
-                                                //echo 'hallo2 </li>';
-                       if($this->field[$key]['Key']=='PRI')$field[$pointer++] = $key;
-                   }
+		if(!is_null($tablename)){
+			//all tables
+        	if($this->field[$key]['Key']=='PRI' && $this->field[$key]['Table_name']==$tablename){$field[] = $key;}
 
-                              next($this->field);}
-                           //echo '</ul>';
-           if(is_array($field))return $field; else return false;
-   }
-   
-   function  get_log()
-   {
-   	   $res = "tmp:" . count($this->edit) . "\n maxpos:" . $this->pos_in_array;
-   	   return $res;
-   }
-   
-function getCSV()
-{//$this->value[$this->pos_in_array][$Field]
-$res = "";
-$delim = '';
-foreach ($this->field as $myfield) 
-{
+        }else{
+        	//specific table
+        	if($this->field[$key]['Key']=='PRI')$field[] = $key;
+        }
+
+	next($this->field);}
+
+	if(is_array($field))return $field; else return false;
+}
+
+function prim_field2(){
+	$res = [];
+	reset($this->field);
+	while (!is_null($key = key($this->field))){
+		$tbl = current($this->field)['Table_name'];
+		if(!is_array($res[$tbl]))$res[$tbl] = [];
+		
+        if($this->field[$key]['Key']=='PRI')
+        	{$res[$tbl][] = $key;}
+        	
+		next($this->field);
+	}
 	
-    $res .= $delim . $myfield['single_name'];
-    $delim = ';';
+	return $res;
 }
 
-echo count($this->value);
-for($i=0; $i< count($this->value); $i++ )
-{
-$delim = '';
-$res .= "\n";
-foreach ($this->field as $k => $v)
+public function get_insert_array_statements()
 {
 
-    $res .= $delim . $this->value[$i][$k];
-    $delim = ';';
-}
-
-}
-//$this->field[$Field]
-
-return $res;
-
-}
-
-public function show_content()
+	$res = [];
+	foreach($this->insert as $key => $value) 
 	{
-		echo "\ntables:\n";
-		foreach($this->field as $key => $value)
-		{
-			echo $key . "=>\t{";
-			foreach($value as $key2 => $value2)
-				echo '[' . $key2 . ']=>"' . $value2 . '", ';
-			echo "}\n";
+		
+		//var_dump('insert',$key, $value , count($value));
+		try {
+		
+		foreach($value as $statement)
+		{		
+
+			//empty statements are useless and needed to be ignored
+			if(count($statement) == 0)continue;
+			
+
+            		$value = array_filter($statement, [$this, 'isValidPrime'], ARRAY_FILTER_USE_BOTH);
+
+            		array_walk(
+            			$value
+            			, [$this, 'applyNotationFormat'] );
+
+
+
+		$res[] = ['SQL' => "INSERT IGNORE INTO $key (" . implode( ', ' , array_keys($value))
+			.  ") VALUES (" . implode( ', ' , array_values($value)) . ");", 'prim'=>$this->prim_field2()[$key], 'tbl'=>$key, 
+			'transaction'=>'INSERT'];
+
+
 		}
 		
+        } catch (RuntimeException $e) {
+            //var_dump(get_class($e), $e->getMessage());
+            continue;
+        }
+		
+	}
+	
+	
+	$list = [];
+	
+	return array_filter($res, function($mylines) use (&$list) {
+    if (in_array($mylines['SQL'], $list)) return false;
+    	
+   $list[] = $mylines['SQL'];
+   return true;
 
+    });	
+}
 
-		echo "values:\n";
-		foreach($this->value as $key => $value)
+public function get_update_array_statements()
+{
+
+		$res = [];
+	foreach($this->update as $key => $value) 
+	{
+		foreach($value as $statement)
+		{		
+			$useless = false;
+			array_walk($statement, [$this, 'applyNotationFormat'] );
+			$filtered = array_filter($statement, [$this, 'isNotPrime'], ARRAY_FILTER_USE_KEY);
+			if(count($filtered) == 0)continue;
+			//var_dump($statement);
+			$line = "UPDATE $key SET ";
+			$komma = '';
+			foreach($filtered as $name => $tblValue)
+			{
+				$line .= $komma . "$name = $tblValue ";
+				$komma = ", ";
+			}
+			
+		$line .= " WHERE ";
+		$komma = '';
+		
+		foreach($this->prim_fields[$key] as $prims)
 		{
-			echo $key . "=>\t{";
-			foreach($value as $key2 => $value2)
-				echo '[' . $key2 . ']=>"' . $value2 . '", ';
-			echo "}\n";
+			$useless = $useless || is_null($statement[$prims]) || 0 == strlen($statement[$prims]); 
+			$line .=  $komma . " $prims = " . $statement[$prims] . " ";
+			$komma = ", ";
 		}
-
-		echo "edit:\n";
-		foreach($this->edit as $key => $value)
+		$line .= ";";
+		if(!$useless)
 		{
-			echo $key . "=>\t{";
-			foreach($value as $key2 => $value2)
-				echo '[' . $key2 . ']=>"' . $value2 . '", ';
-			echo "}\n";
+			$res[] = ['SQL' => $line, 'prim'=>$this->prim_fields[$key], 'tbl'=>$key, 
+			'transaction'=>'UPDATE'];
+		}
 		}
 	}
+	$list = [];
+	
+	return array_filter($res, function($mylines) use (&$list) {
+    if (in_array($mylines['SQL'], $list)) return false;
+    	
+   $list[] = $mylines['SQL'];
+   return true;
+
+    });
+	
+}
+
+public function get_delete_array_statements()
+{
+	/*
+	
+DELETE FROM table_name WHERE condition;
+	*/
+
+	$res = [];
+	
+	
+	foreach($this->delete as $key => $value) 
+	{
+		foreach($value as $statement)
+		{		
+			$useless = false;
+			array_walk($statement, [$this, 'applyNotationFormat'] );
+			//$filtered = array_filter($statement, [$this, 'isNotPrime'], ARRAY_FILTER_USE_KEY);
+			//if(count($filtered) == 0)continue;
+			//var_dump($statement);
+			$line = "DELETE FROM $key WHERE ";
+
+			$komma = '';
+		
+			
+				
+			$prime_field = [];
+			$prime_value = [];
+		foreach($this->prim_fields[$key] as $prims)
+		{
+
+			$useless = $useless || is_null($statement[$prims]) || 0 == strlen($statement[$prims]);
+
+			$prime_field[] = $prims;
+			$prime_value[] = $statement[$prims];
+						
+			//$line .=  $komma . " $prims = " . $statement[$prims] . " ";
+			//$komma = ", ";
+		}
+		
+		if(count($this->prim_fields[$key])> 1)
+		{
+			$line .= " (" . implode(', ', $prime_field) . ") = (" .  implode(', ', $prime_value) . ")";
+		}
+		else
+			$line .= " " . implode(', ', $prime_field) . " = " .  implode(', ', $prime_value) . " ";		
+		
+		$line .= ";";
+		if(!$useless)
+		{
+			$res[] = ['SQL' => $line, 'prim'=>$this->prim_fields[$key], 'tbl'=>$key, 
+			'transaction'=>'DELETE'];
+		}
+		}
+	}
+	
+	$list = [];
+	
+	return array_filter($res, function($mylines) use (&$list) {
+    if (in_array($mylines['SQL'], $list)) return false;
+    	
+   $list[] = $mylines['SQL'];
+   return true;
+
+    });
+}
+
+public function get_update_statements()
+{
+	/*
+	
+	UPDATE table_name
+SET column1 = value1, column2 = value2, ...
+WHERE condition;
+array_walk($fruits, 'test_alter', 'fruit'); applyNotationFormat
+	*/
+
+	$res = [];
+	foreach($this->update as $key => $value) 
+	{
+		foreach($value as $statement)
+		{		
+			$useless = false;
+			array_walk($statement, [$this, 'applyNotationFormat'] );
+			$filtered = array_filter($statement, [$this, 'isNotPrime'], ARRAY_FILTER_USE_KEY);
+			if(count($filtered) == 0)continue;
+			//var_dump($statement);
+			$line = "UPDATE $key SET ";
+			$komma = '';
+			foreach($filtered as $name => $tblValue)
+			{
+				$line .= $komma . "$name = $tblValue ";
+				$komma = ", ";
+			}
+			
+		$line .= " WHERE ";
+		$komma = '';
+		
+		foreach($this->prim_fields[$key] as $prims)
+		{
+			$useless = $useless || is_null($statement[$prims]) || 0 == strlen($statement[$prims]); 
+			$line .=  $komma . " $prims = " . $statement[$prims] . " ";
+			$komma = ", ";
+		}
+		$line .= ";";
+		if(!$useless)$res[] = $line;
+		}
+	}
+	return implode("\n", array_unique($res));		
+}
+
+public function get_delete_statements()
+{
+	/*
+	
+DELETE FROM table_name WHERE condition;
+	*/
+
+	$res = [];
+	
+	
+	foreach($this->delete as $key => $value) 
+	{
+		foreach($value as $statement)
+		{		
+			$useless = false;
+			array_walk($statement, [$this, 'applyNotationFormat'] );
+			//$filtered = array_filter($statement, [$this, 'isNotPrime'], ARRAY_FILTER_USE_KEY);
+			//if(count($filtered) == 0)continue;
+			//var_dump($statement);
+			$line = "DELETE FROM $key WHERE ";
+
+			$komma = '';
+		
+			
+				
+			$prime_field = [];
+			$prime_value = [];
+		foreach($this->prim_fields[$key] as $prims)
+		{
+
+			$useless = $useless || is_null($statement[$prims]) || 0 == strlen($statement[$prims]);
+
+			$prime_field[] = $prims;
+			$prime_value[] = $statement[$prims];
+						
+			//$line .=  $komma . " $prims = " . $statement[$prims] . " ";
+			//$komma = ", ";
+		}
+		
+		if(count($this->prim_fields[$key])> 1)
+		{
+			$line .= " (" . implode(', ', $prime_field) . ") = (" .  implode(', ', $prime_value) . ")";
+		}
+		else
+			$line .= " " . implode(', ', $prime_field) . " = " .  implode(', ', $prime_value) . " ";		
+		
+		$line .= ";";
+		if(!$useless)$res[] = $line;
+		}
+	}
+	return implode("\n", array_unique($res));	
+}
+
+function isNotPrime($key)
+{
+
+return $this->type($key,'Key')!='PRI' ;
+}
+
+function isValidPrime($value, $key ) //
+{
+	if($this->type($key,'Key')=='PRI')
+	{
+		
+		
+		if($this->type($key,'Extra')=='auto_increment' && (is_null($value) || strlen($value) == 0 || $value === false))
+		{
+			return false;
+		}
+		else
+		{
+			if( $value === false )
+				throw new RuntimeException("Invalid Primary Key");
+		}
+
+	}
+
+	return true;
+}
+
+function applyNotationFormat ( &$value, string $key)
+        {
+        	$string = $this->field[$key]['Type'];
+        					
+        	if(is_null($value))
+        		 if($this->field[$key]['Null'] == 'NO')
+
+        		 	throw new RuntimeException("NULL is not allowed in field: $key" );
+
+        		else
+        		{
+        			$value = 'NULL';
+        			return;
+        		}
+
+        	
+        	switch(substr($string,0,5)){
+                                
+            	case 'text':
+            	case 'year':
+				case 'datet':
+				case 'date':
+				case 'time':
+				case 'times':
+				case 'longt':
+				case 'longb':
+                case 'char(': 
+                case 'varch':
+                $value = "'$value'";
+                return;
+                break;
+            }
+                
+                // if empty than Default
+                if(strlen($value) == 0)
+                	$value = $this->field[$key]['Default'];
+                
+                // valid numbers are fine here
+                if(is_numeric($value))return;
+                
+                //test for null as valid
+                if($this->field[$key]['Null'] != 'NO')
+        		 	throw new RuntimeException("Number expected, empty string given and null not allwoed");
+        		else
+        		{
+        			$value = 'NULL';
+        			return;
+        		}
+                                          
+                                
+        }
+
+
+        
 }
 
 

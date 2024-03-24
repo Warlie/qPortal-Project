@@ -43,11 +43,6 @@ class TREE_tree extends Interface_node
 var $name = 'empty';
 var $type = 'none';
 var $namespace = 'none';
-	
-function __construct()
-{
-
-}
 
 function &get_Instance()
 {
@@ -65,13 +60,6 @@ function &new_Instance()
 				return $obj;
 }
 
-function complete()
-	{
-		parent::complete();
-		
-
-	}
-
 
 	
 function event_message_in($type,&$obj)
@@ -83,9 +71,10 @@ function event_message_in($type,&$obj)
 
 		if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#sector') )		
 			$result = in_array($tmp, explode(';', trim_with_null($_SESSION['http://www.auster-gmbh.de/surface#sector'], ';')));
-
-			//var_dump($tmp, $result);
-			//$this->giveOutOverview();
+		/*
+		if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#method') )		
+			$result = $_SERVER['REQUEST_METHOD'] === $tmp;
+*/
 				
 		if($tmp =  intval($this->get_ns_attribute('http://www.trscript.de/tree#securitylevel')) )
 		{
@@ -100,37 +89,11 @@ function event_message_in($type,&$obj)
 		}	
 			
 
-		
+		//useless Exception
 		if(!$result) throw new NoPermissionException('not Allowed');
-		/*
-		
-		if ($att_sector = $this->get_attribute('sector'))
-		{
-		if (false === strpos($_SESSION['http://www.auster-gmbh.de/surface#sector'],';' . $att_sector . ';' )); //return false;
-		}
-		
-		
-		if ($att_security = $this->get_attribute('securitylevel'))
-		{
-		if ((intval($_SESSION['http://www.auster-gmbh.de/surface#securityclass']) < intval($att_security)) 
-		&& 
-		(intval($att_security) <> -1)  )
-		{
-		; //return false;
-		}
-		
-		if (($_SESSION['http://www.auster-gmbh.de/surface#securityclass']) 
-		&& 
-		(intval($att_security) == -1)  )
-		{
-		; //return false;
-		}
-		}
-		
-		*/
+
 	
-		//echo $this->get_attribute('name') . ' ' . $type . "<br>\n";
-	//echo $type . ' ' . $obj->get_request() . ' ' . $this->name .  '<br>';
+
 	if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#src'))
 	{
 		$tmp = str_replace( '%ROOT_DIR%', ROOT_DIR, $tmp);
@@ -150,25 +113,24 @@ function event_message_in($type,&$obj)
 	//{
 		
 		$obj->set_context($this);
-	
 		$this->send_messages($type,$obj);
-		
+		/*
 		//calls all childnodes, which are not template and tree
 		for($i = 0 ; $i < $this->index_max();$i++)
 			{
 			$tmp = $this->getRefnext($i,true);
 			
 			if($tmp->full_URI() <> 'http://www.trscript.de/tree#template' 
-			&& $tmp->full_URI() <> 'http://www.trscript.de/tree#tree'
+			&&  $tmp->full_URI() <> 'http://www.trscript.de/tree#tree'
 			)
 			{
 				//echo $tmp->full_URI() . "- \n";
 				
-				$tmp->event_message_in('',$obj);
+				$tmp->event_message_in($type,$obj);
 			}
 			}
 	//}
-	
+	*/
 	}
 }
 
