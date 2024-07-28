@@ -19,6 +19,7 @@ var $rst = null;
 var $obj = null;
 var $back =  null;
 var $content = null;
+private $currentTreeNode;
 var $dbencode = "ISO-8859-1";
 var $myDocumentName = '';
 var $node = "";
@@ -34,6 +35,11 @@ private $goback  = false;
 var $res = array();
 private $logout_url = '';
 private $logout = true;
+private $aspect = 'i';
+private $addAspects = [];
+private $page;
+
+private $URLString = STD_URL;
 
 	/**
 	* @param $back get reference to container with all trees
@@ -62,14 +68,17 @@ private $logout = true;
   string(3) "sur_value"
 }
 	*/
-	function __construct(/* System.Parser */ &$back, /* System.Content */ &$content)
+	function __construct(/* System.Parser */ &$back, /* System.Content */ &$content, /* System.CurRef */ &$cur)
 	{
 		global $_SESSION;
-
+		
+                $this->currentTreeNode = $cur; // Good for this feature
 		$this->back= &$back;
 		$this->content = &$content;
 		
-			
+		//var_dump($content->getHeap());
+		
+		$this->page = $this->content->getXMLStructur();
 		
 
 	
@@ -153,6 +162,12 @@ private $logout = true;
 				case "root":
 					$this->root = $set;
 					break;
+				case "aspect":
+					$this->aspect = $set;
+					break;
+				case "page":
+					$this->page($set);
+					break;
 				case "back":
 					if($set['active'])
 					{	
@@ -213,6 +228,37 @@ private $logout = true;
 	
 	function show_root(){$this->root  = true;}
 	
+	function page($page)
+	{
+		 
+			if($page=='$default');
+			elseif($page=="$this")
+			{
+				$this->page = $this->content->indexToUri(
+					intval($this->currentTreeNode->get_idx())
+					);
+			}
+			else
+				$this->page = $page;	
+//var_dump($page, $this->page);
+	}
+	
+	function aspects($leadingAspect, $otherAspects = null)
+	{
+		$this->aspect = $leadingAspect;
+		if($otherAspects)$this->addAspects = explode(',',$otherAspects);
+		
+		$res = [];
+		foreach($this->addAspects as $aspect)
+			array_push($res,  $aspect ."=" . $this->content->getHeap()['request'][$aspect]);
+		//	$aspect = 
+		
+		array_push($res,  $leadingAspect ."=%s" );
+		
+		
+		$this->URLString = 'index.php?' . implode('&',$res);
+	}
+	
 	function back_in_tree($name = null, $url = null)
 	{
 
@@ -255,10 +301,10 @@ private $logout = true;
 	    $tmp[$this->level[$i]['Name']] = null;
 	    }
        
-	$tmp[$this->level[0]['URL']] = str_replace('%s', $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),STD_URL);
+	$tmp[$this->level[0]['URL']] = str_replace('%s', $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),$this->URLString);
 	$tmp[$this->level[0]['Name']] = $this->back->show_ns_attrib('http://www.trscript.de/tree#value');
        $tmp[$this->level[1]['Name']] = 'abmelden';
-       $tmp[$this->level[1]['URL']] = str_replace('%s', '__system&modus=LOG_OUT& URL=' . $this->logout_url,STD_URL);;
+       $tmp[$this->level[1]['URL']] = str_replace('%s', '__system&modus=LOG_OUT& URL=' . $this->logout_url,$this->URLString);
        //& URL=
        	return $tmp; 
        
@@ -277,7 +323,7 @@ private $logout = true;
 	    $tmp[$this->level[$i]['Name']] = null;
 	}
        
-	$tmp[$this->level[0]['URL']] = str_replace('%s', $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),STD_URL);
+	$tmp[$this->level[0]['URL']] = str_replace('%s', $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),$this->URLString);
 	$tmp[$this->level[0]['Name']] = $this->back->show_ns_attrib('http://www.trscript.de/tree#value');
 
 	$stamp = $this->back->position_stamp();
@@ -286,7 +332,7 @@ private $logout = true;
 	//if($this->goback)
 	//{
 
-	$tmp[$this->level[1]['URL']] = ($this->goback['URL'] ? $this->goback['URL'] : str_replace('%s', $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),STD_URL)); //str_replace('%s', $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),STD_URL);
+	$tmp[$this->level[1]['URL']] = ($this->goback['URL'] ? $this->goback['URL'] : str_replace('%s', $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),$this->URLString)); //str_replace('%s', $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),$this->URLString);
 	$tmp[$this->level[1]['Name']] = ($this->goback['Name'] ? $this->goback['Name'] : 'zurück');
 	
 	//var_dump($tmp);
@@ -343,6 +389,12 @@ private $logout = true;
 
 	}
 	
+	
+	/**
+	*	@param $stamp : recipes a position stamp
+	*	@param $deep : the max deep, it is allowed to collect data
+	*	@return an array of
+	*/
 	private function &collect_lines($stamp, $deep)
 	{
 	
@@ -361,7 +413,7 @@ private $logout = true;
 	  {
 	   $this->back->go_to_stamp($stamp);
 	    $res[$this->level[$i]['URL']] = str_replace('%s', 
-	    $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),STD_URL);
+	    $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),$this->URLString);
 	    $res[$this->level[$i]['Name']] = $this->back->show_ns_attrib('http://www.trscript.de/tree#value');
 	
 	  }
@@ -369,7 +421,7 @@ private $logout = true;
 	  {
 	    $this->back->parent_node();
 	    $res[$this->level[$i]['URL']] = str_replace('%s', 
-	    $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),STD_URL);
+	    $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),$this->URLString);
 	    $res[$this->level[$i]['Name']] = $this->back->show_ns_attrib('http://www.trscript.de/tree#value');
 	  }
 	  
@@ -391,11 +443,13 @@ private $logout = true;
 	$stamp = $this->back->position_stamp();
 	
 	/* URIs for spezific trees */
-	$structur = $this->content->getXMLStructur();
+	$structur = $this->page;
 	$output = $this->content->get_out_template();
 
 	/* change to control tree */
 	$this->back->change_URI($structur);
+	//var_dump($this->back->cur_idx(), $structur, $this->page);
+	//$this->back->ALL_URI();
 	
 	/* saves current position */
 	$stamp_structur = $this->back->position_stamp();
@@ -426,9 +480,11 @@ private $logout = true;
        $this->res[] = &$this->collect_lines($arr[$i]['stamp'], $arr[$i]['deep']);
        //var_dump($this->res);
 
+       // Does not look reachable
+       //TODO check this
        	if(($this->back->get_NS_QName() != 'final') && ($this->goback) && false)
 	{
-		
+		echo "test me";
 			$this->back->parent_node(); 
 			$tmp = Array();
 			       	for($i = count($this->level) - 1; $i > 1; $i--)
@@ -437,11 +493,11 @@ private $logout = true;
 			       		$tmp[$this->level[$i]['Name']] = null;
 			       	}
        
-			       	$tmp[$this->level[0]['URL']] = str_replace('%s', $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),STD_URL);
+			       	$tmp[$this->level[0]['URL']] = str_replace('%s', $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),$this->URLString);
 			       	$tmp[$this->level[0]['Name']] = $this->back->show_ns_attrib('http://www.trscript.de/tree#value');
 	
 			       	$tmp[$this->level[1]['Name']] = $this->back->show_ns_attrib('http://www.trscript.de/tree#value');
-			       	$tmp[$this->level[1]['URL']] = str_replace('%s',  $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),STD_URL);
+			       	$tmp[$this->level[1]['URL']] = str_replace('%s',  $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),$this->URLString);
 			
 
 			$this->res[] = &$tmp;

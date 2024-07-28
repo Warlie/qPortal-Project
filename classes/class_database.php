@@ -69,7 +69,7 @@ enum WorkModes {
 * sResult($num,$fieldname)
 */
 	
-	
+	//TODO style:  first letter needs to be upper dings
 class database {
 
 //db-conntection
@@ -79,10 +79,12 @@ var $Server = "localhost"; //localhost
 var $db_name = "qportal";
 //encoding
 var $mycodeset = "UTF-8";
-var $open_db;
+var $db;
 var $table_db;
 
 var $error_no=0;
+
+private $profiles = [];
 
 var $timestamp;
 
@@ -94,29 +96,67 @@ var $timestamp;
 *
 */
 
-function __construct($Server = "", $User = "", $pwt = "", $db_name = "", $codeset = ""){
+function __construct($Server = "", $User = "", $pwt = "", $db_name = false, $codeset = false){
         
 	// set SQL Server settings
 	if($Server <> "")$this->Server = $Server;
 	if($User <> "")$this->User = $User;
 	if($pwt <> "")$this->pwt = $pwt;
-	if($db_name <> "")$this->db_name = $db_name;
-	if($codeset <> "")$this->mycodeset = $codeset;
-
-	// opens a server connection
-    $this->open_db = new mysqli($this->Server, $this->User, $this->pwt);
-    
-    // makes errors public
-	$this->error_no = $this->open_db->errno;
+	if($db_name)$this->db_name = $db_name;
+	if($codeset)$this->mycodeset = $codeset;
 	
-	// dies with a error message
-	if ($this->open_db->connect_error) {
-    die('Connect Error (' . $this->open_db->connect_errno . ') '
-            . $this->open_db->connect_error);
-    	}
+
+	if(($Server <> "")  &&
+		($User <> ""))
+			$this->open_db($Server, $User, $pwt, $db_name, $codeset );
+	
+        }
+
+        
+        public function db_profiles($collection){$this->profiles =  $collection;}
+        
+        
+        public function change_profile($name)
+        {
+        	
+        	$this->close_db();
+        	
+        	
+        	if(array_key_exists($name, $this->profiles) )
+        	{
+        		$this->open_db(
+        			$this->profiles[$name]["URL"], 
+        			$this->profiles[$name]["User"], 
+        			$this->profiles[$name]["PWST"], 
+        			$this->profiles[$name]["db_name"], 
+        			$this->profiles[$name]["codeset"]);
+        	}
+        	else
+        	throw new RuntimeException("Profilename '$name' does not exist!");
+        	
+        }
+        
+        private function open_db($Server, $User, $pwt, $db_name = false, $codeset = false)
+        {
+//var_dump($Server, $User, $pwt, $db_name, $codeset);
+        	// opens a server connection
+        	$this->db = new mysqli($Server, $User, $pwt);
+         	
+        	if ($this->db->connect_error) 
+        		throw new RuntimeException("Connect failed: %s\n", mysqli_connect_error());
+	
+        	
+
+        	/*
+        	// dies with a error message
+        	// TODO replace with a good old exception
+        	if ($this->db->connect_error) {
+        		die('Connect Error (' . $this->db->connect_errno . ') '
+        			. $this->db->connect_error);
+        	}
 
     	// uses specific db with error handling
-        if(!$this->open_db->select_db ($this->db_name)){
+        if(!$this->db->select_db ($this->db_name)){
                 echo "datenbank fehlt<p>";
 		$this->error_no = mysqli_errno();
                 if (!mysqli_query('create database ' . $this->db_name . ';')) 
@@ -125,10 +165,22 @@ function __construct($Server = "", $User = "", $pwt = "", $db_name = "", $codese
 		
 		
                 }
+                */
                 
+                if(!$this->db->select_db ($db_name))
+                	throw new RuntimeException("no such database: %s\n", mysqli_errno());
 
+                if($codeset)
+                	$this->db->set_charset ( $codeset );
+                
+                return $this->db;
         }
-
+        
+        private function close_db()
+        {
+        	$this->db->close();
+        }
+        
 	/** errno
 	* @return current error number
 	*
@@ -147,7 +199,7 @@ function __construct($Server = "", $User = "", $pwt = "", $db_name = "", $codese
 	function set_db_encode($codeset)
 		{
 
-			$this->open_db->set_charset ( $codeset );
+			$this->db->set_charset ( $codeset );
 			
 		}
 		
@@ -157,7 +209,7 @@ function __construct($Server = "", $User = "", $pwt = "", $db_name = "", $codese
 	*/
 	function get_db_encode()
 		{
-			return$this->open_db->character_set_name ( );
+			return$this->db->character_set_name ( );
 
 			
 		}		
@@ -169,10 +221,10 @@ function __construct($Server = "", $User = "", $pwt = "", $db_name = "", $codese
 	function SQL($SQLString){
 
                         if(is_object($this->table_db)) $this->table_db->free_result();
-                        $this->table_db = mysqli_query($this->open_db, $SQLString);
-                        if(mysqli_errno($this->open_db)<>0)echo "Fehler ist aufgetreten \n<br>" . '(' . $SQLString . ")\n<br>" . mysqli_error($this->open_db);                        
+                        $this->table_db = mysqli_query($this->db, $SQLString);
+                        if(mysqli_errno($this->db)<>0)echo "Fehler ist aufgetreten \n<br>" . '(' . $SQLString . ")\n<br>" . mysqli_error($this->db);                        
 
-                        return ["Effected_rows" => mysqli_affected_rows($this->open_db), "Last_ID" => mysqli_insert_id($this->open_db)];
+                        return ["Effected_rows" => mysqli_affected_rows($this->db), "Last_ID" => mysqli_insert_id($this->db)];
                                                 }
 
 
@@ -372,7 +424,7 @@ if(!function_exists('extract_table')){
                  	 , 	$this->define_rst_fields(
                  	 	 $listOfTBLs,
                  	 	 ($cols = /* zeile 151 findet alle felder */ extract_col($sql)),
-                 	 	 $this->open_db
+                 	 	 $this->db
                  	 	 )
                  	 );
                                                      
@@ -413,8 +465,8 @@ private function load_field_rst($rst,$sql,$add_pri,$encode = 'UTF-8'){
 	      }
 
 	      // sql request with worse error handling
-          $fdresult = $this->open_db->query($sql); 
-          if($this->open_db->errno <>0)echo 'Fehler aufgetreten: ' . $this->open_db->errno . '(' . $sql . ")\n";                              
+          $fdresult = $this->db->query($sql); 
+          if($this->db->errno <>0)echo 'Fehler aufgetreten: ' . $this->db->errno . '(' . $sql . ")\n";                              
 
           // fetch all over the result
           while ($zeile = $fdresult->fetch_row()) {
@@ -462,8 +514,8 @@ private function collect_mysql_col($table,$filter_in=null,$array_list=null, $db_
 		// * benoetigt alle tabellen -> filter wird abgestellt
 		if($filter_in == '*')$filter_in=null;
 
-		$fdresult = $this->open_db->query("SHOW COLUMNS FROM $table;");
-		if($this->open_db->errno <>0)echo "<p>Fehler ist aufgetreten: " . mysqli_error() . "<p>bei SQL_String: SHOW COLUMNS FROM $table;";
+		$fdresult = $this->db->query("SHOW COLUMNS FROM $table;");
+		if($this->db->errno <>0)echo "<p>Fehler ist aufgetreten: " . mysqli_error() . "<p>bei SQL_String: SHOW COLUMNS FROM $table;";
                                  //filterfunction
         $filter = (is_null($filter_in))? false : true ;
 
@@ -554,12 +606,12 @@ private function update_data($rst,$pos){
     			$sign2 = database::sql_type_sign($rst->type($prim[0]));
 
     			$sql_string = 'update ' . $rst->table[$pos];
-    			$sql_string .= ' set ' . $rst->edit[$k]['field'] . ' = ' . $sign1 . $this->open_db->real_escape_string($rst->edit[$k]['value']) . $sign1;
+    			$sql_string .= ' set ' . $rst->edit[$k]['field'] . ' = ' . $sign1 . $this->db->real_escape_string($rst->edit[$k]['value']) . $sign1;
     			$sql_string .= ' where ' . $prim[0] . ' = ' . $sign2 . $rst->value($rst->edit[$k]['pos'],$prim[0]) . $sign2 . ';';
       
 //echo $sql_string;
-    			$fdresult = $this->open_db->query($sql_string);
-    			if($this->open_db->errno<>0)echo 'Fehler aufgetreten: ' . '(' . $sql_string . ')' . $this->open_db->error;
+    			$fdresult = $this->db->query($sql_string);
+    			if($this->db->errno<>0)echo 'Fehler aufgetreten: ' . '(' . $sql_string . ')' . $this->db->error;
     		}
     	}
 	}
@@ -604,9 +656,9 @@ function insert_rst($rst){
        $sql_string .= ' ORDER BY ' .implode(', ', $prim_tbl[$table[$i]] ) . ';'; //$sql_string .= ' ORDER BY ' . $prim[$i] . ';';
 
 					   //echo $sql_string;
-	$fdresult = mysqli_query($this->open_db, $sql_string);
+	$fdresult = mysqli_query($this->db, $sql_string);
 
-	if(mysqli_errno($this->open_db)<>0)echo 'Fehler aufgetreten (' . $sql_string . '): ' . mysqli_error($this->open_db);
+	if(mysqli_errno($this->db)<>0)echo 'Fehler aufgetreten (' . $sql_string . '): ' . mysqli_error($this->db);
 
        //Abfrage �ber alle elemente einer tabelle erstellt
 
@@ -677,7 +729,7 @@ function insert_rst($rst){
                 for($l=0;$l<count($fields);$l++)
 				{
 					$tmp = $this->sql_type_sign($rst->type($fields[$l]));
-					$string = $this->open_db->real_escape_string($rst->value($map[$j],$fields[$l]));
+					$string = $this->db->real_escape_string($rst->value($map[$j],$fields[$l]));
 							
 					if( $tmp == '' && (('' == $string) || is_null( $string )  )) $string = 'NULL';
 
@@ -696,11 +748,11 @@ function insert_rst($rst){
 				//var_dump($sql_string);
 				
 			   	//speichert einen Datensatz, der neu geschieben wurde
-                $fdresult = $this->open_db->query($sql_string);
-				if($this->open_db->errno<>0)
+                $fdresult = $this->db->query($sql_string);
+				if($this->db->errno<>0)
 				{
 
-					echo '<br>Fehler aufgetreten (' . $sql_string . '): ' . $this->open_db->error . '</br>';
+					echo '<br>Fehler aufgetreten (' . $sql_string . '): ' . $this->db->error . '</br>';
 
 				}
 			}//end loop1

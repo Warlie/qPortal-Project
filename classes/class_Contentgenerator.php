@@ -39,6 +39,7 @@ var $maintemplate = null;
 var $structur = null;
 var $control = null;
 var $nodeName = null;
+var $gotos = [];
 var $panel = true;
 var $static = false;
 var $menu = true;
@@ -203,6 +204,8 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		
 	}
 
+	function getHeap(){return $this->heap;}
+	
 	function setSessionParam($param)
 	{
 		$this->heap['session'] = $param;
@@ -305,6 +308,10 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	{
 		return $this->namespace_reg;
 	}
+	
+
+	
+	
 	//-----------END functions for nodes-----------
 	
 	function generate()
@@ -330,14 +337,14 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 				$booh = null;
 		
 
-		if($this->XMLlist->show_xmlelement())
+		if($cur_obj = $this->XMLlist->show_xmlelement())
 		{
 //model=xpath_model&query="wubb"& //model=xpath_model,namespace=\'\',query=\'wubb\'
 // '*?__find_node(json=' . base64_encode( '{"name":"http://www.trscript.de/tree#final"}' ) . ')=' . base64_encode( '*?start' )
 		if($this->nodeName == "")
 			
-			$this->XMLlist->show_xmlelement()->event_message_check( 
-				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> '*?start']]
+			$cur_obj->event_message_check( 
+				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> ["Identifire"=>"*", "Command"=> ["Name"=> "start" ], "Attribute"=>$this->param] ]] //["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> '*?start']]
 				,new EventObject('',$this,$booh));
 			else
 /*
@@ -345,14 +352,30 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 				base64_encode( '{"name":"http://www.trscript.de/tree#tree", "attribute":{ "http://www.trscript.de/tree#name":"' . $this->nodeName . '" }}' ) . ')=' . 
 				base64_encode( '*?start' )
 */
-			$this->XMLlist->show_xmlelement()->event_message_check(
-				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{ "attribute":{"http://www.trscript.de/tree#name":"' . $this->nodeName . '"}}'], "Value"=> '*?start']]
+			try{
+			$cur_obj->event_message_check(
+				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{ "attribute":{"http://www.trscript.de/tree#name":"' . $this->nodeName . '"}}'], "Value"=> ["Identifire"=>"*", "Command"=> ["Name"=> "start" ], "Attribute"=>$this->param]  ]]
 				,new EventObject('',$this,$booh)); //  "name":"http://www.trscript.de/tree#tree",
-			//$this->XMLlist->show_xmlelement()->event_message_in('*?start',new EventObject('',$this,$booh));
+			
+			}  //$this->XMLlist->show_xmlelement()->event_message_in('*?start',new EventObject('',$this,$booh));
+			catch(NotExistingBranchException $e)
+			{
+				//var_dump($this->XMLlist->show_xmlelement());
+				$cur_obj->event_message_check( 
+				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> '*?start']]
+				,new EventObject('',$this,$booh));
+			}
+			catch(EmptyTreeException $e)
+			{
+				//var_dump($this->XMLlist->show_xmlelement());
+				$cur_obj->event_message_check( 
+				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> '*?start']]
+				,new EventObject('',$this,$booh));
+			}
 		}
 		
     		
-		
+		//
 
 		
 		
@@ -447,6 +470,10 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	{
 		return 'contextgenerator';
 	}
+	
+    public function __debugInfo() {
+        return 'contentgen';
+    }
 
 }
 ?>

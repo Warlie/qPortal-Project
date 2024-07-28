@@ -90,7 +90,9 @@ function complete()
 function event_message_in($type,&$obj)
 	{
 	global $logger_class;
-
+//var_dump($type);
+//	echo $this->full_URI()  . " called by " . (($obj->get_requester() instanceof Interface_node)?$obj->get_requester()->full_URI(): get_class($obj->get_requester())) . " \n" ;
+	
 	//activates a child tree:Object object to receive its data later
 	$message = ["Identifire"=>"http://www.trscript.de/tree#object", "Command"=> ["Name"=> null, "Attribute"=>[], "Value"=> null]]; // 'http://www.trscript.de/tree#object'
 
@@ -98,22 +100,29 @@ function event_message_in($type,&$obj)
 	$Event = new EventObject('',$this,$booh);
 	$Event->set_node($obj->get_node());
 
-	$logger_class->setAssert('               remote starts transaction "' . $this->get_attribute('name') . '" (tree_remote:event_message_in)' ,15);
+
 	//starts a linked node, if it is an "http://www.trscript.de/tree#object"
 	$this->send_messages($message,$Event);
 	
-	//gets its value from a linked node of type "http://www.trscript.de/tree#object"
-	$send = ["Identifire"=>"http://www.trscript.de/tree#object", "Command"=> ["Name"=> "__get_data", "Attribute"=>[], "Value"=> "0"]]; // 'http://www.trscript.de/tree#object?__get_data=0' 
-	$this->send_messages($send,$Event);
+	//gets its value from a linked node of type "http://www.trscript.de/tree#object" //
+	//$send = ["Identifire"=>"http://www.trscript.de/tree#object", "Command"=> ["Name"=> "__get_data", "Attribute"=>[], "Value"=> "0"]]; // 'http://www.trscript.de/tree#object?__get_data=0' 
+	$this->send_messages( ["Identifire"=>"http://www.trscript.de/tree#object", "Command"=> ["Name"=> "__get_data", "Attribute"=>[], "Value"=> "0"]],$Event);
+	$this->send_messages( ["Identifire"=>"http://www.trscript.de/tree#variable", "Command"=> ["Name"=> "", "Attribute"=>[], "Value"=> "0"]],$Event);
 	
 	
 	//--------------------------------------
 	
-	if($tmp = &$this->getdata(0))
+	//for($i = 0 ; $i < $this->index_max();$i++)
+	//	echo get_class($this->getRefnext($i));//$this->getRefnext($i)->send_messages($type,$obj);
+
+	
+	if($tmp = &$this->getdata())
 	$booh = $tmp;
 	else
 	$booh = null;
 	
+	
+	//var_dump((gettype($booh)=='object'?get_class($booh): $booh ));
 	//writes data to a linked Parameterobject
 	$send = ["Identifire"=>"http://www.w3.org/2006/05/pedl-lib#Object_Parameter", "Command"=> ["Name"=> "__set_data", "Attribute"=>[], "Value"=> "0"]] ;  // 'http://www.w3.org/2006/05/pedl-lib#Object_Parameter?__set_data=0'
 	

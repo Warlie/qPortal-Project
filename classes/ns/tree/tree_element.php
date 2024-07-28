@@ -134,8 +134,10 @@ function event_message_in($type,&$obj)
 							$tmp = &$this->getRefnext($i,true);
 							//activates all param tags
 							if($tmp->full_URI() == 'http://www.trscript.de/tree#param')
-							{$res =  $tmp->getdata();
+							{
 								$tmp->send_messages($type,$obj);
+								$res =  $tmp->getdata();
+								
 								if($tmp->getRefnext(0) instanceof Interface_node)
 								{
 								$many_remote = $tmp->getRefnext(0)->index_max();
@@ -160,7 +162,7 @@ function event_message_in($type,&$obj)
 					$this->cdata_switch = ($att_mode == 'CDATA');
 					
 				}
-				
+
 			
 				if(strtolower($att_type) == 'xhtml')
 					if($value = $this->get_attribute('value'))
@@ -176,6 +178,31 @@ function event_message_in($type,&$obj)
 						//alters a existing xml-element
 						$this->process_exist_xhtml($obj,$tag_array);
 					}
+				
+			}
+			else
+			{
+					for($i = 0 ; $i < $this->index_max();$i++)
+						{
+							$tmp = &$this->getRefnext($i,true);
+							//echo $tmp->full_URI() . ":" . $obj->get_node()->full_URI() . "\n";
+
+							if( $tmp->get_QName() == "html" )
+							{
+								$Event = new EventObject('',$this,$booh);
+								$send = ["Identifire"=>"http://www.trscript.de/tree#object", "Command"=> ["Name"=> "__set_namespace", "Attribute"=>[], "Value"=> "http://www.w3.org/1999/xhtml"]];
+								$tmp->send_messages($send,$Event);
+								for($j = 0 ; $j < $tmp->index_max();$j++)
+									{
+										$tmp->getRefnext($j,true)->cloning($obj->get_node());
+									}
+								//		$this->get_parser()->show_xmlelement()->cloning($obj->get_node());
+							}
+								//activates all param tags
+
+							unset($tmp);
+							unset($res);
+						}
 				
 			}
 			
@@ -213,7 +240,7 @@ function process_new_xhtml(&$obj,$name,$attrib)
 		
 		
 		
-		if(strlen($prefix) > 0)
+		if(!is_null($prefix) && strlen($prefix) > 0)
 			$new_node->name = $prefix . ':' . $postfix;
 		else
 			$new_node->name = $postfix;
@@ -406,7 +433,7 @@ function process_exist_xhtml(&$obj,$attrib)
 											
 					$prefix = $this->get_parser()->get_Prefix(substr($key,0,$ns_qname),$obj->get_node()->get_idx());
 					$postfix = substr($key,$ns_qname + 1);
-					
+
 					$attrib->setdata($value,0);
 		
 							if(is_string($prefix) && strlen($prefix) > 0)
@@ -422,6 +449,7 @@ function process_exist_xhtml(&$obj,$attrib)
 								$cur_element->attribute( $postfix, $attrib);
 							}
 						
+							unset($attrib);
 
 					
 				}

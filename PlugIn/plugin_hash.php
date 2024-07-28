@@ -12,11 +12,14 @@
 */
 require_once("plugin_interface.php");
 
-class Alternativ extends plugin 
+class Hash extends plugin 
 {
-private $tag_name = false;
-private $allocation = array();
+private $algo = "md5";
+private $salt = "chilli";
+private $tag_name = "";
 private $std_default = array();
+private $std_null = array();
+private $to_null = array();
 var $rst = null;
 var $into = array();
 //var $obj = null;
@@ -29,29 +32,23 @@ var $param = array();
 var $images = array();
 var $tag;
 
-	function __construct(/* System.Parser */ &$back, /* System.Content */ &$content)
+	function __construct()
 	{
-		
-		
-		$this->back= &$back;
-		$this->content = &$content;
+
 		
 	}
 	
 	public function col($columnname)
 	{
+		
 	if($this->rst)
 	{
-	  if(isset($this->allocation[$columnname]))
-	  {
-	  	  
-	  	  if(is_null($this->rst->col($columnname)) || $this->rst->col($columnname) == '') 
-	  	  	  return $this->rst->col($this->allocation[$columnname]);
+		 if($this->tag_name == $columnname)
+		 	 return hash( $this->algo, $this->rst->col($columnname) .  $this->salt, false);
+		else
+			return $this->rst->col($columnname);
 
-
-	  }
 	
-	  return $this->rst->col($columnname);
 	}
 	  throw new ObjectBlockException('Recordset is missing');
 	}
@@ -65,12 +62,11 @@ var $tag;
 		//echo 'booh' . $this->test++ . '<br>';
 		return $this;}
 
-	
-	public function alternativ($name, $alt)
-	{
-	  	  $this->allocation[$name] = $alt;
+	public function columnName($name){$this->tag_name = $name;}	
+	public function algo($name){$this->algo = $name;}
+	public function salt($salt){$this->salt = $name;}
 
-	}
+	
 
 	
 	function getAdditiveSource(){;}

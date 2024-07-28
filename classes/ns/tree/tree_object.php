@@ -278,6 +278,7 @@ function event_message_in($type,&$obj)
 			{
 				//echo "gefunden"; 
 				//echo get_class($obj->get_requester());
+
 				$parser->show_xmlelement()->setdata($obj->get_node(),0);
 
 				

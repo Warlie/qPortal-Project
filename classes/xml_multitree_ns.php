@@ -317,6 +317,7 @@ function delete_index($index)
 		  
 			if(!(false === stripos(substr($key,0,5),'xmlns')))
 			{
+
 if(is_null($value))echo $key;
 				$value = str_replace('#','',$value);
 				
@@ -716,7 +717,7 @@ if(is_null($value))echo $key;
    {
                                   
 
-   
+
                                         if(isset($this->cur_pointer[$this->idx])){
                                                 $tmp = $this->cur_pointer[$this->idx]->index_max();
                                                 
@@ -774,7 +775,7 @@ if(is_null($value))echo $key;
 								$newobj->namespace = $this->cur_pointer[$this->idx]->namespace;
 								$newobj->set_parser($this);
 								$newobj->setRefprev($this->cur_pointer[$this->idx]);
-								$newobj->setdata($this->convert_from_XML($res),$tmp);
+								$newobj->setdata($this->convert_from_XML($res),$tmp); // $this->convert_from_XML($res)
 								//$newobj->giveOutOverview();
 								
 								$this->cur_pointer[$this->idx]->setdata($newobj,$tmp);
@@ -802,7 +803,7 @@ if(is_null($value))echo $key;
 					
 					if(!$expand_data)
 					{
-					$this->cur_pointer[$this->idx]->setdata($this->convert_from_XML($res),$tmp);
+					$this->cur_pointer[$this->idx]->setdata($this->convert_from_XML($res),$tmp); // $this->convert_from_XML($res)
                                         }
 
                                         

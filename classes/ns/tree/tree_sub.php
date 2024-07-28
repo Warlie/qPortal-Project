@@ -96,6 +96,9 @@ function event_message_in($type,&$obj)
 
 		global $_SESSION;
 
+		
+		$param_arr = [];
+		
 				$result = true;
 
 		if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#sector') )		
@@ -124,6 +127,36 @@ function event_message_in($type,&$obj)
 		if(!$result) throw new NoPermissionException('not Allowed');
 
 	
+		
+		// collects all param tag info
+		for($i = 0 ; $i < $this->index_max();$i++)
+		{
+			$tmp = &$this->getRefnext($i,true);
+							//activates all param tags
+							if($tmp->full_URI() == 'http://www.trscript.de/tree#param')
+							{
+								$tmp->send_messages($type,$obj);
+								//echo "call";
+								$res =  $tmp->getdata();
+								
+								if($tmp->getRefnext(0) instanceof Interface_node)
+								{
+								$many_remote = $tmp->getRefnext(0)->index_max();
+								
+								if(0 < $many_remote)
+								{
+							
+								$res .= $tmp->getRefnext(0)->getRefnext($many_remote - 1)->getdata(0); //
+								//$tag_array[$tmp->get_attribute('name')] = $tmp->getRefnext($many_remote - 1)->getdata(0);
+								}
+								}
+								$param_arr[$tmp->get_attribute('name')] = $res;
+								
+							}
+							unset($tmp);
+							unset($res);
+						}
+
 		//echo $this->get_attribute('name') . ' ' . $type . "<br>\n";
 	//echo $type . ' ' . $obj->get_request() . ' ' . $this->name .  '<br>';
 	if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#src'))
@@ -135,6 +168,27 @@ function event_message_in($type,&$obj)
 
 			$this->get_parser()->load($tmp,0);
 		//$this->get_parser()->ALL_URI();
+		
+		$var_name;
+		
+		if(count($param_arr)){
+		$this->get_parser()->flash_result();
+		$this->get_parser()->seek_node('http://www.trscript.de/tree#variable');
+		$res_tags = $this->get_parser()->get_result();
+		
+		foreach($res_tags as $value){If(array_key_exists(
+			$var_name = $value->get_ns_attribute('http://www.trscript.de/tree#name'),
+			$param_arr))
+				$value->setdata( $param_arr[$var_name] ,0);
+
+		}
+				
+		
+		 $this->get_parser()->flash_result();
+		}
+		
+		
+		
 			$this->get_parser()->seek_node('http://www.trscript.de/tree#final');
 			$this->get_parser()->show_xmlelement()->event_message_in($type,$obj);
 			return true;

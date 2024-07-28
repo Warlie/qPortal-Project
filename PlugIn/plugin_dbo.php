@@ -40,13 +40,16 @@ private $testmode = false;
 	function __construct (/* System.Database */ &$db)
 	{
 		$this->dbclazz = &$db;
-	
+
 	}
 	
 
 
 		
-
+public function useProfil($profile)
+		{
+			$this->dbclazz->change_profile($profile);
+		}
 	
 		/**
 		*loads a recordset
@@ -241,9 +244,10 @@ public function execute()
 			if($this->limit > 0) $sql .=  ' LIMIT ' .  $this->limit;
 
 			$sql .= $this->last . ';';
-			//echo $sql . "\n";
+			if($this->testmode)echo $sql . "\n";
 
 			$this->rst = $this->dbclazz->get_rst($sql);
+			if($this->testmode)echo "sql statement has effected:" . $this->rst->rst_num() . " records!\n";;
 			$this->rst->first_ds();
 		}
 
@@ -430,8 +434,8 @@ public function saves_dataset_back()
 		{
 		 global $logger_class;
 
-		 //if($this->testmode)
-			//$this->rst->show_content();
+		 if($this->testmode)echo "booho";
+		//	$this->rst->show_content();
 
 
 		// starts, when a plugin is connected
@@ -575,8 +579,8 @@ public function saves_dataset_back()
 			}	
 
 			if($this->testmode)
-;
-			//$this->rst->show_content();
+
+			$this->rst->show_content();
 			else
 			{
 				$res = $this->dbclazz->insert_rst($this->rst);

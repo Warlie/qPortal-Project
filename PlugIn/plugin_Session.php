@@ -102,7 +102,7 @@ class Session extends plugin
 public function col($columnName)
 {
 	global $_SESSION;
-	
+	//echo "wupp";
 	//$this->max
 	if(!is_null($tmp = $_SESSION[$columnName]))
 	{

@@ -1046,6 +1046,11 @@ function DOC_check($String)
    // Aktueller Index
    function cur_idx(){return $this->idx;}
 
+   function cur_URI(){
+   	   var_dump($this->$this->loaded_URI[intval($this->idx)], $this->loaded_URI, intval($this->idx));
+   return $this->loaded_URI[intval($this->idx)] ;
+   }
+   
    function max_idx(){return $this->max_idx; }
 
    function change_idx($index)
@@ -1117,6 +1122,9 @@ function DOC_check($String)
  
    }
 
+   public function indexToUri($i)
+   { return $this->loaded_URI[$i];}
+   
    function ALL_URI()
    {
         echo "<ol>\n";
@@ -1448,11 +1456,11 @@ return $res;
 
    }
 
-   function cdata($parser, $cdata)
+   function cdrata($parser, $cdata) // outdated
    {
   
                                            
-
+echo "fick dich";
    
                                         if(isset($this->cur_pointer[$this->idx])){
                                                 $tmp = $this->cur_pointer[$this->idx]->index_max();
@@ -1472,11 +1480,11 @@ return $res;
 					if(is_Object($cdata))
 					$this->cur_pointer[$this->idx]->setdata($cdata,$tmp);
 					else
-					$this->cur_pointer[$this->idx]->setdata($this->convert_from_XML($res),$tmp);
+					$this->cur_pointer[$this->idx]->setdata("",$tmp); // $this->convert_from_XML($res)
                                         }
    }
 
-   function tag_close($parser, $tag)
+   function tag_c6lose($parser, $tag)
    {
    //echo "&lt;/<font color=\"#0000cc\">$tag</font>&gt;";
    	$this->cur_pointer[$this->idx]->comlete();
@@ -1553,7 +1561,7 @@ function &convert_from_XML($myString)
                 switch (strtoupper($this->MIME[$this->idx]['encoding']))
                 {
                 case 'UTF-8' :
-
+        //        	$res = $String;
 		$res = mb_convert_encoding($String,'utf-8');
                 //echo 'ausgang bei utf8:' .$res . ";\n";
                 break;
@@ -1572,7 +1580,7 @@ function &convert_from_XML($myString)
         }
 function convert_to_XML( $String , $format, $void = false)
         {
-                
+               
 		if(is_null($String) || $void)return $String;		
 		if($format == '') $format = $this->MIME[$this->idx]['encoding'];
                 
@@ -1583,7 +1591,7 @@ function convert_to_XML( $String , $format, $void = false)
                 case 'UTF-8':
                        $tmp = utf8_encode($String);
                        
-
+/*
                 $tmp = str_replace(
                         array('&'),
                         array('&amp;'),
@@ -1594,11 +1602,12 @@ function convert_to_XML( $String , $format, $void = false)
                         array('"','<','>'),
                         array('&quot;','&lt;','&gt;'),
                         $tmp);
-                       
+                       */
                         break;
                 case 'ISO-8859-1':
                       //echo $String ."<p>\n";
-                
+                $tmp = $String;
+                /*
 		$tmp = str_replace(
                         array('&'),
                         array('&amp;'),
@@ -1609,10 +1618,11 @@ function convert_to_XML( $String , $format, $void = false)
                         array('"','<','>'),
                         array('&quot;','&lt;','&gt;'),
                         $tmp);
-                        
+                  */      
                         break;
                 default:
                 $tmp = $String;
+                /*
                 $tmp = str_replace(
                         array('&'),
                         array('&amp;'),
@@ -1623,10 +1633,10 @@ function convert_to_XML( $String , $format, $void = false)
                         array('"','<','>'),
                         array('&quot;','&lt;','&gt;'),
                         $tmp);
-                
+                */
                 }
 
-                if(true)
+                if(false)
                 return $tmp;
                 else
                 {

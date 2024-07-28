@@ -66,7 +66,9 @@ function event_message_in($type,&$obj)
 	{
 
 		global $_SESSION;
-		
+		$json = '{"name":"http://www.trscript.de/tree#final"}';
+
+
 				$result = true;
 
 		if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#sector') )		
@@ -92,23 +94,72 @@ function event_message_in($type,&$obj)
 		//useless Exception
 		if(!$result) throw new NoPermissionException('not Allowed');
 
-	
+		
+		// consider the aspect for the next branch (tree)
+		
+		if($aspect = $this->get_ns_attribute('http://www.trscript.de/tree#consider_aspect') )
+		{
+			
+				if(array_key_exists('Attribute',$swap = $type))
+					if(array_key_exists($aspect,$type['Attribute']))
+					{
+						
+						$json =  '{ "attribute":{"http://www.trscript.de/tree#name":"';
+						$json .= $type['Attribute'][$aspect];
+						$json .= '"}}';
 
+					}
+				
+
+		}			
+	
+	$find = ["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>$json], "Value"=>$type ]] ;
+		
+	//var_dump($find);
+	
+//var_dump($type, $this);
 	if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#src'))
 	{
+		
+		//echo $tmp . "\n";
 		$tmp = str_replace( '%ROOT_DIR%', ROOT_DIR, $tmp);
 				 
 		if(is_file($tmp))
 		{
 			$this->get_parser()->load($tmp,0);
+			
 		//$this->get_parser()->ALL_URI();
-			$this->get_parser()->seek_node('http://www.trscript.de/tree#final');
-			$this->get_parser()->show_xmlelement()->event_message_in($type,$obj);
+			
+			//var_dump($this->get_parser()->show_xmlelement());
+			$this->get_parser()->show_xmlelement()->event_message_check($find ,$obj);
+			//$this->get_parser()->show_xmlelement()->event_message_in($find ,$obj);
+			
+
+		/*
+			if()
+			$this->get_parser()->show_xmlelement()->event_message_in( 
+				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> ["Identifire"=>"*", "Command"=> ["Name"=> "start" ], "Attribute"=>$this->param] ]] //["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> '*?start']]
+				,$obj);
+			else
+
+			$this->get_parser()->show_xmlelement()->event_message_in(
+				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{ "attribute":{"http://www.trscript.de/tree#name":"' . $this->nodeName . '"}}'], "Value"=> ["Identifire"=>"*", "Command"=> ["Name"=> "start" ], "Attribute"=>$this->param]  ]]
+				,$obj); //  "name":"http://www.trscript.de/tree#tree",
+
+		*/
+		
+		
+			//$this->get_parser()->seek_node('http://www.trscript.de/tree#final');
+			//$this->get_parser()->show_xmlelement()->event_message_in($type,$obj);
 			return true;
 		}
 		
+		return false;
 	}
-	//echo count($this->way_out);
+	else
+		if( ! count($this->way_out))
+			throw new EmptyTreeException("Empty tree");
+		
 	//if($obj instanceof EventObject )
 	//{
 		

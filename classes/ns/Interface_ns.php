@@ -86,7 +86,7 @@ var $cdata = false;
 
 var $index = 0;
 private $is_Class = false;
-
+private $secRequest = 0;
 
 //for Namespace
 var $type = 'rootnode';
@@ -420,7 +420,7 @@ function position_hash_map_(&$stamp)
 }
 
 
-function posInPrev_()
+function posInPrev()
 {
 	
 
@@ -463,8 +463,9 @@ function &getRefprev(){return $this->prev_el;}
 //orginal
 function index_max()
         {
+        	
         if(is_array($this->next_el))
-	{
+        {
 	//for($i = 0;count($this->next_el);$i++)
 	if($this->next_el[0] instanceof Interface_node)
         return count($this->next_el);
@@ -473,6 +474,7 @@ function index_max()
 	}
         return 0;
         }
+        
 //orginal
 function setRefnext(&$ref,$pos = -1){
 		if(!($ref instanceof Interface_node))throw new ErrorException('insert not valid childelement');
@@ -754,37 +756,50 @@ protected function set_read_event($bool)
 
 public function freedata_(){return true;}
 //orginal
-function setdata(&$data,$pos = null){
+function setdata(&$data,$pos = null, $add = false){
 
+	if(is_string($data) && 
+		(str_contains($data, '&')
+		|| str_contains($data, '"')
+		|| str_contains($data, '<')
+		|| str_contains($data, '>')))$this->cdata = true;
+	
 
-                if(is_null($data))
+        if(is_null($data))
 		{
 			unset($data);
 			$data = "";
 		}
-                if(is_null($pos))
+		
+        if(is_null($pos))
 
                         $index = $this->index;
                         
                 else
                         $index = $pos;
 
-                //$this->data[$index] = (
-                //                        (substr($data,strlen($data)-1)<>' ') &&
-                //                        (substr($data,strlen($data)-2)==' ')
-                //                        )? $this->data[$index] .= $data : $this->data[$index] .= $data;
-                if(is_Object($data))
+
+        if(is_Object($data))
 		{
 			unset($this->data[$index]);
 			$this->data[$index] = &$data;
 		}
 		else
 		{
-			//if(is_Object($this->data[$index]))echo get_class($this->data[$index]) . " is still on this position\n";
-			//echo $data . ": $index  <br> in primitiv data area \n";
+			
 			$tmp = $data;
-			//unset($this->data[$index]);
-			$this->data[$index] = $tmp;
+						
+			if($add)
+			{
+				if(is_array($this->data))
+					$res = array_splice($this->data,$index, 0, $tmp);
+				else
+					$this->data = [$tmp];
+				
+
+			}
+			else
+				$this->data[$index] = $tmp;
 		}
 			
 		//causes alterdataevent
@@ -800,12 +815,14 @@ function &getdata($pos = null)
 
                 if(is_null($pos))
                 {
-                         for($i = 0;$i <= $this->index_max();$i++)
+                	//echo count($this->data); $this->index_max()
+                         for($i = 0;$i <= count($this->data);$i++)
                         {
 				if(is_Object($this->data[$i]))
 				{
 				//echo $this->type . '=' . $this->data  . '::' . $pos . ";is_object@ \n";
-					return $this->data[$i]->getdata();
+				// returns an object
+					return $this->data[$i];
 				}
 				else
 				{	//echo $this->type . '=' . $this->data  . '::' . $pos . ";is_Text@ \n";	
@@ -1099,6 +1116,12 @@ function event_attribute($name,&$message)
 protected function event_message_check($type,&$obj)
 {
 global $logger_class;
+
+
+//var_dump($this, $this->get_idx(), $this->full_URI(), $type);
+
+//if($this->secRequest++ > 10000)throw new NotExistingBranchException("sicherheitsdings");
+
 	//if(is_array($type) || is_string($type))$com_elemnet = $this->parseCommand($type);
 	//else
 	//$com_elemnet = $type;
@@ -1148,7 +1171,10 @@ global $logger_class;
 		$logger_class->setAssert('  Redirect was send to "' . $this->full_URI() . '"(Interface_node:event_message_check)' ,5);
 			//$com_elemnet = $this->parseCommand($type);
 			//echo $com_elemnet->get_Command(0,1) . ' ' . get_Class($obj->get_Node()) . ' ' . get_Class($this) . ' <br>';
+
 			if(is_null($com_elemnet->get_Command(0,1)))throw new Exception("Null detected: " . $com_elemnet->get_Insert());
+			
+
 			$this->send_messages($com_elemnet->get_Command(0,1),$obj) ;
 			return true;
 			
@@ -1156,12 +1182,12 @@ global $logger_class;
 
 		if($com_elemnet->matchesCommand('__find_node'))
 		{//var_dump($com_elemnet);
+			//var_dump($type);
 			$structur = $com_elemnet->get_Result_Array();
 			//echo get_class($this->parser) . "\n";
-			//var_dump($structur);
 			//$structur['Command']['Attribute']['json'] = $structur['Command']['Attribute']['json'];
 			//$structur['Command']['Value'] = $structur['Command']['Value'];
-			
+			//var_dump($this->get_idx(), $this->get_parser()->cur_idx()); //, $this->get_parser()->change_idx($index)
 			$json = json_decode($structur['Command']['Attribute']['json'], true);
 			//var_dump($json);
 			$name = null;
@@ -1170,12 +1196,25 @@ global $logger_class;
 			if(array_key_exists('attribute', $json))$attribute =  $json['attribute'];
 			if(array_key_exists('name', $json))$name =  $json['name'];
 			//var_dump(json_decode($structur['Command']['Attribute']['json'], true));
-			
-			if($this->parser->seek_node($name,$attribute))
+			 $this->get_parser()->flash_result();
+			if($this->parser->seek_node($name,$attribute) && (count($this->get_parser()->get_result())>0))
 			{
-				//var_dump($name,$attribute,$this->parser->show_xmlelement()->full_URI());
-				$this->parser->show_xmlelement()->event_message_in($value,$obj) ;
+
+		//$many_of_res = count($this->get_parser()->get_result());
+		foreach( $this->get_parser()->get_result() as $value_obj){
+
+			$value_obj->event_message_in($value,$obj) ;
+		}
+				
+		
+		 $this->get_parser()->flash_result();
+				
+				//var_dump($name,$attribute,$this->parser->show_xmlelement());
+				//$this->parser->show_xmlelement()->event_message_in($value,$obj) ;
 			}
+			else
+			throw new NotExistingBranchException( " $name does not exist");
+
 			//var_dump($name,$attribute,$this->parser->show_xmlelement()->full_URI(), $value);
 			//$com_elemnet = $this->parseCommand($type);
 			//echo $com_elemnet->get_Command(0,1) . ' ' . get_Class($obj->get_Node()) . ' ' . get_Class($this) . ' <br>';
@@ -1221,6 +1260,22 @@ global $logger_class;
 			
 		}
 		
+		if($com_elemnet->matchesCommand('__insert_data'))
+		{
+			
+			$this->set_alter_event(false);
+			
+			$this->setdata($obj->get_context(),$com_elemnet->get_Command(0,1),true);
+			
+			$this->set_alter_event(true);
+			
+			//echo "tes3t" . $obj->get_context() . " " . $com_elemnet->get_Command(0,1);
+			//$this
+			//$this->event_alterdata(false);
+			return true;
+			
+		}
+		
 		if($com_elemnet->matchesCommand('__get_data'))
 		{
 			//echo ' in __get_data(';
@@ -1253,6 +1308,31 @@ $logger_class->setAssert('__get_data of requester "' . $obj->get_requester()->fu
 			$obj->get_requester()->set_alter_event(true);
 				//echo ') ';
 			//$this->event_alterdata(false);
+			return true;
+			
+		}
+		
+		if($com_elemnet->matchesCommand('__set_namespace'))
+		{
+			//echo ' in __get_data(';
+			
+
+			
+			//$com_elemnet = $this->parseCommand($type);
+			$obj->get_requester()->set_alter_event(false);
+						
+			//if(!is_object($this->getdata($com_elemnet->get_Command(0,1))))
+				var_dump($this->getdata($com_elemnet->get_Command(0,1)));
+
+			if(!is_null($tmp = &$this->getdata($com_elemnet->get_Command(0,1))))
+			{
+				
+				$this->namespace = $tmp;
+
+			}
+
+			//$this->send_messages($type,&$obj)
+			
 			return true;
 			
 		}
@@ -1393,6 +1473,8 @@ function &cloning(&$prev_obj)
                                 $obj->data =  $this->data;
                                 $obj->namespace =  $this->namespace;
                                 $obj->type =  $this->type;
+                                $obj->cdata = $this->cdata;
+                                // cdata fehlt
 
                                 // if(!$this->get_parser())throw new ErrorException( $this->full_URI() . " needs a backref to its parser", 1332, 75);
                                 

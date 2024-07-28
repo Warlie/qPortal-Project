@@ -6,17 +6,19 @@
 require_once __DIR__ . '/vendor/autoload.php';
 define('CONFIG','config/config.ini');
 define('CONFIG_DEFAULT','config/default.ini');
+                        
+include('mod_lib.php');
 
 
 // Parse ini with sections
 if(file_exists(CONFIG))
-	$ini_array = parse_ini_file(CONFIG, true);
+	$ini_array = parse_ini_file_multi(CONFIG, true); //$ini_array = parse_ini_file(CONFIG, true);
 else
-	$ini_array = parse_ini_file(CONFIG_DEFAULT, true);
+	$ini_array = parse_ini_file_multi(CONFIG_DEFAULT, true);  //$ini_array = parse_ini_file(CONFIG_DEFAULT, true);
 	
 	$shortCut = [];
 
-//print_r($ini_array);
+//print_r($ini_array); 
 
                 define('START_PAGE',$ini_array["runtime"]["START_PAGE"]);
                 define('STD_URL','index.php?i=%s');
@@ -37,7 +39,7 @@ else
 				define('MEMORY_USAGE', true);
 				define('TRACE', true);
 
-				set_time_limit(600);
+				set_time_limit(300);
 				
 				error_reporting($ini_array["error"]["ERROR"]);
 				ini_set('display_errors',$ini_array["error"]["SHOW_ERRORS"]);
@@ -57,9 +59,11 @@ else
 				require_once('classes/array_merge_recursive_distinct.php');
 				//require_once('classes/class_compute_internal_statements.php');
 				require_once('classes/exceptions/not_a_fieldname_exception.php');
+				require_once('classes/exceptions/not_existing_branch_exception.php');
+				require_once('classes/exceptions/empty_tree_exception.php');
 				
                                 include('classes/class_Contentgenerator.php');
-                                include('mod_lib.php');
+
                                 
 				
                                 
@@ -128,7 +132,8 @@ else
 				foreach( $_SESSION as $key => $value ) {
 				     $logger_class->setAssert("SESSION[$key]=$value\n ", 0) ;
 				} 
-
+				//WTF Concept horrible (and 15 years old XD) 
+				//TODO 
                                 $content = new ContentGenerator(
                                 	$ini_array["database"]["URL"],
                                 	$ini_array["database"]["User"],
@@ -136,6 +141,9 @@ else
                                 	$ini_array["database"]["db_name"],
                                 	$ini_array["database"]["codeset"]
                                 	);
+                                
+                               $content->getSQLObj()->db_profiles($ini_array["database"]["ext"]);
+                                
                                 
 				                 //SearchingModelObject::$treeRef = $content;
                                  //SearchingModelObject::init_models();
