@@ -153,7 +153,7 @@ class XML_handle extends Interface_handle
       
       //if($this->base_object->DOC[$this->base_object->idx] <> '')echo $this->base_object->DOC[$this->base_object->idx];
       if(($this->base_object->DOC[$this->base_object->idx] <> '') && !is_array($this->base_object->DOC[$this->base_object->idx]))$res .= $this->base_object->DOC[$this->base_object->idx];
-	
+
 
 /**
 *
@@ -200,6 +200,8 @@ $myhelp = 0;
 
    //schreibt die eingabe
    if(-1 == $this->base_object->show_pointer()){
+   	   
+   	//   set_read_event
 //echo $this->base_object->cur_node() . "\n";
     $res .=  '<' .  $this->base_object->cur_node() . $this->base_object->all_attrib_axo($format) . $this->positionstamp($modus) . '>';
     $res .=  $this->base_object->setcdata_tag($this->base_object->convert_to_XML($this->base_object->show_cur_data(0),$format),$this->base_object->show_curtag_cdata());

@@ -325,8 +325,11 @@ else
 						}
 
 				
+						
+						
                                 print($content->getoutput(SEND_HEADER,'ISO 8859-1'));
-				
+                                 
+				//print($content->getSystemDocument(SEND_HEADER,'ISO-8859-1'));
 				}
                 else
 				{

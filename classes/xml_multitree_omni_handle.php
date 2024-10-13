@@ -189,7 +189,6 @@ class xml_omni extends xml_objex
 				
 			}
 			
-			
 			$obj->parse_document($source);
 			$this->PARAMETER[$this->idx] = $obj->get_attribute();
 			
@@ -267,7 +266,6 @@ function save_file($format = '',$send_header=false, $filename = false)
 			
 			        	
 			$logger_class->setAssert('save dokument with identifer "' . $this->loaded_URI[$this->idx] . '"(xml_omni:handle_save)',1);
-			
 			return $obj->save_back($format,$this->MIME[$this->idx],$this->DOC[$this->idx]);
 			
 

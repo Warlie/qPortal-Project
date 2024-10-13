@@ -328,6 +328,8 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		
 		$treeEngine = new TreeEngine($this);
 		//$this->XMLlist->load($this->template);
+		
+		
 		$treeEngine->load_structur($this->structur,'@registry_surface_system');
 				
 				
@@ -387,6 +389,19 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		return true; //EnD
 }
 	
+
+//function setSystemDocument($set_header,$type = 'UTF-8')
+
+	function getSystemDocument($set_header,$type = 'UTF-8')
+	{
+		$this->out_template = '@registry_surface_system';
+		$this->XMLlist->prevent_read_event(true);
+		if(!$this->XMLlist->change_URI($this->out_template))echo "Das Dokument: '" . $this->out_template . "' nicht gefunden!(getoutput)";
+		$res = $this->XMLlist->save_Stream($out,$set_header);
+		$this->XMLlist->prevent_read_event(false);
+		//$this->XMLlist->test_consistence();
+		return $res;
+	}
 
 	function getoutput($set_header,$type = "",$special = "")
 	{

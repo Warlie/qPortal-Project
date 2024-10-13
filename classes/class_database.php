@@ -221,7 +221,22 @@ function __construct($Server = "", $User = "", $pwt = "", $db_name = false, $cod
 	function SQL($SQLString){
 
                         if(is_object($this->table_db)) $this->table_db->free_result();
-                        $this->table_db = mysqli_query($this->db, $SQLString);
+                        
+
+                            // SQL-String escapen
+                        $escapedSQLString = $SQLString;//mysqli_real_escape_string($this->db, $SQLString);
+                            try {
+        $this->table_db = mysqli_query($this->db, $escapedSQLString);
+    } catch (mysqli_sql_exception $e) {
+        // Fehler fangen und detaillierte Informationen ausgeben
+        echo "Fehler bei der Ausführung der SQL-Abfrage: \n<br>";
+        echo "Fehlercode: " . $e->getCode() . "\n<br>";
+        echo "Fehlermeldung: " . $e->getMessage() . "\n<br>";
+        echo "SQL-Abfrage: " . $SQLString . "\n<br>"; // Nur in der Entwicklung anzeigen!
+        return ["Effected_rows" => 0, "Last_ID" => 0]; 
+    }
+
+                  //      $this->table_db = mysqli_query($this->db, $escapedSQLString);
                         if(mysqli_errno($this->db)<>0)echo "Fehler ist aufgetreten \n<br>" . '(' . $SQLString . ")\n<br>" . mysqli_error($this->db);                        
 
                         return ["Effected_rows" => mysqli_affected_rows($this->db), "Last_ID" => mysqli_insert_id($this->db)];
@@ -328,6 +343,7 @@ if(!function_exists('extract_table')){
                 $sign = ($pointer==0)?'from':'join';
 
 		// copy sql in lower case
+		if(is_null($sql))$sql = ";";
                 if(is_null($low_sql))$low_sql = strtolower($sql);
 		//position of next join or from
 

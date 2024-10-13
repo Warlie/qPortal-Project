@@ -180,7 +180,7 @@ protected function event_readdata($own)
 
 					if( PEDL_Object_Class::Is_ShortCuts($this->name)){
 						//$example = function ($instance, $array){return $instance->configuration(...$array);};
-						
+
 						$refl = PEDL_Object_Class::GiveShortCuts($this->name)($myarray[1], $all_values);
 					//$refl = $myarray[1]->configuration(...$all_values);
 					}

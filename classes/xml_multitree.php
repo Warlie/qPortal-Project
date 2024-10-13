@@ -98,6 +98,7 @@ class xml  {
    //config
    var $only_child_node = false;
    public $heap=[];
+   private $prevent_read_event = false;
    
    
    
@@ -296,11 +297,17 @@ class xml  {
            
         }
         
+        function prevent_read_event($bool)
+        {
+        	$this->prevent_read_event = $bool;}
+        
         /* gibt die Daten eines Knotens aus. Sie sind sortiert in der Reihenfolge, wie sie auch zwischen Knoten stehen */
    function show_cur_data($counter = null){
               if(!isset($this->pointer[$this->idx])){$this->pointer[$this->idx] = &$this->mirror[$this->idx];}
-              
-	      return $this->pointer[$this->idx]->getdata($counter);
+              if($this->prevent_read_event) $this->pointer[$this->idx]->set_read_event(false);
+              $res = $this->pointer[$this->idx]->getdata($counter);
+              $this->pointer[$this->idx]->set_read_event(true);
+	      return $res;
 	      
         }
 
@@ -1460,7 +1467,7 @@ return $res;
    {
   
                                            
-echo "fick dich";
+
    
                                         if(isset($this->cur_pointer[$this->idx])){
                                                 $tmp = $this->cur_pointer[$this->idx]->index_max();
@@ -1589,7 +1596,7 @@ function convert_to_XML( $String , $format, $void = false)
                 {
 
                 case 'UTF-8':
-                       $tmp = utf8_encode($String);
+                       $tmp = mb_convert_encoding($String,'utf-8');
                        
 /*
                 $tmp = str_replace(
@@ -1641,7 +1648,7 @@ function convert_to_XML( $String , $format, $void = false)
                 else
                 {
                         //,'&' ,'&amp;'
-                
+//var_dump(serialize($tmp));
                 $tmp = str_replace(
                         array('&'),
                         array('&amp;'),

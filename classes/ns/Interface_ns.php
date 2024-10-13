@@ -124,7 +124,6 @@ function &getobj()
         }
 
 
-
 public function __construct($type = 'rootnode', $namespace = "default")
 {
 	$this->type = $type;
@@ -749,7 +748,7 @@ protected function set_alter_event($bool)
 	$this->alter_sensity = $bool;
 }
 
-protected function set_read_event($bool)
+public function set_read_event($bool)
 {
 	$this->read_sensity = $bool;
 }
@@ -1576,6 +1575,10 @@ public function __debugInfo(){
                                 $obj->type =  $this->type;
                                 $this->attrib_ns[$key]->getdata()
 $this->full_URI()*/} 
+
+  public function __toString() {
+    return "My name is: {$this->full_URI()}\n";
+  }
 }
 
 

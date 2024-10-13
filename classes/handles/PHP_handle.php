@@ -36,7 +36,7 @@ class PHP_handle extends Interface_handle
 	{
 	
 	               
-		//var_dump($source);
+
 		$is_obj = ($source instanceof FileHandle );
 		
 		$str_source;	
@@ -59,7 +59,7 @@ class PHP_handle extends Interface_handle
 			}
 			//echo $this->attribute_values['URI'];
 			$filescanner = new File_Scan();
-			
+			$mtime = microtime();
 			$filescanner->insert_str($str_source, $this->attribute_values['URI']);
 			//$filescanner->add_path('/');
 			$filescanner->add_tag('class ');
@@ -78,8 +78,6 @@ class PHP_handle extends Interface_handle
 			*/			
 			
 			$this->base_object->set_first_node();
-			
-
 			
 			//echo count($result);
 			//echo $this->base_object->cur_idx() . '!! ';

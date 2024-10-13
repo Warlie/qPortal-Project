@@ -41,9 +41,11 @@ private $objectList = array();
 	public function getTreeIdent(){return '@registry_surface_system';}
 	public function getIDX(){return $this->idx ;}
 	
+	function load_preloaded_structur($url,$registry ){}
+	
 	function load_structur($structur,$registry)
 	{
-		
+		//var_dump($structur, $registry);
 		$this->system = $structur;
 		$this->registry = $registry;
 		$this->my_Xml_Object->get_context_generator()->set_Reg_NS('http://www.tr-script.de/regsys');
@@ -64,6 +66,7 @@ private $objectList = array();
 		
 		
 	}
+	
 	private function rdf_build()
 	{
 		$namespace = array();
