@@ -332,10 +332,17 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		
 		$treeEngine->load_structur($this->structur,'@registry_surface_system');
 				
+		
 				
 		$this->XMLlist->cur_node();
+		
+		if( $this->XMLlist->get_URI() != 'http://www.trscript.de/tree#indextree')
+		{
+			//echo $this->XMLlist->get_URI() . " ";
+			return true;
+		}
 		//echo $this->XMLlist->get_URI() . " ";
-
+//var_dump();
 				$booh = null;
 		
 

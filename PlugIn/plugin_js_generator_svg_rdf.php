@@ -383,7 +383,7 @@ private $additional_files = [];
   	new Array('http://www.auster-gmbh.de/2010/08/anttree-lib#Controlcenter.buildUp.arg'),
   	'ate:Controlcenter.buildUp',
   	new Array('ate:Controlcenter.buildUp.arg'),
-  	'function to create a new document');
+  	'funct to create a new document');
   	//de.auster_gmbh.semanticelement.semantic_web.addBag(coce, add);
  	
  	

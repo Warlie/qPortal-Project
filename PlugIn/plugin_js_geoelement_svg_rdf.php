@@ -433,7 +433,7 @@ private $full_uri = array();
   		
   	}
   	
-  	/* functions of the class Controlelement */
+  	/* functs of the class Controlelement */
   	
   	
   	/* onFocus */

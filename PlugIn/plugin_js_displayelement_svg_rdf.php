@@ -559,6 +559,7 @@ private $full_uri = array();
   			this.display[0].closed = true;
   			
   			eventobj = new de.auster_gmbh.library.tools.eventObject(command,message,id_num);
+  			console.debug(command,message,id_num);
   			this.dataref.fireEvent('Controlcenter.sendToSemWeb',eventobj); //Controlcenter
    			eventobj = new de.auster_gmbh.library.tools.eventObject('',this,id_num);
   			this.dataref.fireEvent('[*/JSControl].setID',eventobj);

@@ -558,7 +558,7 @@ if($rst->rst_num() > 0)
 				$system->setboolPanel(false);
 
                 if(is_Null($tmp = $_REQUEST['r']))$tmp = "";
-                                
+                               // var_dump($tmp, $rst->value('tbl_surface_doc_overview.txt_doc_URL'));
                                 $system->setTreeNodeName($tmp);
                                 if(!$system->generate())
                                 {

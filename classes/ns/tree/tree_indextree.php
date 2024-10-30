@@ -46,6 +46,7 @@ function complete()
 
 	}
 
+	
 	function event_message_check($type,&$obj){parent::event_message_check($type,$obj);}
 	
 	function event_message_in($type,&$obj)

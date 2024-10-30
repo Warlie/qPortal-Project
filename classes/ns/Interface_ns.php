@@ -105,6 +105,7 @@ var $test = 'testme';
 private $idx = 0;
 private $alter_sensity = false;
 private $read_sensity = true;
+protected $features = [];
 
 var $position=-1;
 var $mark = false;
@@ -128,7 +129,10 @@ public function __construct($type = 'rootnode', $namespace = "default")
 {
 	$this->type = $type;
 	$this->namespace = $namespace;
+	//$features[] = ''
 }
+
+public function supports_function($feature){return in_array($feature, $this->features); }
 
 public function alter_name($type = 'rootnode', $namespace = "default")
 {
@@ -1105,6 +1109,8 @@ function event_attribute($name,&$message)
 {
 	
 }
+
+public function insert_message($type,&$obj){echo $this->name . ' event:' . get_Class($this) ;  $this->event_message_check($type,$obj);}
 
 /**
 * @function event_message_check
