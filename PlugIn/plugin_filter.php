@@ -65,7 +65,7 @@ var $tag;
 	
 	public function col($columnname)
 	{
-		
+
 	if($this->rst)
 	{
 		//echo "(probe:"  . $columnname . " :"  . $this->rst->col($columnname) . ")";
@@ -117,7 +117,7 @@ not is ''
 		{
 			$this->columns[$keys[$i]] = $values[$i];
 		}
-		
+
 	}
 
 	public function rule($rule, $concat = 'AND')
@@ -226,7 +226,7 @@ not is ''
 		{
 
 		$bool = false;
-			
+			// processes rule by rule
 			for($i = 0;$i < count($this->rule);$i++)
 			{
 				$arg = array();
@@ -235,13 +235,19 @@ not is ''
 				$and = true;
 
 				
-				//var_dump($this->rule[$i]);
+				//var_dump($this->rule);
 				
-				
+				//printf("\nzykel\n");
 				foreach($this->rule[$i][1] as $value)
 				{
-
-					$and = ('AND' == trim(strtoupper($this->rule[$i][0])) );
+/*
+printf("\n rule", $i);
+echo $i . "\n"; 
+	print_r($this->rule[$i]);
+printf("value\n");
+	print_r($value);
+	*/
+					$and = ('AND' == trim(strtoupper($this->rule[$i][0])) ); // check for AND
 					
 					if($value == 'is' || $value == '=') continue;
 					if($value == 'not' )
@@ -254,14 +260,19 @@ not is ''
 							$arg[] = '';
 							continue;
 						}
-						
-					if($tmp = $this->columns[$value])
-						$arg[] = $this->rst->col($this->columns[$value]);
+
+					if(!is_null($tmp = $this->columns[$value]))
+					{
+						//if($this->rst->col($tmp))return false;
+						$arg[] = $this->rst->col($tmp);
+					}
 					else
 						$arg[] = trim($value, "'");
+						
+
 				}
 				//echo "var_dump\n";
-				//var_dump($arg, $command, $neg);
+				//var_dump("arg",$arg, "command", $command, "neg", $neg);
 
 				if($command == '=')
 				{
@@ -283,14 +294,16 @@ not is ''
 						if($and)
 						{
 							//echo " =>false \n";
+							//$bool = false;
 							return false;
 							
 						}
 						elseif(!$and && (!$bool && ($i !=0)))
 						{
 							//echo " =>false \n";
+							//$bool = false;
 							return false;
-							
+
 						}
 						
 					}
@@ -306,6 +319,7 @@ not is ''
 					else
 						echo " false)  ";
 						echo " \n set true\n"; */
+						//echo " =>true \n";
 						$bool = true; 
 						
 						

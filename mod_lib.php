@@ -45,6 +45,122 @@ function parse_ini_file_multi($file, $process_sections = false, $scanner_mode = 
 }
 
 /**
+* @param data : simple array with name and value cycling
+* @return associative array
+*/
+
+function toAssoArray($data)
+{
+	$result = [];
+	
+	for($i=1;$i < count($data);$i += 2)
+		$result[$data[$i]] = $data[$i + 1];
+
+	return $result;
+}
+
+/**
+* @param list : Object to generate
+* @param data : simple array with name and value cycling
+* @param system : boolean filters for system or standard parameter 
+*/
+
+function giveArrayArguments($list, $data, $system = false)
+{
+	$key = toAssoArray($data);
+	return array_filter($key, function ($key) use ($list, $system) { return !$system xor in_array($key, $list); }, ARRAY_FILTER_USE_KEY);
+}
+
+/**
+* service_create_account
+* ----------------------------------------------------
+* @param engine : Object to generate
+* @param URL : spezific URL to load
+*/
+
+function getSystemArgument($name, $list, $data)
+{
+	if(!in_array($name, $list)) throw new Exception( $name .  ' is not a system command');
+	$com = giveArrayArguments($list, $data, true);
+	//var_dump($name,$com);
+	if(array_key_exists($name,$com))
+		return $com[$name];
+	else
+		return false;
+}
+
+/**
+* service_create_account
+* ----------------------------------------------------
+* @param engine : Object to generate
+* @param URL : spezific URL to load
+*/
+
+function createConfigFromINIFile($ini, $list, &$pre, $project = false)
+{
+	$failed = [];
+	
+	foreach ($list as $key => $value)
+	{
+		
+		if(defined($key))continue;
+		
+		if(!array_key_exists($value[0],$ini))
+		{
+			array_push($failed, $value[0] .  ' does not exist');
+			//throw new Exception( $value[0] .  ' does not exist');
+			continue;
+			//throw new Exception( $value[0] .  ' does not exist');
+		}
+		
+	if($project === false)
+		{
+			//if(!array_key_exists($value[1],$ini[$value[0]])) throw new Exception( $value[1] .  ' does not exist');
+			if(!array_key_exists($value[1],$ini[$value[0]]))
+			{
+			array_push($failed, $value[1] .  ' does not exist');
+			continue;
+			//throw new Exception( $value[0] .  ' does not exist');
+			}
+		
+			$ini_value = str_replace($pre['from'], $pre['to'], $ini[$value[0]][$value[1]]);
+			define($key, $ini_value);
+			array_push($pre['from'], '__' . $key); array_push($pre['to'], $ini_value) ;
+
+
+		}
+		
+	else
+
+		{
+			
+			if(!array_key_exists($project,$ini[$value[0]]))
+			{
+			array_push($failed, $value[1] . '.' . $project .  ' does not exist');
+			continue;
+
+			}
+			
+			if(!array_key_exists($value[1],$ini[$value[0]][$project]))
+			{
+			array_push($failed, $value[1] .  ' does not exist');
+			continue;
+
+			}
+		
+
+			$ini_value = str_replace($pre['from'], $pre['to'], $ini[$value[0]][$project][$value[1]]);
+			define($key, $ini_value);
+			array_push($pre['from'], '__' . $key); array_push($pre['to'], $ini_value) ;
+
+
+		}
+	}
+	
+	return $failed;
+}
+
+/**
 * service_create_account
 * ----------------------------------------------------
 * @param engine : Object to generate

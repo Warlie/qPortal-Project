@@ -906,6 +906,7 @@ if(!is_null($this->attrib) && count($this->attrib) > 0)
 	echo '(' . count($this->attrib) . ")<br/><ul>\n";
 	foreach($this->attrib as $key => $value)
 	{
+		
 	echo '<li><i>' . $key  . "</i></li>\n";
 }
 }
@@ -920,7 +921,7 @@ echo ' Attributes (ns) : (' . count($this->attrib_ns) . ')<br><ul>';
 if(count($this->attrib_ns) > 0)	 	 
 	foreach($this->attrib_ns as $key => $value)
 	{
-	echo '<li><i>' . $key  . '</i>-<b>' . $value->full_URI() . "</b></li>\n";
+	echo '<li><i>' . $key  . '</i>-<b>' . $value->full_URI() . "</b>=" . $value->getdata() . "</li>\n";
 	}
 	else
 	{

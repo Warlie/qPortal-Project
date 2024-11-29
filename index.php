@@ -9,6 +9,37 @@ define('CONFIG_DEFAULT','config/default.ini');
                         
 include('mod_lib.php');
 
+$list_of_depending_param_names = ['--p', '--m', '-i', '-u','-p'];
+$list_of_placeholders = [
+	'from' => [
+		'__DIR', 
+		'__URL'] ,
+	'to' => [
+		__DIR__,
+		(array_key_exists('REQUEST_URI', $_SERVER)?$_SERVER['REQUEST_URI'] : "")
+		]];
+$list_of_configuration_parameters = [
+	'SERVER_URL' =>  ['runtime', 'SERVER_URL'],
+	'START_PAGE' => ['runtime', 'START_PAGE'],
+	'STD_URL' => ['runtime', 'STD_URL'],
+	'CUR_PATH' => ['runtime', 'CUR_PATH'],
+	'ROOT_DIR' => ['runtime', 'ROOT_DIR'],
+	'PLUG_IN_FOLDER' => ['runtime', 'PLUG_IN_FOLDER'],
+	'FRONTEND_INDEX' => ['runtime', 'FRONTEND_INDEX'],
+	'EDIT_INDEX' => ['runtime', 'EDIT_INDEX'],
+	'LANGUAGE_INPUT_DEFAULT' => ['default', 'LANGUAGE_INPUT'],
+	'LANGUAGE_OUTPUT_DEFAULT' => ['default', 'LANGUAGE_OUTPUT'],
+
+	'XML_CASE_FOLDING_DEFAULT' => ['default', 'XML_CASE_FOLDING'],
+	
+	'DATABASE_URL' => ['database', 'URL'],
+	'DATABASE_DB_NAME' => ['database', 'db_name'],
+	'DATABASE_USER' => ['database', 'User'],
+	'DATABASE_PWST' => ['database', 'PWST'],
+	'DATABASE_CODESET' => ['database', 'codeset'],
+	
+	'PLUGINS' => ['short', 'plugin']
+	];
 
 // Parse ini with sections
 if(file_exists(CONFIG))
@@ -18,8 +49,10 @@ else
 	
 	$shortCut = [];
 
+//
 //print_r($ini_array); 
-
+//print_r(parse_ini_file_multi(CONFIG_DEFAULT, true));
+/*
                 define('START_PAGE',$ini_array["runtime"]["START_PAGE"]);
                 define('STD_URL','index.php?i=%s');
                 define('CUR_PATH','');
@@ -32,7 +65,38 @@ else
                 define('LANGUAGE_OUTPUT_DEFAULT', ($ini_array["default"]["LANGUAGE_OUTPUT"]!=""? $ini_array["default"]["LANGUAGE_OUTPUT"] : "XML"));
 
                 define('XML_CASE_FOLDING_DEFAULT', ($ini_array["default"]["XML_CASE_FOLDING"]!=""? $ini_array["default"]["XML_CASE_FOLDING"] : "1"));
+*/
 
+	$results = [];
+	
+	array_push(
+		$results,
+	createConfigFromINIFile($ini_array, $list_of_configuration_parameters,
+	$list_of_placeholders,
+	getSystemArgument('--p', $list_of_depending_param_names, $_REQUEST)
+	));
+
+	if(count($results[0] )> 0)
+	{
+		array_push(
+			$results,
+			createConfigFromINIFile($ini_array, $list_of_configuration_parameters,
+				$list_of_placeholders
+				));
+	
+
+		if(count($results[1] ) > 0)
+		{
+			array_push(
+				$results,
+				createConfigFromINIFile(parse_ini_file_multi(CONFIG_DEFAULT, true), $list_of_configuration_parameters,
+					$list_of_placeholders
+					));	
+
+	if(count($results[2]) > 0) throw new Exception( "Following stack of missing ini Entries:\n" .   implode("\n", $results[2]) . "\n" );
+		}
+	}
+	
 
 				define('INSTALL',false);
 				define('REPORT',5); //Reportlevel [0,5]

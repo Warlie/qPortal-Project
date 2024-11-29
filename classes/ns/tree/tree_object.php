@@ -129,7 +129,7 @@ function event_message_in($type,&$obj)
 		 {	
 		 
 		  if(in_array($class_Name . ':' . $instance_id,$this->obj_init))return false;
-		  $this->obj_init[count($this->obj_init)] = $class_Name . ':' . $instance_id;
+		  $this->obj_init[] = $class_Name . ':' . $instance_id;
 		//echo ' - ' . $class_Name . ';' . $instance_id . "\n";
 		 }
 	//---------------------------------------------------------------------------------
@@ -313,10 +313,16 @@ function event_message_in($type,&$obj)
 			
 				//echo "nicht gefunden";
 				$load_url = $this->get_attribute('src');
-				//var_dump($load_url);
-				if(!is_null($load_url))$parser->load($load_url,0,'PHP');
-				
-				
+
+				if(!is_null($load_url))
+					$parser->load($load_url,0,'PHP');
+				else
+				{
+					if(array_key_exists($class_Name, PLUGINS))
+						$parser->load(PLUGINS[$class_Name],0,'PHP');
+					else
+						throw new Exception( $class_Name  .  ' is an unknown class name');
+				}
 				//echo $idx_num . ' --';
 			}
 		

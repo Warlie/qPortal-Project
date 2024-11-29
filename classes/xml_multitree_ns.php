@@ -165,7 +165,7 @@ class xml_ns extends xml_omni
 		   {
 
 		   	//echo "many entries " . count($this->looking_index[$this->idx][$type]) . ",\n";
-		   
+
 			   if(($arg = &$this->looking_index[$this->idx][$type]) == null)
 			   {
 		   		
@@ -179,6 +179,7 @@ class xml_ns extends xml_omni
 		   else
 		   {
 		   $cur_num = 0;
+
 		   	foreach($this->looking_index[$this->idx] as $key => $value )
 		   	{
 		   		for($k = 0;$k < count($this->looking_index[$this->idx][$key]);$k++)
@@ -188,7 +189,7 @@ class xml_ns extends xml_omni
 		   	}
 			   
 			   
-			  if(!$arg)echo "und raus";
+			  //if(!$arg)echo "und raus";
 			   if(!$arg)return false;
 
 		   
@@ -237,7 +238,7 @@ class xml_ns extends xml_omni
 				if($check)
 				{
 				//echo "element saved " . $arg[$i]->full_URI() . " <br>\n";  
-				$this->result_nodes[count($this->result_nodes)] = &$arg[$i];
+				$this->result_nodes[] = &$arg[$i];
 				}
 				    
 
@@ -1011,6 +1012,12 @@ if(is_null($value))echo $key;
    {
 	   return $this->cur_pointer[$this->idx]->full_URI();
    }
+   // TODO cur_pointer is wrong. It is for creation
+    function get_my_URI()
+   {
+	   return $this->pointer[$this->idx]->full_URI();
+   }
+   
    function get_NS_QName()
    {
 	   return $this->cur_pointer[$this->idx]->get_QName();

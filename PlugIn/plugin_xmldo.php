@@ -15,7 +15,7 @@
 */
 
 require_once("plugin_interface.php");
-define("DEBUG",     false);
+define("DEBUG",     true);
 
 class XMLDO extends plugin 
 {

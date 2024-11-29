@@ -442,6 +442,7 @@ if(!function_exists('extract_table')){
                  	 	 ($cols = /* zeile 151 findet alle felder */ extract_col($sql)),
                  	 	 $this->db
                  	 	 )
+                 	 ,	$this->db
                  	 );
                                                      
                  //uebergibt alle tabellennamen
@@ -649,7 +650,7 @@ function insert_rst($rst){
     //    $this->injectSQL($rst->get_insert_statements());
     //    $this->injectSQL($rst->get_update_statements());
     //    $this->injectSQL($rst->get_delete_statements());
-     //   var_dump($res);
+    //    var_dump($res);
         return $res ;
         
 //var_dump($rst->edit);
@@ -897,6 +898,7 @@ var $var_cur_pos=0;
 var $pos_in_array=0;
 public $table;
 private $index;
+private $db_connection;
 
 private $workmode = WorkModes::WMUpdateAndInsert;
 
@@ -904,7 +906,8 @@ private $update = [];
 private $insert = [];
 private $delete = [];
 
-function __construct($tbl, $fields) {
+function __construct($tbl, $fields, $db_connection) {
+	$this->db_connection = $db_connection;
 	$this->table = $tbl;
 	$this->field = $fields;
 	
@@ -1249,13 +1252,15 @@ public function get_insert_array_statements()
 			//empty statements are useless and needed to be ignored
 			if(count($statement) == 0)continue;
 			
-
+ //$db_connection
             		$value = array_filter($statement, [$this, 'isValidPrime'], ARRAY_FILTER_USE_BOTH);
 
             		array_walk(
             			$value
-            			, [$this, 'applyNotationFormat'] );
-
+            			, [$this, 'applyNotationFormat']);
+//function() use (&$value) {
+//    return $value++;
+//  };
 
 
 		$res[] = ['SQL' => "INSERT IGNORE INTO $key (" . implode( ', ' , array_keys($value))
@@ -1524,8 +1529,12 @@ function isValidPrime($value, $key ) //
 	return true;
 }
 
-function applyNotationFormat ( &$value, string $key)
+function applyNotationFormat ( &$value, string $key) //, object $db_connection
         {
+        	/* -----------------replace for numbers ------------------------------ */
+        	$find = array(",");
+        	$replace = array(".");
+        	
         	$string = $this->field[$key]['Type'];
         					
         	if(is_null($value))
@@ -1542,31 +1551,41 @@ function applyNotationFormat ( &$value, string $key)
         	
         	switch(substr($string,0,5)){
                                 
+        			case 'date':
+
+        				$timestamp = strtotime($value);
+        				$value = "'" . date('Y-m-d', $timestamp) . "'";
+        				return;
             	case 'text':
             	case 'year':
 				case 'datet':
-				case 'date':
 				case 'time':
 				case 'times':
 				case 'longt':
 				case 'longb':
                 case 'char(': 
                 case 'varch':
-                $value = "'$value'";
-                return;
+                	$value = "'" . $this->db_connection->real_escape_string( $value )  . "'";
+                	return;
                 break;
+            	case 'decim':
+
+            		$value = str_replace($find,$replace,$value);
             }
                 
                 // if empty than Default
                 if(strlen($value) == 0)
                 	$value = $this->field[$key]['Default'];
-                
+
                 // valid numbers are fine here
-                if(is_numeric($value))return;
+                if(is_numeric($value))
+                {
+                	return;
+                }
                 
                 //test for null as valid
                 if($this->field[$key]['Null'] != 'NO')
-        		 	throw new RuntimeException("Number expected, empty string given and null not allwoed");
+        		 	throw new RuntimeException("\"" . $key . "\":Number expected (\"" . $value . "\"), empty string given and null not allwoed");
         		else
         		{
         			$value = 'NULL';
@@ -1576,7 +1595,10 @@ function applyNotationFormat ( &$value, string $key)
                                 
         }
 
-
+public function show_content()
+	{
+		var_dump($this->update, $this->insert, $this->delete);
+	}
         
 }
 

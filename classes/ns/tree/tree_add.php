@@ -75,6 +75,7 @@ function event_initiated()
 function event_message_in($type,&$obj)
 	{
 		
+//$this->giveOutOverview();
 
 		if(is_Null($this->get_attribute('doctype')))
 		$doc_type = 'XML';
@@ -99,7 +100,7 @@ function event_message_in($type,&$obj)
 
 						$output = file_get_contents('php://input');
 						
-
+//var_dump($doc_type,$id);
 						$this->get_parser()->setNewTree($id);
 						//var_dump($output, $doc_type);
 						$this->get_parser()->load_Stream($output,$this->caseFolding,$doc_type,$id);

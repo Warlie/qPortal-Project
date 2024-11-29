@@ -40,8 +40,8 @@ var $out = "";
 	public function col($columnName)
 	{
 
-
-		
+		if(!current($this->internal_table_values))return false;
+			
 		if(!is_null($res = current($this->internal_table_values)) && array_key_exists($columnName, $res) )
 			return $res[$columnName];
 		

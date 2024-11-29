@@ -10,7 +10,7 @@ class CSV_handle extends Interface_handle
 	var $base_object = null;
 	var $heads = array();
 	var $body = array();
-	private $end_of_line = "\\n";
+	private $end_of_line = "\n";
 	
 	function check_format($example)
 	{
@@ -42,7 +42,13 @@ class CSV_handle extends Interface_handle
 		$is_obj = false;
 		
 		//if($is_obj)echo "ist ein object vom type FileHandle";
-		
+/*		
+		var_dump(
+		str_getcsv(
+    $source, ";",,"\n"));
+*/		
+
+    	
 		$this->base_object->MIME[$this->base_object->idx]['name'] = 'xml';
 		$this->base_object->MIME[$this->base_object->idx]['version'] = '1.0';
 		$this->base_object->MIME[$this->base_object->idx]['encoding'] = 'ISO-8859-1';
@@ -62,8 +68,9 @@ class CSV_handle extends Interface_handle
 
 			if(!$is_obj)
 			{
-				$allRows = explode($this->end_of_line,$source); //Delimiter falsch
 				
+				$allRows = explode($this->end_of_line,$source); //Delimiter falsch
+
 				$delimiter = $this->parse_Head($allRows[0]);
 				for($i = 1;$i < count($allRows);$i++)
 				{
@@ -171,7 +178,7 @@ class CSV_handle extends Interface_handle
 		if(!(false === strpos($line, ',')))$delimiter = ',';
 		if(!(false === strpos($line, ';')))$delimiter = ';';
 		if(!(false === strpos($line, '|')))$delimiter = '|';
-		if(!(false === strpos($line, '	')))$delimiter = '	';
+		//if(!(false === strpos($line, '	')))$delimiter = '	';
 		//echo $delimiter;
 		$this->heads = explode($delimiter,$line);
 		return $delimiter;
@@ -191,7 +198,7 @@ class CSV_handle extends Interface_handle
 								{
 								
 								//$this->base_object->tag_open($this, 'FIELD',array('NAME'=>$this->heads[$j]) );
-								$this->base_object->tag_open2($this, trim($this->heads[$j]),array() );
+								$this->base_object->tag_open2($this, 'COLUMN', array('NAME'=>trim($this->heads[$j]), 'NUM'=>$j) );
 								$this->base_object->cdata2($this, $cur_row[$j] );
 								//echo $cur_row[$j];
 								$this->base_object->tag_close2($this, $this->heads[$j]);
@@ -199,7 +206,7 @@ class CSV_handle extends Interface_handle
 								else
 								{
 									//echo $this->heads[$j] . ' ' . $cur_row[$j] . "\n";
-								$this->base_object->tag_open($this, trim($this->heads[$j]),array() );
+								$this->base_object->tag_open($this, 'COLUMN', array('NAME'=>trim($this->heads[$j]), 'NUM'=>($j + 1)) );
 								$this->base_object->cdata($this, $cur_row[$j] );
 								//echo $cur_row[$j];
 								$this->base_object->tag_close($this, $this->heads[$j]);

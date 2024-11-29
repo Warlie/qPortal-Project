@@ -288,8 +288,9 @@ function save_stream_back(&$stream, $format,$send_header = false)
 	
 function send_header()
 {
-	                        if ( stristr($_SERVER["HTTP_ACCEPT"],"application/xhtml+xml") ||
-					stristr($_SERVER["HTTP_USER_AGENT"],"W3C_Validator")) {
+	                        if (
+	                        	(array_key_exists("HTTP_ACCEPT", $_SERVER) && stristr($_SERVER["HTTP_ACCEPT"],"application/xhtml+xml")) ||
+					(array_key_exists("HTTP_ACCEPT", $_SERVER) && stristr($_SERVER["HTTP_USER_AGENT"],"W3C_Validator"))) {
 					header("Content-type: application/xhtml+xml");
 					header('Cache-Control: no-cache, no-store, must-revalidate');
 					header('Pragma: no-cache');

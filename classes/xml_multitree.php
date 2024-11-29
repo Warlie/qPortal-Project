@@ -196,6 +196,7 @@ class xml  {
 
         $this->pointer[$this->idx] = &$this->pointer[$this->idx]->getRefnext($num);
 
+
         //erstellt stamp
 
         $this->pos_stamp_func(0,$num,"child_node");

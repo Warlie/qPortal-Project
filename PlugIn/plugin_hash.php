@@ -17,6 +17,7 @@ class Hash extends plugin
 private $algo = "md5";
 private $salt = "chilli";
 private $tag_name = "";
+private $composite = [];
 private $std_default = array();
 private $std_null = array();
 private $to_null = array();
@@ -40,11 +41,23 @@ var $tag;
 	
 	public function col($columnname)
 	{
-		
+
 	if($this->rst)
 	{
 		 if($this->tag_name == $columnname)
+		 {
+		 	 if(count($this->composite) == 0)
 		 	 return hash( $this->algo, $this->rst->col($columnname) .  $this->salt, false);
+		 	else
+		 	{
+		 		$compositeString = '';
+		 		for($i = 0; $i < count($this->composite); ++$i) 
+		 		{
+		 			$compositeString .= $this->rst->col($this->composite[$i]);
+		 		}
+		 		return hash( $this->algo, $compositeString .  $this->salt, false);
+		 	}
+		 }
 		else
 			return $this->rst->col($columnname);
 
@@ -62,7 +75,8 @@ var $tag;
 		//echo 'booh' . $this->test++ . '<br>';
 		return $this;}
 
-	public function columnName($name){$this->tag_name = $name;}	
+	public function columnName($name){$this->tag_name = $name;}
+	public function composite($name){$this->composite[] = $name;}
 	public function algo($name){$this->algo = $name;}
 	public function salt($salt){$this->salt = $name;}
 
