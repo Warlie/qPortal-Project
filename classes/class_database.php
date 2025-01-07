@@ -1090,6 +1090,8 @@ function last_ds(){$this->var_cur_pos=$this->pos_in_array;return $this->pos_in_a
 
 function EOF(){return !($this->var_cur_pos<$this->pos_in_array);}
 
+function BOF(){return !($this->var_cur_pos>0);}
+
 function setValue($Field,&$Value,$num=null,$editable=false){
 	 //if($Value == '36')throw new RuntimeException("booh ");
 //var_dump($Field,$Value,$num,$editable);

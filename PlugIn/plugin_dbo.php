@@ -16,7 +16,7 @@ class DBO extends plugin
 {
 private $dbclazz = null;
 private $bool_op = array();
-private $rst = null;
+protected $rst = null;
 
 private $save_result = [];
 
@@ -384,8 +384,13 @@ public function get_col($col_name){//echo $col_name . " " .  strval($this->rst->
 		//TODO Problem mit 0 und Baum
 public function col($col_name){return $this->rst->value($col_name);}
 
-public function datatype($columnname){return false;}
-public function fields(){return $this->rst->db_field_list();}
+public function datatype($columnname){return $this->rst-> type($columnname);}
+public function fields()
+{
+	$res = $this->rst->db_field_list();
+	if(count($res)>0)$res = $res[0];
+	return $res;
+}
 		/** 
 		*@parameter: tag_name = name for column in plug in
 		*@parameter: field_name = fieldname in db
@@ -553,8 +558,8 @@ public function saves_dataset_back()
 	return parent::check_type($type);
 	}
 
-	function next(){$this->rst->next_ds();return !$this->rst->EOF();}
-	
+	public function next(){$this->rst->next_ds();return !$this->rst->EOF();}
+	public function prev(){$this->rst->prev_ds();return !$this->rst->BOF();}
 	function decription(){return "no description avaiable!";}
 	public function getAdditiveSource(){}
 }

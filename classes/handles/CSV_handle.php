@@ -12,6 +12,8 @@ class CSV_handle extends Interface_handle
 	var $body = array();
 	private $end_of_line = "\n";
 	
+	private $bool_first_tag = true; 
+	
 	function check_format($example)
 	{
 		return false;
@@ -146,30 +148,7 @@ class CSV_handle extends Interface_handle
 			
 			//alle spaltennamen
 		//	$this->heads = explode(";",$allRows[0]); 
-		/*
-			for($i = 1;$i<count($allRows);$i++)
-			{
-				if(trim($allRows[$i])<>'')
-				{
-				$this->base_object->tag_open($this, 'ROW',array('NUM'=>$i) );
-				$cur_row = explode(";",$allRows[$i]);
-				
-							for($j = 0;$j<count($cur_row);$j++)
-							{
-								
-								//$this->base_object->tag_open($this, 'FIELD',array('NAME'=>$this->heads[$j]) );
-								$this->base_object->tag_open($this, trim($this->heads[$j]),array() );
-								$this->base_object->cdata($this, $cur_row[$j] );
-								//echo $cur_row[$j];
-								$this->base_object->tag_close($this, $this->heads[$j]);
-							}
-							
-				$this->base_object->tag_close($this, 'ROW');
-				}
-			}
-			
-			//$this->base_object->tag_close($this, 'CSV');
-			*/
+
 	}
 	
 	function parse_Head($line)
@@ -247,133 +226,68 @@ class CSV_handle extends Interface_handle
    
         }
 	
+        function extract_Columns($row)
+        {
+        	$res = array();
+        	for($i = 0; $i < $row->index_max(); $i++ )
+        		{
+        			$next = $row->getRefnext($i, true);
+        			$name = $next->get_ns_attribute('http://www.csv.de/csv#NAME');
+        			$value = $next->getdata();
+        			if($name && $value)
+        				$res[$name] = $value;
+        			unset($next);
+        		}
+        		
+        	return $res;
+        }
+        
+        function write_Column_Values($header, $column)
+        {
+        	$res = array();
+        	foreach ($header as $name)$res[] = $column[$name];
+        	return $res;
+        }
+        
 	
-	function save_back($format, $send_header = false)
+	function save_back($format,$send_header = false)
 	{
 		
-      switch ($format)
-      {
-      case 'HTML': $arg = 'ISO-8859-5';
-      break;
-      case 'UTF-8': $arg = 'UTF-8';
-      }
+		/**
+		*
+		*
+		*/
 
 
- 
-      				$inter_counter = 0;
-                                $deep[$this->base_object->idx]=0;
+
+                 $header = array();
+                 $csv = array();
                                 
-                                $end = false;
+                 $this->base_object->set_first_node();
+		
+		$this->base_object->complete_list(true);
+		$this->base_object->cloneResult(true);
+		if(! $this->base_object->xpath("ROW")  )echo "false";
+		$this->base_object->cloneResult(false);
+		
+		$result = $this->base_object->get_xpath_Result();
+		
+		$header = array_keys($this->extract_Columns($result[0]));
+		$res .= implode(';', $header) . "\n";
+		foreach ($result as $row)
+		{
+			//echo $row->full_URI() . "\n";
+			
+			//$csv[] = $this->write_Column_Values($header, $this->extract_Columns($row));
+			$res .= implode(';', 
+				$this->write_Column_Values($header, $this->extract_Columns($row))
+				) . "\n";
+			//get_ns_attribute
+		}
+		
+		return $res;
 
-                                $reset=true;
-                              $this->base_object->set_first_node();
-
-                              //fputs ($fp, "\n<ul>\n");
-
-
-                                while(!$end){
-
-                                //schaltet den pointer zurück, wenn ein neuer knoten betreten wird
-                                if($reset)$this->base_object->reset_pointer();
-
-                                //testet, ob es weitere knoten gibt
-                                if($this->base_object->index_child()>0){
-
-                                        //schreibt die eingabe
-                                       if(-1 == $this->base_object->show_pointer()){
-
-                                                                       //Knotenname und attribute f�r den Wurzelknoten
-					       			       $res .=  '<' .  $this->base_object->cur_node() . $this->base_object->all_attrib_axo($format) . '>';
-								       
-                                                                       //gibt den ersten datenknoten aus
-								       $res .=  trim($this->base_object->setcdata_tag($this->convert_to_XML($this->base_object->show_cur_data(0),$format),$this->base_object->show_curtag_cdata()));
-                                                                       $reset = true;
-								       //geht in den ersten Kindsknoten
-                                                                       $this->base_object->child_node(0);
-
-                                                                       //
-                                                                       $deep[$this->base_object->idx]++;
-                                                                        }elseif((($this->base_object->index_child()-1) > $this->base_object->show_pointer()) ){
-                                                                       
-									$res .=  trim($this->base_object->setcdata_tag(
-								       						$this->convert_to_XML(
-															$this->base_object->show_cur_data($this->base_object->show_pointer()+1,$format)
-															,$format)
-														,$this->base_object->show_curtag_cdata()
-														));
-                                                                       $reset = true;
-                                                                       $check = $this->base_object->child_node($this->base_object->show_pointer() + 1);
-                                                                       $deep[$this->base_object->idx]++;
-                                                                                if(!$check){
-                                                                                echo 'geht nicht weiter';
-                                                                                }
-
-                                                                        }else{
-
-                                                                        $res .=  trim($this->base_object->setcdata_tag($this->convert_to_XML($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$format),$this->base_object->show_curtag_cdata()));
-									
-                                                                        $res .=  '</' .  $this->base_object->cur_node() . '>';
-
-                                                                        $end = !$this->base_object->parent_node();
-
-                                                                        $deep[$this->base_object->idx]--;
-                                                                        $reset = false;
-                                                                        }
-                                        }else{
-
-                                                                        if(-1 == $this->base_object->show_pointer()){
-										
-										if($inter_counter == 0 )$this->heads[count($this->heads)] = $this->base_object->cur_node();
-										
-										$this->body[$this->base_object->cur_node()][$inter_counter] = 
-												trim(
-													$this->base_object->show_cur_data() 
-													);
-												//$this->convert_to_XML(,$format 
-												//	,true 
-												//	)
-												
-                                                                        $res .=  '<' .  $this->base_object->cur_node() . $this->base_object->all_attrib_axo($format) ;}
-                                                                                if( '' <>( $this->base_object->show_cur_data($this->base_object->show_pointer()+1)) )
-                                                                                {
-                                                                                $res .=  '>' . $this->base_object->setcdata_tag($this->convert_to_XML($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$format),$this->base_object->show_curtag_cdata());
-                                                                                $res .=  '</' .  $this->base_object->cur_node() . ' >';   // str_repeat (" ", 2*$deep[$this->idx])
-                                                                                }
-                                                                                else
-                                                                                $res .=  '/>';
-
-                                                                        $end = !$this->base_object->parent_node();
-                                                                        $deep[$this->base_object->idx]--;
-                                                                        $reset = false;
-                                                                        //echo 'hallo';
-
-                                        }
-
-                                if( $deep[$this->base_object->idx] == 0 ) $inter_counter++;
-				
-                                }
-				
-					if(is_Null($this->attribute_values['HEAD']) || $this->attribute_values['HEAD'])
-				        $res = implode($this->heads,";") . "\n";
-					
-					for($x = 0;$x < $inter_counter;$x++)
-					{
-						for($y = 0;$y < count($this->heads);$y++)
-						{
-							//echo $this->heads[$y]  . "\n";
-							//echo $x  . "\n";
-							
-							$res .= $this->body[ $this->heads[$y] ][$x];
-							if($y < (count($this->heads)-1))
-							$res .= ';';
-							else
-							$res .= "\n";
-						}
-					}
-				
-					
-				return $res;
-				
+		
 	}
 	
 	function save_stream_back(&$stream,$format, $send_header = false)

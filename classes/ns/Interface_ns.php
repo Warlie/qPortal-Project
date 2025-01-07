@@ -1584,7 +1584,9 @@ public function __debugInfo(){
 $this->full_URI()*/} 
 
   public function __toString() {
-    return "My name is: {$this->full_URI()}\n";
+  	  
+  	  var_dump($this->get_ns_attribute());
+    return "My name is: {$this->full_URI()} with ". http_build_query( $this->get_attribute() ) . "\n";
   }
 }
 

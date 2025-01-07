@@ -15,13 +15,13 @@
 */
 
 require_once("plugin_interface.php");
-define("DEBUG",     true);
+define("DEBUG",     false);
 
 class XMLDO extends plugin 
 {
 private $machwasmit = 1;
 private $test = 0;
-private $rst;
+protected $rst;
 private $pos = 0;
 private $template;
 private $content;

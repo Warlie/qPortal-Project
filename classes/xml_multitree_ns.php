@@ -153,20 +153,22 @@ class xml_ns extends xml_omni
 	   /* durchsucht den Baum nach Inhalten (keine direkte optimierung)*/
    	   public function seek_node( $type = null, array $attrib = null, array $data = null, $respos = 0)
 	   {
-		   //echo 'start' . $type . ' ' . count($this->looking_index[$this->idx][$type]) .  ' in ' . $this->idx .  "<br>\n";
+
+
+	   	   //$this-> index_consistence();	   	   
+	   	   
 		   $toAdd = count($this->result_nodes);
 
 		   if(!is_null($type) && (false === strpos($type,'#')))echo "please use full URI for '" . $type . "'<br>\n";
 		   
 		   $arg = null;
-			
+
 		   //hashsuche
 		   if(!is_null($type))
 		   {
+		   	   //var_dump($type);
 
-		   	//echo "many entries " . count($this->looking_index[$this->idx][$type]) . ",\n";
-
-			   if(($arg = &$this->looking_index[$this->idx][$type]) == null)
+			   if(($arg = &$this->looking_index[$this->idx][$type]) == null) //?
 			   {
 		   		
 				   return false;
@@ -184,7 +186,7 @@ class xml_ns extends xml_omni
 		   	{
 		   		for($k = 0;$k < count($this->looking_index[$this->idx][$key]);$k++)
 		   		{ 
-		   			$arg[$cur_num++] = &$this->looking_index[$this->idx][$key][$k];
+		   			$arg[] = &$this->looking_index[$this->idx][$key][$k];
 		   		}
 		   	}
 			   
@@ -195,6 +197,7 @@ class xml_ns extends xml_omni
 		   
 		   }
 
+		   
 		    $check = true;
 		    $value = null; 
 

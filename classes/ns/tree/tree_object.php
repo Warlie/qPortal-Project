@@ -89,22 +89,28 @@ function &new_Instance()
 				return $obj;
 }
 
+
+private function auto_Complete_name($className, $functionCall)
+{
+	if(!str_contains($functionCall, $className))
+		return $className . "." . $functionCall;
+
+	return $functionCall;
+}
+
 /**
-*
+* TODO boiling down to an easy readable code
 */
 function event_message_in($type,&$obj)
 	{
 	
 	$parser = &$this->get_parser();
 		
-	if($obj->get_node())
-	{
-		
-
-		
-		
+		if($obj->get_node())
+		{
+		//? TODO das geht doch schoener
 		$this->get_parser()->go_to_stamp( '0000.' . $obj->get_node()->get_idx() . $obj->get_node()->position_stamp());
-	}
+		}
 	//echo $obj->get_node()->full_URI();
 	//else
 	//echo "\n kein Objekt im request \n";
@@ -122,12 +128,12 @@ function event_message_in($type,&$obj)
 		$instance_id = $this->get_attribute('id');
 		
 	//---------------------------------------------------------------------------------
-	//--                       voids multiple entry instancing                       --
+	//--                       avoids multiple entry instancing                       --
 	//---------------------------------------------------------------------------------
 	
 		if($class_Name)
 		 {	
-		 
+		 // in case id and class name are mentioned, that can be seen as instancing an object. For preventing any overwrite, you will get a return
 		  if(in_array($class_Name . ':' . $instance_id,$this->obj_init))return false;
 		  $this->obj_init[] = $class_Name . ':' . $instance_id;
 		//echo ' - ' . $class_Name . ';' . $instance_id . "\n";
@@ -177,10 +183,11 @@ function event_message_in($type,&$obj)
 							//add the current remote-object
 							$obj_array[$i] = &$this->getRefnext($i);
 							
-							
+							//auto_Complete_name($className, $functionCall)
 							//creates correct name of the function
 							$node_func = $reg_name . '#' . 
 							$this->getRefnext($i)->get_ns_attribute('http://www.trscript.de/tree#name');
+							//echo $node_func . "\n";
 							
 							//
 							$this->getRefnext($i)->connect_uri($node_func);
@@ -289,8 +296,7 @@ function event_message_in($type,&$obj)
 
 			}
 			
-		//change to controldoc
-		$parser->go_to_stamp($stamp);
+
 		
 		$parser->flash_result();
 		//saves attributes (could be useless)
@@ -304,13 +310,28 @@ function event_message_in($type,&$obj)
 		* TODO geeignet f�r exception
 		*/
 		//
-		if($parser->seek_node('@registry_surface_system#PhpClass',array('@registry_surface_system#ID' => $class_Name),null))
+		
+		//if($class_Name == "XMLDO")$parser-> index_consistence();
+		//$parser->seek_node('@registry_surface_system#PhpClass');
+		/*
+		if(!$parser->seek_node('@registry_surface_system#PhpClass',array('http://www.w3.org/2006/05/pedl-lib#name' => $class_Name))) 
+		{
+			//$parser->index_consistence();
+			echo "didnt found";
+		}
+		else
+			echo $parser->show_xmlelement();
+		$parser->flash_result();
+		*/
+
+		
+		//echo $class_Name . "\n";
+		if(!$parser->seek_node('@registry_surface_system#PhpClass',array('http://www.w3.org/2006/05/pedl-lib#name' => $class_Name)))
 			{
-				echo "gefunden";
-			}
-			else
-			{
-			
+
+				//change to controldoc
+				$parser->go_to_stamp($stamp);
+				
 				//echo "nicht gefunden";
 				$load_url = $this->get_attribute('src');
 
