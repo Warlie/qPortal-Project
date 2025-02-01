@@ -80,7 +80,10 @@ private $end = false;
 //var_dump($res);
 
 	if(!is_null($res))
+	{
+		//echo $this->transform($res['value'], $this->datatype($columnname)) . " \n";	
 		return $this->transform($res['value'], $this->datatype($columnname));	
+	}
 
 	return "";
 	}
@@ -167,7 +170,7 @@ private $end = false;
     			} // nextCollectionBreak will check group characteristica and will return false in case, it has changed
     			while(!$this->end && $this->nextCollectionBreak());
 
-    			
+    			//var_dump($this->dataSet);
     			// shows first time run
     			$this->done = true;
     			

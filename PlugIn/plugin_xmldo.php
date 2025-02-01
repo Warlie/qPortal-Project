@@ -198,7 +198,9 @@ private $template_json;
 	}
 	
 
-	
+	/**
+	* switch for collecting data out from a document
+	*/
 	public function actsAsCollector($bool)
 	{
 		$this->config['actsAsCollector'] = $bool;
@@ -371,7 +373,6 @@ private $template_json;
 		  if(is_array($tbl))     
 		  	  foreach($tbl as $key => $value){
 		  	  	  if($res == '')$res = $key;
-
 		  	  	$tmp = $this->rst->col( $key);
 				if($bool )$res = $key;
 				
@@ -397,14 +398,15 @@ private $template_json;
 	private function permutate(&$array, $permut )
 	{
 	}
-
+	
+	// TODO it is just a copy function
 	private function &buildRow($tbl)
 	{
 		$res = array();
 		  if(is_array($tbl))     
 		  	  foreach($tbl as $key => $value)
-
-		  	  	$res[$key] = $this->rst->col( $key);			  
+		  	  	$res[$key] = $value;
+		  	  	//$res[$key] = $this->rst->col( $key);			  
 		  return $res;
 	}
 	
@@ -1057,12 +1059,14 @@ private $template_json;
 			return;
 		}
 		
+		// case of XMLDO as a collector
 		if($this->config['actsAsCollector'])
 		{
 			$this->collectData();
 			return;
 		}
 		
+		// is for debug
 		$this->show_content();
 		$this->config['setTreeType'] = "Branch";
 		
@@ -1097,8 +1101,8 @@ $permutation = $tmp[1];
 		$this->create_tbl($tbl);
 		
 
-		
-		$this->rst->moveFirst();
+		// is it important?
+		//$this->rst->moveFirst();
 		
 		
 		$res = "";
@@ -1196,26 +1200,7 @@ if(DEBUG)
 * -----------------------------------------------------------------------------------------------------------------------------
 */
          
-   /*             // appends branch and crotch to groups
-                		
-        for($i = 0; count($this->level) > $i; $i++ )
-		{
-			$arr = explode(',', $this->level[$i]["group"]);
-			for($j = 0; count($arr) > $j; $j++ )
-			{
-				if($this->level[$i]["type"] == 0)
-				{
-					$groups[$arr[$j]]['crotch'] = &$this->level[$i];
-				}
-				else
-				{
-					$groups[$arr[$j]]['branch'] = &$this->level[$i];
-				}
-			}
-
-		}	
-
-		*/			
+			
 	$curHold = array();
 
 
@@ -1223,8 +1208,6 @@ if(DEBUG)
 	$pos = 0;
 	$prev_group = 1;
 				
-/* 				echo gettype()
-				var_dump($value); */
 
 		
 		if(DEBUG)
@@ -1266,8 +1249,11 @@ if(DEBUG)
 		}
 		do{
 			// ------ update table ------
+			// TODO It seems like a copy function. Just check this
 			$res = $this->test_alter($tbl) ; //fills table with current values
+
 			$until = $this->last_col($tbl); // finds first null element and returns its key
+			//var_dump($tbl, $res, $until);
 
 			$fulltbl[$pos++] = $this->buildRow($tbl); //builds up the full table
 

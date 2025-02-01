@@ -23,6 +23,7 @@ var $rst = null;
 private $criteria = [];
 private $accumName = "";
 private $accum = [];
+private $preAccum = [];
 private $group = "";
 private $groupValue = 0.0;
 //var $obj = null;
@@ -79,10 +80,15 @@ private $groupValue = 0.0;
 
 			if(!array_key_exists($groupValue, $this->accum ))
 				$this->accum[$groupValue] = 0.0;
-			//var_dump($this->accum[$groupValue] ,$groupValue );
-			$this->accum[$groupValue] = floatval($this->rst->col($columnname)) + $this->accum[$groupValue] ;
-			//var_dump($this->accum[$groupValue] ,$groupValue );
-			return $this->accum[$groupValue];
+			
+			if(!array_key_exists($groupValue, $this->preAccum ))
+				$this->preAccum[$groupValue] = 0.0;			
+
+			$preSave  = floatval($this->rst->col($columnname)) + $this->accum[$groupValue] ;
+
+			$this->preAccum[$groupValue] = $preSave;
+
+			return $preSave;
 		}
 		else
 		return $this->rst->col($columnname);
@@ -111,16 +117,27 @@ private $groupValue = 0.0;
 	protected function moveFirst()
 	{
 		
+		$this->accum = [];
+		$this->preAccum = [];
+		
 		if($this->rst){
 			$res = $this->rst->moveFirst();
-			//$this->extract_array();
+
 			return $res; 
 			
 		}else return false;
 	}
     	protected function moveLast(){if($this->rst)return $this->rst->moveLast();else return false;}
-    	
-	public function next(){if($this->rst)return $this->rst->next();else return false;}
+
+	public function next(){/*echo "next\n";*/
+
+		$this->accum =$this->preAccum;
+		$this->preAccum = [];
+		
+		if($this->rst)return $this->rst->next();
+		else return false;
+	}
+
     	public function set_list(&$value)
     	{
 
@@ -136,13 +153,6 @@ private $groupValue = 0.0;
     	
     	public function fields(){if($this->rst) return $this->rst->fields();else return array();}
     	
-    	private function extract_array()
-    	{
-    		$res = [];
-    		foreach ($this->fields() as $value)$res[$value] = $this->rst->col($value);
-    		
-    		var_dump($res);
-    	}
     	
     	private function transform($valueArray, $format)
     	{
