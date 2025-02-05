@@ -587,6 +587,21 @@ function attribute($name,&$value){
         }
 }
 	
+	public function set_ns_attribute($uri, $value)
+	{
+		$teile = explode("#", $uri);		
+		$attrib = &$this->parser->namespace_frameworks[$teile[0]]['node'][$teile[1]]->new_Instance();
+		
+					$attrib->setdata($value,0);
+					$attrib->name  = $teile[1];
+					$attrib->type = $teile[1];
+					$attrib->set_idx($this->idx); 
+					$attrib->namespace = $teile[0];
+					$attrib->set_parser($this->parser);
+					$this->attribute($uri,$attrib);
+					$this->attrib[$teile[1]] = &$attrib;
+	}
+	
 	
 	public function &get_ns_attribute($uri  = '')
 	{

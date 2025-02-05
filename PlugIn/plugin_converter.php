@@ -42,7 +42,7 @@ var $tag;
 	
 	public function col($columnname)
 	{
-		
+
 	if($this->rst)
 	{
 		//echo $columnname . " :"  . $this->rst->col($columnname) . "(Converter:2b)\n";
@@ -118,7 +118,12 @@ var $tag;
 	public function r_default($value)
 	{
 	  if(!($this->tag_name === false))
-	  $this->std_default[$this->tag_name] = $value;
+	  {
+	  	 if(!isset($this->allocation[$this->tag_name]))
+	  	  $this->allocation[$this->tag_name] = array();
+	  	  
+	  	$this->std_default[$this->tag_name] = $value;
+	  }
 	
 	}
 	
@@ -152,6 +157,8 @@ var $tag;
 	else
 	return 'no element received';
     	}
+    	
+    	public function datatype($columnname){return $this->rst->datatype($columnname);}
     	
     	public function fields(){if($this->rst) return $this->rst->fields();else return array();}
 

@@ -138,8 +138,12 @@ function event_message_in($type,&$obj)
 								$tmp->send_messages($type,$obj);
 								//echo "call";
 								$res =  $tmp->getdata();
-								
-								if($tmp->getRefnext(0) instanceof Interface_node)
+								// holy crap this will fullfill data collection for just one node it it
+								if($tmp->getRefnext(0) instanceof TREE_object && ($tmp->getRefnext(0)->index_max() == 0))
+								{
+									$res = $tmp->getRefnext(0)->get_attribute('id');
+								}
+								elseif($tmp->getRefnext(0) instanceof Interface_node)
 								{
 								$many_remote = $tmp->getRefnext(0)->index_max();
 								
@@ -174,19 +178,35 @@ function event_message_in($type,&$obj)
 		if(count($param_arr)){
 		$this->get_parser()->flash_result();
 		$this->get_parser()->seek_node('http://www.trscript.de/tree#variable');
+		$this->get_parser()->seek_node('http://www.trscript.de/tree#object');
 		$res_tags = $this->get_parser()->get_result();
 		
-		foreach($res_tags as $value){If(array_key_exists(
-			$var_name = $value->get_ns_attribute('http://www.trscript.de/tree#name'),
-			$param_arr))
-				$value->setdata( $param_arr[$var_name] ,0);
+		foreach($res_tags as $value){
+			if($value instanceof TREE_object)
+				If(array_key_exists(
+					$var_name = $value->get_ns_attribute('http://www.trscript.de/tree#variable'),
+					$param_arr)
+					)
+				
+						$value->set_ns_attribute('http://www.trscript.de/tree#id', $param_arr[$var_name]);
 
+					//$value->setdata( $param_arr[$var_name] ,0);
+				
+			if($value instanceof TREE_variable)
+				If(array_key_exists(
+					$var_name = $value->get_ns_attribute('http://www.trscript.de/tree#name'),
+					$param_arr)
+					)
+					 $value->setdata( $param_arr[$var_name] ,0);
+
+				
 		}
 				
 		
 		 $this->get_parser()->flash_result();
 		}
-		
+
+
 		
 		
 			$this->get_parser()->seek_node('http://www.trscript.de/tree#final');

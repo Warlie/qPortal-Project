@@ -74,6 +74,7 @@ class TREE_factory
 			$this->node['xpath'] = new TREE_xpath('xpath', $ns);
 			$this->node['document'] = new TREE_document('document', $ns);
 			$this->node['header'] = new TREE_header('header', $ns);
+			$this->node['id'] = new Interface_node('id', $ns);
 			
 			$this->nativ->set_is_Class();
 			foreach ($this->node as $value)

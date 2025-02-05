@@ -122,10 +122,11 @@ function event_message_in($type,&$obj)
 	* src : contains a path to a codefile
 	* also it gets the registry-document to deal with.
 	*--------------------------------------------------*/
-	
+
 		//gets all attributes
 		$class_Name = $this->get_attribute('name');
 		$instance_id = $this->get_attribute('id');
+
 		
 	//---------------------------------------------------------------------------------
 	//--                       avoids multiple entry instancing                       --
@@ -159,6 +160,9 @@ function event_message_in($type,&$obj)
 
 			$object = $parser->getControlUnit( "surface_tree_engine")->getObjectByID($instance_id);
 			
+			// class name mentioned in the former object, called by the instance id
+			$object_Class_Name = $object->get_attribute('name');
+			
 			//echo "\n<br>my logic is undeniable!<br>\n";
 			
 			if(is_null($object->way_out))echo "check $instance_id (tree_object.php:163)";
@@ -186,8 +190,12 @@ function event_message_in($type,&$obj)
 							//auto_Complete_name($className, $functionCall)
 							//creates correct name of the function
 							$node_func = $reg_name . '#' . 
-							$this->getRefnext($i)->get_ns_attribute('http://www.trscript.de/tree#name');
-							//echo $node_func . "\n";
+							$this->auto_Complete_name(
+								$object_Class_Name, 
+								$this->getRefnext($i)->get_ns_attribute('http://www.trscript.de/tree#name'));
+							
+							//$this->getRefnext($i)->get_ns_attribute('http://www.trscript.de/tree#name');
+							//echo $this->getRefnext($i)->get_ns_attribute('http://www.trscript.de/tree#name') . "\n";
 							
 							//
 							$this->getRefnext($i)->connect_uri($node_func);
@@ -432,7 +440,10 @@ function event_message_in($type,&$obj)
 						if($this->getRefnext($i)->is_Node('http://www.trscript.de/tree#remote'))
 						{
 							//ascertains full URI of the specific function- or parameternode to find it 
-							$node_func = $node_obj->get_NS() . '#' . $this->getRefnext($i)->get_ns_attribute('http://www.trscript.de/tree#name');				
+							$node_func = $node_obj->get_NS() . '#' . 
+								$this->auto_Complete_name(
+									$class_Name, 
+									$this->getRefnext($i)->get_ns_attribute('http://www.trscript.de/tree#name'));				
 							
 							
 							$this->getRefnext($i)->connect_uri($node_func);
