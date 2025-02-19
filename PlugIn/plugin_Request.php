@@ -172,7 +172,7 @@ image/x-xbitmap 	*.xbm 	XBM-Dateien
 image/x-xpixmap 	*.xpm 	XPM-Dateien 
 
 */
-	private $rst;
+
 	private $groups = array();
 	private $max ;
 	private $min = 0;
@@ -331,9 +331,7 @@ image/x-xpixmap 	*.xpm 	XPM-Dateien
 	}
 	}
 	
-	
-	public function iter()
-	{return $this;}
+
 	
 	
 public function request($name)

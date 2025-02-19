@@ -18,7 +18,6 @@ class QPDateTime extends plugin
 private $rel = array();
 private $mod = array();
 private $source;
-private $rst = null;
 
 private $year = null;
 private $month = null;
@@ -138,14 +137,7 @@ private $minute = null;
 	public function setsource($column){ $this->source = $column; }
 	public function setcolumn($column, $format, $modify){ $this->rel[$column] = $format; if($modify)$this->mod[$column] = $modify;}
 	
-	
-	/**
-	*@function: ITER = gives out a object to LIST-parameter
-	*/
-	public function &iter()
-		{
-		//echo 'booh' . $this->test++ . '<br>';
-		return $this;}
+
 
 
 	

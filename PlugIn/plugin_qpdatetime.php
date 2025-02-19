@@ -17,7 +17,6 @@ class QPDateTime extends plugin
 
 private $rel = array();
 private $source;
-private $rst = null;
 
 
 
@@ -45,14 +44,6 @@ private $rst = null;
 	public function setsource($column){ $this->source = $column; }
 	public function setcolumn($column, $format){ $this->rel[$column] = $format; }
 	
-	
-	/**
-	*@function: ITER = gives out a object to LIST-parameter
-	*/
-	public function &iter()
-		{
-		//echo 'booh' . $this->test++ . '<br>';
-		return $this;}
 
 
 	

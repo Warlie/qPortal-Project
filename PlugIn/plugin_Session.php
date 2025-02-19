@@ -17,7 +17,6 @@ class Session extends plugin
 
 
 
-	private $rst;
 	private $max  = 1;
 	private $pos = 0;
 	private $groups = array();
@@ -94,8 +93,6 @@ class Session extends plugin
 	}
 	
 	
-	public function iter()
-	{return $this;}
 	
 	
  
