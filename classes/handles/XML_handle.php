@@ -22,15 +22,15 @@ class XML_handle extends Interface_handle
 
             xml_parser_set_option( $this->parser, XML_OPTION_CASE_FOLDING, $this->attribute_values['XML_OPTION_CASE_FOLDING'] );
 			//xml_parser_set_option( $this->parser, XML_OPTION_TARGET_ENCODING, 'ISO-8859-1' );
-            xml_set_object($this->parser, $this->base_object);
+            //xml_set_object($this->parser, $this->base_object);
 			
 			
-            xml_set_element_handler($this->parser, "tag_open", "tag_close");
-            xml_set_character_data_handler($this->parser, "cdata");
-            xml_set_external_entity_ref_handler($this->parser, "tag_entity");
-			xml_set_notation_decl_handler($this->parser, "tag_notation");
-			xml_set_unparsed_entity_decl_handler($this->parser, "tag_up_entity");
-			xml_set_processing_instruction_handler($this->parser, "tag_instruction_entry");
+            xml_set_element_handler($this->parser, [$this->base_object, "tag_open"], [$this->base_object, "tag_close"]);
+            xml_set_character_data_handler($this->parser, [$this->base_object, "cdata"]);
+            xml_set_external_entity_ref_handler($this->parser, [$this->base_object, "tag_entity"]);
+			xml_set_notation_decl_handler($this->parser, [$this->base_object, "tag_notation"]);
+			xml_set_unparsed_entity_decl_handler($this->parser, [$this->base_object, "tag_up_entity"]);
+			xml_set_processing_instruction_handler($this->parser, [$this->base_object, "tag_instruction_entry"]);
 		
 			
 

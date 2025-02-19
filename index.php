@@ -125,6 +125,7 @@ else
 				require_once('classes/exceptions/not_a_fieldname_exception.php');
 				require_once('classes/exceptions/not_existing_branch_exception.php');
 				require_once('classes/exceptions/empty_tree_exception.php');
+				require_once('classes/exceptions/source_not_found_exception.php');
 				
                                 include('classes/class_Contentgenerator.php');
 

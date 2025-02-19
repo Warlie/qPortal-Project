@@ -267,10 +267,11 @@ class CSV_handle extends Interface_handle
 		
 		$this->base_object->complete_list(true);
 		$this->base_object->cloneResult(true);
-		if(! $this->base_object->xpath("ROW")  )echo "false";
+		if(! $this->base_object->xpath("ROW")  )return "";
 		$this->base_object->cloneResult(false);
 		
 		$result = $this->base_object->get_xpath_Result();
+		
 		
 		$header = array_keys($this->extract_Columns($result[0]));
 		$res .= implode(';', $header) . "\n";

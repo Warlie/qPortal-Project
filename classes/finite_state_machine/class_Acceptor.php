@@ -67,7 +67,7 @@ class Acceptor implements \Finite\StatefulInterface
     *    )
     *)   
     */
-    public function __construct( array $array = array(), Transducer $trans = null )
+    public function __construct( array $array = array(), ?Transducer $trans = null)
     {
     	
     	$this->stateMachine = new \Finite\StateMachine\StateMachine($this);

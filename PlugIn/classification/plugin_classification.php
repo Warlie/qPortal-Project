@@ -136,7 +136,9 @@ private $criteria = [];
 	return 'no element received';
     	}
     	
-    	public function datatype($columnname){return $this->rst->datatype($columnname);}
+    	public function datatype($columnname){
+    	var_dump($columnname, $this->rst->datatype($columnname), $this->rst->fields());
+    	return $this->rst->datatype($columnname);}
     	
     	public function fields(){if($this->rst) return $this->rst->fields();else return array();}
     	

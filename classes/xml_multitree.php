@@ -564,7 +564,7 @@ echo 'booh';
    
 
 // respos changed of 1 to 0
-   function seek_node($type = null,array $attrib = null,array $data = null, $respos = 0){
+   function seek_node($type = null,?array $attrib = null,?array $data = null, $respos = 0){
              
    
                         //erfragt, ob alle Knoten durchforstet werden, oder nur der aktuelle Ast
@@ -805,9 +805,7 @@ $tmp = $ref;
 }//End   
         // TODO throwing exception would be more useful
         if (!($fp = fopen($tmp, "r"))) {
-                $this->err = 1;
-                		$res = '<?xml version="1.0" encoding="iso-8859-1" standalone="yes" ?><html>Error</html>';
-                        $this->load_Stream($res);
+        	throw new SourceNotFoundException($ref . ' cannot be opened');
                 return $pos_in_array;
         }
 

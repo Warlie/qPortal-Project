@@ -84,7 +84,7 @@ class xml_ns extends xml_omni
 	private $exception_collection;
 	
 
-	function __construct( ContentGenerator $context = null)
+	function __construct( ?ContentGenerator $context = null)
 	{
 		$this->context_generator = &$context;
 		$this->exception_collection = new ExceptionCollection($this);
@@ -151,7 +151,7 @@ class xml_ns extends xml_omni
 	}
 	
 	   /* durchsucht den Baum nach Inhalten (keine direkte optimierung)*/
-   	   public function seek_node( $type = null, array $attrib = null, array $data = null, $respos = 0)
+   	   public function seek_node( $type = null, ?array $attrib = null, ?array $data = null, $respos = 0)
 	   {
 
 
@@ -1063,7 +1063,7 @@ if(is_null($value))echo $key;
 	   return $this->prefixes_inv[$namespace][$id];
    }
    
-   public function create_Ns_Node($prefix_Q_name, $stamp = null, array $attrib = null,$pos = -1 )
+   public function create_Ns_Node($prefix_Q_name, $stamp = null, ?array $attrib = null,$pos = -1 )
    {
   
   	   if(false !== strrpos ( $prefix_Q_name , '#' ))
