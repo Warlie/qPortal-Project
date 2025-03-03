@@ -96,7 +96,7 @@ function event_message_in($type,&$obj)
 
 		global $_SESSION;
 
-		
+		//--------------------------------------- check access -------------------------------------------------
 		$param_arr = [];
 		
 				$result = true;
@@ -126,7 +126,7 @@ function event_message_in($type,&$obj)
 		
 		if(!$result) throw new NoPermissionException('not Allowed');
 
-	
+	/* ------------------------------------------------------ Variable section ------------------------------------------------------------*/
 		
 		// collects all param tag info
 		for($i = 0 ; $i < $this->index_max();$i++)
@@ -208,9 +208,18 @@ function event_message_in($type,&$obj)
 
 
 		
-		
+		// TODO add first
+			$this->get_parser()->seek_node('http://www.trscript.de/tree#first');
+			if(count($this->get_parser()->get_result()) > 0)
+				$this->get_parser()->show_xmlelement()->event_message_in($type,$obj);
+
+			$this->get_parser()->flash_result();
+
+
 			$this->get_parser()->seek_node('http://www.trscript.de/tree#final');
 			$this->get_parser()->show_xmlelement()->event_message_in($type,$obj);
+
+			
 			return true;
 		}
 		
@@ -218,7 +227,8 @@ function event_message_in($type,&$obj)
 	//echo count($this->way_out);
 	//if($obj instanceof EventObject )
 	//{
-		
+	/* ------------------------------------------------------ Continue ------------------------------------------------------------*/
+	
 		$obj->set_context($this);
 	
 		$this->send_messages($type,$obj);

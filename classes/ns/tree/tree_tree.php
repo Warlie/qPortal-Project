@@ -68,7 +68,6 @@ function event_message_in($type,&$obj)
 		global $_SESSION;
 		$json = '{"name":"http://www.trscript.de/tree#final"}';
 
-
 				$result = true;
 
 		if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#sector') )		
@@ -162,9 +161,12 @@ function event_message_in($type,&$obj)
 		
 	//if($obj instanceof EventObject )
 	//{
-		
+	
 		$obj->set_context($this);
 		$this->send_messages($type,$obj);
+		
+
+		
 		/*
 		//calls all childnodes, which are not template and tree
 		for($i = 0 ; $i < $this->index_max();$i++)

@@ -198,6 +198,11 @@ function event_message_in($type,&$obj)
 									}
 								//		$this->get_parser()->show_xmlelement()->cloning($obj->get_node());
 							}
+							else
+							if( $tmp->get_NS() == "http://www.trscript.de/tree" )
+								{
+									$tmp->cloning($obj->get_node());
+								}
 								//activates all param tags
 
 							unset($tmp);

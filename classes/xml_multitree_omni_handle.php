@@ -251,7 +251,7 @@ function save_file($format = '',$send_header=false, $filename = false)
 	   		$obj = &My_Handle_factory::handle_factory($this->TYPE[$this->idx]);
 	   		//echo count($this->SPECIAL);
 			$obj->set_object($this);
-			if(is_Array($this->SPECIAL[$this->idx - 1]))
+			if(!is_null($this->SPECIAL) && is_Array($this->SPECIAL[$this->idx - 1]))
 			{
 			foreach($this->SPECIAL[$this->idx - 1] as $key => $value)
 			{
@@ -264,9 +264,10 @@ function save_file($format = '',$send_header=false, $filename = false)
 
 			if($get_header)$obj->send_header();
 			
-			        	
-			$logger_class->setAssert('save dokument with identifer "' . $this->loaded_URI[$this->idx] . '"(xml_omni:handle_save)',1);
-			return $obj->save_back($format,$this->MIME[$this->idx],$this->DOC[$this->idx]);
+			//$logger_class->setAssert('save dokument with identifer "' . $this->loaded_URI[$this->idx] . '"(xml_omni:handle_save)',1);
+			return $obj->save_back($format
+				,$this->MIME[$this->idx]
+				,$this->DOC[$this->idx]);
 			
 
    }

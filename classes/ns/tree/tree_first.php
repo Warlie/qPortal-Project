@@ -55,7 +55,7 @@ function __construct()
 
 function &get_Instance()
 {
-return new TREE_program();
+return new TREE_first();
 }
 
 
@@ -69,174 +69,20 @@ function &new_Instance()
 				return $obj;
 }
 
-//primar call after finishing object, ther wont be an existing childnode
-function event_initiated()
-{
-	$uri = $this->getRefprev()->full_URI();
-	if( $uri == 'http://www.trscript.de/tree#program' || $uri == 'http://www.trscript.de/tree#content'
-	)
-	{
-	
-	$this->to_listener();
-	
-	}
-	// || $uri == 'http://www.trscript.de/tree#tree' || $uri == 'http://www.trscript.de/tree#final'
-}
 
-function complete()
-	{
-		parent::complete();
-
-	}
 
 function event_message_in($type,&$obj)
 	{
 	
 		if($obj instanceof EventObject )
 		{
-
-			 try{
-			
-			$res = $this->actualize_data($type,$obj);
-			
-			if($res)
-			{
-
-			//$this->loop_Operation($type,$obj);
-			if($this->if_Operation($type,$obj))
-			{
+			$obj->set_context($this);
 			$this->send_messages($type,$obj);
-			}
-			}
-			else
-			{
-			$this->send_messages($type,$obj); 
-			
-			}
-		
-			 } catch (ProgramBlockException $e)
-			 {
-			 	 $this->get_parser()->get_ExceptionManager()->catchException($e);
-			 }
-			
+				
 		}//end of if obj == EventObject
 	
 	}
 	
-private function if_Operation($type,&$obj)
-	{ 
-
-	global $logger_class;
-		
-		$result = true;
-	for($i=0;$i < count($this->if_clause);$i++ )
-		{
-		
-		if($this->if_clause[$i] instanceof Interface_node)
-		
-		$many = $this->if_clause[$i]->data_many();
-		$res = '';
-		for($z = 0;$z < $many;$z++)
-		{
-		
-			//$this->if_clause[$i]->event_message_in($type,$obj);
-			$res .= $this->if_clause[$i]->getdata($z);
-			if($z < ($many - 1))
-			{
-				$many_remote = $this->if_clause[$i]->getRefnext($z)->index_max();
-						if(0 < $many_remote)
-						{
-						//echo $many_remote;
-						$res .= $this->if_clause[$i]->getRefnext($z)->getRefnext($many_remote - 1)->getdata(0);
-						}
-			}
-		}
-		
-		$logger_class->setAssert(' if Statement for eval "' . $res . '" ("' . $this->get_attribute('name') . '")(tree_program:if_Operation)' ,2);
-		//echo $res;
-		//return true;
-			 try{
-
-				$result = eval( $res );
-		
-			 } catch(ParseError $e){
-			 
-			 	 $this->get_parser()->get_ExceptionManager()->catchException($e);
-			 }
-
-		if(!$result)break;
-		
-		}
-		if(count($this->if_clause) == 0)return true;
-
-		return $result;
-		
-	}
-	
-private function dowhile_Operation()
-	{
-		$result = true;
-		foreach ($this->dowhile_clause  as $value) 
-		{
-		$result = (eval($value) && $result);
-		}
-		return $result;
-	}
-	
-private function loop_Operation($type,&$obj)
-	{
-
-		for($i = 0;($this->while_bool || ($i < $this->loop_num)) && $this->if_Operation();$i++)
-			{
-
-				$this->send_messages($type,$obj); 
-				if(!$this->dowhile_Operation())break;
-				$this->actualize_data($type,$obj);
-			}
-	}
-	
-
-	
-private function actualize_data($type,&$obj)
-	{
-	unset($this->if_clause);
-	$this->if_clause = array();
-	$res = true;
-		for($i = 0 ; $i < $this->index_max();$i++)
-		{
-			$tmp = $this->getRefnext($i,true);
-			
-			
-			if($tmp->full_URI() == 'http://www.trscript.de/tree#param')
-			{
-				//requests param tag
-				$tmp->send_messages($type,$obj);
-				if(strtoupper($tmp->get_attribute('name')) == 'IF')
-				{
-				
-				$this->if_clause[count($this->if_clause)] = &$tmp;
-
-				}
-				
-				if(strtoupper($tmp->get_attribute('name')) == 'DOWHILE')
-				$this->dowhile_clause[count($this->dowhile_clause)] = &$tmp;
-			
-				if(strtoupper($tmp->get_attribute('name')) == 'LOOP')
-				$this->loop_num = $tmp->getdata();
-			
-				if(strtoupper($tmp->get_attribute('name')) == 'WHILE')
-				$this->while_bool = $tmp->getdata();
-				
-				unset($tmp);
-				
-				$res = false;
-			}
-
-
-		}
-
-	return !$res;
-	}
 	
 }
 

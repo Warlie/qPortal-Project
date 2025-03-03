@@ -56,13 +56,13 @@ class TREE_factory
 			$this->node['indextree'] = new TREE_INDEXTREE('indextree', $ns);
 			$this->node['final'] = new TREE_tree('final', $ns);
 			$this->node['tree'] = new TREE_tree('tree', $ns);
+			$this->node['first'] = new TREE_first('first', $ns);
 			$this->node['sub'] = new TREE_sub('sub', $ns);
 			$this->node['subtree'] = new TREE_subtree('subtree', $ns);
 			$this->node['template'] = new TREE_template('template', $ns);
 			$this->node['main'] = new TREE_main('main', $ns);
 			$this->node['add'] = new TREE_add('add', $ns);
 			$this->node['program'] = new TREE_program('program', $ns);
-			$this->node['first'] = new TREE_first('first', $ns);
 			$this->node['variable'] = new TREE_variable('variable', $ns);
 			$this->node['content'] = new TREE_content('content', $ns);
 			$this->node['element'] = new TREE_element('element', $ns);

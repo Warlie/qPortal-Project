@@ -69,7 +69,8 @@ function event_initiated()
 {
 	$uri = $this->getRefprev()->full_URI();
 	if( $uri == 'http://www.trscript.de/tree#program'
-		||  $uri == 'http://www.trscript.de/tree#tree' ||  $uri == 'http://www.trscript.de/tree#final')
+		||  $uri == 'http://www.trscript.de/tree#tree' ||  $uri == 'http://www.trscript.de/tree#final'
+		|| $uri == 'http://www.trscript.de/tree#first')
 	{
 	$this->to_listener();
 	
@@ -123,7 +124,15 @@ function event_message_in($type,&$obj)
 			//changes maintemplate, to edit an non maintemplate
 			if ($other_template = $this->get_attribute('id'))
 			{
+				
+				//$this->get_idx()
+				//echo "here it is" . get_class($obj->get_requester()) . " " . $obj->get_requester()->get_current_template() . " " . $this->get_parser()->cur_URI() . " " . $this->get_idx() .  " \n";
 			
+				if($other_template == "@me")
+					{
+						$template = $this->get_parser()->indexToUri($this->get_idx() );
+					}
+				else
 				if($template = $obj->get_requester()->get_template($other_template))
 				{
 							$obj->get_requester()->set_current_template($other_template) ;

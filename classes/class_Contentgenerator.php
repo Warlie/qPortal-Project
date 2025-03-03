@@ -272,6 +272,8 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		
 	}
 	
+	function show_templates(){var_dump($this->heap);}
+	
 	function get_out_template() //:URI
 	{
 		return $this->out_template;

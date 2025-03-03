@@ -325,7 +325,20 @@ class xml  {
 
 */
                 }
-
+function checkPointers()
+{
+	echo "Es fragt " . $this->idx . "\n";
+	
+	foreach ($this->pointer as $key =>  $myPointer) {
+		if (is_object($myPointer)) {
+        // Für Objekte: Klassenname ausgeben
+        echo "Objekt vom Typ: " . get_class($myPointer) . " ($key)\n";
+    } else {
+        // Für andere Datentypen: Typ und aktuelles Datum ausgeben
+        echo "Typ: " . gettype($myPointer) . " mit " . $myPointer . "\n";
+    }
+    }
+}
 
         /* beschreibt einen ganz bestimmten Knoten in einem Baum. Hashfunktion noch nicht implimentiert! */
    function position_stamp(){
@@ -341,7 +354,14 @@ class xml  {
 	if(!is_object($this->pointer[$this->idx]))return '0000.' . $this->idx . '.0';
 >>>>>>> a612fd4651a533137033b16aa12e793158a61ee7
 */
-	$string = $this->pointer[$this->idx]->position_stamp();
+	if(is_object($this->pointer[$this->idx]))
+	{
+		///echo $this->loaded_URI[$this->idx]  . "\n";
+		$string = $this->pointer[$this->idx]->position_stamp();
+	}
+	else
+		throw new Exception( $this->idx . " refers to the type " .  gettype($this->pointer[$this->idx]) . " with " .  $this->loaded_URI[$this->idx] ); 
+	//	 $this->ALL_URI();// var_dump("wupp", $this->pointer[$this->idx]);
    return '0000.' . $this->idx . $string;}
    
         /* beschreibt einen ganz bestimmten Knoten in einem Baum. Hashfunktion noch nicht implimentiert! */
@@ -1053,7 +1073,7 @@ function DOC_check($String)
    function cur_idx(){return $this->idx;}
 
    function cur_URI(){
-   	   var_dump($this->$this->loaded_URI[intval($this->idx)], $this->loaded_URI, intval($this->idx));
+   	   var_dump($this->loaded_URI[$this->idx], $this->loaded_URI, intval($this->idx));
    return $this->loaded_URI[intval($this->idx)] ;
    }
    

@@ -1133,29 +1133,9 @@ public function insert_message($type,&$obj){echo $this->name . ' event:' . get_C
 * @param $type : commandline
 * @param $obj : context of Eventobject
 */
-
-protected function event_message_check($type,&$obj)
+private function show_event_data($obj)
 {
-global $logger_class;
-
-
-//var_dump($this, $this->get_idx(), $this->full_URI(), $type);
-
-//if($this->secRequest++ > 10000)throw new NotExistingBranchException("sicherheitsdings");
-
-	//if(is_array($type) || is_string($type))$com_elemnet = $this->parseCommand($type);
-	//else
-	//$com_elemnet = $type;
-	$com_elemnet = $this->parseCommand($type);
-	$bool=true;
-	for($i = 0;count($this->check_list) > $i;$i++)
-	{
-		
-		//echo get_class($this->way_out[$i]);
-		$this->check_list[$i]->event_attribute($type,$obj);
-		
-	}
-	if(!true){
+	
 	echo "check of " . $this->full_URI() .  " ( " .  get_Class($this) .  ") gets: type:\"" . $type . '"  Event: Request' . $obj->get_request() ;
 
 	if($obj->get_requester())
@@ -1181,7 +1161,31 @@ global $logger_class;
 		echo "Daten:" . $obj->get_node()->full_URI() . "\n";
 	else
 		echo " keine Daten \n";
+	
+}
+protected function event_message_check($type,&$obj)
+{
+global $logger_class;
+
+
+//var_dump($this, $this->get_idx(), $this->full_URI(), $type);
+
+//if($this->secRequest++ > 10000)throw new NotExistingBranchException("sicherheitsdings");
+
+	//if(is_array($type) || is_string($type))$com_elemnet = $this->parseCommand($type);
+	//else
+	//$com_elemnet = $type;
+	$com_elemnet = $this->parseCommand($type);
+	$bool=true;
+	for($i = 0;count($this->check_list) > $i;$i++)
+	{
+		
+		//echo get_class($this->way_out[$i]);
+		$this->check_list[$i]->event_attribute($type,$obj);
+		
 	}
+	if(!true)show_event_data($obj);
+		
 	if($obj instanceof EventObject && !$obj->get_locked())
 	{
 
@@ -1486,7 +1490,7 @@ function &new_Instance()
 function &cloning(&$prev_obj)
                 {
                                 $obj = $this->get_Instance();
-
+                                $obj->set_parser($this->get_parser());
                                 if($prev_obj) $obj->set_idx($prev_obj->get_idx());
                                 $obj->name =  $this->name;
                                 $obj->attrib = $this->attrib;
@@ -1573,6 +1577,10 @@ function &cloning(&$prev_obj)
                                 //echo "-------------------------------------------------------------------------------------------\n";
                                 //var_dump($prev_obj, $this, $obj);
                                 //echo "-------------------------------------------------------------------------------------------\n";
+                                
+                              //  if($obj->get_NS() == "http://www.trscript.de/tree")
+                                	$obj->complete();
+                                
                                 return $obj;
                 }
 		
@@ -1600,8 +1608,8 @@ $this->full_URI()*/}
 
   public function __toString() {
   	  
-  	  var_dump($this->get_ns_attribute());
-    return "My name is: {$this->full_URI()} with ". http_build_query( $this->get_attribute() ) . "\n";
+  //	  var_dump($this->get_attribute()); . http_build_query( $this->get_attribute() ) . 
+    return "My name is: {$this->full_URI()} with ". "\n";
   }
 }
 
