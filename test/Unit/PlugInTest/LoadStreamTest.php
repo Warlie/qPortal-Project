@@ -11,7 +11,7 @@ class TestPlugin extends plugin
 {
 
 
-	private $rst;
+	protected $rst;
 	private $names = ['tbl_dls_Objekte.Strasse', 'tbl_dls_Objekte.Plz', 'tbl_dls_Objekte.Ort', 'tbl_dls_Objekte.GPSPositionX', 'tbl_dls_Objekte.GPSPositionY'];                
 
 	private $input = [];	
@@ -87,7 +87,7 @@ class TestPlugin extends plugin
 	}
 	
 	
-	public function iter()
+	public function &iter()
 	{return $this;}
 	
 	
@@ -151,6 +151,10 @@ final class LoadStreamTest extends TestCase
 	
     public function testLoadStream() : void
 {
+	
+	 // Test überspringen, falls eine bestimmte Bedingung erfüllt ist
+    $this->markTestSkipped('Dieser Test testet die Kommunikation mit openMaps und wird übersprungen.');
+	
 	//$test_string = "*?__find_node(model=xpath_model,namespace='',query='wubb')=wup";
 
 	//echo "Next test with:" . $value . "\n";

@@ -43,7 +43,7 @@ private array $tagNames = [['amenity',0],
 	['boundingbox',1]
 	];
 private array $fail = [];
-var $rst = null;
+protected $rst = null;
 var $into = array();
 //var $obj = null;
 var $back =  null;
