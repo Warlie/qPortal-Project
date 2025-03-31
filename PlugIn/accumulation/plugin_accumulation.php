@@ -1,32 +1,20 @@
 <?PHP
 
 /**
-*
-*
-* creates a menu
-* @-------------------------------------------
-* @title:DBO
+* @title:Accumulation
 * @autor:Stefan Wegerhoff
-* @description: Databaseobject, needs only a columndefinition to receive data from other object
+* @description: expect an object of same kind in rst. It adds the value of one column in reference to another column 
 *
 */
 
 class Accumulation extends plugin 
 {
 
-private $alias;
-private $filename; 
-private $hash; 
-private $output;
-
-var $rst = null;
-private $criteria = [];
 private $accumName = "";
 private $accum = [];
 private $preAccum = [];
 private $group = "";
 private $groupValue = 0.0;
-//var $obj = null;
 
 
 
@@ -35,40 +23,36 @@ private $groupValue = 0.0;
 		
 		
 	}
-	
-	
-	/*
-	*	@param columnname : name of the specific column as criteria
-		@param $columnname : Name in column
-		@param $add : json for deferentiating classification
-		@param $datatype : optional standard database formats
 		
-		datatype will be drawn from source
-		
-	**/
-	public function token ( $columnname, $add , $datatype = null)
-	{
-		if(is_null($datatype))
-		$this->criteria[] = array( "name" => $columnname, "datatype" => $this->datatype($columnname), "add" => $add );
-		else
-		$this->criteria[] = array( "name" => $columnname, "datatype" => $datatype, "add" => $add );
-		
-	}
-	
+	/**
+	*	@param columnname : name of the specific column
+	*	
+	*	This column should contain only numerical data. For every step, this value will be added to the next value.
+	*	
+	*/
 	public function forAccumulation($columnname)
 	{
 		$this->accumName = $columnname;
 	}
 	
+	
+	/**
+	*	@param columnname : name of the column 
+	*	
+	*	this column differentiates several accumulations
+	*	
+	*/
 	public function group($columnname)
 	{
 		$this->group = $columnname;
-		//$this->group[$columnname] = false;
 	}
 	
+	/**
+	* @see plugin::col()
+	*/
 	public function col($columnname)
 	{
-		//echo $columnname . "\n";
+
 	if($this->rst)
 	{
 		
@@ -99,7 +83,7 @@ private $groupValue = 0.0;
 	}
 	
 	/**
-	*@function: ITER = gives out a object to LIST-parameter
+	* @see plugin::iter()
 	*/
 	public function &iter()
 		{
@@ -107,14 +91,11 @@ private $groupValue = 0.0;
 		return $this;}
 
 	
-	public function alias($column, $alias)
-	{
-		$this->alias[$alias] = $column;
-	}
-	
-	
+	/**
+	* @see plugin::getAdditiveSource()
+	*/
 	function getAdditiveSource(){;}
-	protected function moveFirst()
+	public function moveFirst()
 	{
 		
 		$this->accum = [];
@@ -127,17 +108,29 @@ private $groupValue = 0.0;
 			
 		}else return false;
 	}
-    	protected function moveLast(){if($this->rst)return $this->rst->moveLast();else return false;}
+	
+	/**
+	* @see plugin::moveLast()
+	*/
+    	public function moveLast(){if($this->rst)return $this->rst->moveLast();else return false;}
 
+    	/**
+	* @see plugin::next()
+	*/
 	public function next(){/*echo "next\n";*/
 
-		$this->accum =$this->preAccum;
+		foreach ($this->preAccum as $group => $value) {
+			$this->accum[$group] = $value; // Updates or adds the value for the group
+		}
 		$this->preAccum = [];
 		
 		if($this->rst)return $this->rst->next();
 		else return false;
 	}
 
+	/**
+	* @see plugin::set_list()
+	*/
     	public function set_list(&$value)
     	{
 
@@ -149,85 +142,15 @@ private $groupValue = 0.0;
 	return 'no element received';
     	}
     	
+	/**
+	* @see plugin::datatype()
+	*/
     	public function datatype($columnname){return $this->rst->datatype($columnname);}
     	
+    	/**
+	* @see plugin::fields()
+	*/
     	public function fields(){if($this->rst) return $this->rst->fields();else return array();}
     	
-    	
-    	private function transform($valueArray, $format)
-    	{
-    		switch(strtoupper(strtok($format, '('))
-    			)
-	  	  {
-	  	  case 'varchar' :
-	  	  case 'VARCHAR':
-	  	  case 'date' :
-	  	  case 'DATE':
-	  	  	  
-			$res = array_unique($valueArray);
-	  	  	return implode(',', $res);   
-
-	  	  	  break;
-	  	  case 'TINYINT' :
-	  	  case 'SMALLINT' :
-	  	  case 'INT' :
-	  	  case 'BIGINT' :
-	  	  	  return  array_sum(array_map('intval', $valueArray));
-	  	  	  break;
-	  	  case 'DECIMAL' :
-	  	  case 'NUMERIC' :
-	  	  case 'FLOAT' :
-	  	  case 'REAL' :
-	  	  	  return array_sum(array_map('floatval', $valueArray));
-	  	  	  break;
-	  	  default:
-			$res = array_unique($valueArray);
-	  	  	return implode(',', $res);   
-	  	  }
-    	}
-    	
-    	/*
-    	SQL Numerische Datentypen
-    	BIT 	1 	0
-TINYINT 	0 	255
-SMALLINT 	-32,768 	32,767
-INT 	-2,147,483,648 	2,147,483,647
-BIGINT 	-9,223,372,036,854,775,808 	9,223,372,036,854,775,807
-DECIMAL 	-10^38 + 1 	10^38 – 1
-NUMERIC 	-10^38 + 1 	10^38 – 1
-FLOAT 	-1.79E+308 	1.79E+308
-REAL  	-3.40E+38 	3.40E+38
-SQL Datum- und Zeit-Datentypen
-Datentyp 	Beschreibung
-DATE 	Speichert Datum im Format JJJJ-MM-TT
-TIME 	Speichert Zeit im Format HH:MM:SS
-DATETIME 	Speichert Datum- und Zeitinformationen im Format JJJJ-MM-TT HH:MM:SS
-TIMESTAMP 	Speichert die Anzahl der Sekunden seit der Unix-Epoche (‚1970-01-01 00:00:00‘ UTC)
-YEAR 	Speichert das Jahr im 2- oder 4-stelligen Format. Bereich 1901 bis 2155 im 4-stelligen Format. Bereich 70 bis 69, was 1970 bis 2069 entspricht.
-SQL Zeichen- und String-Datentypen
-Datentyp 	Beschreibung
-CHAR 	Feste Länge mit einer maximalen Länge von 8.000 Zeichen
-VARCHAR 	Variable Länge mit einer maximalen Länge von 8.000 Zeichen
-VARCHAR(max) 	Variable Länge mit angegebener maximaler Zeichenanzahl, in MySQL nicht unterstützt
-TEXT 	Variable Länge mit einer maximalen Größe von 2 GB Daten
-SQL Unicode Zeichen- und String-Datentypen
-Datentyp 	Beschreibung
-NCHAR 	Feste Länge mit einer maximalen Länge von 4.000 Zeichen
-NVARCHAR 	Variable Länge mit einer maximalen Länge von 4.000 Zeichen
-NVARCHAR(max) 	Variable Länge mit angegebener maximaler Zeichenanzahl
-NTEXT 	Variable Länge mit einer maximalen Größe von 1 GB Daten
-SQL Binäre Datentypen
-Datentyp 	Beschreibung
-BINARY 	Feste Länge mit einer maximalen Länge von 8.000 Bytes
-VARBINARY 	Variable Länge mit einer maximalen Länge von 8.000 Bytes
-VARBINARY(max) 	Variable Länge mit angegebener maximaler Byteanzahl
-IMAGE 	Variable Länge mit einer maximalen Größe von 2 GB binären Daten
-SQL Verschiedene Datentypen
-Datentyp 	Beschreibung
-CLOB 	Charakter-Großobjekte, die bis zu 2 GB speichern können
-BLOB 	Für große binäre Objekte
-XML 	Zum Speichern von XML-Daten
-JSON 	Zum Speichern von JSON-Daten
-*/
 }
 ?>
