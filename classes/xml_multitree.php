@@ -64,7 +64,7 @@ function get_Clazz(&$clazz)
 *
 * (C) Stefan Wegerhoff
 */
-require_once('classes/dynamic.php');
+//require_once('classes/dynamic.php');
 require_once('classes/class_FileScan.php');
 
 class xml  {

@@ -126,13 +126,14 @@ final class AutomatTest extends TestCase
     public static function ProvideTestCases(): array
     {
     	return [
-    	['*?start', ["Identifire" => '*', "Command" => ['Name' => 'start', 'Attribute' => [], 'Value'=> null]]],
-    	['*', ["Identifire" => '*', "Command" => ['Name' => null, 'Attribute' => [], 'Value'=> null]]], //!
-    	["*?__find_node(model=xpath_model,namespace='',query='wubb')", ["Identifire" => '*', "Command" => ['Name' => '__find_node', 'Attribute' => ['model'=>'xpath_model','namespace'=>"''",'query'=>"'wubb'"], 'Value'=> '']]],
-    	['http://www.w3.org/2006/05/pedl-lib#Object_Constructor?construct', ["Identifire" => 'http://www.w3.org/2006/05/pedl-lib#Object_Constructor', "Command" => ['Name' => 'construct', 'Attribute' => [], 'Value'=> null]]],
-    	['@registry_surface_system#DBO?__redirect_node=QHJlZ2lzdHJ5X3N1cmZhY2Vfc3lzdGVtI0RCTy5zZXRTdGF0ZW1lbnQuc3RhdGVtZW50P19fYWRkX2luX29iamVjdD0w', ["Identifire" => '@registry_surface_system#DBO', "Command" => ['Name' => '__redirect_node', 'Attribute' => [], 'Value'=> '@registry_surface_system#DBO.setStatement.statement?__add_in_object=0']]],
-        ["*?__find_node=wup", ["Identifire" => '*', "Command" => ['Name' => '__find_node', 'Attribute' => [], 'Value'=> 'wup']]]
-        ,["", ["Identifire" => '', "Command" => ['Name' => null, 'Attribute' => [], 'Value'=> null]]]
+    	['*?start', ["Identifire" => '*', "Command" => ['Name' => 'start', 'Attribute' => [], 'Value'=> null]], "Build in standard pattern '*?start'"],
+    	['*', ["Identifire" => '*', "Command" => ['Name' => null, 'Attribute' => [], 'Value'=> null]], "Build in standard pattern '*'"], //!
+    	["*?__find_node(model=xpath_model,namespace='',query='wubb')", ["Identifire" => '*', "Command" => ['Name' => '__find_node', 'Attribute' => ['model'=>'xpath_model','namespace'=>"''",'query'=>"'wubb'"], 'Value'=> '']], "simple call for parsing"],
+    	['http://www.w3.org/2006/05/pedl-lib#Object_Constructor?construct', ["Identifire" => 'http://www.w3.org/2006/05/pedl-lib#Object_Constructor', "Command" => ['Name' => 'construct', 'Attribute' => [], 'Value'=> null]], "specific PEDL call"],
+    	['@registry_surface_system#DBO?__redirect_node=QHJlZ2lzdHJ5X3N1cmZhY2Vfc3lzdGVtI0RCTy5zZXRTdGF0ZW1lbnQuc3RhdGVtZW50P19fYWRkX2luX29iamVjdD0w', ["Identifire" => '@registry_surface_system#DBO', "Command" => ['Name' => '__redirect_node', 'Attribute' => [], 'Value'=> '@registry_surface_system#DBO.setStatement.statement?__add_in_object=0']], "Complex redirected call"],
+        ["*?__find_node=wup", ["Identifire" => '*', "Command" => ['Name' => '__find_node', 'Attribute' => [], 'Value'=> 'wup']], "simple call with parameter"],
+       ['', ["Identifire" => '*', "Command" => ['Name' => null, 'Attribute' => [], 'Value'=> null]], "Build in standard pattern '*'"]
+       
         ];
     }    
 
@@ -143,22 +144,12 @@ final class AutomatTest extends TestCase
      * @depends testProducerFirst
      * @dataProvider ProvideTestCases
      */
-    public function testClassConstructor(string $value, array $pattern) : void
+    public function testClassConstructor(string $value, array $pattern, string $error_message) : void
 {
-	//$test_string = "*?__find_node(model=xpath_model,namespace='',query='wubb')=wup";
-
-	//echo "Next test with:" . $value . "\n";
 
     $test1 = new Command_Object($value);
-    //$test2 = new Command_Old_Object($value);
 
-   // var_dump($value, $test1, $pattern);
-
-    // reference and finite state machine have to deliver same results
-    
-    // same URI
-       
-    $this->assertSame($test1->get_Result_Array(), $pattern);
+    $this->assertSame($test1->get_Result_Array(), $pattern, $error_message);
 
     
 
@@ -195,8 +186,8 @@ final class AutomatTest extends TestCase
     public static function ProvideTestWrongTransition(): array
     {
     	return [
-    	['*?b(--,'],
-    	['*?boom((']
+    	['*?b(--,', "uses wrong patterns"],
+    	['*?boom((', "leaves a sequence incomplete "]
         ];
     }    
 
@@ -205,9 +196,9 @@ final class AutomatTest extends TestCase
      * @dataProvider ProvideTestWrongTransition
      * TODO other exception is needed and there are still errors
      */
-    public function testAutomatTransitionException(string $value) : void
+    public function testAutomatTransitionException(string $value, $error_message) : void
 {
-    $this->expectException(Finite\Exception\StateException::class);
+    $this->expectException(Finite\Exception\StateException::class, $error_message);
     new Command_Object($value);
 }
     

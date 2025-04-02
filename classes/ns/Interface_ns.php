@@ -1666,6 +1666,11 @@ var $back;
 class Command_Object extends qp_workflow 
 {
 	private $node_URI;
+	/** 
+	* @var mixed
+	* @access private
+	* holds the constructors argument
+	*/
 	private $insert;
 	private $commands = array();
 	private $commands1 = array();
@@ -1685,40 +1690,57 @@ class Command_Object extends qp_workflow
 		//if(is_null($command))$command ='';
 		//var_dump($command);
 		$this->insert = $command;
+		/* 
+		* case command is a Command_Object
+		* in this case, it is already parsed and ready to use
+		*/
 		if($command instanceof Command_Object)
 			{
 				$this->listOfInformation = $command->get_Result_Array();
 			
 			
 			}
+		/*
+		*In case the command is an array, we assume it to be formated the proper way
+		*/
 		elseif(is_array($command) )
 		{
 			//var_dump($command);
 			$this->listOfInformation = $command;
 			//echo "drin";
 		}
-		/*if(is_object($command) )
-			$this->listOfInformation = $command->get_Result_Array(); */
+		/*
+		* here are common cases*/
 		elseif($command == '*?start')
 			$this->listOfInformation = ["Identifire"=>"*", "Command"=> ["Name"=>"start", "Attribute"=>[], "Value"=> null]];
 		elseif($command == '')
 			$this->listOfInformation = ["Identifire"=>"*", "Command"=> ["Name"=> null, "Attribute"=>[], "Value"=> null]];
 		elseif($command == '*')
 			$this->listOfInformation = ["Identifire"=>"*", "Command"=> ["Name"=> null, "Attribute"=>[], "Value"=> null]];
+		/* 
+		* common cases done 
+		* next one aspect it to be in json notation 
+		*/
 		elseif($decode = json_decode($command, true))
 			$this->listOfInformation = $decode;
+
+		/*
+		* the last one uses a final state automata, which uses a tranducer for creating an array
+		*/
 		else
 		{
+			
 			parent::__construct($command);
+			/*
 			if($this->listOfInformation["Command"]['Name'] != '__add_in_object' && true)
 			{
 			echo "->$command<-\n";
-			
-
-			$this->outputArray();
+			var_dump($this);
+			//$this->outputArray();
 			echo "\n";
 			throw new ErrorException( $command );
 			}
+			*/
 
 		}
 			

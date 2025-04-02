@@ -1,5 +1,9 @@
 <?PHP
 
+/*
+irrelevant old file. Should be removed from project 
+*/
+
         define("SPLIT", "\r\n");
 
                function convertKeyFromWrapper($line){
@@ -139,7 +143,7 @@ class Header{
 
 
         
-        define("ATTRIBUTE","");
+        //define("ATTRIBUTE","");
         
         define("HOST_KV",""); // HTTPS
         define("HOST_IBE","");// <-- Default
