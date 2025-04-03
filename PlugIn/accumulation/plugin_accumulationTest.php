@@ -45,6 +45,8 @@ class plugin_accumulationTest extends TestCase
      */
     public function testAccumulationWithGroups(): void
     {
+        
+        
         // 1. Define test data
         $testData = [
             ['grp' => 'A', 'wert' => 10],
@@ -55,7 +57,8 @@ class plugin_accumulationTest extends TestCase
 
         // 2. Instantiate the concrete stub with the test data
         $stubRst = new RstStubForTesting($testData); // Pass the test data
-
+        
+        var_dump($stubRst);
         // 3. Create Accumulation instance
         $accumulation = new Accumulation();
 

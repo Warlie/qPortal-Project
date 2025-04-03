@@ -44,7 +44,8 @@ abstract class plugin
     {
         return end($this->internal_table_values);
     }
-    //is never used
+    
+    //is only used in plugin_js_*
     //abstract public function getAdditiveSource();
 
     public function configuration($json)

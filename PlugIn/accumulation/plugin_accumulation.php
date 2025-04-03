@@ -48,7 +48,7 @@ private $groupValue = 0.0;
 	}
 	
 	/**
-	* @see plugin::col()
+	* @see plugin::col() rst defined in plugin_interface 
 	*/
 	public function col($columnname)
 	{
@@ -90,11 +90,7 @@ private $groupValue = 0.0;
 		
 		return $this;}
 
-	
-	/**
-	* @see plugin::getAdditiveSource()
-	*/
-	function getAdditiveSource(){;}
+
 	public function moveFirst()
 	{
 		
