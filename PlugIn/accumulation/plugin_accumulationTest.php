@@ -22,9 +22,9 @@ use Tests\Stubs\RstStubForTesting; // Use the stub from its namespace
 // --- Auxiliary definitions for the test ---
 // Define the Exception class if it's not globally available/autoloaded
 // Ideally, this exception would also be in its own file and namespace.
-if (!class_exists('NotAFieldnameException')) {
-    class NotAFieldnameException extends \Exception {}
-}
+//if (!class_exists('NotAFieldnameException')) {
+//    class NotAFieldnameException extends \Exception {}
+//}
 // --- End auxiliary definitions ---
 
 

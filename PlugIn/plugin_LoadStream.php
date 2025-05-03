@@ -193,8 +193,8 @@ foreach ($places as $place) {
 	
 	
 	function getAdditiveSource(){;}
-	protected function moveFirst(){if($this->rst && $this->rst->moveFirst()){ $this->Load($this->collectArray()); return true;} else return false;}
-    protected function moveLast(){if($this->rst)return $this->rst->moveLast();else return false;}
+	public function moveFirst(){if($this->rst && $this->rst->moveFirst()){ $this->Load($this->collectArray()); return true;} else return false;}
+    public function moveLast(){if($this->rst)return $this->rst->moveLast();else return false;}
     	
 	public function next(){if($this->rst  && $this->rst->next()){$this->Load($this->collectArray());return true;}else return false;}
     	public function set_list(&$value)

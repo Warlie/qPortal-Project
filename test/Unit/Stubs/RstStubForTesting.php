@@ -42,7 +42,7 @@ class RstStubForTesting extends plugin {
      *
      * @return bool True if successful (data exists), false otherwise.
      */
-    protected function moveFirst(): bool {
+    public function moveFirst(): bool {
         if (empty($this->testData)) {
             $this->rowIndex = -1; // No data, pointer remains invalid
             return false;
@@ -134,7 +134,7 @@ class RstStubForTesting extends plugin {
      * Dummy implementation for moveLast().
      * @return bool Always returns false in this stub.
      */
-    protected function moveLast(): bool {
+    public function moveLast(): bool {
         /* For a more complete stub, you could implement this:
         if (!empty($this->testData)) {
             $this->rowIndex = count($this->testData) - 1;

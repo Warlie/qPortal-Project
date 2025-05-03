@@ -36,11 +36,11 @@ abstract class plugin
         return $this;
     }
 
-    protected function moveFirst()
+    public function moveFirst()
     {
         return reset($this->internal_table_values);
     }
-    protected function moveLast()
+    public function moveLast()
     {
         return end($this->internal_table_values);
     }

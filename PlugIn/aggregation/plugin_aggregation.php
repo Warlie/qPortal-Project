@@ -101,7 +101,7 @@ private $end = false;
 
 
 	function getAdditiveSource(){;}
-	protected function moveFirst()
+	public function moveFirst()
 	{
 		if($this->rst){
 			$res = $this->rst->moveFirst();
@@ -109,7 +109,6 @@ private $end = false;
 			
 		}else return false;
 	}
-    	protected function moveLast(){if($this->rst)return $this->rst->moveLast();else return false;}
     	
 	public function next()
 	{

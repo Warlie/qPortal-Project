@@ -112,7 +112,7 @@ private $criteria = [];
 	
 	
 	function getAdditiveSource(){;}
-	protected function moveFirst()
+	public function moveFirst()
 	{
 		
 		if($this->rst){
@@ -122,7 +122,7 @@ private $criteria = [];
 			
 		}else return false;
 	}
-    	protected function moveLast(){if($this->rst)return $this->rst->moveLast();else return false;}
+
     	
 	public function next(){if($this->rst)return $this->rst->next();else return false;}
     	public function set_list(&$value)
