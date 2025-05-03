@@ -54,9 +54,13 @@ var $name = 'empty';
 var $type = 'none';
 var $namespace = 'none';
 	
+/* this variables shows that this node has behavior */
+protected $has_behavior = true;
+protected $was_called = false;
 
 function &get_Instance()
 {
+	//var_dump(debug_backtrace(2,3));
 return new PEDL_Object_Constructor();
 }
 
@@ -76,11 +80,14 @@ function event_initiated()
 {
 
 }
-
+// chech it
 function event_Instance(&$instance,$type,&$obj)
 {
-
-	
+	/* bad style TODO make it pretty*/
+	/* this event will be called several times, this variable prevents this. */
+	if($this->was_called)return;
+	$this->was_called = true;
+//throw new ErrorException("boom");
 	$parser = &$this->get_parser();
 
 	//wrong request
@@ -93,7 +100,7 @@ function event_Instance(&$instance,$type,&$obj)
 	$all_names = array();
 	//echo $instance->full_URI() . "<br>\n";
 	//goes to parametercontainer
-	for($j = 0; $instance->index_max() > $j;$j++)
+	for($j = 0; $instance->index_max() > $j;$j++) // TODO Check for relevance
 			if($instance->getRefnext($j)->is_Node('http://www.w3.org/2006/05/pedl-lib#hasParameter'))
 			{
 				$instance = $instance->getRefnext($j);
@@ -105,14 +112,15 @@ function event_Instance(&$instance,$type,&$obj)
 				}
 			}
 	//collects all Parameternames
-	for($j = 0; $instance->index_max() > $j;$j++)
+	for($j = 0; $instance->index_max() > $j;$j++) // TODO Check for relevance
 	{
 	
 		if($instance->getRefnext($j)->is_Node('http://www.w3.org/2006/05/pedl-lib#Object_Parameter'))
 			{
-				$all_names[count($all_names)] = $instance->getRefnext($j)->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#name');
+				$all_names[] = $instance->getRefnext($j)->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#name');
 			}
 	}		
+
 	//	
 	for($i = 0; $this->index_max() > $i;$i++)
 		{
@@ -123,6 +131,7 @@ function event_Instance(&$instance,$type,&$obj)
 					$func = &$this->getRefnext($i);
 					$function_name = $func->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#ID');
 					$pedl_name = $func->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#name');
+
 					if(!in_array($pedl_name,$all_names))
 					{
 					$attrib2 = array('pedl:name' => $pedl_name);
@@ -130,6 +139,8 @@ function event_Instance(&$instance,$type,&$obj)
 					throw new ErrorException('Cannot instancing following class:' . $function_name . ' ', 0,75,"pedl_Object_Construktor",119); //$value->getParam_name()
 					}
 					if($func->data_many() > 0)$parser->show_xmlelement()->setdata($func->getdata(0),0);
+					
+
 					//echo $function_name . ' "' . $pedl_name . '" ' . $func->get_QName() . ' ' . $func->data_many() . ' <br>';
 					$parser->parent_node();
 					unset($func);
@@ -197,7 +208,41 @@ function event_Instance(&$instance,$type,&$obj)
 	//if(get_class($this->getRefprev()) == 'PEDL_Object_Class' )echo 'jo';
 	
 }	
+/*
+function event($type,&$obj)
+{
 
+	if($type == '*?parse_complete')
+	{
+	//löst event aus
+
+	
+		if($this->link_to_class && !$this->is_Class)
+			{
+					echo $this->full_URI() . "calls class " . $this->link_to_class->full_URI() . "\n";
+				$obj->set_node($this);
+				$this->link_to_class->event('*?parse_complete_classes',$obj);
+			
+			}
+	
+
+	}
+
+	if($this->link_to_class && $type == '*?parse_complete_classes')
+		{
+			echo $this->full_URI() . " Instance called \n";
+			$this->event_Instance($obj->get_node(),$type,$obj);
+			$this->link_to_class->event('*?parse_complete_classes',$obj);
+			
+			//echo $this->full_URI() . "<br>\n";
+		}
+		
+	//if($this->link_to_class)$this->link_to_class->event_Instance($this,$type,$obj);
+
+		//$this->event_parseComplete();
+
+}
+*/
 function event_message_in($type,&$obj)
 	{
 		//echo $type . 'wohooo';

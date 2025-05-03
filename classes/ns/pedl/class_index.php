@@ -22,6 +22,7 @@ require_once('pedl_Object_Funktion.php');
 require_once('pedl_Object_Constructor.php');
 require_once('pedl_Object_Parameter.php');
 require_once('pedl_name.php');
+require_once('pedl_refersTo.php');
 require_once('pedl_hasCodeResource.php');
 require_once('pedl_src.php');
 
@@ -51,6 +52,7 @@ class PEDL_factory
 			$this->node['hasCodeResource'] = new PEDL_hasCodeResource('hasCodeResource', $ns);
 			$this->node['src'] = new PEDL_Object_Parameter('src', $ns);
 			$this->node['name'] = new PEDL_name('name', $ns);
+			$this->node['refersTo'] = new PEDL_refersTo('refersTo', $ns);
 			
 			$this->nativ->set_is_Class();
 			foreach ($this->node as $value)

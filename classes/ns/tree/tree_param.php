@@ -6,14 +6,7 @@
 
 class TREE_param extends Interface_node
 {
-var $name = 'empty';
-var $type = 'none';
-var $namespace = 'none';
-	
-function __construct()
-{
 
-}
 
 function &get_Instance()
 {
@@ -31,16 +24,7 @@ function &new_Instance()
 				return $obj;
 }
 
-function complete()
-	{
-		parent::complete();
 
-	}
-
-function event_message_in($type,&$obj)
-	{
-	//echo $type . ' ' . get_Class($obj);
-	}
 }
 
 ?>

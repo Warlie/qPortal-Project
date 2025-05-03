@@ -343,7 +343,7 @@ $db->SQL($entry);
 					
 				}
  
-                                print($system->getoutput(SEND_HEADER,'ISO 8859-1'));
+                                print($system->getoutput(SEND_HEADER));
 
 }
 
@@ -423,7 +423,7 @@ $db->SQL('DELETE FROM tbl_marked_for_group WHERE `code` = "' . $code . '" ;');
 					
 				}
  
-                                print($system->getoutput(SEND_HEADER,'ISO 8859-1'));
+                                print($system->getoutput(SEND_HEADER));
 
 }
 
@@ -475,7 +475,7 @@ function service_log_in( &$system , $user , $key)
 					
 				}
  
-                                print($system->getoutput(SEND_HEADER,'ISO 8859-1'));
+                                print($system->getoutput(SEND_HEADER));
 }
 
 function service_log_out( &$system)

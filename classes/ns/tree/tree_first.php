@@ -39,38 +39,17 @@
 
 class TREE_first extends Interface_node
 {
-var $name = 'empty';
-var $type = 'none';
-var $namespace = 'none';
-	
-var $if_clause = array();
-var $dowhile_clause = array();
-var $loop_num = 1;
-var $while_bool = false;
 
-function __construct()
-{
-
-}
 
 function &get_Instance()
 {
-return new TREE_first();
-}
-
-
-function &new_Instance()
-{
-                                
-				$obj = $this->get_Instance();
-				
-				$obj->link_to_class = &$this;
-				
-				return $obj;
+//return new TREE_first();
+return new TREE_tree();
 }
 
 
 
+/*
 function event_message_in($type,&$obj)
 	{
 	
@@ -82,7 +61,7 @@ function event_message_in($type,&$obj)
 		}//end of if obj == EventObject
 	
 	}
-	
+*/	
 	
 }
 

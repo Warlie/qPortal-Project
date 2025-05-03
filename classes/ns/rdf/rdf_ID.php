@@ -91,41 +91,13 @@ function &get_Instance()
 				$new_obj->set_idx( $this->get_idx());
 				$new_obj->namespace = $namespace;
 				$new_obj->set_parser($this);
+				//var_dump(debug_backtrace(2,3));
 				//echo $namespace2 . ' ' . $new_obj->full_URI() . "--------------------------------------------- <br>\n";
 				$this->get_parser()->set_Object_to_Namespace($namespace2,$new_obj);
 	//echo $this->getRefprev()->ManyInstance();
 	}	
 	
-	function event_message_in($type,&$obj)
-	{
-		
-	}
-	
-	
-	/*
-	function event($event)
-	{
-		if('start' == $event)
-		{
-		$type = $this->back->type;
-		$ns = $this->back->namespace;
-		
-			
-		if(!(false === ($tmp = strpos($this->value,'#'))))
-		{
-		
-			$prefix = substr($this->value,0,$tmp);
-			$nodename = substr(strtolower($this->value),$tmp + 1);
-			
-			if(trim($prefix) == '')
-			$this->back->parser->namespace_frameworks[$prefix]['nativ'] = &$this->back;
-			else
-			$this->back->parser->namespace_frameworks[$prefix]['node'][$nodename] = &$this->back;
-		}
-		}
-	
-	}
-	*/
+
 }
 
 ?>

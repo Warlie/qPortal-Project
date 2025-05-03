@@ -117,6 +117,12 @@ protected function event_readdata($own)
 
 		//echo 'function-alter(' . $this->id_of_object . '):';
 		$myarray = &$this->getRefprev()->getobj();
+		//var_dump($myarray);
+		if(is_null($myarray))
+		{
+			echo "no existing object in " . $this->getRefprev()->full_URI()  . " :" . $this->full_URI() . "(" . get_class($this) . ") [" . $this->position_stamp() . "]\n";
+			return;
+		}
 		$reflectionObject = $myarray[0];
 		//echo get_Class($myarray[0]);
 		
@@ -124,18 +130,7 @@ protected function event_readdata($own)
 		$methodname = $this->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#name');
 
 		if(strlen(trim($methodname)) == 0)return false;
-		/*
-		var_dump($methodname);
-		if($myarray[1] instanceof plugin && array_key_exists($methodname, $this->functions))
-		{
-			
-			
-			
-			$myarray[1]
-			echo $methodname; 
-			
-		}
-		*/
+
 		
 		if($method = $myarray[0]->getMethod($methodname)) 
 			{
@@ -167,13 +162,9 @@ protected function event_readdata($own)
 
 						$result;
 						
-					//echo $method->getName() . " \n";
+
 					$this->set_alter_event(false);
-	//var_dump($all_values);				
-					//if($myarray[1] instanceof plugin && in_array())echo "es";
-					//else
-//echo "nope";
-						//
+
 					
 					// contains a reflectionClass and a SQL String
 

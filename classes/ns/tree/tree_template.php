@@ -45,35 +45,22 @@ var $namespace = 'none';
 
 var $succesful = true;
 
-function __construct()
-{
-
-}
-
 function &get_Instance()
 {
 return new TREE_template();
 }
 
 
-function &new_Instance()
-{
-                                
-				$obj = $this->get_Instance();
-				
-				$obj->link_to_class = &$this;
-				
-				return $obj;
-}
-
 //primar call after finishing object, ther wont be an existing childnode
 function event_initiated()
 {
 	$uri = $this->getRefprev()->full_URI();
-	if($uri == 'http://www.trscript.de/tree#tree' || $uri == 'http://www.trscript.de/tree#final')
+	if($uri == 'http://www.trscript.de/tree#tree' 
+		|| $uri == 'http://www.trscript.de/tree#final'
+		|| $uri == 'http://www.trscript.de/tree#first')
 	{
 		$this->to_listener();
-	
+
 	}
 }
 

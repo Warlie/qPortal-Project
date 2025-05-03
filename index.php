@@ -126,7 +126,11 @@ else
 				require_once('classes/exceptions/not_existing_branch_exception.php');
 				require_once('classes/exceptions/empty_tree_exception.php');
 				require_once('classes/exceptions/source_not_found_exception.php');
-				
+				require_once('classes/exceptions/no_permission_exception.php');
+				require_once('classes/exceptions/Not_defined_Namespace_exception.php');
+				//require_once('classes/exceptions/program_block_exception.php');
+				require_once('classes/exceptions/wrong_class_exception.php');
+				require_once('classes/class_REST.php');
                                 include('classes/class_Contentgenerator.php');
 
                                 
@@ -337,6 +341,8 @@ else
                                 if(is_Null($tmp = $_REQUEST['i']))$tmp = "";
                                 $content->setTreeNodeName($tmp);
                                 
+                                $mtime = hrtime(true);
+                                
                                             try {
 
                                 
@@ -390,10 +396,10 @@ else
 						}
 
 				
+					//echo "	computed time " . hrtime(true) -$mtime  . "\n";	
 						
-						
-                                print($content->getoutput(SEND_HEADER,'ISO 8859-1'));
-                                 
+                                print($content->getoutput(SEND_HEADER)); 
+                                 //echo "	Complete  time " . hrtime(true) -$mtime  . "\n";	
 				//print($content->getSystemDocument(SEND_HEADER,'ISO-8859-1'));
 				}
                 else

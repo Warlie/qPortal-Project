@@ -206,19 +206,45 @@ function event_message_in($type,&$obj)
 		 $this->get_parser()->flash_result();
 		}
 
-
-		
-		// TODO add first
+/*
 			$this->get_parser()->seek_node('http://www.trscript.de/tree#first');
+			//$this->get_parser()->seek_node('http://www.trscript.de/tree#final');
+			if(count($nodes = $this->get_parser()->get_result()) > 2 && count($nodes) == 0)
+				echo "wrong results";
+			
+			var_dump(count($nodes) );
+			
+			foreach ($nodes as $value)$value->event_message_in($type,$obj);
+			*/
+			
+			$this->get_parser()->seek_node('http://www.trscript.de/tree#first');
+			/*
 			if(count($this->get_parser()->get_result()) > 0)
 				$this->get_parser()->show_xmlelement()->event_message_in($type,$obj);
+*/
+
+			$myfirst = array_pop($this->get_parser()->get_result());
+
 
 			$this->get_parser()->flash_result();
+			
+			$findIt = $this->get_parser()->seek_node('http://www.trscript.de/tree#final');
+			
+			$myfinal = array_pop($this->get_parser()->get_result());
+			/*
+			if(count($myres = $this->get_parser()->get_result()) > 0)echo " There are results\n";
+			else
+			echo " No  results\n";
+			
+			var_dump($findIt , count($myres) );
 
+			*/
+			
+			if($myfirst)$myfirst->event_message_in($type,$obj);
+			if($myfinal )$myfinal->event_message_in($type,$obj);
 
-			$this->get_parser()->seek_node('http://www.trscript.de/tree#final');
-			$this->get_parser()->show_xmlelement()->event_message_in($type,$obj);
-
+			//$this->get_parser()->show_xmlelement()->event_message_in($type,$obj);
+			$this->get_parser()->flash_result();
 			
 			return true;
 		}

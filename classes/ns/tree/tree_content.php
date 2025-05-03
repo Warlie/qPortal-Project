@@ -39,14 +39,7 @@
 
 class TREE_content extends Interface_node
 {
-var $name = 'empty';
-var $type = 'none';
-var $namespace = 'none';
-	
-function __construct()
-{
 
-}
 
 function &get_Instance()
 {
@@ -54,15 +47,6 @@ return new TREE_content();
 }
 
 
-function &new_Instance()
-{
-                                
-				$obj = $this->get_Instance();
-				
-				$obj->link_to_class = &$this;
-				
-				return $obj;
-}
 
 //primar call after finishing object, ther wont be an existing childnode
 function event_initiated()
@@ -117,7 +101,7 @@ function event_message_in($type,&$obj)
 		
 		if($obj instanceof EventObject )
 		{
-		$template = $obj->get_requester()->get_out_template($other_template);
+		$template = $obj->get_requester()->get_out_template($other_template); //???
 		//echo $obj->get_requester()->get_out_template();
 		$obj->get_requester()->set_current_template($obj->get_requester()->get_out_template()) ;
 		

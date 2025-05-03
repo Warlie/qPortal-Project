@@ -71,7 +71,7 @@ protected $complete_list = false;
         /* schreibt Daten in einen Knoten */
    function set_node_obj(&$value){$this->pointer[$this->idx]->setobj($value);}
 
-
+/*
    function &getInstance($name,$attributes,$obj_arg = null)
    {
   
@@ -86,7 +86,7 @@ protected $complete_list = false;
 	$attributes,
 	new XMLelement_objex());
    }
-
+*/
    /**
    *in depending to the complete_list func, it returns the first found object or a boolean expression of success
    *the created list is receivable about the get_result func

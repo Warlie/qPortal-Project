@@ -412,7 +412,7 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		return $res;
 	}
 
-	function getoutput($set_header,$type = "",$special = "")
+	function getoutput($set_header,$type = "UTF-8",$special = "")
 	{
 	//echo memory_get_usage(true);
 	//echo memory_get_peak_usage(true);
@@ -423,9 +423,9 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	if($this->out_template)
 		if(!$this->XMLlist->change_URI($this->out_template))echo "Das Dokument: '" . $this->out_template . "' nicht gefunden!(getoutput)";
 		
-		if($type == "")$out = 'UTF-8';
-		else $out = $type;
-		
+		//if($type == "")$out = 'UTF-8';
+		//else $out = $type;
+		$out = $type;
 		
 		
 		if($special == "HTML")

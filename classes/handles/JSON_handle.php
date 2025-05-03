@@ -4,6 +4,37 @@
 *   
 */
 
+function xmlNodeToPhp($node) {
+    $result = [];
+    // Falls Leaf‑Node (keine Kind-Elemente), direkt Wert casten
+    if ($node->count() === 0) {
+        $text = (string)$node;
+        $type = (string)$node->attributes()['datatype'] ?? 'string';
+        switch ($type) {
+            case 'integer': return (int)$text;
+            case 'number':  return (float)$text;
+            case 'boolean': return filter_var($text, FILTER_VALIDATE_BOOLEAN);
+            default:        return $text;
+        }
+    }
+    // Ansonsten: über alle Kinder iterieren
+    foreach ($node->children() as $child) {
+        $name  = $child->getName();
+        $value = xmlNodeToPhp($child);
+        // Mehrfach-Vorkommen als Array abbilden
+        if (isset($result[$name])) {
+            if (!is_array($result[$name]) || array_keys($result[$name]) !== range(0, count($result[$name]) - 1)) {
+                $result[$name] = [ $result[$name] ];
+            }
+            $result[$name][] = $value;
+        } else {
+            $result[$name] = $value;
+        }
+    }
+    return $result;
+}
+
+
 class JSON_handle extends Interface_handle 
 {
 
@@ -58,10 +89,9 @@ class JSON_handle extends Interface_handle
 		
 		/* TYPE contains special */
 		$end_of_line =  $this->base_object->TYPE[$this->base_object->idx] . ' ';		
-
-//var_dump($source);
+//$out = $source;
+//var_dump($out);
 				$json_array = json_decode($source, true);
-
 				if(is_null($json_array))echo json_last_error_msg();
 				
 				$native_attribute = array();
@@ -132,8 +162,16 @@ class JSON_handle extends Interface_handle
 		
 			foreach ($setOfArrays as $key => $value)
 			{
+				echo "---- key:value---\n";
 
+				if(is_int($value))
+					$attributes['datatype'] = "integer";  //xs:integer
+				if(is_float($value))
+					$attributes['datatype'] = "float";  //xs:integer
+				if(is_string($value))
+					$attributes['datatype'] = "string";  //xs:integer
 				
+				echo "---------------------\n";
 				if(is_array($value))
 					foreach ($value as $key2 => $value2)
 					{
@@ -142,7 +180,7 @@ class JSON_handle extends Interface_handle
 						
 						if(is_numeric($key2))
 						{
-
+							// this could be an element to create an array
 							$this->parse_body($value, $key);
 							break;
 						}
@@ -199,182 +237,38 @@ class JSON_handle extends Interface_handle
 	
 	function save_back($format,$send_header = false)
 	{
+
+		$handle = &My_Handle_factory::handle_factory('XML');
+		$handle->set_object($this->base_object);
+		$handle->set_attribute('XML_OPTION_CASE_FOLDING',false);
+		
+		$xml_output = $handle->save_back("UTF-8");
+			
+		
 		
 		/**
-		*
+		*var_dump($xml_output);
 		*
 		*/
-		$printall = false;
-		if( $this->attribute_values['OUTPUT'] == 'ALL')
-		{
-		$printall = true;
-		
-		}
-		
-      $modus = "";
-      if($this->attribute_values['MODUS']) $modus = $this->attribute_values['MODUS'];
-		
-      switch ($format)
-      {
-      case 'HTML': $arg = 'ISO-8859-5';
-      break;
-      case 'UTF-8': $arg = 'UTF-8';
-      }
-
-	
-
-      $nl = chr(13) . chr(10);
-      
-       $res = '<?';        
-      
-              foreach ($this->base_object->MIME[$this->base_object->idx] as $key => $ele)
-                {
-                        if($key == 'name')$res .= strtolower($ele) . ' ';
-                        else
-                                $res .= $key . '="' . $ele . '" ';
-                }
-      
-      $res .= "?>$nl";
-      
-     
-      
-              foreach ($this->base_object->INSTR[$this->base_object->idx] as $key => $ele)
-                {
-                	$res .= '<?' . $ele['target'] . " " . $ele['data'] . "?>$nl";
-
-                }
-
-      
-      //if($this->base_object->DOC[$this->base_object->idx] <> '')echo $this->base_object->DOC[$this->base_object->idx];
-      if(($this->base_object->DOC[$this->base_object->idx] <> '') && !is_array($this->base_object->DOC[$this->base_object->idx]))$res .= $this->base_object->DOC[$this->base_object->idx];
-	
-
-/**
-*
-*
-*/
-if($printall)
-{
-$res .=  '<root>';
-$start = 0;
-$stop = $this->base_object->doc_many() - 1;
-//echo $this->base_object->doc_many();
-}
-else
-{
-$start = $this->base_object->cur_idx();
-$stop = $this->base_object->cur_idx() + 1;
-}
-//echo $this->base_object->doc_many();
-
-for($ic = $start;$ic < $stop ; $ic++)
-{
-$end = false;
-	$this->base_object->change_idx($ic);
-
-	                        $deep[$this->base_object->idx]=0;
-                                $i = 30000;
-                                $end = false;
-
-                                $reset=true;
-
-/* */
-                              $this->base_object->set_first_node();
-
-                              //fputs ($fp, "\n<ul>\n");
 
 
-$myhelp = 0;
- while(!$end){
- //schaltet den pointer zurück, wenn ein neuer knoten betreten wird
- if($reset)$this->base_object->reset_pointer();
-
-  //testet, ob es weitere knoten gibt
-  if($this->base_object->index_child()>0){
-
-   //schreibt die eingabe
-   if(-1 == $this->base_object->show_pointer()){
-//echo $this->base_object->cur_node() . "\n";
-    $res .=  '<' .  $this->base_object->cur_node() . $this->base_object->all_attrib_axo($format) . $this->positionstamp($modus) . '>';
-    $res .=  $this->base_object->setcdata_tag($this->base_object->convert_to_XML($this->base_object->show_cur_data(0),$format),$this->base_object->show_curtag_cdata());
-    $reset = true;
-
-     if(!$this->base_object->child_node(0)) 
-      {
-       if(is_null($this->base_object->show_xmlelement()))$this->base_object->parent_node();
-        $this->base_object->show_xmlelement()->giveOutOverview();
-        throw new ErrorException('Consistence-Error in ' 
-         . $this->base_object->cur_node() . ' on position-stamp ' 
-         . $this->base_object->position_stamp() . ' current historypointer is on "'
-         . $this->base_object->show_pointer() . '" and '
-         . $this->base_object->index_child() .  ' child(s) ' . "\n", 0,1,'XML_handle.php',1);
-      }
-
-                                                                       
-        $deep[$this->base_object->idx]++;
-      }elseif((($this->base_object->index_child()-1) > $this->base_object->show_pointer()) ){
-                                                                       
-       $res .=  $this->base_object->setcdata_tag($this->base_object->convert_to_XML($this->base_object->show_cur_data($this->base_object->show_pointer()+1,$format) ,$format),$this->base_object->show_curtag_cdata()); 
-       $reset = true;
-       $check = $this->base_object->child_node($this->base_object->show_pointer() + 1);
-       $deep[$this->base_object->idx]++;
-                                                                                
-       if(!$check){
-       //echo 'booh';
-       $res .=  '<!-- ' . "unerlaubte aktion, fehler beim konvertieren:" . $this->base_object->cur_node() . ' -->';
-       //die("unerlaubte aktion, fehler beim konvertieren:" . $this->base_object->cur_node());
-                                                                        $end = !$this->base_object->parent_node();
-                                                                        $deep[$this->base_object->idx]--;
-                                                                        $reset = false;        
-             
-                                                                   }
-
-       }else{
-
-        $res .=  $this->base_object->setcdata_tag($this->base_object->convert_to_XML($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$format),$this->base_object->show_curtag_cdata());
-
-        $res .=  '</' .  $this->base_object->cur_node() . '>';
-
-        $end = !$this->base_object->parent_node();
-
-        $deep[$this->base_object->idx]--;
-        $reset = false;
-        }
-                                        
-        }else{
-
-                                                                        if(-1 == $this->base_object->show_pointer()){
-                                                                        $res .=  '<' .  $this->base_object->cur_node() . $this->base_object->all_attrib_axo($format) . $this->positionstamp($modus) ;}
-                                                                                if( '' <>( $this->base_object->show_cur_data($this->base_object->show_pointer()+1)) )
-                                                                                {
-                                                                                $res .=  '>' . $this->base_object->setcdata_tag($this->base_object->convert_to_XML($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$format,$this->base_object->show_curtag_cdata()),$this->base_object->show_curtag_cdata());
-                                                                                $res .=  '</' .  $this->base_object->cur_node() . '>';   // str_repeat (" ", 2*$deep[$this->idx])
-                                                                                }
-                                                                                else
-                                                                                $res .=  '/>';
-                                                                        $end = !$this->base_object->parent_node();
-                                                                        $deep[$this->base_object->idx]--;
-                                                                        $reset = false;
-                                                                        //echo 'hallo';
-
-                                        }
-
-                                }
-                                $res .= "\n";
-}
-if($printall) $res .=  '</root>';
-
-
-	$this->bool_first_tag = true;
-
-	$filechange = str_replace(array("\n", "\r", "\t"), '', $res);
+	$filechange = str_replace(array("\n", "\r", "\t"), '', $xml_output);
 # The trailing and leading spaces are trimmed to make sure the XML is parsed properly by a simple XML function.
-$filetrim = trim(str_replace('"', "'", $filechange));
+$filetrim = trim( $filechange); //str_replace('"', "'", )
+var_dump($filetrim);
 # The simplexml_load_string() function is called to load the contents of the XML file.
 $resultxml = simplexml_load_string($filetrim);
+var_dump($resultxml);
+$typedXml = xmlNodeToPhp($resultxml);
+var_dump($resultxml, $typedXml);
 # The final conversion of XML to JSON is done by calling the json_encode() function.
-$resultjson = json_encode($resultxml);
-	
+$resultjson = json_encode($resultxml, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK);
+var_dump($resultjson);
+if (!$resultjson) {
+    throw new \RuntimeException("Ungültiges XML");
+}
+
+	//throw new ErrorException("---");
 				return $resultjson;
 		
 	}

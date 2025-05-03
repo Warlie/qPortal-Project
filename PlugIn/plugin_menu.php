@@ -304,7 +304,7 @@ private $URLString = STD_URL;
 	$tmp[$this->level[0]['URL']] = str_replace('%s', $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),$this->URLString);
 	$tmp[$this->level[0]['Name']] = $this->back->show_ns_attrib('http://www.trscript.de/tree#value');
        $tmp[$this->level[1]['Name']] = 'abmelden';
-       $tmp[$this->level[1]['URL']] = str_replace('%s', '__system&modus=LOG_OUT& URL=' . $this->logout_url,$this->URLString);
+       $tmp[$this->level[1]['URL']] = str_replace('%s', '__system&modus=LOG_OUT&URL=' . $this->logout_url,$this->URLString);
        //& URL=
        	return $tmp; 
        

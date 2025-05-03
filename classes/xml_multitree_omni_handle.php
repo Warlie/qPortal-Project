@@ -65,7 +65,7 @@ class xml_omni extends xml_objex
         	//echo $special . "\n";
         //echo $source . "\n\n";
         	global $logger_class;
-		$logger_class->setAssert('load dokument with identifer "' . $ref . '" and special "' . $special . '"(xml_omni:load_Stream)',1);
+
 		//echo 'load dokument with identifer "' . $ref . '" and special "' . $special . '"(xml_omni:load_Stream)<br>\n';
 		if($special <> 'PHP')
 		{
@@ -188,9 +188,11 @@ class xml_omni extends xml_objex
 				}
 				
 			}
-			
+
 			$obj->parse_document($source);
+
 			$this->PARAMETER[$this->idx] = $obj->get_attribute();
+					//	var_dump($this->PARAMETER);
 			
 			
 

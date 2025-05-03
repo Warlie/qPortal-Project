@@ -49,7 +49,7 @@ return new RDF_resource();
 
 
 	function event_initiated()
-	{	
+	{	//throw new ErrorException("booh");
 		global $logger_class;
 		//echo ' rdf_resource ' . $this->full_URI() . ' ' . $namespace . ' to ' . $this->getdata() . " \n" ;
 		//echo $this->getdata() . ;
@@ -177,13 +177,12 @@ return new RDF_resource();
 			
 			try {
 				 $this->obj = $this->get_parser()->get_Class_of_Namespace($namespace);
-				 $logger_class->setAssert('          0000.' . $this->obj->idx . $this->obj->position_stamp() . '  ' . 
-				 $this->obj->type . '(RDF_resource:TicketEvent)' ,10);
+
 				 
 				 $this->set_to_out($this->obj->linkToClass());
 				 //echo 'booh' . $this->full_URI() . ' ' . $namespace . ' ' . get_Class($this->obj) . ' ' . count($this->way_out[$i]) .  "\n";
 			} catch (ErrorException $e) {
-				//echo 'Exception abgefangen: ',  $e->getMessage(), "\n";
+				echo 'Exception abgefangen: ',  $e->getMessage(), "\n";
 				
 			}
 	}

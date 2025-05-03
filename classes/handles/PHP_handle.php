@@ -35,7 +35,35 @@ class PHP_handle extends Interface_handle
 	function parse_document(&$source)
 	{
 	
-	               
+		$corr_xml_file = str_replace(".php", ".pedl", $this->attribute_values['URI']);
+		
+		$ws = null;
+		if(!$ws)$ws = "surface_tree_engine";
+		
+		$this->base_object->set_first_node();
+		
+		$xmlPos = $this->base_object->position_stamp();
+		$this->base_object->go_to_stamp(
+					$this->base_object->getControlUnit( $ws)->getPositionStampReg()
+				);		
+
+		
+		$list = [];
+
+		foreach($this->base_object->array_Of_Objects_Related_To_Tag_Name('@registry_surface_system#PhpClass') as $value)
+			if($name = $value->get_ns_attribute("http://www.w3.org/2006/05/pedl-lib#name"))
+				$list[] =$name;
+
+		if(is_file($corr_xml_file))
+		{
+
+			$this->use_PEDL_file($this->base_object, $corr_xml_file);
+			$this->base_object->use_ns_def_strict(false);
+						//echo $this->base_object->index_consistence();
+			$this->base_object->go_to_stamp($xmlPos);
+			return;
+		}
+
 
 		$is_obj = ($source instanceof FileHandle );
 		
@@ -58,8 +86,10 @@ class PHP_handle extends Interface_handle
 
 			}
 			//echo $this->attribute_values['URI'];
+			
+			// TODO Reflection could do this job better because of it's allways up to date parser
 			$filescanner = new File_Scan();
-			$mtime = microtime();
+			//$mtime = hrtime(true);
 			$filescanner->insert_str($str_source, $this->attribute_values['URI']);
 			//$filescanner->add_path('/');
 			$filescanner->add_tag('class ');
@@ -69,7 +99,7 @@ class PHP_handle extends Interface_handle
 			$filescanner->switch_cross_seek(array('require_once("','")'));
 			$filescanner->seeking();
 			$result = $filescanner->result();
-			
+			//echo hrtime(true) -$mtime  . "\n";
 			/*
 			foreach( $result as $value)
 			{
@@ -77,44 +107,113 @@ class PHP_handle extends Interface_handle
 			}
 			*/			
 			
-			$this->base_object->set_first_node();
-			
-			//echo count($result);
-			//echo $this->base_object->cur_idx() . '!! ';
-			
+
+			//var_dump($result );
 
 			
-			
-			//needed for update spezific workspace 
-			//$workspace_list = explode(';',$this->attribute_values['workspaces']);
-			
-			$ws = null;
-			if(!$ws)$ws = "surface_tree_engine";
-			
-			$document_stamp = $this->base_object->getControlUnit( $ws)->getPositionStampReg();
-//echo $document_stamp;
-//$this->base_object->ALL_URI();
-			 
-			
-			$xmlPos = $this->base_object->position_stamp();
-			//echo " $xmlPos $document_stamp \n";
-			$this->base_object->go_to_stamp($document_stamp);
-			//echo $this->base_object->position_stamp() . '!! ' . $this->base_object->cur_node() . ' ';
-			$obj_class = new Obj_Class_Collection($result,$this->base_object); //finds pre defined values
+			/*
+			*	This class builds up a xml image of a php document's structure 
+			*/
+			$obj_class = new Obj_Class_Collection($result,$this->base_object, $list); //finds pre defined values
 			
 			$this->base_object->use_ns_def_strict(true);
 
 
-			//	$this->base_object->go_to_stamp($document_stamp);
-				$obj_class->create_rdf_entry($this->base_object);
 
-			$this->base_object->use_ns_def_strict(false);
+			//here we create our entries in our registry
+			$obj_class->create_rdf_entry($this->base_object);
+
+			$this->create_new_PEDL_file($obj_class, $corr_xml_file);
+
+		//$myPrivateModel->save_file("UTF-8",false, $corr_xml_file);
+		//var_dump($handle->save_back("UTF-8"));
 			
+		$handle = &My_Handle_factory::handle_factory('XML');
+		$handle->set_object($this->base_object);
+		$handle->set_attribute('XML_OPTION_CASE_FOLDING',false);
+		//var_dump($handle->save_back("UTF-8"));
+		 //unset($handle);
+
+		
+			$this->base_object->use_ns_def_strict(false);
+						//echo $this->base_object->index_consistence();
 			$this->base_object->go_to_stamp($xmlPos);
 			// $this->base_object->show_index();
+
 	}
 	
 
+	private function create_new_PEDL_file(Obj_Class_Collection $obj_class, string $xml_file)
+	{ 
+		foreach ($obj_class as  $pedl_class) {
+
+			//unset($myPrivateModel);
+		$myPrivateModel = new xml_xPath_sParqle();
+		$myPrivateModel->setNewTree('@registry_surface_system');
+		$myPrivateModel->set_definition_context('TYPE','XML');
+		$myPrivateModel->set_definition_context('MIME','<?xml version="1.0" encoding="UTF-8"?>');
+		$myPrivateModel->set_definition_context('DOC','');
+			
+			
+		$namespace = array();
+		$namespace['xmlns'] = '@registry_surface_system';
+		$namespace['xmlns:owl'] = 'http://www.w3.org/2002/07/owl';
+		$namespace['xmlns:rdf'] = 'http://www.w3.org/1999/02/22-rdf-syntax-ns';
+		$namespace['xmlns:rdfs'] = 'http://www.w3.org/2000/01/rdf-schema';
+		$namespace['xmlns:xsd'] = 'http://www.w3.org/2000/01/rdf-schema';
+		$namespace['xmlns:pedl'] = 'http://www.w3.org/2006/05/pedl-lib';
+		
+		//echo get_Class($this->my_Xml_Object);
+	
+		
+		$myPrivateModel->createTree('@registry_surface_system','rdf:RDF', $namespace);
+		$myPrivateModel->set_first_node();
+		$pedl_class->create_rdf_entry($myPrivateModel);
+		//unset($handle);
+		$handle = &My_Handle_factory::handle_factory('XML');
+		$handle->set_object($myPrivateModel);
+		$handle->set_attribute('XML_OPTION_CASE_FOLDING',false);
+		$corr_xml_file = str_replace(".php", ".pedl", $pedl_class->get_Path_URL());
+		//var_dump($handle->save_back("UTF-8"));
+		//echo $corr_xml_file . "\n";
+		file_put_contents($corr_xml_file, $handle->save_back("UTF-8"));
+		}
+	}
+	
+	private function use_PEDL_file( $parser, string $xml_file)
+	{
+		$myPrivateModel = new xml_xPath_sParqle();
+		 $myPrivateModel ->load($xml_file, false);
+		 $myPrivateModel->set_first_node();
+		 $parser->set_first_node();
+		 		 
+		 /* walk through seeAlso entries for preload relevant data */
+		 	foreach($myPrivateModel->array_Of_Objects_Related_To_Tag_Name('http://www.w3.org/2000/01/rdf-schema#seeAlso') as $seeAlso)
+		 		if(false !== ($data = $seeAlso->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#src')) && 
+		 			file_exists($data))
+		 				$this->use_PEDL_file( $parser, $data);
+
+		 /* -------------------------------------------------------------------------- */
+		 
+		 $myBranches = $myPrivateModel->array_Of_Objects_Related_To_Tag_Name('@registry_surface_system#PhpClass') ;
+
+		 if(count($myBranches)> 0 )
+		 	 $myBranches[0]->cloning($parser->show_xmlelement());
+
+		 /*
+		 $handle = &My_Handle_factory::handle_factory('XML');
+		$handle->set_object($myPrivateModel);
+		$handle->set_attribute('XML_OPTION_CASE_FOLDING',false);
+				var_dump($handle->save_back("UTF-8"));
+		 unset($handle);
+		$handle = &My_Handle_factory::handle_factory('XML');
+		$handle->set_object($parser);
+		$handle->set_attribute('XML_OPTION_CASE_FOLDING',false);
+
+		var_dump($handle->save_back("UTF-8"));
+		*/
+
+	}
 	
 	function convert_to_XML( $String , $format)
         {
@@ -148,262 +247,18 @@ class PHP_handle extends Interface_handle
 	
 	function save_back($format, $send_header = false)
 	{
-		
-      switch ($format)
-      {
-      case 'HTML': $arg = 'ISO-8859-5';
-      break;
-      case 'UTF-8': $arg = 'UTF-8';
-      }
-
-
- 
-      				$inter_counter = 0;
-                                $deep[$this->base_object->idx]=0;
-                                
-                                $end = false;
-
-                                $reset=true;
-                              $this->base_object->set_first_node();
-
-                              //fputs ($fp, "\n<ul>\n");
-
-
-                                while(!$end){
-
-                                //schaltet den pointer zurück, wenn ein neuer knoten betreten wird
-                                if($reset)$this->base_object->reset_pointer();
-
-                                //testet, ob es weitere knoten gibt
-                                if($this->base_object->index_child()>0){
-
-                                        //schreibt die eingabe
-                                       if(-1 == $this->base_object->show_pointer()){
-
-                                                                       //Knotenname und attribute für den Wurzelknoten
-					       			       $res .=  '<' .  $this->base_object->cur_node() . $this->base_object->all_attrib_axo($format) . '>';
-								       
-                                                                       //gibt den ersten datenknoten aus
-								       $res .=  trim($this->base_object->setcdata_tag($this->convert_to_XML($this->base_object->show_cur_data(0),$format),$this->base_object->show_curtag_cdata()));
-                                                                       $reset = true;
-								       //geht in den ersten Kindsknoten
-                                                                       $this->base_object->child_node(0);
-
-                                                                       //
-                                                                       $deep[$this->base_object->idx]++;
-                                                                        }elseif((($this->base_object->index_child()-1) > $this->base_object->show_pointer()) ){
-                                                                       
-									$res .=  trim($this->base_object->setcdata_tag(
-								       						$this->convert_to_XML(
-															$this->base_object->show_cur_data($this->base_object->show_pointer()+1,$format)
-															,$format)
-														,$this->base_object->show_curtag_cdata()
-														));
-                                                                       $reset = true;
-                                                                       $check = $this->base_object->child_node($this->base_object->show_pointer() + 1);
-                                                                       $deep[$this->base_object->idx]++;
-                                                                                if(!$check){
-                                                                                echo 'geht nicht weiter';
-                                                                                }
-
-                                                                        }else{
-
-                                                                        $res .=  trim($this->base_object->setcdata_tag($this->convert_to_XML($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$format),$this->base_object->show_curtag_cdata()));
-									
-                                                                        $res .=  '</' .  $this->base_object->cur_node() . '>';
-
-                                                                        $end = !$this->base_object->parent_node();
-
-                                                                        $deep[$this->base_object->idx]--;
-                                                                        $reset = false;
-                                                                        }
-                                        }else{
-
-                                                                        if(-1 == $this->base_object->show_pointer()){
-										
-										if($inter_counter == 0 )$this->heads[count($this->heads)] = $this->base_object->cur_node();
-										
-										$this->body[$this->base_object->cur_node()][$inter_counter] = 
-												trim($this->convert_to_XML(
-													$this->base_object->show_cur_data() 
-													,$format
-													));
-												
-												
-                                                                        $res .=  '<' .  $this->base_object->cur_node() . $this->base_object->all_attrib_axo($format) ;}
-                                                                                if( '' <>( $this->base_object->show_cur_data($this->base_object->show_pointer()+1)) )
-                                                                                {
-                                                                                $res .=  '>' . $this->base_object->setcdata_tag($this->convert_to_XML($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$format),$this->base_object->show_curtag_cdata());
-                                                                                $res .=  '</' .  $this->base_object->cur_node() . ' >';   // str_repeat (" ", 2*$deep[$this->idx])
-                                                                                }
-                                                                                else
-                                                                                $res .=  '/>';
-
-                                                                        $end = !$this->base_object->parent_node();
-                                                                        $deep[$this->base_object->idx]--;
-                                                                        $reset = false;
-                                                                        //echo 'hallo';
-
-                                        }
-
-                                if( $deep[$this->base_object->idx] == 0 ) $inter_counter++;
-				
-                                }
-				
-					if(is_Null($this->attribute_values['HEAD']) || $this->attribute_values['HEAD'])
-				        $res = implode($this->heads,";") . "\n";
-					
-					for($x = 0;$x < $inter_counter;$x++)
-					{
-						for($y = 0;$y < count($this->heads);$y++)
-						{
-							$res .= $this->body[ $this->heads[$y] ][$x];
-							if($y < (count($this->heads)-1))
-							$res .= ';';
-							else
-							$res .= "\n";
-						}
-					}
-				
-					
-				return $res;
-				
+		//  needs implementation
 	}
 	
 	function save_stream_back(&$stream,$format, $send_header = false)
 	{
-		
-      switch ($format)
-      {
-      case 'HTML': $arg = 'ISO-8859-5';
-      break;
-      case 'UTF-8': $arg = 'UTF-8';
-      }
-
-
- 
-      				$inter_counter = 0;
-                                $deep[$this->base_object->idx]=0;
-                                
-                                $end = false;
-
-                                $reset=true;
-                              $this->base_object->set_first_node();
-
-                              //fputs ($fp, "\n<ul>\n");
-
-
-                                while(!$end){
-
-                                //schaltet den pointer zurück, wenn ein neuer knoten betreten wird
-                                if($reset)$this->base_object->reset_pointer();
-
-                                //testet, ob es weitere knoten gibt
-                                if($this->base_object->index_child()>0){
-
-                                        //schreibt die eingabe
-                                       if(-1 == $this->base_object->show_pointer()){
-
-                                                                       //Knotenname und attribute f�r den Wurzelknoten
-					       			       $res .=  '<' .  $this->base_object->cur_node() . $this->base_object->all_attrib_axo($format) . '>';
-								       
-                                                                       //gibt den ersten datenknoten aus
-								       $res .=  trim($this->base_object->setcdata_tag($this->convert_to_XML($this->base_object->show_cur_data(0),$format),$this->base_object->show_curtag_cdata()));
-                                                                       $reset = true;
-								       //geht in den ersten Kindsknoten
-                                                                       $this->base_object->child_node(0);
-
-                                                                       //
-                                                                       $deep[$this->base_object->idx]++;
-                                                                        }elseif((($this->base_object->index_child()-1) > $this->base_object->show_pointer()) ){
-                                                                       
-									$res .=  trim($this->base_object->setcdata_tag(
-								       						$this->convert_to_XML(
-															$this->base_object->show_cur_data($this->base_object->show_pointer()+1,$format)
-															,$format)
-														,$this->base_object->show_curtag_cdata()
-														));
-                                                                       $reset = true;
-                                                                       $check = $this->base_object->child_node($this->base_object->show_pointer() + 1);
-                                                                       $deep[$this->base_object->idx]++;
-                                                                                if(!$check){
-                                                                                echo 'geht nicht weiter';
-                                                                                }
-
-                                                                        }else{
-
-                                                                        $res .=  trim($this->base_object->setcdata_tag($this->convert_to_XML($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$format),$this->base_object->show_curtag_cdata()));
-									
-                                                                        $res .=  '</' .  $this->base_object->cur_node() . '>';
-
-                                                                        $end = !$this->base_object->parent_node();
-
-                                                                        $deep[$this->base_object->idx]--;
-                                                                        $reset = false;
-                                                                        }
-                                        }else{
-
-                                                                        if(-1 == $this->base_object->show_pointer()){
-										
-										if($inter_counter == 0 )$this->heads[count($this->heads)] = $this->base_object->cur_node();
-										
-										$this->body[$this->base_object->cur_node()][$inter_counter] = 
-												trim($this->convert_to_XML(
-													$this->base_object->show_cur_data() 
-													,$format
-													));
-												
-												
-                                                                        $res .=  '<' .  $this->base_object->cur_node() . $this->base_object->all_attrib_axo($format) ;}
-                                                                                if( '' <>( $this->base_object->show_cur_data($this->base_object->show_pointer()+1)) )
-                                                                                {
-                                                                                $res .=  '>' . $this->base_object->setcdata_tag($this->convert_to_XML($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$format),$this->base_object->show_curtag_cdata());
-                                                                                $res .=  '</' .  $this->base_object->cur_node() . ' >';   // str_repeat (" ", 2*$deep[$this->idx])
-                                                                                }
-                                                                                else
-                                                                                $res .=  '/>';
-
-                                                                        $end = !$this->base_object->parent_node();
-                                                                        $deep[$this->base_object->idx]--;
-                                                                        $reset = false;
-                                                                        //echo 'hallo';
-
-                                        }
-
-                                if( $deep[$this->base_object->idx] == 0 ) $inter_counter++;
-				
-                                }
-				
-				        if(is_Null($this->base_object->PARAMETER[$this->base_object->idx]['HEAD_OFF']) || !$this->base_object->PARAMETER[$this->base_object->idx]['HEAD_OFF'])
-					{
-					$res = implode($this->heads,";") . "\n";
-					}
-					else
-					{
-					$res = '';
-					}
-					for($x = 0;$x < $inter_counter;$x++)
-					{
-						for($y = 0;$y < count($this->heads);$y++)
-						{
-							$res .= $this->body[ $this->heads[$y] ][$x];
-							if($y < (count($this->heads)-1))
-							$res .= ';';
-							else
-							$res .= "\n";
-						}
-					}
-				
-					
-				$stream->write_file($res) ;
-				return true;
-				
+		// needs Implementation
 	}
 		
 function send_header()
 {
 
-					header("Content-type: text/html;  charset=iso-8859-1");
+	// needs implementation
 
 }
 
@@ -413,21 +268,25 @@ function send_header()
 /*
 
 */
-class Obj_Class_Collection
+class Obj_Class_Collection implements \IteratorAggregate, \Countable
 {
-	private $collection_Array = array();
+	private $collection_Array = array(); //prints all lies als objects
 	private $cur_node;
+	private $list_of_resources = [];
+
 	
 	/**
 	* Collects all entries to describe a plenty of classes
-	* @param filescan result
-	* @param parser 
+	* @param array of strings showing class and function lines
+	* @param parser for injecting php document description into 
 	*
 	*/
-	public function __construct( array $structure, xml_ns &$xml_model) 
+	public function __construct( array $structure, xml_ns &$xml_model, array $void_list = []) 
 	{
 
 		$class_ref;
+		
+
 		
 			foreach( $structure as $value)
 			{
@@ -438,8 +297,14 @@ class Obj_Class_Collection
 					$this->cur_node = null;
 					
 					
-					//
-					$this->collection_Array[] = $this->cur_node = new Obj_Class( $value );
+					//$void_list
+					
+					$this->cur_node = new Obj_Class( $value, $this->list_of_resources );
+					if(!in_array($this->cur_node->get_name(), $void_list))
+					{
+						$this->collection_Array[] = $this->cur_node;
+						$name_to_path_list[$this->cur_node->get_name()] = $this->cur_node->get_Path_URL();
+					}
 				}
 				
 				if(!(false === stripos($value['tag'],'function ')))
@@ -476,25 +341,82 @@ class Obj_Class_Collection
 			
 			}
 	}
+	
+	    /**
+     * IteratorAggregate interface: return an iterator over the classes
+     *
+     * @return \ArrayIterator<Obj_Class>
+     */
+    public function getIterator(): \ArrayIterator
+    {
+        return new \ArrayIterator($this->collection_Array);
+    }
+
+    /**
+     * Countable interface: return number of classes collected
+     *
+     * @return int
+     */
+    public function count(): int
+    {
+        return count($this->collection_Array);
+    }
+
+    /**
+     * Convenience: filter classes by a callback
+     *
+     * @param callable(Obj_Class): bool $callback
+     * @return self
+     */
+    public function filter(callable $callback): self
+    {
+        $filtered = array_filter($this->collection_Array, $callback);
+        $clone = clone $this;
+        $clone->collection_Array = array_values($filtered);
+        return $clone;
+    }
+
+    /**
+     * Convenience: map over classes
+     *
+     * @param callable(Obj_Class): mixed $callback
+     * @return array
+     */
+    public function map(callable $callback): array
+    {
+        return array_map($callback, $this->collection_Array);
+    }
+
 }
 
+
+/**
+*	
+*/
 class Obj_Class 
 {
 	private $name;
 	private $php_path;
+	private $xml_path;
 	private $num;
 	private $constructor = null;
 	private $subClassOf = null;
 	
 	private $functionList = array();
+	private $my_list_of_resources = [];
 	
-	public function __construct($array_tag)
+	public function __construct($array_tag, &$list_of_resources)
 	{
-		
+		$this->my_list_of_resources = &$list_of_resources;
 		$this->php_path = $array_tag['file'];
+		$this->xml_path = str_replace(".php", ".pedl", $this->php_path);
 		$this->num = $array_tag['pos'];
 		$name = explode(' ', $array_tag['tag']);
 		$this->name = trim($name[1]);
+		
+		
+		
+		$this->my_list_of_resources[$this->name] = $this->xml_path;
 		
 		if($name[2] == "extends")$this->subClassOf = $name[3];
 
@@ -510,45 +432,61 @@ class Obj_Class
 		
 	}
 	
+	public function get_Path_URL()
+	{
+		return $this->php_path;
+	}
+	
+	public function get_name()
+	{
+		return  trim($this->name);
+	}
+	
 	public function create_rdf_entry( xml_ns &$xml_model)
 	{
 
+
 		$attrib = array('rdf:ID' => $this->name , 'pedl:name' => $this->name);
+		//var_dump($attrib);
 		$xml_model->tag_open($this, "PhpClass", $attrib);
-		
-		//echo  $xml_model->cur_node();
-		//$xml_model->create_Ns_Node("PhpClass");
-		//$xml_model->set_node_attrib('rdf:ID',trim($this->name));
-		//$xml_model->set_node_attrib('pedl:name',trim($this->name));
+
+
 		if(!is_Null($this->subClassOf))
 		{
 			$attrib = array('rdf:resource' => trim($this->subClassOf));
 			$xml_model->tag_open($this, "rdfs:subClassOf", $attrib);
 			$xml_model->tag_close($this, "rdfs:subClassOf");
 			
-		//$xml_model->create_Ns_Node("rdfs:subClassOf");
-		//$xml_model->set_node_attrib('rdf:resource',trim($this->subClassOf));
-		//$xml_model->parent_node();
+			// gives seeAlso for the 
+			if(array_key_exists(trim($this->subClassOf), $this->my_list_of_resources))
+			{
+				$attrib = array('pedl:src' => $this->my_list_of_resources[trim($this->subClassOf)]);
+				$xml_model->tag_open($this, "rdfs:seeAlso", $attrib);
+				$xml_model->tag_close($this, "rdfs:seeAlso");
+			}
+			
+			
+
 		}
 			$attrib = array('pedl:src' => $this->php_path);
 			$xml_model->tag_open($this, "pedl:hasCodeResource", $attrib);
 			$xml_model->tag_close($this, "pedl:hasCodeResource");
 		
-		//$xml_model->create_Ns_Node("pedl:hasCodeResource");
-		//$xml_model->set_node_attrib('pedl:src',$this->php_path);
-		//$xml_model->parent_node();
+
 		
 		$attrib = array();
-		//$xml_model->tag_open($this, "pedl:hasFunktions", $attrib);
+
 		
 			$attrib = array();
-			//$xml_model->tag_open($this, "pedl:Funktions", $attrib);
+
 			
 		
 			foreach( $this->functionList as $value)
 			{
+
 				$prim = &$value->create_rdf_entry($xml_model,$this->name);
 				if($prim) $this->constructor = &$prim;
+
 			}
 			
 			//$xml_model->tag_close($this, "pedl:Funktions");
@@ -556,6 +494,8 @@ class Obj_Class
 		//$xml_model->tag_close($this, "pedl:hasFunktions");
 			
 		$xml_model->tag_close($this, "PhpClass");
+		
+
 	}
 }
 
@@ -609,15 +549,18 @@ class Obj_Function
 
 							if(!(false === ($comment = stripos($myval,'/*'))))
 							{
-
-							$comment2 = stripos($myval,'*/',$comment);
-							$mycomment = substr($myval,$comment + 2 , $comment2 - ($comment + 2) );
-							$myparam = substr($myval,0 ,$comment  ) .
- 							substr($myval,$comment2 + 2 );
+								/* Here comments will be collected */
+								$comment2 = stripos($myval,'*/',$comment);
+								$mycomment = substr($myval,$comment + 2 , $comment2 - ($comment + 2) );
+								$myparam = substr($myval,0 ,$comment  ) .
+								substr($myval,$comment2 + 2 );
 
 							}
+							//echo $mycomment . "\n";
  							$parameter_Obj = new Obj_Parameter(trim($myparam),$counter++);
+ 							
 							$parameter_Obj->setPresetValues($mycomment,$this->parser);
+							
 							$this->parameterList[count($this->parameterList)] = &$parameter_Obj;
 							unset($parameter_Obj);
 						}
@@ -632,6 +575,7 @@ class Obj_Function
 	public function &create_rdf_entry( xml_ns &$xml_model, $name)
 	{
 		//echo  $xml_model->cur_node();
+
 		$attrib = array('rdf:ID' => $name  . '.' . trim($this->name),'pedl:name' => trim($this->name));
 		
 		if( $name == trim($this->name) || '__construct' == trim($this->name) )
@@ -655,8 +599,6 @@ class Obj_Function
 			//$xml_model->tag_open($this, "pedl:ParameterCollection", $attrib);	
 		}	
 			
-		//$xml_model->set_node_attrib('rdf:ID',$name  . '.' . trim($this->name));
-		//$xml_model->set_node_attrib('pedl:name',trim($this->name));
 				
 			foreach( $this->parameterList as $value)
 			{
@@ -684,9 +626,10 @@ class Obj_Parameter
 	private $type;
 	private $name;
 	private $num;
-	private $gives_out_ref = false;
+	private $gives_out_ref = false; //way to decide how to use the Ref sign
 	private $has_value = false;
-	private $pre_value = null; 
+	private $pre_value = null;
+	private $value_content = "";
 	
 	public function __construct($string_param,$counter)
 	{
@@ -741,8 +684,9 @@ class Obj_Parameter
 	{
 		$res = trim($preSet);
 		$this->has_value = (strlen($res) > 0);
+		$this->value_content = $res;
 		//echo get_Class($refParser) . ': ';
-		
+		/*
 		//echo $refParser->cur_idx();
 		if($this->has_value && $refParser)
 		{
@@ -762,16 +706,18 @@ class Obj_Parameter
 		//$refParser->go_to_stamp($stamp);
 		//$refParser->flash_result();
 		}
-		
+		*/
 	}
 	
 	public function create_rdf_entry( xml &$xml_model, $class_name, $function_name)
 	{
 		//echo  $xml_model->cur_node();
 		$attrib = array('rdf:ID' => trim($class_name . '.'  . $function_name . '.' . $this->name),'pedl:name' => trim($this->name));
+		if($this->has_value )$attrib['pedl:refersTo'] = $this->value_content ;
 		$xml_model->tag_open($this, "PhpParameter", $attrib);
-		if($this->has_value && !$this->gives_out_ref)$xml_model->cdata($this,$this->pre_value);
-		if($this->has_value && $this->gives_out_ref)$xml_model->cdata_ref($this,$this->pre_value);
+		//if($this->has_value && !$this->gives_out_ref)$xml_model->cdata($this,$this->pre_value);
+		//if($this->has_value && $this->gives_out_ref)$xml_model->cdata_ref($this,$this->pre_value);
+
 
 		$xml_model->tag_close($this, "PhpParameter");
 		//$xml_model->create_Ns_Node("PhpParameter");

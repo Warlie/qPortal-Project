@@ -166,7 +166,7 @@ class xml_ns extends xml_omni
 		   //hashsuche
 		   if(!is_null($type))
 		   {
-		   	   //var_dump($type);
+		   	  // var_dump($type, array_keys($this->looking_index[$this->idx]));
 
 			   if(($arg = &$this->looking_index[$this->idx][$type]) == null) //?
 			   {
@@ -290,41 +290,68 @@ function delete_index($index)
 	   $this->idx = $index;
    }
 	
-   function &getInstance($name,$attributes,$obj_arg = null)
+   /**
+   *	@param	string	$uri		tag name with different notations about the namespace
+   *	@return	array	one or two strings in an array. First is tag name and second is namespace
+   *
+   *	Delivers a pair of node tag and namespace corresponding to the uri
+   */
+   function URI_identifire_into_array($uri)
    {
-	global $logger_class;
-	$logger_class->setAssert(' create node of type "' . $name . '"(xml_ns:getInstance)' ,2);
+   	   $res = [];
+   	   
+   	   if(is_null($uri))
+   	   	   return $res; 
+   	   
+   	   
+   	   if(!(false === ($tmp = strpos($uri,'#'))))
+   	   	   {
+   	   	   	   // creates an array with two entries
+   	   	   	    $res[] = substr($uri,$tmp + 1);
+   	   	   	    $res[] = substr($uri,0,$tmp);
+   	   	   }
+   	   	   else
+   	   	if(!(false === ($tmp = strpos($uri,':'))))
+   	   		{
 
-	//echo '-' . $name . "<br>\n";
- 	if($obj_arg)
-	return parent::getInstance(
-   	$name,
-	$attributes,
-	$obj_arg);
+   	   			// same creation but with prefix
+		   	    	$res[] = substr($uri,$tmp + 1);
+		   	    	$prefix = substr($uri,0,$tmp);
+
+		   	    
+		   	    // in case a namespace ("xmlns:rdf") is used
+		   	    if(is_null($this->prefixes[$prefix]))
+		   	    	{
+		   	    		$res[0] = $uri;
+		   	    		return $res;
+		   	    	}
+		   	    
+   	   	   	    $res[] =end($this->prefixes[$prefix]);
+   	   	   	}
 	else
-	{
-		
-		/*
-		* an native nodes specific properties are its namespaces
-		* all these properties are stored in attributes with xmlns at start of the key,
-		* in a way of expanded namespaces sparate to a ':'.
-		* all these namespaces will be collected to an multidimensional assoziativ array named 'namespace_frameworks.
-		*
-		*/
-		$nativ = false;
-	   //findet die namespaces und legt die objekte in einem array ab
-	   if(is_array($attributes))
-	   {
-		   //starts collecting namespaces
-		   foreach( $attributes as $key => $value)
+		$res[] = $uri;
+	
+	return $res; 
+   }
+   
+   public function add_new_namespace_from_attributes($attributes)
+   {
+   	   $nativ = false;
+   	   
+   	   	foreach( $attributes as $key => $value)
 		   {
-		  
+		   	   /*
+		   	   * ------------- here starts a section for defining prefixes and  namesspaces ---------------- 
+		   	   */
 			if(!(false === stripos(substr($key,0,5),'xmlns')))
-			{
-
-if(is_null($value))echo $key;
-				$value = str_replace('#','',$value);
+			{	//TODO for the prefixes, we will need a space for definition in every root node. Namespaces can be defined globaly
+				$nativ = true; //native knoten definieren einen Namensraum und beenden ihn auch
 				
+				if(is_null($value))echo $key; //TODO Exception
+				
+				$value = str_replace('#','',$value); // sometimes there was a # at the end of an URI, seen for RDF
+				
+				// asks for a Namespace
 				$obj = My_NameSpace_factory::namespace_factory($value);
 
 				if(is_object($obj) && !is_array($this->namespace_frameworks[$value]) )
@@ -341,9 +368,6 @@ if(is_null($value))echo $key;
 
 				}
 				
-				//has to be checked
-				//if($this->namespace_frameworks[$value])
-				$nativ = true; //native knoten definieren einen Namensraum und beenden ihn auch
 				
 					/*
 					* defines prefixes 
@@ -396,23 +420,193 @@ if(is_null($value))echo $key;
 					
 			}
 		   }
-		   reset($attributes); //sets arraypointer to start
-	   } 
-	   
+		    /*
+		    * ------------- here ends this section for defining prefixes and  namesspaces ---------------- 
+		   */
+		   
+		   return $nativ;
+   
+   }
+   
+   public function create_node_to_attribute(string $identifire, mixed $value) : array
+   {
+   	   $k = $identifire;
+   	   $v = $value;
+   	   $res = ['full_ns'=> '', 'object'=>null, 'identifier'=>''];
+   	   
+   	   	if(!(false === ($tmp = strpos($k,'#'))))
+		   {
+		   	   
+		   	//$prefix = substr($k,0,$tmp);
+			$attribname = substr($k,$tmp + 1);
+			$full_ns  = substr($k,0,$tmp);
+			
+			if(!is_null($attribwithpre = $this->get_Prefix($full_ns)) && ( strlen($attribwithpre)>0))
+				$attribwithpre .= ':' . $attribname;
+			else
+				$attribwithpre = $attribname;
+				
+			
+				if($this->namespace_frameworks[$full_ns]['node'][$attribname])
+					{
+						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
+
+					}
+					else
+					{
+						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory($nodename,  $full_ns);
+						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
+					}
+
+					if(is_null($v))
+					{
+						$empty_string = "";
+						$attrib->setdata($empty_string,0);
+					}
+					else
+						$attrib->setdata($this->convert_from_XML($v),0);
+						
+					$attrib->set_NodeType(1);
+					$attrib->name  = $attribname;
+					$attrib->type = $attribname;
+					$attrib->set_idx($this->idx);
+					$attrib->namespace = $full_ns;
+					$attrib->set_parser($this);
+					$res ['identifier'] = $attribwithpre;
+					$res ['full_ns'] = $full_ns;
+					$res ['object'] = $attrib;
+			
+		   }
+		   else
+		    if(!(false === ($tmp = strpos($k,':'))))
+		    {
+					$prefix = substr($k,0,$tmp);
+					$attribname = substr($k,$tmp + 1);
+					
+					//var_dump($this->prefixes, $prefix, $this->prefixes[$prefix]);
+					if('xmlns' == $prefix)$prefix = 0;
+					if('xml' == $prefix)$prefix = 0;
+					
+					if(!is_null($this->prefixes[$prefix]))
+						$full_ns = end($this->prefixes[$prefix]);
+					else 
+						$full_ns = $this->prefixes[$prefix][0];
+					
+					if($this->namespace_frameworks[$full_ns]['node'][$attribname])
+					{
+						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
+
+					}
+					else
+					{
+						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory($nodename,  $full_ns);
+						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
+					}
+
+					if(is_null($v))
+					{
+						$empty_string = "";
+						$attrib->setdata($empty_string,0);
+					}
+					else
+						$attrib->setdata($this->convert_from_XML($v),0);
+						
+					$attrib->set_NodeType(1);
+					$attrib->name  = $k;
+					$attrib->type = $attribname;
+					$attrib->set_idx($this->idx);
+					$attrib->namespace = $full_ns;
+					$attrib->set_parser($this);
+					$res ['identifier'] = $k;
+					$res ['full_ns'] = $full_ns;
+					$res ['object'] = $attrib;
+					
+
+					
+			}
+			else
+			{
+					
+					$prefix = null;
+					$attribname = $k;
+					
+					if($this->prefixes[$this->idx])
+						$full_ns = end($this->prefixes[$this->idx]);
+					else
+						$full_ns = '';
+					
+					if($this->namespace_frameworks[$full_ns]['node'][$attribname])
+					{
+						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
+
+					}
+					else
+					{if($this->use_def_strict)
+						{
+							
+							$this->test_consistence();
+							
+							throw new ErrorException('actual namespace for "' .$full_ns . '#' . $attribname . '" for an attribute is not defined for "' . $k . '".', 255, 75);
+						}
+						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory($nodename,  $full_ns);
+						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
+						
+					}
+					//echo 	$k . "\n";
+					$attrib->setdata($this->convert_from_XML($v, "UTF-8"),0);
+					$attrib->name  = $k;
+					$attrib->type = $attribname;
+					$attrib->set_idx($this->idx);
+					$attrib->namespace = $full_ns;
+					$attrib->set_parser($this);
+					$res ['identifier'] = $k;
+					$res ['full_ns'] = $full_ns;
+					$res ['object'] = $attrib;
+
+			}
+   	   return $res;
+   }
+   
+   /**
+   *
+   */
+   function &getInstance($name,$attributes)
+   {
+	global $logger_class;
+//TODO Complete delete of the alternative options. There are getInstance methods in objex and multitree. After function tests just delete those methods
+		/*
+		* an native nodes specific properties are its namespaces
+		* all these properties are stored in attributes with xmlns at start of the key,
+		* in a way of expanded namespaces sparate to a ':'.
+		* all these namespaces will be collected to an multidimensional assoziativ array named 'namespace_frameworks.
+		*
+		*/
+		$nativ = $this->add_new_namespace_from_attributes($attributes);
+
+
 	   $node;
 	   $null = null;
 
-	   
-	if(!(false === ($tmp = strpos($name,':'))))
+/*
+* ------------- here starts this section for defining prefixes and  namesspaces ---------------- 
+*/
+	 // gives namespace and tag to name
+	$uri_array = $this->URI_identifire_into_array($name);
+
+
+	   // colon signs a prefix, in this case
+	if(count($uri_array) == 2) 
 	{
 
-		$prefix = substr($name,0,$tmp);
-		$nodename = substr($name,$tmp + 1);
+		//$prefix = substr($name,0,$tmp);
+		//$nodename = substr($name,$tmp + 1);
 		
 		//prefixes are in pair to full namespaces
-		$full_ns = $this->prefixes[$prefix][count($this->prefixes[$prefix]) - 1];
-
-
+		//$full_ns = end($this->prefixes[$prefix]);
+			// $this->prefixes[$prefix][count($this->prefixes[$prefix]) - 1];
+		$nodename = $uri_array[0];
+		$full_ns = $uri_array[1];
+			
 		if($nativ)
 		{
 			//wenn der Knoten nicht existiert, gibt es einen Standardknoten
@@ -469,18 +663,19 @@ if(is_null($value))echo $key;
 	{
 				//var_dump("ohne doppelpunkt", $name);
 		if($this->prefixes[$this->idx])
-			$glob_namespace = $this->prefixes[$this->idx][count($this->prefixes[$this->idx]) - 1];
+			$glob_namespace = end($this->prefixes[$this->idx]);
 		else
-			$glob_namespace = '';
+			$glob_namespace = ''; // TODO test this case will ever occur
 
 		$prefix = null;
-		$nodename = substr($name,$tmp);
+		//$nodename = substr($name,$tmp);
+		$nodename = $uri_array[0];
 
 		
 		if($nativ)
 		{
 			
-			//wenn der Knoten nicht existiert, gibt es einen Standardknoten
+			//looks for a nativ node, those are for defining namespaces
 			if($this->namespace_frameworks[$glob_namespace]['nativ'])
 			{
 				//echo " gefunden in main $nodename<br>" . "\n" ;
@@ -493,14 +688,14 @@ if(is_null($value))echo $key;
 				//echo "nativ: " . $node->full_URI() . " (2)\n";
 			}
 			else
-			{	
+			{	// TODO there should be a node in case we have no namespace
 				if($this->use_def_strict)throw new ErrorException('actual namespace for "' .$full_ns . '#" for natives is not defined.', 255, 75);
 				echo "fehler xml_multitree_ns.php Zeile 328";
 
 			}
 		}
 		else
-		{
+		{	// here are regular nodes
 			if($this->namespace_frameworks[$glob_namespace]['node'][$nodename])
 			{
 				//echo " gefunden in main $nodename<br>" . "\n" ;
@@ -525,118 +720,36 @@ if(is_null($value))echo $key;
 		
 	}	
 	   
-	   $asd = 0;
-	   
+
+	//   var_dump($attributes);
 	   /* attributes in specific node */
-	   if($attributes)
-	   if (count($attributes)) {
-            foreach ($attributes as $k => $v) 
+            foreach ($attributes as $k => $v)   // TODO seems to be a good code sequence for the factory method in interface_ns
 	    {
 		   
-		   if(!(false === ($tmp = strpos($k,'#'))))
-		   {
-		   	$prefix = substr($k,0,$tmp);
-			$attribname = substr($k,$tmp + 1);
-			$k = $this->get_Prefix($prefix) . ':' . $attribname;
-			
-		   }
-		   
-		    	if(!(false === ($tmp = strpos($k,':'))))
-			{
-				
-					$prefix = substr($k,0,$tmp);
-					$attribname = substr($k,$tmp + 1);
-					
-					//var_dump($this->prefixes, $prefix, $this->prefixes[$prefix]);
-					if('xmlns' == $prefix)$prefix = 0;
-					if('xml' == $prefix)$prefix = 0;
-					
-					if(!is_null($this->prefixes[$prefix]))
-						$full_ns = $this->prefixes[$prefix][count($this->prefixes[$prefix]) - 1];
-					else 
-						$full_ns = $this->prefixes[$prefix][0];
-					//echo "ns:$full_ns pre:$prefix attrib:$attribname ist ausgabe<br>\n";
-					if($this->namespace_frameworks[$full_ns]['node'][$attribname])
-					{
-						$logger_class->setAssert("Attrib ($k) full_ns=\"$full_ns\" attribname=\"$attribname\" " ,3);
-						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
+	    	$attrib_to_node = $this->create_node_to_attribute($k, $v);
+	    	//var_dump($attrib_to_node, $k, $v);
+	    	$node->attribute(
+	    		$attrib_to_node['identifier'],
+	    		$attrib_to_node['object']);
 
-					}
-					else
-					{
-						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory($nodename,  $full_ns);
-						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
-					}
-					//	echo 	$k . "\n";
-					$logger_class->setAssert("Attrib name=\"$k\" " ,3);
-					$attrib->setdata($this->convert_from_XML($v),0);
-					$attrib->set_NodeType(1);
-					$attrib->name  = $k;
-					$attrib->type = $attribname;
-					$attrib->set_idx($this->idx);
-					$attrib->namespace = $full_ns;
-					$attrib->set_parser($this);
-					$node->attribute($k,$attrib);
-					unset($attrib);
-					
-			}
-			else
-			{
-					
-					$prefix = null;
-					$attribname = $k;
-					
-					if($this->prefixes[$this->idx])
-						$full_ns = $this->prefixes[$this->idx][count($this->prefixes[$this->idx]) - 1];
-					else
-						$full_ns = '';
-					
-					if($this->namespace_frameworks[$full_ns]['node'][$attribname])
-					{
-						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
+	    	
+	    	
 
-					}
-					else
-					{if($this->use_def_strict)
-						{
-							
-							$this->test_consistence();
-							
-							throw new ErrorException('actual namespace for "' .$full_ns . '#' . $attribname . '" for an attribute is not defined for "' . $k . '".', 255, 75);
-						}
-						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory($nodename,  $full_ns);
-						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
-						
-					}
-					//echo 	$k . "\n";
-					$attrib->setdata($this->convert_from_XML($v),0);
-					$attrib->name  = $k;
-					$attrib->type = $attribname;
-					$attrib->set_idx($this->idx);
-					$attrib->namespace = $full_ns;
-					$attrib->set_parser($this);
-					$node->attribute($k,$attrib);
-					unset($attrib);
-			}
-
-                    
 	    }
-	}
 
-	$this->obj_stack[count($this->obj_stack)] = &$node;
+
+	$this->add_to_execute( $node );
 	
-	if(!$this->looking_index[$this->idx][$node->full_URI()])
-		$this->looking_index[$this->idx][$node->full_URI()] = array();
 	
-	//echo "element:" . $node->full_URI() . "\n";
-	$this->looking_index[$this->idx][$node->full_URI()][count($this->looking_index[$this->idx][$node->full_URI()])] = &$node;
-	
+	$this->set_new_index($node);
+
 	 if(!$node->get_parser())echo $node->full_URI() . " has no parser \n";
 	
 	return $node;
 
-	}
+
    }
+
 
 
    
@@ -652,21 +765,43 @@ if(is_null($value))echo $key;
    }
    
 
-   
+   function add_to_execute($node)
+   {
+   	  
+   	   if($node->has_behavior() &&  !$node->is_Class())
+   	   	   $this->obj_stack[] = $node;
+   }
+   /*
+   * will be called in Load_String in omni handle
+   */
    function executed()
    {
-	   
+// Startzeitpunkt in Nanosekunden
+$start = hrtime(true);
+
+
+
 	   for($i = 0;count($this->obj_stack) > $i ; $i++ )
 	   {
+	   	   //$first  = hrtime(true);
 		   $no_context = null;
-		   
+		   //echo $this->obj_stack[$i]->full_URI() . "---------------------starts\n";
+		   //$this->obj_stack[$i]->event_Instance($this,'*?parse_complete',new EventObject('',$this,$no_context));
 		   $this->obj_stack[$i]->event('*?parse_complete',new EventObject('',$this,$no_context));
-		   //echo $this->obj_stack[$i]->full_URI() . "<br>\n";
+		   //$second   = hrtime(true);
+		   //echo sprintf("Abschnitt: %.3f ms\n", ($second - $first) / 1_000_000);  
+		   //echo $this->obj_stack[$i]->full_URI() . "------------------------ends\n";
 	   
 	   }
 	   
 	   $this->obj_stack = array();
-   
+// Endzeitpunkt in Nanosekunden
+$end = hrtime(true);
+
+// Dauer in Millisekunden berechnen
+$durationMs = ($end - $start) / 1_000_000;
+
+//echo sprintf("Dauer: %.3f ms\n", $durationMs);   
    
    }
    
@@ -707,7 +842,7 @@ if(is_null($value))echo $key;
                                 $this->cur_pointer[$this->idx] = &$this->cur_pointer[$this->idx]->getRefnext($this->cur_pointer[$this->idx]->index_max() - 1 ,true);
                                 //$this->cur_pointer[$this->idx]->setRefprev(&$this->mirror[$this->idx]);
                                 //$cur_pointer = &$this->mirror[$this->idx]->getRefnext();
-                
+                                //var_dump($this->cur_pointer[$this->idx]->full_URI());
                         }
                         
                         
@@ -807,7 +942,8 @@ if(is_null($value))echo $key;
 					
 					if(!$expand_data)
 					{
-					$this->cur_pointer[$this->idx]->setdata($this->convert_from_XML($res),$tmp); // $this->convert_from_XML($res)
+						
+					$this->cur_pointer[$this->idx]->setdata($this->convert_from_XML($res, "UTF-8"),$tmp); // $this->convert_from_XML($res)
                                         }
 
                                         
@@ -822,10 +958,19 @@ if(is_null($value))echo $key;
                                         if(isset($this->cur_pointer[$this->idx])){
                                                 $tmp = $this->cur_pointer[$this->idx]->index_max();
 
-					
+					//echo get_class($cdata) ."\n";
 					$this->cur_pointer[$this->idx]->setdata($cdata,$tmp);
                                         }
    }
+   
+   function setobj(&$obj)
+   {
+
+                                        if(isset($this->cur_pointer[$this->idx])){
+					$this->cur_pointer[$this->idx]->setobj($obj);
+                                        }
+   }
+   
 
    function tag_close($parser, $tag)
    {
@@ -1002,6 +1147,16 @@ if(is_null($value))echo $key;
 				   echo "\n } \n";
 		   }
 		   echo "\n ende \n";
+   }
+   
+   public function array_Of_Objects_Related_To_Tag_Name(string $tag_name) : array
+   {
+   	   $res = [];
+   	   if(array_key_exists($tag_name, $this->looking_index[$this->idx]))
+   	   	   foreach($this->looking_index[$this->idx][$tag_name] as $value)
+		   	$res[] = $value;
+		   
+	return $res;
    }
    
    function set_Namespace($ns)

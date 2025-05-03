@@ -106,6 +106,8 @@ class XML_handle extends Interface_handle
 	function save_back($format,$send_header = false)
 	{
 		
+		$encoding = $format;
+		
 		/**
 		*
 		*
@@ -130,19 +132,32 @@ class XML_handle extends Interface_handle
 	
 
       $nl = chr(13) . chr(10);
-      
-       $res = '<?';        
+            
+       $res = '<?xml';        
       
               foreach ($this->base_object->MIME[$this->base_object->idx] as $key => $ele)
                 {
-                        if($key == 'name')$res .= strtolower($ele) . ' ';
+                        if($key == 'name'); //$res .= strtolower($ele) . ' ';
                         else
-                                $res .= $key . '="' . $ele . '" ';
+                        {
+                        	if($key == "encoding")
+                        	{
+                        		// TODO format can be null 
+                        		if($encoding == '')
+                        			$encoding = $ele;
+                        		
+                        		
+                        		$res .= ' ' . $key . '="' . $encoding  . '"';
+
+                        	}
+                        	else
+                        		$res .= ' ' . $key . '="' . $ele  . '"';
+ 
+                        }
                 }
       
       $res .= "?>$nl";
-      
-     
+
       
               foreach ($this->base_object->INSTR[$this->base_object->idx] as $key => $ele)
                 {
@@ -204,7 +219,7 @@ $myhelp = 0;
    	//   set_read_event
 //echo $this->base_object->cur_node() . "\n";
     $res .=  '<' .  $this->base_object->cur_node() . $this->base_object->all_attrib_axo($format) . $this->positionstamp($modus) . '>';
-    $res .=  $this->base_object->setcdata_tag($this->base_object->convert_to_XML($this->base_object->show_cur_data(0),$format),$this->base_object->show_curtag_cdata());
+    $res .=  $this->base_object->setcdata_tag($this->base_object->show_cur_data(0),$this->base_object->show_curtag_cdata());
     $reset = true;
 
      if(!$this->base_object->child_node(0)) 
@@ -222,7 +237,7 @@ $myhelp = 0;
         $deep[$this->base_object->idx]++;
       }elseif((($this->base_object->index_child()-1) > $this->base_object->show_pointer()) ){
                                                                        
-       $res .=  $this->base_object->setcdata_tag($this->base_object->convert_to_XML($this->base_object->show_cur_data($this->base_object->show_pointer()+1,$format) ,$format),$this->base_object->show_curtag_cdata()); 
+       $res .=  $this->base_object->setcdata_tag($this->base_object->show_cur_data($this->base_object->show_pointer()+1,$format),$this->base_object->show_curtag_cdata()); 
        $reset = true;
        $check = $this->base_object->child_node($this->base_object->show_pointer() + 1);
        $deep[$this->base_object->idx]++;
@@ -239,7 +254,7 @@ $myhelp = 0;
 
        }else{
 
-        $res .=  $this->base_object->setcdata_tag($this->base_object->convert_to_XML($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$format),$this->base_object->show_curtag_cdata());
+        $res .=  $this->base_object->setcdata_tag($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$this->base_object->show_curtag_cdata());
 
         $res .=  '</' .  $this->base_object->cur_node() . '>';
 
@@ -255,7 +270,7 @@ $myhelp = 0;
                                                                         $res .=  '<' .  $this->base_object->cur_node() . $this->base_object->all_attrib_axo($format) . $this->positionstamp($modus) ;}
                                                                                 if( '' <>( $this->base_object->show_cur_data($this->base_object->show_pointer()+1)) )
                                                                                 {
-                                                                                $res .=  '>' . $this->base_object->setcdata_tag($this->base_object->convert_to_XML($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$format,$this->base_object->show_curtag_cdata()),$this->base_object->show_curtag_cdata());
+                                                                                $res .=  '>' . $this->base_object->setcdata_tag($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$this->base_object->show_curtag_cdata());
                                                                                 $res .=  '</' .  $this->base_object->cur_node() . '>';   // str_repeat (" ", 2*$deep[$this->idx])
                                                                                 }
                                                                                 else
@@ -275,7 +290,9 @@ if($printall) $res .=  '</root>';
 
 	$this->bool_first_tag = true;
 
-				return $res;
+	//convert_to_XML(
+
+				return $this->base_object->convert_to_XML($res, $encoding, true);
 		
 	}
 	

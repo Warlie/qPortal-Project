@@ -53,6 +53,10 @@ var $name = 'empty';
 var $type = 'none';
 var $namespace = 'none';
 
+/* this variables shows that this node has behavior */
+protected $has_behavior = true;
+protected $was_called = false;
+
 private $collectionFunctionElements = [];
 
 private $id_of_object;
@@ -83,7 +87,9 @@ public static function Is_ShortCuts($key) { return array_key_exists($key, PEDL_O
 function set_executive(){$this->executive = true;}
 function is_executive(){return $this->executive;}	
 	
-
+/**
+* creates a file with a list of lambdas for better performance
+*/
 function __destruct() {
 	
 	if($this->newList)
@@ -111,22 +117,7 @@ private function create_Shortcuts(array $list)
 	$res[] = 'PEDL_Object_Class::AddShortCuts("' . $value[0] . 
 		'",function ($instance, $arg){return $instance->' . $value[1] . '(...$arg);});';
 	
-/*
-				$file = $this->getRefnext($i)->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#src');
-				if(is_file($file))
-				{
-					$std_content = file_get_contents('/home/warlie/qportal/qPortal-Project/PlugIn/shortcut_template.php');
-					
-					$std_content = str_replace(['key'], [ hash_file('sha256', realpath($file))], $std_content);
-					
-					$helpfile = str_replace('.', '_shortcut.', realpath($file));
-					file_put_contents($helpfile, $std_content);
-					if(!is_file($helpfile))echo "no file";
-					echo $std_content;
-					//echo hash_file('sha256', realpath($file));
-				echo realpath($this->getRefnext($i)->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#src'));
-				}
-*/
+
 	return implode("\n", $res);
 }
     
@@ -205,7 +196,7 @@ protected function event_message_check($type,&$obj)
 
 //primar call after finishing object, ther wont be an existing childnode
 function event_initiated()
-{
+{//echo $this->full_URI() . "------------Init------------\n";
 	$this->id_of_object = $this->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#ID');
 	//echo "new id $this->id_of_object " . $this->position_stamp() . "\n"; 	
 		for($i = 0; $this->index_max() > $i;$i++)
@@ -232,19 +223,24 @@ function event_initiated()
 //$this->name .= 'booh';
 }
 
-function event_parseComplete()
-{
-						/*	for($i = 0;count($this->way_out) > $i;$i++)
-							{
-							echo '<br>' . $this->way_out[$i]->full_URI() . "<br>\n";
-							}*/
-//$this->ManyInstance() . 'booh';
-}
 
 protected function addToFunctionList($list){$this->collectionFunctionElements = $list;}
 
+/**
+*	@param instance : how knows
+*	@param type : how knows ether
+*	@param obj : what ever
+*	I guess, it will be called, it a class was be called by its new definition
+*/
+
 function event_Instance(&$instance,$type,&$obj)
 {
+	/* bad style TODO make it pretty*/
+	/* this event will be called several times, this variable prevents this. */
+	if($this->was_called)return;
+	//if($this->was_called)throw new ErrorException($this->full_URI() . "(" . $this->get_parser()->position_stamp() . ")");
+	//echo "Arbeit Arbeit " . $this->get_parser()->position_stamp() . " [" . spl_object_id($this) . "] " . ($this->was_called? "yes":"no") . "\n";
+	$this->was_called = true;
 	/*
 	* find positionstamp of this node
 	*/
@@ -270,6 +266,8 @@ function event_Instance(&$instance,$type,&$obj)
 			$basic_obj = &$parser->show_xmlelement();
 			//echo $basic_obj->full_URI();
 			
+			
+			// will call all hasCodeResource to establish the specific shortcuts
 	for($i = 0; $this->index_max() > $i;$i++)
 		{
 			
@@ -307,6 +305,7 @@ function event_Instance(&$instance,$type,&$obj)
 					$pedl_name = $func->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#name');
 
 					if(PEDL_Object_Class::Is_ShortCuts($function_name))
+						// tests for the function name and creates a lambda call if it was successful
 						$func->set_Shortcut($function_name, PEDL_Object_Class::GiveShortCuts($function_name));
 					
 					
@@ -320,7 +319,7 @@ function event_Instance(&$instance,$type,&$obj)
 							$tmp->pushParam($param_name,$pedl_name2);
 						}
 					
-					//
+					// It will return a res array with a function name and it reference
 					$res[$pedl_name] = &$tmp;
 					unset($func);
 					unset($tmp);
@@ -328,7 +327,8 @@ function event_Instance(&$instance,$type,&$obj)
 				
 			if($this->getRefnext($i)->is_Node('http://www.w3.org/2000/01/rdf-schema#subClassOf'))
 				{
-					$go = true;
+					$go = true; // there is no use
+					// will look to its reference
 				if($this->getRefnext($i)->get_ns_attribute_obj('http://www.w3.org/1999/02/22-rdf-syntax-ns#resource')->getobj())
 				{
 					$class = &$this->getRefnext($i)->get_ns_attribute_obj('http://www.w3.org/1999/02/22-rdf-syntax-ns#resource')->getobj()->linkToClass();
@@ -337,7 +337,7 @@ function event_Instance(&$instance,$type,&$obj)
 				}
 				else
 				{
-					/*TODO gescheite Fehlerbeschreibung */
+					/*TODO gescheite Fehlerbeschreibung  Laber Exception*/
 				
 				echo $this->name; 
 				$name = $this->get_ns_attribute_obj("http://www.w3.org/2006/05/pedl-lib#name")->getdata();
@@ -428,7 +428,41 @@ function event_Instance(&$instance,$type,&$obj)
 	//echo $this->index_max() . ' object_name:' . $this->full_URI() . ' event:' . $instance->full_URI() . ' ' . $type .  "<br>\n";
 	
 }
+/*
+function event($type,&$obj)
+{
 
+	if($type == '*?parse_complete')
+	{
+	//löst event aus
+
+	
+		if($this->link_to_class && !$this->is_Class)
+			{
+					echo $this->full_URI() . "calls class " . $this->link_to_class->full_URI() . "\n";
+				$obj->set_node($this);
+				$this->link_to_class->event('*?parse_complete_classes',$obj);
+			
+			}
+	
+
+	}
+
+	if($this->link_to_class && $type == '*?parse_complete_classes')
+		{
+			echo $this->full_URI() . " Instance called \n";
+			$this->event_Instance($obj->get_node(),$type,$obj);
+			$this->link_to_class->event('*?parse_complete_classes',$obj);
+			
+			//echo $this->full_URI() . "<br>\n";
+		}
+		
+	//if($this->link_to_class)$this->link_to_class->event_Instance($this,$type,$obj);
+
+		//$this->event_parseComplete();
+
+}
+*/
 private function find_functions(&$class, array &$result,$priority = 1)
 {
 	$go = false;

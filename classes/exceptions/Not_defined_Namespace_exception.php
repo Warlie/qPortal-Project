@@ -1,5 +1,5 @@
 <?php
-Not_defined_Namespace_Exception extends ErrorException {
+class Not_defined_Namespace_Exception extends ErrorException {
 /* Eigenschaften */
 //protected int $severity ;
 /* Methoden */

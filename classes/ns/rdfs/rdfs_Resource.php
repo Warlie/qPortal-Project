@@ -12,11 +12,6 @@ function &get_Instance()
 return new RDFS_Resource();
 }
 
-function complete()
-	{
-		parent::comlete();
-		
-	}
 
 }
 

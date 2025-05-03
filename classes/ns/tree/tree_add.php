@@ -74,9 +74,9 @@ function event_initiated()
 
 function event_message_in($type,&$obj)
 	{
-		
-//$this->giveOutOverview();
 
+//$this->giveOutOverview();
+		// doctype contains the supported document type
 		if(is_Null($this->get_attribute('doctype')))
 		$doc_type = 'XML';
 		else
@@ -84,12 +84,14 @@ function event_message_in($type,&$obj)
 										
 
 										
-		//case-folding
+		//it is the conventional case-folding
 		if($this->get_attribute('case_folding')) 
 			$this->caseFolding = intval($this->get_attribute('case_folding'));
 
 		//var_dump($this->getdata());
-		
+		/*
+		* if there is no URL, it will act as an incoming document
+		*/
 				if(is_null($this->getdata())){
 					
 					if($method = $this->get_attribute('method') && $id = $this->get_attribute('id') )
@@ -114,10 +116,66 @@ function event_message_in($type,&$obj)
 				}
 				else
 				{
+
+				$com_parameter = [];
+				$com_parameter["Method"] = REST_Connection::GET;
+				
+					if(($method = $this->get_attribute('method')) && $id = $this->get_attribute('id') )
+					{
+
+						$com_parameter["Method"] = $method;
+
+						$head = $this->findListByName('http://www.trscript.de/tree#header', $this);
+						
+						if(count($head) > 0)
+						{
+							$com_parameter ["RequestHeaders"] = [];
+							$tmp_header_parameter =$this->findListByName("http://www.trscript.de/tree#param", $head[0]);
+							
+							for($i = 0; $i  < count($tmp_header_parameter); $i++)
+								$com_parameter ["RequestHeaders"][] = $tmp_header_parameter[$i]->get_attribute('name') . ": " .  
+									trim($tmp_header_parameter[$i]->getdata());
+
+
+						}	
+						// $template = $obj->get_requester()->get_template($other_template)
+						// 	$this->get_parser()->change_URI($template);
+						//save_stream($format = ''
+						// ->save_Stream($out,$set_header)
+						//$this->get_attribute('id')
+						if($body = $this->get_attribute('body'))
+						{
+
+							$cur_idx = $this->get_parser()->cur_idx();
+							$this->get_parser()->change_URI(
+								$obj->get_requester()->get_template($body)
+								);
+							$com_parameter ["RequestBody" ] = $this->get_parser()->save_Stream();
+							$com_parameter ["Parameters"] = [];
+							$this->get_parser()->change_idx($cur_idx);
+							
+						}
+							
+						$tmp_parameter =$this->findListByName("http://www.trscript.de/tree#param", $this);
+						
+						if(count($tmp_parameter) > 0)
+						{
+							$com_parameter ["Parameters"] = [];
+							
+							for($i = 0; $i  < count($tmp_parameter); $i++)
+								$com_parameter ["Parameters"][$tmp_parameter[$i]->get_attribute('name')] = 
+									trim($tmp_parameter[$i]->getdata());
+
+
+						}	
+	//print($content->getoutput(SEND_HEADER,'ISO 8859-1'));
+						//$com_parameter["RequestBody"]
+						
+					}
 		
-		
+
 		//calls specific parser based on doc-type									
-		$this->get_parser()->load($this->getdata(),$this->caseFolding,$doc_type);
+		$this->get_parser()->load(trim($this->getdata()),$this->caseFolding,$doc_type, $com_parameter );
 		
 		//TODO expands parser with Exceptions
 		if($this->get_parser()->error_num() <> 0)
@@ -136,16 +194,31 @@ function event_message_in($type,&$obj)
 			$uri = $this->getRefprev()->full_URI();
 			if($uri == 'http://www.trscript.de/tree#template' )
 			{
-				
-				$obj->get_requester()->set_template($this->get_attribute('id'),$this->getdata());
+				//var_dump(get_class($obj->get_requester()),$this->get_attribute('id'), trim($this->getdata() ));
+				$obj->get_requester()->set_template($this->get_attribute('id'),trim($this->getdata()));
 				
 				
 	
 			}
+
 }
 		
 		
 	}
+	
+	private function findListByName($name, $node)
+	{
+		$res = [];
+							
+		for($i = 0; $i  < $node->index_max(); $i++)
+			if($node->getRefnext($i)->full_URI() == $name)
+				{
+					$res[] = $node->getRefnext($i);
+				}
+	
+		return $res; 
+	}					
+	
 }
 
 ?>

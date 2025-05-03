@@ -81,6 +81,11 @@ var $prev_el;
 var $name = '';
 var $attrib;
 protected $attrib_ns = array();
+
+/* this variables shows that this node has behavior */
+protected $has_behavior = false;
+
+
 var $data;
 var $cdata = false;
 
@@ -124,13 +129,20 @@ function &getobj()
 
         }
 
-
+/* switches behaviour status on and off, Instance events will be called on positive behaviour status*/
+protected function set_behavior(bool $behavior): void {$this->has_behavior = $behavior;}
+public function has_behavior(): bool{return $this->has_behavior;}
+        
+        
+// TODO protected could be better because of the factory method
 public function __construct($type = 'rootnode', $namespace = "default")
 {
 	$this->type = $type;
 	$this->namespace = $namespace;
 	//$features[] = ''
 }
+
+
 
 public function supports_function($feature){return in_array($feature, $this->features); }
 
@@ -167,7 +179,7 @@ $res = array();
 	return $res;
 }
 
-public function Class_stamp_($add)
+public function Class_stamp($add)
 {
 
 	if($this->link_to_class)
@@ -187,9 +199,9 @@ public function get_NodeType()
 	return $this->kind_of_node;
 }
 
-function get_classes_()
+function get_classes()
 {
-echo $this->full_URI() . "<br>\n";
+//echo $this->full_URI() . "<br>\n";
 if($this->link_to_class)$this->link_to_class->get_classes();
 }
 
@@ -544,29 +556,13 @@ function &get_parser()
 
 
 
-
+// TODO attribute is worth a check for the cases, it actual uses
 function attribute($name,&$value){
 	
-	if(is_object($value))
-	{
-		
-		if(is_Object($this->attrib[$name]))
-		{
-				if($value instanceof Interface_node)
-				{
-				//$this->attrib[$name]->freedata();
-				
-				$this->attrib[$name]->setdata($value);
-				
-				
-				}
-		}
-		else
-		{
 			
 		if($value instanceof Interface_node)
 		{
-			$value->set_NodeType(1);
+			$value->set_NodeType(ATTRIBUTE);
 			$value->setrefprev($this);
 			//echo "\n<br> key ::= " . $value->full_URI() . '=>' . $value->getdata() . ";<p>\n";
 			if($this->attrib_ns[$value->full_URI()]) unset($this->attrib_ns[$value->full_URI()]);
@@ -575,16 +571,9 @@ function attribute($name,&$value){
 			$value->event_initiated();
 			
 		}
-		
-		}
-		
-	}
-	else
-	{
-		
-		$this->attrib[$name] = $value;
-		
-        }
+		else
+		throw new ErrorException("The second argument has to be an Interface_node");
+
 }
 	
 	public function set_ns_attribute($uri, $value)
@@ -1004,7 +993,7 @@ function final_data(){$this->index++;}
 //Starts behavior of tagelement, for NS
 function complete()
 {
-	//calls only attributes
+	//calls only !attributes!
 	for($i = 0 ; count($this->start_list) > $i;$i++)
 	{
 		$this->start_list[$i]->event('*?start');
@@ -1017,16 +1006,17 @@ function complete()
 //distributor to inherit, fires most of all events in class
 function event($type,&$obj)
 {
-		global $logger_class;
-	$logger_class->setAssert('  Message ("' . $type . '") was send to "' . $this->full_URI() . '  ' . '"(Interface_node:event_message_in)' ,5);
+	//echo $type . " " . get_class($this) ."\n";
+/*
 
 	//löst in allen attributen event aus
 	for($i = 0 ; count($this->start_list) > $i;$i++)
 	{
+
 		$this->start_list[$i]->event($type,$obj);
 		
 	}
-	
+	*/
 	if($type == '*?parse_complete')
 	{
 	//löst event aus
@@ -1034,19 +1024,18 @@ function event($type,&$obj)
 	
 		if($this->link_to_class && !$this->is_Class)
 			{
-				
+					//echo $this->full_URI() . "calls class " . $this->link_to_class->full_URI() . "\n";
 				$obj->set_node($this);
 				$this->link_to_class->event('*?parse_complete_classes',$obj);
 			
 			}
-	//l�st bei den geklonten objekten ein event aus, wenn das parsen beendet ist
 	
 
 	}
 
 	if($this->link_to_class && $type == '*?parse_complete_classes')
 		{
-			//
+			//echo $this->full_URI() . " Instance called \n";
 			$this->event_Instance($obj->get_node(),$type,$obj);
 			$this->link_to_class->event('*?parse_complete_classes',$obj);
 			
@@ -1055,7 +1044,7 @@ function event($type,&$obj)
 		
 	//if($this->link_to_class)$this->link_to_class->event_Instance($this,$type,$obj);
 
-		$this->event_parseComplete();
+		//$this->event_parseComplete();
 
 }
 
@@ -1362,14 +1351,7 @@ $logger_class->setAssert('__get_data of requester "' . $obj->get_requester()->fu
 			
 		}
 		
-		
-		//echo 'booh-------------' . get_Class($this) . ' ' . $type . "<br>\n";
-		//echo $type;
-		//if($this->is_Node($type))
-		//{
-		//$logger_class->setAssert('  Command was send to "' . $this->full_URI() . '  ' . '"(Interface_node:event_message_check)' ,5);
-		//echo 'booh-------------' . get_Class($this) . ' ' . $type . "<br>\n";
-		
+
 		$this->event_message_in($type,$obj);
 		//}
 	}
@@ -1486,99 +1468,105 @@ function &new_Instance()
 				//$obj->set_parser($this->get_parser());
 				return $obj;
 }
-
-function &cloning(&$prev_obj)
+/**
+*	@param prev_obj : previous node in data tree
+*	@param called_by_cloning : tells the method it is called by itself or someone other
+*
+* create deep copies of a branch
+*/
+function &cloning(&$prev_obj, $called_by_cloning = false)
                 {
-                                $obj = $this->get_Instance();
-                                $obj->set_parser($this->get_parser());
-                                if($prev_obj) $obj->set_idx($prev_obj->get_idx());
+                	
+                		
+                		
+                	
+                		/* instances a new object of the current node */
+                		if(is_object($prev_obj))
+                		{
+                			  if($prev_obj->get_parser() !== $this->get_parser())
+                			  	  {
+                			  	  	  $myparser = $prev_obj->get_parser();
+                			  	  	  
+                			  	  	  //var_dump($this->full_URI(), $this->get_ns_attribute());
+                			  	  	  $obj = $myparser->getInstance($this->full_URI(),$this->get_ns_attribute());
+                			  	  	  //$obj->attrib = $this->attrib;
+                			  	  	  //$obj->attrib_ns = $this->attrib_ns; // that stinks
+                			  	  	  
+                			  	  }	  
+                			  else
+                			  {
+                			  
+                			  $myparser = $prev_obj->get_parser();
+                			  $obj = $this->get_Instance();
+                			  $obj->attrib = $this->attrib;
+                                	$obj->attrib_ns = $this->attrib_ns; // that stinks
+                			  }
+                                }
+                                else
+                                {
+                                	$myparser = $this->get_parser();
+                                	$obj = $this->get_Instance();
+                                	$obj->attrib = $this->attrib;
+                                	$obj->attrib_ns = $this->attrib_ns; // that stinks
+                                }
+                                	
+
+                                	
+
+                                
+                                /* here it gets all its common data */
                                 $obj->name =  $this->name;
-                                $obj->attrib = $this->attrib;
-                                $obj->attrib_ns = $this->attrib_ns;
+                                
+                                //attribute($name,&$value){
+                                
+
                                 $obj->data =  $this->data;
                                 $obj->namespace =  $this->namespace;
                                 $obj->type =  $this->type;
                                 $obj->cdata = $this->cdata;
                                 // cdata fehlt
 
-                                // if(!$this->get_parser())throw new ErrorException( $this->full_URI() . " needs a backref to its parser", 1332, 75);
-                                
-                                //$this->giveOutOverview();
-                                //if($this->get_parser())$this->giveOutOverview();
-                                
-                                //$obj->idx = $this->idx;
-                                //$obj->res_idx =  $this->res_idx;
-                                //if(!is_null($this->ref))$obj->ref =  &$this->ref;
+                                /* get the most relevant parser */
+                                if(is_object($prev_obj))
+                                {
+                                	$obj->prev_el = &$prev_obj;
 
-                                //echo '<span style="color:blue;" >' . $obj->get_type() . ' - ' . $obj->get_name() . ' mit dem index ' . $obj->res_idx . '</span><br>';
-                                                           //instances_down[$z]
+                                	if(!is_array($prev_obj->next_el))$prev_obj->next_el = array();
+                                		$prev_obj->next_el[] = &$obj;
 
-                                //$obj->instances_down = &$this->instances_down;
-                                
-                                /*
-                                if(is_object($this->one_to_many))
-                                $obj->one_to_many = &$this->one_to_many;
+                                	$obj->set_idx($prev_obj->get_idx());
+
+                                	$myparser = $prev_obj->get_parser();
+                                }
                                 else
-                                $obj->one_to_many = $this->one_to_many;
-                                */
+                                	$myparser = $this->get_parser();
+                                	
+                                $obj->set_parser($myparser);
+                                
+
                                 if(!is_null($this->next_el))
                                 	for($i = 0;$i < count($this->next_el);$i++)
                                 	{
 					
-                                		 if(!$this->next_el[$i]->get_parser())
+                                		 if(!$this->next_el[$i]->get_parser()) 
                                 		 {
                                 		 	$this->next_el[$i]->set_parser($this->get_parser());
                                 		 	
                                 		 	 trigger_error($this->next_el[$i]->full_URI() . " in interface_ns needs a reference to its parser. please check the specific code", E_USER_WARNING);
                                 		 }
                                 		 
-                                		$my_temp  =  &$this->next_el[$i]->cloning($obj);
+
                                 		
-                                //$obj->next_el[$i]
-                                //echo 'in clone ' .  $my_temp->get_type();
-                                	$obj->next_el[$i] = &$my_temp;
-                                //echo 'in clone ' .  $obj->next_el[$i]->get_type();
+
+                                	$obj->next_el[$i] = $this->next_el[$i]->cloning($obj);
+
                                 	}
 
-                                if(is_object($prev_obj))
-                                {
-                                //echo $prev_obj->name . '--';
 
-                                $obj->prev_el = &$prev_obj;
-
-                                // if(!is_null($prev_obj->next_el))
-                                //var_dump(count($prev_obj->next_el)); //count($prev_obj->next_el)
-                                if(!is_array($prev_obj->next_el))$prev_obj->next_el = array();
-                                $prev_obj->next_el[] = &$obj;
-
-
-
-                                //echo $obj->prev_el->name;
-                                }
-
-                                if($this->get_parser())
-                                {$this->get_parser()->set_new_index($obj);
-                                //$this->giveOutOverview();
-                                }
-                                else
-                                {
-                                	
-                                	if($prev_obj &&  $prev_obj->get_parser())
-                                		$prev_obj->get_parser()->set_new_index($obj);
-                                	else
-                                	//throw new ErrorException( $this->full_URI() . " needs a backref to its parser", 1332, 75);
-                                	;
-                                	//echo "danger, no index";
-                                //	echo "not in ------------------------------------------------------------------------------------\n";
-                               
-                               
-                                //echo "-------------------------------------------------------------------------------------------\n";
-                                }
-                                //echo "-------------------------------------------------------------------------------------------\n";
-                                //var_dump($prev_obj, $this, $obj);
-                                //echo "-------------------------------------------------------------------------------------------\n";
                                 
-                              //  if($obj->get_NS() == "http://www.trscript.de/tree")
+                                $myparser->set_new_index($obj);
+                                $myparser->add_to_execute($obj);
+
                                 	$obj->complete();
                                 
                                 return $obj;

@@ -101,12 +101,15 @@ class xml  {
    private $prevent_read_event = false;
    
    
-   
+   // will be called by TreeStdWorkspace
    public function setControlUnit(ControlUnit &$unit)
    {
 	   $this->controlUnits[$unit->getName()] = &$unit;
    }
    
+   // is a simple getter for control structures
+   // having this in a DOM like structure is questionable
+   // TODO push it into a sperate class or something similar
    public function &getControlUnit( $name )
    {
 	   if(is_null($tmp = &$this->controlUnits[$name])) return false;
@@ -496,6 +499,7 @@ function checkPointers()
 
 
         /* erstellt einen Knoten im Baum*/
+        /*
    function create_node($stamp=null,$pos=null){
 
 echo 'booh';
@@ -547,7 +551,7 @@ echo 'booh';
 
 
         }
-
+*/
 /*   function delete_node($stamp,$pos=null){
 
 
@@ -780,12 +784,65 @@ echo 'booh';
    
    
    */
-   function load($ref,$case_folder = 1,$spezial = 'XML')
+   function load($ref,$case_folder = 1,$spezial = 'XML', $com_parameter = ["Method"=>'GET'])
    {
    global $logger_class;
    $res;
-
+// if(filter_var($text, FILTER_VALIDATE_URL))
 //echo '--' . $ref . "---\n\n";
+
+//if(filter_var($text, FILTER_VALIDATE_URL))
+if(!file_exists($ref) && filter_var($ref, FILTER_VALIDATE_URL)){
+$client = new REST_Connection($ref);
+
+// Konfiguriere den Request
+$client->setMethod($com_parameter["Method"]);
+
+
+
+if(array_key_exists("Parameters", $com_parameter))
+	$client->setParameters($com_parameter["Parameters"]);
+
+if(array_key_exists("RequestBody", $com_parameter) && $com_parameter["RequestBody"] != "")
+	{
+		$client->setBody($com_parameter["RequestBody"]);
+		$com_parameter["RequestHeaders"]['Content-Length'] = "" . strlen($com_parameter["RequestBody"]);
+	}
+
+if(array_key_exists("RequestHeaders", $com_parameter))
+	$client->setHeaderArray($com_parameter ["RequestHeaders"]);
+
+
+
+//$client->setParameters($request["Parameters"]);
+//$client->setHeaderArray($request ["RequestHeaders"]);
+/*
+if($request["RequestBody"] != "")
+	{
+		$client->setBody($request["RequestBody"]);
+		$request["RequestHeaders"]['Content-Length'] = "" . strlen($request["RequestBody"]);
+	}
+
+*/
+	$client->request(''); // Pfad relativ zur BaseUrl
+
+$statusCode = $client->getStatusCode();
+//echo "Status Code: " . $statusCode . "\n";
+/*
+$headers = $client->getAllResponseHeaders();
+echo "Response Headers:\n";
+print_r($headers);
+*/
+	$this->setNewTree($ref); // TODO das gehört ins load_Stream
+
+$res = $client->getRaw();
+
+// TODO check correctness in case { "test" } -> {}
+
+        $this->load_Stream($res,$case_folder,$spezial,$ref);
+        
+                return $this->idx;
+}
 
 if(false === stripos($ref,'.php'))
 {
@@ -1387,7 +1444,7 @@ return $res;
         }
 
         // hilfsfunction
-        function all_attrib_axo($format){
+        function all_attrib_axo($format, $flags = ENT_XML1){
                                 $res = '';
 
                                 $attrib_array = $this->show_cur_attrib();
@@ -1396,11 +1453,7 @@ return $res;
 
                                         foreach ($attrib_array as $key => $value){
 
-
-
-                                                        $res .= $key . '="' . $this->convert_to_XML($value,$format) . '" ';
-
-
+                                        	$res .= $key . '="' . htmlspecialchars( $value, $flags, 'UTF-8') . '" ';
 
                                         }
                                        return ' ' . $res;}
@@ -1417,110 +1470,7 @@ return $res;
    
 
    }
-   //Aenderung f�r NS				    
-   function &getInstance($name,$attributes,$arg_obj = null)
-   {
-	   if($arg_obj)
-	   $obj = $arg_obj;
-	   else
-	   $obj = new XMLelement();
-	   
-	   $obj->name = $name;
-	   
-	   if($attributes)
-	   if (count($attributes)) {
-            foreach ($attributes as $k => $v) {
-             $obj->attribute($k,$this->convert_from_XML($v));
-                                   }
-                           }
-	   
-   return $obj;
-   }
-//seems to be never used again override in ns
-   function tag_open($parser, $tag, $attributes)
-   {
-
-        if(!isset($this->mirror[$this->idx])){
-
-                $num = 0;
-
-                $this->mirror[$this->idx] = $this->getInstance($tag,$attributes);
  
-                }else{
-
-                        $num = $this->mirror[$this->idx]->index_max();
-
-                        if(!isset($this->mirror[$this->idx]->next_el)){
-
-                                $var = $this->getInstance($tag,$attributes);
-                                $this->mirror[$this->idx]->setRefnext($var);
-                                $this->cur_pointer[$this->idx] = &$this->mirror[$this->idx]->getRefnext($this->mirror[$this->idx]->index_max() - 1 ,true);
-                                //schliesst cdata ab
-                                //$this->cur_pointer[$this->idx]->final_data();
-                                $this->cur_pointer[$this->idx]->setRefprev($this->mirror[$this->idx]);
-                                
-                                
-                                
-                                
-                        }else{
-
-                                $var = $this->getInstance($tag,$attributes);
-                                $var->setRefprev($this->cur_pointer[$this->idx]);
-                                $this->cur_pointer[$this->idx]->setRefnext($var);
-                                //schliesst cdata ab
-                                $this->cur_pointer[$this->idx]->final_data();
-                                $this->cur_pointer[$this->idx] = &$this->cur_pointer[$this->idx]->getRefnext($this->cur_pointer[$this->idx]->index_max() - 1 ,true);
-                                //$this->cur_pointer[$this->idx]->setRefprev(&$this->mirror[$this->idx]);
-                                //$cur_pointer = &$this->mirror[$this->idx]->getRefnext();
-                
-                        }
-                        
-                        
- 
-           }
-           
-
-   }
-
-   function cdrata($parser, $cdata) // outdated
-   {
-  
-                                           
-
-   
-                                        if(isset($this->cur_pointer[$this->idx])){
-                                                $tmp = $this->cur_pointer[$this->idx]->index_max();
-                                                
-                                        //$this->cur_pointer[$this->idx]->setdata($this->convert_from_XML($cdata),$this->cur_pointer[$this->idx]->index_max());
-                                        //echo $this->convert_from_XML($cdata);
-					$res;
-						if(is_Null($cdata))
-						{
-							$res = "";
-						}
-						else
-						{
-							$res = $cdata;
-						}
-					
-					if(is_Object($cdata))
-					$this->cur_pointer[$this->idx]->setdata($cdata,$tmp);
-					else
-					$this->cur_pointer[$this->idx]->setdata("",$tmp); // $this->convert_from_XML($res)
-                                        }
-   }
-
-   function tag_c6lose($parser, $tag)
-   {
-   //echo "&lt;/<font color=\"#0000cc\">$tag</font>&gt;";
-   	$this->cur_pointer[$this->idx]->comlete();
-        if(isset($this->cur_pointer[$this->idx]->prev_el))        
-	 $this->cur_pointer[$this->idx] = &$this->cur_pointer[$this->idx]->getRefprev();
-                                                      //$this->cur_pointer[$this->idx]->final_data();
-
-
-   }
-
 //function for entities
    function tag_entity($parser, $open_entity_names , $base, $system_id, $public_id )
    {
@@ -1568,43 +1518,48 @@ return $res;
         }
 
    }
-function &convert_from_XML($myString)
-        {
-                /*
-                echo '<b>' . $this->MIME[$this->idx]['encoding'] . '</b>bei ' . str_replace(
+function &convert_from_XML(string $text, string $sourceEncoding = 'UTF-8'): string
+    {
+    	
+    	array_key_exists('encoding', $this->MIME[$this->idx]);
+    	
+        $text = $text === null ? '' : $text;
+        $enc = strtoupper((array_key_exists('encoding', $this->MIME[$this->idx]))?$this->MIME[$this->idx]['encoding']:$sourceEncoding);
 
-                        array('&Uuml;','&Auml;','&Ouml;','&uuml;','&auml;','&ouml;'),
-                        $String
-                        ) . '<br>';
-                        
-                */
-		
-                $String = (is_null($myString)? '': $myString);
-                //echo strtoupper($this->MIME[$this->idx]['encoding']);
-                if (strtoupper($this->special) == "URLENCODE") $String = urldecode($String);
-                
-                //echo strtoupper($this->MIME[$this->idx]['encoding']) . $myString . "\n\r";
-                switch (strtoupper($this->MIME[$this->idx]['encoding']))
-                {
-                case 'UTF-8' :
-        //        	$res = $String;
-		$res = mb_convert_encoding($String,'utf-8');
-                //echo 'ausgang bei utf8:' .$res . ";\n";
-                break;
-                case 'ISO-8859-1' :
-                $res = $String;
-                //echo 'ausgang bei ISO-8859-1:' .$res . ";\n";
-                break;
-                default:
-                $res = $String;
-                //echo 'ausgang bei sonstiges:' .$res . ";\n";
-                break;
-                }
-                
-                //$res = utf8_decode($String);
-                return $res;
+        if ($enc === 'UTF-8') {
+            return $text;
         }
-function convert_to_XML( $String , $format, $void = false)
+
+        // Nur gezielt konvertieren, keine automatische Erkennung
+        return @mb_convert_encoding($text, 'UTF-8', $enc) ?: $text;
+        }
+        
+        
+public function convert_to_XML(string $text, string $targetEncoding, bool $identity = false): string
+    {
+        $enc = strtoupper($targetEncoding);
+
+        // Erst in Ziel-Encoding konvertieren
+        if ($enc !== 'UTF-8') {
+            $text = @mb_convert_encoding($text, $enc, 'UTF-8') ?: $text;
+        }
+
+        // Identity-Modus (keine Escapes)
+        if ($identity) {
+            return $text;
+        }
+
+        // Standard-Escaping für XML
+        $escaped = str_replace(
+            ['&', '"', '<', '>'],
+            ['&amp;', '&quot;', '&lt;', '&gt;'],
+            $text
+        );
+
+        return $escaped;
+    }
+        
+function convert_to_XML_alt( $String , $format, $void = false)
         {
                
 		if(is_null($String) || $void)return $String;		

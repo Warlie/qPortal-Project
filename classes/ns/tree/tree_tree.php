@@ -158,15 +158,11 @@ function event_message_in($type,&$obj)
 	else
 		if( ! count($this->way_out))
 			throw new EmptyTreeException("Empty tree");
-		
-	//if($obj instanceof EventObject )
-	//{
+
 	
 		$obj->set_context($this);
 		$this->send_messages($type,$obj);
-		
 
-		
 		/*
 		//calls all childnodes, which are not template and tree
 		for($i = 0 ; $i < $this->index_max();$i++)

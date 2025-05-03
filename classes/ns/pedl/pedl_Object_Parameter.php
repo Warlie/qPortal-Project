@@ -65,13 +65,47 @@ function &new_Instance()
 function event_initiated()
 {
 
+	if($pedl_name = $this->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#refersTo'))
+	{
+		//echo $pedl_name . "\n";
+		//echo  get_class($this->setPresetValues($pedl_name))  . "\n";
+		$this->setdata($this->setPresetValues($pedl_name), 0);
+	}
+	
 }
 
-function event_message_in($type,&$obj)
+	public function setPresetValues($preSet)
 	{
-		
+		$res = trim($preSet);
+		$has_value = (strlen($res) > 0);
 
+		//echo get_Class($refParser) . ': ';
+		
+		//echo $refParser->cur_idx();
+		if($has_value && $this->get_parser())
+		{
+		$stamp = $this->get_parser()->position_stamp();
+		$URI = '@registry_surface_system#' . $res;
+			if($this->get_parser()->seek_node($URI,null,null))
+			{
+				//echo "gefunden";
+				//$this->get_parser()->go_to_stamp($stamp);
+				return  $this->get_parser()->show_xmlelement()->getdata(0);
+				
+			}
+			else
+			{
+				//$this->get_parser()->go_to_stamp($stamp);
+				echo "nicht gefunden: $URI";
+				
+
+			}
+		
+		//$refParser->flash_result();
+		}
+		
 	}
+
 }
 
 ?>
