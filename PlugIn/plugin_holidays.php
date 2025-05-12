@@ -222,8 +222,8 @@ public function feiertag ($datum, $bundesland='')
 	
 	
 	function getAdditiveSource(){;}
-	protected function moveFirst(){if($this->rst)return $this->rst->moveFirst(); else return false;}
-    	protected function moveLast(){if($this->rst)return $this->rst->moveLast();else return false;}
+	public function moveFirst(){if($this->rst)return $this->rst->moveFirst(); else return false;}
+    	public function moveLast(){if($this->rst)return $this->rst->moveLast();else return false;}
     	
 	public function next(){if($this->rst)return $this->rst->next();else return false;}
     	public function set_list(&$value)

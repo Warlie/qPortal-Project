@@ -57,12 +57,15 @@ class PHP_handle extends Interface_handle
 		if(is_file($corr_xml_file))
 		{
 
-			$this->use_PEDL_file($this->base_object, $corr_xml_file);
-			$this->base_object->use_ns_def_strict(false);
+			if($this->use_PEDL_file($this->base_object, $corr_xml_file))
+			{
+				$this->base_object->use_ns_def_strict(false);
 						//echo $this->base_object->index_consistence();
-			$this->base_object->go_to_stamp($xmlPos);
-			return;
+				$this->base_object->go_to_stamp($xmlPos);
+				return;
+			}
 		}
+
 
 
 		$is_obj = ($source instanceof FileHandle );
@@ -186,7 +189,24 @@ class PHP_handle extends Interface_handle
 		 $myPrivateModel ->load($xml_file, false);
 		 $myPrivateModel->set_first_node();
 		 $parser->set_first_node();
-		 		 
+		
+		 	foreach($myPrivateModel->array_Of_Objects_Related_To_Tag_Name('http://www.w3.org/2006/05/pedl-lib#hasCodeResource') as $source)
+		 	{
+		 		if(false !== ($hash = $source->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#hash')))
+		 		{
+		 			if(false !== ($src = $source->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#src')))
+		 			{
+		 				if(hash_file('sha256', $src) != $hash)
+		 					return false;
+		 			}
+		 			
+		 		}
+		 		else
+		 		{
+		 			return false;
+		 		}
+		 	}
+		 
 		 /* walk through seeAlso entries for preload relevant data */
 		 	foreach($myPrivateModel->array_Of_Objects_Related_To_Tag_Name('http://www.w3.org/2000/01/rdf-schema#seeAlso') as $seeAlso)
 		 		if(false !== ($data = $seeAlso->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#src')) && 
@@ -213,6 +233,7 @@ class PHP_handle extends Interface_handle
 		var_dump($handle->save_back("UTF-8"));
 		*/
 
+		return true;
 	}
 	
 	function convert_to_XML( $String , $format)
@@ -468,7 +489,7 @@ class Obj_Class
 			
 
 		}
-			$attrib = array('pedl:src' => $this->php_path);
+			$attrib = array('pedl:src' => $this->php_path, 'pedl:hash'=>hash_file('sha256', $this->php_path));
 			$xml_model->tag_open($this, "pedl:hasCodeResource", $attrib);
 			$xml_model->tag_close($this, "pedl:hasCodeResource");
 		

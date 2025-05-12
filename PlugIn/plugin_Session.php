@@ -36,7 +36,7 @@ class Session extends plugin
 		
 	public function moveFirst()
 	{
-		if($this->rst)$this->rst->moveFirst();
+		if($this->rst)return $this->rst->moveFirst();
 		$this->pos = 0;
 		return true;
 	
@@ -48,19 +48,14 @@ class Session extends plugin
 	*/
 	public function moveLast()
 	{
-		if($this->rst)$this->rst->moveLast();
+		if($this->rst)return $this->rst->moveLast();
 		$this->pos = $this->max - 1 ;
 		return true;
 	}
 		
 	public function next()	
 	{
-		if($this->pos < $this->max - 1) 
-			{
-			$this->pos++;
-			if($this->rst)$this->rst->next();
-			return true;
-			}
+
 		if($this->rst)return $this->rst->next();
 		return false;
 	}
@@ -101,9 +96,10 @@ public function col($columnName)
 	global $_SESSION;
 	//echo "wupp";
 	//$this->max
-	if(!is_null($tmp = $_SESSION[$columnName]))
+	
+	if(array_key_exists($columnName,$_SESSION))
 	{
-		return $tmp;
+		return $_SESSION[$columnName];
 	}
 	
 	if($this->rst)
@@ -252,12 +248,11 @@ global $_SESSION;
 		
 		public function fields()
 		{
-	$res = array();
-	foreach ($_SESSION as $key => $value)
-		{
-			$res[] = $key;
-		}
-	return $res;
+			if($this->rst) $res = $this->rst->fields();else $res = array();}
+			
+			
+			return array_merge(array_keys($_SESSION), $res); 
+
 
 
 		}

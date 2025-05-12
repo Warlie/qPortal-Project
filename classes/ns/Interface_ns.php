@@ -763,7 +763,7 @@ public function set_read_event($bool)
 
 public function freedata_(){return true;}
 //orginal
-function setdata(&$data,$pos = null, $add = false){
+function setdata($data,$pos = null, $add = false){
 
 	if(is_string($data) && 
 		(str_contains($data, '&')
@@ -1209,18 +1209,24 @@ global $logger_class;
 			$value = $structur['Command']['Value'];
 			if(array_key_exists('attribute', $json))$attribute =  $json['attribute'];
 			if(array_key_exists('name', $json))$name =  $json['name'];
+
 			//var_dump(json_decode($structur['Command']['Attribute']['json'], true));
 			 $this->get_parser()->flash_result();
+			// var_dump("name",$name, "attrib", $attribute);
 			if($this->parser->seek_node($name,$attribute) && (count($this->get_parser()->get_result())>0))
 			{
 
+			$obj->set_node($this);
 		//$many_of_res = count($this->get_parser()->get_result());
+		//echo "geht durch \n";
 		foreach( $this->get_parser()->get_result() as $value_obj){
-
+		//	echo  spl_object_id($this) . " insert " . spl_object_id($value_obj) . " [" . $value_obj->full_URI() . "]--------\n";
+			//var_dump($value_obj);
+			
 			$value_obj->event_message_in($value,$obj) ;
 		}
 				
-		
+		//echo "fertig \n";
 		 $this->get_parser()->flash_result();
 				
 				//var_dump($name,$attribute,$this->parser->show_xmlelement());
@@ -1362,6 +1368,7 @@ protected function event_message_in($type,&$obj)
 	
 }
 //sign in to be a listener
+/*
 protected function set_to_out(&$obj)
 {
 	
@@ -1370,6 +1377,19 @@ protected function set_to_out(&$obj)
 
 	
 		
+}
+*/
+protected function set_to_out(Interface_node &$listener): void
+{
+    // schon registriert?
+    foreach ($this->way_out as $existing) {
+        if ($existing === $listener) {
+        	throw new ErrorException($listener);
+            return;
+        }
+    }
+    $this->way_out[] = $listener;
+    $listener->set_to_in($this);
 }
 
 public function &get_out_ref()
@@ -1382,15 +1402,17 @@ public function &get_in_ref()
 	return $this->way_in;
 }
 
-//sign in to be a listener
-function set_to_in(&$obj)
+protected function set_to_in(Interface_node &$origin): void
 {
-	
-	$this->way_in[count($this->way_in)] = &$obj;
-
-		
+    // schon registriert?
+    foreach ($this->way_in as $existing) {
+        if ($existing === $origin) {
+        	throw new ErrorException($origin);
+            return;
+        }
+    }
+    $this->way_in[] = $origin;
 }
-
 
 function set_to_check(&$obj)
 {

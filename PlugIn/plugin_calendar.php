@@ -233,7 +233,7 @@ var $tag;
 	
 	
 	function getAdditiveSource(){;}
-	protected function moveFirst()
+	public function moveFirst()
 	{
 		if($this->mode == 'calendar')
 		{
@@ -247,7 +247,7 @@ var $tag;
 		
 		}
 	return true;}
-    	protected function moveLast(){$this->cal_week_add = 34;return true;}
+    	public function moveLast(){$this->cal_week_add = 34;return true;}
     	
     	
 	public function next()

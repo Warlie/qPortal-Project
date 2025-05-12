@@ -4,8 +4,8 @@ require('PlugIn/plugin_interface.php');
 
 abstract class Readable extends plugin
 {
-    	//abstract protected function moveFirst();
-    	//abstract protected function moveLast();
+    	//abstract public function moveFirst();
+    	//abstract public function moveLast();
     	//abstract protected function get_list(&$value);
 
 	function &get_file_handler()

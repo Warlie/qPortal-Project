@@ -242,12 +242,12 @@ var $tag;
 	
 	
 	function getAdditiveSource(){;}
-	protected function moveFirst()
+	public function moveFirst()
 	{	
 		return (reset($this->big_list));	
 	}
 	
-    	protected function moveLast()
+    	public function moveLast()
     	{
 		return (end($this->big_list));
 	}

@@ -69,7 +69,8 @@ function complete()
 
 function event_message_in($type,&$obj)
 	{
-		
+		//echo "ich mache hier schon Dinge\n";
+		//throw new ErrorException($this->full_URI());
 		global $_SESSION;
 		
 		// requests the permission to enter a special sector tag
@@ -96,15 +97,16 @@ function event_message_in($type,&$obj)
 		return false;
 		}
 		}
-		
+
 		// ---------------------- Start with progress --------------------
 		
 		if($obj instanceof EventObject )
 		{
 		$template = $obj->get_requester()->get_out_template($other_template); //???
-		//echo $obj->get_requester()->get_out_template();
+
 		$obj->get_requester()->set_current_template($obj->get_requester()->get_out_template()) ;
-		
+		//echo "Ich mache dinge\n";
+		//throw new ErrorException("dinge");
 			//changes maintemplate, to edit an non maintemplate
 			if ($other_template = $this->get_attribute('id'))
 			{
@@ -154,6 +156,7 @@ function event_message_in($type,&$obj)
 	$obj->set_node($this->get_parser()->show_xmlelement());
 	//echo $this->get_parser()->show_xmlelement()->name;
 	//echo $obj->name;
+
 	$this->send_messages('*',$obj); 
 	}
 	else

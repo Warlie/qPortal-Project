@@ -335,7 +335,7 @@ printf("value\n");
 	}
 	
 	function getAdditiveSource(){;}
-	protected function moveFirst()
+	public function moveFirst()
 	{
 		if($this->rst)
 		{
@@ -352,7 +352,7 @@ printf("value\n");
 		return false;
 	}
 	
-    	protected function moveLast(){if($this->rst)return $this->rst->moveLast();else return false;}
+    	public function moveLast(){if($this->rst)return $this->rst->moveLast();else return false;}
     	
 	public function next()
 	{

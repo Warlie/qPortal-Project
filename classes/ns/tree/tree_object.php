@@ -157,9 +157,9 @@ function event_message_in($type,&$obj)
 		{
 	//------------------Allready existing name---------------------------
 			//gives out first existing instance to id
-
+			//echo $instance_id . "\n";
 			$object = $parser->getControlUnit( "surface_tree_engine")->getObjectByID($instance_id);
-			
+			//var_dump($object);
 			// class name mentioned in the former object, called by the instance id
 			$object_Class_Name = $object->get_attribute('name');
 			
@@ -171,6 +171,8 @@ function event_message_in($type,&$obj)
 			{
 			if($object->way_out[$j]->name <> 'remote')
 			{
+				//var_dump(get_class($object->way_out[$j]), $object->way_out[$j]->name, spl_object_id($object->way_out[$j]));
+				
 			$this->set_to_out($object->way_out[$j]);
 
 			}

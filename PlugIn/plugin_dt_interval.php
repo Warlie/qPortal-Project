@@ -713,7 +713,7 @@ monthly{1{9:00(+10hours) }2{9:00(+10hours) }}daily{8:00(+10hours)}
 	
 	function getAdditiveSource(){;}
 
-	protected function moveFirst()
+	public function moveFirst()
 		{
 
 			if(count($this->full_time) == 0)$this->collect_data();
@@ -728,7 +728,7 @@ monthly{1{9:00(+10hours) }2{9:00(+10hours) }}daily{8:00(+10hours)}
 
 		}
 		
-    	protected function moveLast()
+    	public function moveLast()
     	{
 			if(count($this->full_time) == 0)$this->collect_data();
 			

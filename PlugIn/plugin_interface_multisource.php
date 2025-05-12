@@ -4,8 +4,8 @@ abstract class plugin_multisource extends plugin
 protected $columns = array();
 protected $column_prefix = array();
 protected $rst = array();
-    	//abstract protected function moveFirst();
-    	//abstract protected function moveLast();
+    	//abstract public function moveFirst();
+    	//abstract public function moveLast();
     	//abstract protected function get_list(&$value);
     	
     	public function prefix($tbl, $prefix)

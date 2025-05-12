@@ -130,12 +130,12 @@ var $tag;
 	
 	
 	function getAdditiveSource(){;}
-	protected function moveFirst()
+	public function moveFirst()
 	{
 		unset($this->result_array);
 		if($this->rst)return $this->rst->moveFirst(); else return false;
 	}
-    	protected function moveLast()
+    	public function moveLast()
     	{
     		unset($this->result_array);
     		if($this->rst)return $this->rst->moveLast();else return false;

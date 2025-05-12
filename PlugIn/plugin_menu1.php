@@ -417,8 +417,8 @@ var $res = array();
 	
 	
 	function getAdditiveSource(){;}
-	protected function moveFirst(){$this->pos = 0;return true;}
-    	protected function moveLast(){$this->pos = count($this->res)-1 ;return true;}
+	public function moveFirst(){$this->pos = 0;return true;}
+    	public function moveLast(){$this->pos = count($this->res)-1 ;return true;}
     	
     	public function many(){return count($this->res);}
 	//public function next(){return (($this->pos < count($this->res)-1) && !$this->pos++);}

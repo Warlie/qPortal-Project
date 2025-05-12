@@ -43,9 +43,9 @@ var $tag;
 	
 	public function set_list(&$value)
 	{
-	    
 	    if(is_object($value))
 	    {
+
 	        $this->rst = &$value;
 	    }
 	    else
@@ -56,9 +56,11 @@ var $tag;
 	{
 
 	if($this->rst)
-	{
+	{ 
+		
 		 if($this->tag_name == $columnname)
 		 {
+
             if(count($this->composite) == 0)
 		 	    return hash( $this->algo, $this->rst->col($columnname) .  $this->salt, false);
 		 	else

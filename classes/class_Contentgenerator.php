@@ -364,10 +364,11 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 				base64_encode( '*?start' )
 */
 			try{
+				//echo "jojo\n";
 			$cur_obj->event_message_check(
 				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{ "attribute":{"http://www.trscript.de/tree#name":"' . $this->nodeName . '"}}'], "Value"=> ["Identifire"=>"*", "Command"=> ["Name"=> "start" ], "Attribute"=>$this->param]  ]]
 				,new EventObject('',$this,$booh)); //  "name":"http://www.trscript.de/tree#tree",
-			
+			//echo "donedone\n";
 			}  //$this->XMLlist->show_xmlelement()->event_message_in('*?start',new EventObject('',$this,$booh));
 			catch(NotExistingBranchException $e)
 			{

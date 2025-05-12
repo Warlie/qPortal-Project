@@ -65,7 +65,7 @@ var $tag;
 	
 	
 	function getAdditiveSource(){;}
-	protected function moveFirst()
+	public function moveFirst()
 	{
 		if(count($this->rst) == 0) 
 			return false;
@@ -76,7 +76,7 @@ var $tag;
 		return $res;	
 	}
 	
-    	protected function moveLast()
+    	public function moveLast()
     	{
     		if(count($this->rst) == 0) 
 			return false;

@@ -221,7 +221,7 @@ var $rst = null;
 	
 	function getAdditiveSource(){;}
 	
-	protected function moveFirst()
+	public function moveFirst()
 		{
 
 			if(count($this->sum) == 0)$this->collect_data();
@@ -230,7 +230,7 @@ var $rst = null;
 
 		}
 		
-    	protected function moveLast()
+    	public function moveLast()
     	{
 			if(count($this->sum) == 0)$this->collect_data();
 				

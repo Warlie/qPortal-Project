@@ -122,7 +122,8 @@ function event_message_in($type,&$obj)
 		//echo $this->get_attribute('value') . ' ' . $type . ' ' . $obj->get_node()->name . "<br>\n";
 	
 	//checks for type 
-	
+	//echo $this->full_URI() . " !!!!!!!! " . spl_object_id($this) . " " . $obj->get_node()->full_URI() . ":" . spl_object_id($this) .  " \n";
+	//throw new ErrorException($this->full_URI());
 	$tag_array = array();
 
 			// looks for a type-attibute
@@ -171,6 +172,7 @@ function event_message_in($type,&$obj)
 						//echo "new";
 						//creates a new xml-element
 						$this->process_new_xhtml($obj,$value,$tag_array);
+
 					}
 					else
 					{
@@ -216,8 +218,9 @@ function event_message_in($type,&$obj)
 // creates new tag in specific tree
 function process_new_xhtml(&$obj,$name,$attrib)
 	{
+		
 		//$get_fu
-		//echo $name . ' <br>';
+		if($name == "http://www.w3.org/1999/xhtml#unqueID" )echo "start loop\n";
 		//tests for namespace with qname or just qname
 		//creates an object depending on Namespace 
 		if(false === ($posinStr = strpos($name,'#')))
@@ -236,7 +239,7 @@ function process_new_xhtml(&$obj,$name,$attrib)
 			//set_idx
 			$prefix_full = substr($name,0,$posinStr);
 			$postfix_full = substr($name,$posinStr + 1);
-			
+
 		$new_node = $this->get_parser()->get_Object_of_Namespace( $name );
 		if(!$obj) throw new ErrorException('no tree for ' . $name, 169,71);
 		//echo $obj->get_node()->get_id();
@@ -336,23 +339,26 @@ function process_new_xhtml(&$obj,$name,$attrib)
 		{
 		
 		
-			
+			$counting = 0;
 			$string = '';
 			$point = 0;
 			
 			//loop for all textnodes
 			for($i = 0; $i <= $this->index_max() ;$i++)
 			{
-			
-				
+			//if($name == "http://www.w3.org/1999/xhtml#unqueID" )echo $i . "\n";
+
 				if($i == $this->index_max())
 				{
 				//on last textnode
-					//echo $i . ' ' . $new_node->getdata($point);
+					
 						$string .= $this->getdata($i);
 						
+
 						
 						$new_node->setdata($string,$point);
+						//if($name == "http://www.w3.org/1999/xhtml#unqueID" )echo "unique";
+						//if($name == "http://www.w3.org/1999/xhtml#unqueID" )die("hier"); // Bis hier läuft alles gut
 				}
 				else
 				{
@@ -368,7 +374,7 @@ function process_new_xhtml(&$obj,$name,$attrib)
 						$string = '';
 					}
 					elseif($this->getRefnext($i,false)->full_URI() == 'http://www.trscript.de/tree#object')
-					{ //echo 'booh';
+					{
 						$string .= $this->getdata($i);
 						
 						$many_remote = $this->getRefnext($i)->index_max();
@@ -393,6 +399,7 @@ function process_new_xhtml(&$obj,$name,$attrib)
 					//echo " \n" . $i . ' ' . $string . " \n";
 					
 				}
+
 			}
 			
 			
@@ -471,10 +478,10 @@ function process_exist_xhtml(&$obj,$attrib)
 		$this->send_messages('',$new_event);
 			
 		if((0 < $this->get_data_many()) || (0 < $this->index_max()) )
-		{
+		{ 
 			$string = '';
 			$point = 0;
-			
+			if($name == "http://www.w3.org/1999/xhtml#unqueID" )die();
 			for($i = 0; $i < $this->index_max() + 1;$i++)
 			{
 			
@@ -484,6 +491,7 @@ function process_exist_xhtml(&$obj,$attrib)
 						$string .= $this->getdata($i);
 						
 						$cur_element->setdata($string,$point);
+						
 				}
 				else
 				{
@@ -504,7 +512,7 @@ function process_exist_xhtml(&$obj,$attrib)
 						$string = '';
 					}
 					elseif($this->getRefnext($i,false)->full_URI() == 'http://www.trscript.de/tree#object')
-					{ 
+					{ //if($name == "http://www.w3.org/1999/xhtml#unqueID" )die();
 						$string .= $this->getdata($i);
 						
 						$many_remote = $this->getRefnext($i)->index_max();
@@ -528,6 +536,7 @@ function process_exist_xhtml(&$obj,$attrib)
 					}
 					
 				}
+				
 			}
 		}
 

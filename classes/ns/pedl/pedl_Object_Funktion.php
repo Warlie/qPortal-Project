@@ -168,12 +168,11 @@ protected function event_readdata($own)
 					
 					// contains a reflectionClass and a SQL String
 
-
 					if( PEDL_Object_Class::Is_ShortCuts($this->name)){
 						//$example = function ($instance, $array){return $instance->configuration(...$array);};
 
 						$refl = PEDL_Object_Class::GiveShortCuts($this->name)($myarray[1], $all_values);
-					//$refl = $myarray[1]->configuration(...$all_values);
+										//$refl = $myarray[1]->configuration(...$all_values);
 					}
 					else
 					try{

@@ -75,13 +75,13 @@ var $tag;
 	
 	
 	function getAdditiveSource(){;}
-	protected function moveFirst()
+	public function moveFirst()
 	{
 	$this->counter = 0;
 	if($this->rst)return $this->rst->moveFirst(); else return false;
 	}
 	
-    	protected function moveLast()
+    	public function moveLast()
     	{
     	$this->counter = count($this->add);
     	if($this->rst)return $this->rst->moveLast();else return false;}

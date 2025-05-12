@@ -566,8 +566,8 @@ var $rst = null;
 	}
 	
 	function getAdditiveSource(){;}
-	protected function moveFirst(){ if($this->first){$this->first = false;$this->run();} if($this->rst[0])return $this->rst[0]->moveFirst(); else return false;}
-    	protected function moveLast(){if($this->first){$this->first = false;$this->run();}if($this->rst[0])return $this->rst[0]->moveLast();else return false;}
+	public function moveFirst(){ if($this->first){$this->first = false;$this->run();} if($this->rst[0])return $this->rst[0]->moveFirst(); else return false;}
+    	public function moveLast(){if($this->first){$this->first = false;$this->run();}if($this->rst[0])return $this->rst[0]->moveLast();else return false;}
     	
 	public function next(){if($this->rst[0])return $this->rst[0]->next();else return false;}
 

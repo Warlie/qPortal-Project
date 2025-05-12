@@ -142,8 +142,8 @@ var $tag;
 	
 	
 	function getAdditiveSource(){;}
-	protected function moveFirst(){if($this->rst){$this->cur = 0; return true;}else return false;}
-    	protected function moveLast(){if($this->rst){$this->cur = $this->count - 1;return true;}else return false;}
+	public function moveFirst(){if($this->rst){$this->cur = 0; return true;}else return false;}
+    	public function moveLast(){if($this->rst){$this->cur = $this->count - 1;return true;}else return false;}
     	
 	public function next()
 	{

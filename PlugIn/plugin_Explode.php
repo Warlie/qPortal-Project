@@ -97,10 +97,10 @@ var $tag;
 
 	
 	function getAdditiveSource(){;}
-	protected function moveFirst(){
+	public function moveFirst(){
 	unset($this->expl);
 	if($this->rst)return $this->rst->moveFirst(); else return false;}
-    	protected function moveLast(){
+    	public function moveLast(){
     	unset($this->expl);
     	if($this->rst)return $this->rst->moveLast();else return false;}
     	

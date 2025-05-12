@@ -69,8 +69,8 @@ var $tag;
 	}
 		
 	function getAdditiveSource(){;}
-	protected function moveFirst(){if($this->rst){ $this->count =0 ;return $this->rst->moveFirst(); }else return false;}
-    	protected function moveLast()
+	public function moveFirst(){if($this->rst){ $this->count =0 ;return $this->rst->moveFirst(); }else return false;}
+    	public function moveLast()
     	{
     		if($this->rst)return false;
     		$this->moveFirst();

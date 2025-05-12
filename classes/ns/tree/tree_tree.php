@@ -64,7 +64,11 @@ function &new_Instance()
 	
 function event_message_in($type,&$obj)
 	{
+//echo "Das Ding hier " . " [" . $this->full_URI() . "]" . spl_object_id($this) . " wurde aufgerufen von " . spl_object_id($obj->get_node()) .  "\n";
+//	echo spl_object_id($this) . "--->\n";
 
+//if(spl_object_id($obj->get_node())==354 && spl_object_id($this) == 354)throw new ErrorException("jap");
+	$obj->set_node($this);
 		global $_SESSION;
 		$json = '{"name":"http://www.trscript.de/tree#final"}';
 
@@ -130,6 +134,8 @@ function event_message_in($type,&$obj)
 		//$this->get_parser()->ALL_URI();
 			
 			//var_dump($this->get_parser()->show_xmlelement());
+			//echo  "deeper " . spl_object_id($this) . " insert " . spl_object_id($this->get_parser()->show_xmlelement()) . " [" . $this->get_parser()->show_xmlelement()->full_URI() . "]--------\n";
+			//var_dump($find);
 			$this->get_parser()->show_xmlelement()->event_message_check($find ,$obj);
 			//$this->get_parser()->show_xmlelement()->event_message_in($find ,$obj);
 			
@@ -180,6 +186,7 @@ function event_message_in($type,&$obj)
 			}
 	//}
 	*/
+	//echo spl_object_id($this) . "<---\n";
 	}
 }
 

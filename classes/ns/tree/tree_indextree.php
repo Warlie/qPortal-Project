@@ -25,7 +25,9 @@ return new TREE_indextree();
 
 
 	
-	function event_message_check($type,&$obj){parent::event_message_check($type,$obj);}
+	function event_message_check($type,&$obj){
+
+	parent::event_message_check($type,$obj);}
 	
 
 	

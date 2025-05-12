@@ -93,7 +93,6 @@ function complete()
 	
 function event_message_in($type,&$obj)
 	{
-
 		global $_SESSION;
 
 		//--------------------------------------- check access -------------------------------------------------
@@ -216,7 +215,7 @@ function event_message_in($type,&$obj)
 			
 			foreach ($nodes as $value)$value->event_message_in($type,$obj);
 			*/
-			
+			$this->get_parser()->flash_result();
 			$this->get_parser()->seek_node('http://www.trscript.de/tree#first');
 			/*
 			if(count($this->get_parser()->get_result()) > 0)
@@ -231,6 +230,8 @@ function event_message_in($type,&$obj)
 			$findIt = $this->get_parser()->seek_node('http://www.trscript.de/tree#final');
 			
 			$myfinal = array_pop($this->get_parser()->get_result());
+			
+			$this->get_parser()->flash_result();
 			/*
 			if(count($myres = $this->get_parser()->get_result()) > 0)echo " There are results\n";
 			else
@@ -240,8 +241,16 @@ function event_message_in($type,&$obj)
 
 			*/
 			
-			if($myfirst)$myfirst->event_message_in($type,$obj);
-			if($myfinal )$myfinal->event_message_in($type,$obj);
+				$obj->set_node($this);
+			
+			if($myfirst)
+				{
+					$myfirst->event_message_in($type,$obj);
+				}
+			if($myfinal )
+				{
+					$myfinal->event_message_in($type,$obj);
+				}
 
 			//$this->get_parser()->show_xmlelement()->event_message_in($type,$obj);
 			$this->get_parser()->flash_result();
