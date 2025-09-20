@@ -53,10 +53,17 @@ class xml_omni extends xml_objex
 	var $PARAMETER = array();
 	public $NAMESPACES = array();
 	
+	private $schema = false;
+	
 	public function set_special($key, $value)
 	{
 		$this->SPECIAL[$this->idx][$key]= $value;
 
+	}
+	
+	public function set_schema($path)
+	{
+		$this->schema = $path;
 	}
 	
      /* läd ein XML-Dokument */
@@ -122,6 +129,7 @@ class xml_omni extends xml_objex
 			}
 	   		$obj = &My_Handle_factory::handle_factory($special);
 			if(!is_object($obj))echo "Descriptor \"$special\" can not be assimilated";
+			if($path = $this->schema)$obj->set_Schema($path);
 			$obj->set_object($this);
 			$obj->set_attribute('XML_OPTION_CASE_FOLDING',$casefolding);
 			$obj->set_attribute('URI',$ref);

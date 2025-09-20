@@ -1382,9 +1382,11 @@ protected function set_to_out(&$obj)
 protected function set_to_out(Interface_node &$listener): void
 {
     // schon registriert?
+    
     foreach ($this->way_out as $existing) {
         if ($existing === $listener) {
-        	throw new ErrorException($listener);
+        	//var_dump($this->way_out);
+        	//throw new ErrorException($listener);
             return;
         }
     }
@@ -1508,7 +1510,8 @@ function &cloning(&$prev_obj, $called_by_cloning = false)
                 			  if($prev_obj->get_parser() !== $this->get_parser())
                 			  	  {
                 			  	  	  $myparser = $prev_obj->get_parser();
-                			  	  	  
+                			  	  	  if(is_null($myparser)) $myparser = $this->get_parser();
+
                 			  	  	  //var_dump($this->full_URI(), $this->get_ns_attribute());
                 			  	  	  $obj = $myparser->getInstance($this->full_URI(),$this->get_ns_attribute());
                 			  	  	  //$obj->attrib = $this->attrib;
@@ -1585,7 +1588,7 @@ function &cloning(&$prev_obj, $called_by_cloning = false)
                                 	}
 
 
-                                
+                                if(is_null($myparser)) $myparser = $this->get_parser();
                                 $myparser->set_new_index($obj);
                                 $myparser->add_to_execute($obj);
 
@@ -1608,7 +1611,7 @@ public function __debugInfo(){
 		$way_to[$i] = $this->way_in[$i]->full_URI();
 
 	
-	return  ['idx'=>$this->get_idx(), 'type'=>$this->type,'is_Class'=> $this->is_Class(), 'namespace'=>$this->namespace, 'name'=>$this->name, 'attribute_ns'=>$this->attrib_ns , 'way_out'=>$way_from, 'way_in'=>$way_to]; /*                              $obj->name =  $this->name;
+	return  ['idx'=>$this->get_idx(), 'type'=>$this->type,'is_Class'=> $this->is_Class(), 'namespace'=>$this->namespace, 'name'=>$this->name, 'attribute_ns'=>$this->attrib_ns , "node_ns"=>['way_out'=>$way_from, 'way_in'=>$way_to]]; /*                              $obj->name =  $this->name;
                                 $obj->attrib = $this->attrib;
                                 $obj->data =  $this->data;
                                 $obj->namespace =  $this->namespace;

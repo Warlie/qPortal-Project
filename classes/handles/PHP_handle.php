@@ -32,7 +32,7 @@ class PHP_handle extends Interface_handle
 		$this->base_object = &$obj;
 	}
 	
-	function parse_document(&$source)
+	function parse_document($source)
 	{
 	
 		$corr_xml_file = str_replace(".php", ".pedl", $this->attribute_values['URI']);

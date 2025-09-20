@@ -15,7 +15,7 @@ class SVG_Overview_handle extends Interface_handle
 	private $pos_inherit = array();
 	private $cur_id = 0;
 
-	function parse_document(&$source)
+	function parse_document($source)
 	{
 	
 		$is_obj = ($source instanceof FileHandle);

@@ -10,14 +10,14 @@ class XML_handle extends Interface_handle
 	
 	private $parser;
 	
-	function parse_document(&$source)
+	function parse_document($source)
 	{
 	//$this->base_object->test_consistence();
 		$is_obj = ($source instanceof FileHandle);
 		//$is_obj = is_subclass_of($source, 'FileHandle');
-		
+		$this->parse_document_neu($source);		
 //		if(!$is_obj)
-		
+		//$this->parser = xml_parser_create_ns();
 		$this->parser = xml_parser_create(); //'UTF-8'
 
             xml_parser_set_option( $this->parser, XML_OPTION_CASE_FOLDING, $this->attribute_values['XML_OPTION_CASE_FOLDING'] );
@@ -83,6 +83,74 @@ class XML_handle extends Interface_handle
 		
 	}
 	
+    function parse_document_neu($source)
+    {
+        $reader = new XMLReader();
+
+        // Überprüfen, ob die Quelle eine Datei oder ein String ist und die
+        // entsprechende XMLReader-Methode verwenden.
+        if (is_file($source)) {
+            $reader->open($source);
+        } else {
+            $reader->xml($source);
+        }
+
+        // Schema-Validierung aktivieren, falls ein Schema definiert ist.
+        if ($this->schema) {
+            libxml_use_internal_errors(true);
+            if (!$reader->setSchema($this->schema)) {
+                $errors = libxml_get_errors();
+                libxml_clear_errors();
+                var_dump($errors);
+                throw new Exception('Schema-Validierung fehlgeschlagen während des Setups.');
+            }
+        }
+        /*
+        // Die XML-Knoten einlesen und an die entsprechenden Handler-Methoden
+        // in Ihrer Basisklasse ($this->base_object) weiterleiten.
+        while ($reader->read()) {
+            switch ($reader->nodeType) {
+                case XMLReader::ELEMENT:
+                    // Handler für das Öffnen eines Tags aufrufen
+                    $attributes = [];
+                    if ($reader->hasAttributes) {
+                        while ($reader->moveToNextAttribute()) {
+                            // Namen und Wert des Attributs auslesen
+                            $attributes[$reader->name] = $reader->value;
+                        }
+                    }
+                    // Wichtig: die originalen Handler-Methoden Ihrer XML-NS-Klasse aufrufen
+                    $this->base_object->tag_open(null, $reader->name, $attributes);
+                    break;
+
+                case XMLReader::END_ELEMENT:
+                    // Handler für das Schließen eines Tags aufrufen
+                    $this->base_object->tag_close(null, $reader->name);
+                    break;
+                    
+                case XMLReader::TEXT:
+                case XMLReader::CDATA:
+                    // Handler für Text- und CDATA-Daten aufrufen
+                    $cdata = $reader->value;
+                    $this->base_object->cdata(null, $cdata);
+                    break;
+            }
+        }
+*/
+        // Nach dem Parsen die Validierungsfehler abrufen und verarbeiten.
+        if ($this->schema) {
+            $errors = libxml_get_errors();
+            libxml_clear_errors();
+            if (count($errors) > 0) {
+                // Sie können die Fehler hier genauer analysieren und handhaben
+                throw new Exception('Validierungsfehler gefunden: ' . print_r($errors, true));
+            }
+        }
+
+        $reader->close();
+        return 0; // Erfolg
+    }
+
 	
 	private $bool_first_tag = true; 
 	

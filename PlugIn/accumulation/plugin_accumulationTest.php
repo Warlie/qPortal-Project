@@ -16,6 +16,7 @@ require_once __DIR__ . '/plugin_accumulation.php';    // The class under test
 // Option 2: Manual require (adjust path relative to this file)
 require_once __DIR__ . '/../../test/Unit/Stubs/RstStubForTesting.php';
 
+
 // --- Import the Stub Class ---
 use Tests\Stubs\RstStubForTesting; // Use the stub from its namespace
 

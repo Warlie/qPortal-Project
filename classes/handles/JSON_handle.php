@@ -65,7 +65,7 @@ class JSON_handle extends Interface_handle
 		$this->base_object = &$obj;
 	}
 	
-	function parse_document(&$source)
+	function parse_document($source)
 	{
 	    /* filehandle vs string */           
 		if( is_Object($source))
@@ -77,7 +77,7 @@ class JSON_handle extends Interface_handle
 		
 		$this->base_object->MIME[$this->base_object->idx]['name'] = 'json';
 		$this->base_object->MIME[$this->base_object->idx]['version'] = '1.0';
-		$this->base_object->MIME[$this->base_object->idx]['encoding'] = 'ISO-8859-1';
+		$this->base_object->MIME[$this->base_object->idx]['encoding'] = 'UTF8'; //ISO-8859-1
 		//var_dump($this->base_object->special);
 
 		//looks up for line restriction
@@ -162,7 +162,7 @@ class JSON_handle extends Interface_handle
 		
 			foreach ($setOfArrays as $key => $value)
 			{
-				echo "---- key:value---\n";
+				//echo "---- $key:$value---\n";
 
 				if(is_int($value))
 					$attributes['datatype'] = "integer";  //xs:integer
@@ -171,7 +171,7 @@ class JSON_handle extends Interface_handle
 				if(is_string($value))
 					$attributes['datatype'] = "string";  //xs:integer
 				
-				echo "---------------------\n";
+				//echo "---------------------\n";
 				if(is_array($value))
 					foreach ($value as $key2 => $value2)
 					{
@@ -237,7 +237,7 @@ class JSON_handle extends Interface_handle
 	
 	function save_back($format,$send_header = false)
 	{
-
+//echo "wuppwupp-----------------------------------------------------";
 		$handle = &My_Handle_factory::handle_factory('XML');
 		$handle->set_object($this->base_object);
 		$handle->set_attribute('XML_OPTION_CASE_FOLDING',false);
@@ -255,18 +255,19 @@ class JSON_handle extends Interface_handle
 	$filechange = str_replace(array("\n", "\r", "\t"), '', $xml_output);
 # The trailing and leading spaces are trimmed to make sure the XML is parsed properly by a simple XML function.
 $filetrim = trim( $filechange); //str_replace('"', "'", )
-var_dump($filetrim);
+//var_dump($filetrim);
 # The simplexml_load_string() function is called to load the contents of the XML file.
 $resultxml = simplexml_load_string($filetrim);
-var_dump($resultxml);
+//var_dump($resultxml);
 $typedXml = xmlNodeToPhp($resultxml);
-var_dump($resultxml, $typedXml);
+//var_dump($resultxml, $typedXml);
 # The final conversion of XML to JSON is done by calling the json_encode() function.
 $resultjson = json_encode($resultxml, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK);
-var_dump($resultjson);
+//var_dump($resultjson);
 if (!$resultjson) {
     throw new \RuntimeException("Ungültiges XML");
 }
+
 
 	//throw new ErrorException("---");
 				return $resultjson;

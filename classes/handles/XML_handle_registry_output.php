@@ -10,7 +10,7 @@ class XML_handle_registry extends Interface_handle
 	
 	private $parser;
 	
-	function parse_document(&$source)
+	function parse_document($source)
 	{
 	//$this->base_object->test_consistence();
 		$is_obj = ($source instanceof FileHandle);

@@ -165,7 +165,7 @@ protected function event_readdata($own)
 
 					$this->set_alter_event(false);
 
-					
+					//var_dump("pedl:function(168)" , $this->name);
 					// contains a reflectionClass and a SQL String
 
 					if( PEDL_Object_Class::Is_ShortCuts($this->name)){

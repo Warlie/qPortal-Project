@@ -81,6 +81,7 @@ var $db_name = "qportal";
 var $mycodeset = "UTF-8";
 var $db;
 var $table_db;
+var $showSQL = false;
 
 var $error_no=0;
 
@@ -95,6 +96,8 @@ var $timestamp;
 * @param $pwt : override
 *
 */
+
+function testmode(){$this->showSQL = true; echo "active";}
 
 function __construct($Server = "", $User = "", $pwt = "", $db_name = false, $codeset = false){
         
@@ -278,7 +281,7 @@ function __construct($Server = "", $User = "", $pwt = "", $db_name = false, $cod
 		
 		foreach($SQLArray as &$line )
 		{
-			   
+			if($this->showSQL)echo $line['SQL'] . "\n";
 			$line['ID'] = $this->SQL($line['SQL'])['Last_ID'];
 		}
 		
@@ -332,7 +335,7 @@ global $logger_class;
 	* @param pointer
 	* @param mysec
 	*/
-
+if($this->showSQL)echo $sql . "\n";
 			
 if(!function_exists('extract_table')){
 
@@ -626,7 +629,7 @@ private function update_data($rst,$pos){
     			$sql_string .= ' set ' . $rst->edit[$k]['field'] . ' = ' . $sign1 . $this->db->real_escape_string($rst->edit[$k]['value']) . $sign1;
     			$sql_string .= ' where ' . $prim[0] . ' = ' . $sign2 . $rst->value($rst->edit[$k]['pos'],$prim[0]) . $sign2 . ';';
       
-//echo $sql_string;
+if($this->showSQL)echo $sql_string;
     			$fdresult = $this->db->query($sql_string);
     			if($this->db->errno<>0)echo 'Fehler aufgetreten: ' . '(' . $sql_string . ')' . $this->db->error;
     		}
@@ -672,7 +675,7 @@ function insert_rst($rst){
        $sql_string .= ' FROM ' . $table[$i];
        $sql_string .= ' ORDER BY ' .implode(', ', $prim_tbl[$table[$i]] ) . ';'; //$sql_string .= ' ORDER BY ' . $prim[$i] . ';';
 
-					   //echo $sql_string;
+	if($this->showSQL)echo $sql_string;
 	$fdresult = mysqli_query($this->db, $sql_string);
 
 	if(mysqli_errno($this->db)<>0)echo 'Fehler aufgetreten (' . $sql_string . '): ' . mysqli_error($this->db);
@@ -761,7 +764,7 @@ function insert_rst($rst){
 				$sql_string .= ');';
 
 				
-				
+				if($this->showSQL)echo $sql_string;
 				//var_dump($sql_string);
 				
 			   	//speichert einen Datensatz, der neu geschieben wurde

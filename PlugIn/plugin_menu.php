@@ -310,9 +310,12 @@ private $URLString = STD_URL;
        
 	}
 	
+	/*
+	*	used
+	*/
 	private function add_goback_line()
 	{
-		
+
        $tmp = Array();
        
        if(!$this->goback)return $tmp;
@@ -482,9 +485,10 @@ private $URLString = STD_URL;
 
        // Does not look reachable
        //TODO check this
-       	if(($this->back->get_NS_QName() != 'final') && ($this->goback) && false)
+       //($this->back->get_NS_QName() != 'final') ||
+       	if(( (count($this->addAspects) > 0)) && ($this->goback))
 	{
-		echo "test me";
+
 			$this->back->parent_node(); 
 			$tmp = Array();
 			       	for($i = count($this->level) - 1; $i > 1; $i--)
@@ -492,15 +496,23 @@ private $URLString = STD_URL;
 			       		$tmp[$this->level[$i]['URL']] = null;
 			       		$tmp[$this->level[$i]['Name']] = null;
 			       	}
-       
+       /*
 			       	$tmp[$this->level[0]['URL']] = str_replace('%s', $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),$this->URLString);
 			       	$tmp[$this->level[0]['Name']] = $this->back->show_ns_attrib('http://www.trscript.de/tree#value');
 	
 			       	$tmp[$this->level[1]['Name']] = $this->back->show_ns_attrib('http://www.trscript.de/tree#value');
 			       	$tmp[$this->level[1]['URL']] = str_replace('%s',  $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),$this->URLString);
+		*/	
+			       	$tmp[$this->level[0]['URL']] = $this->goback['URL'];
+			       	$tmp[$this->level[0]['Name']] = $this->goback['Name'];
+	
+			       	$tmp[$this->level[1]['Name']] = $this->goback['Name'];
+			       	$tmp[$this->level[1]['URL']] = $this->goback['URL'];
+			       	
+			       	
+			$this->res[] = &$tmp;
 			
 
-			$this->res[] = &$tmp;
 
 	}
 

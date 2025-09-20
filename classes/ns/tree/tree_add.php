@@ -150,7 +150,7 @@ function event_message_in($type,&$obj)
 							$this->get_parser()->change_URI(
 								$obj->get_requester()->get_template($body)
 								);
-							$com_parameter ["RequestBody" ] = $this->get_parser()->save_Stream();
+							$com_parameter ["RequestBody" ] = $this->get_parser()->save_Stream(); // It takes the 
 							$com_parameter ["Parameters"] = [];
 							$this->get_parser()->change_idx($cur_idx);
 							

@@ -135,6 +135,7 @@ function event_message_in($type,&$obj)
 			
 		$tag_name = $this->get_attribute('name');
 		$tag_array = array();
+		$pos_value = 0;
 		$void = false;
 		
 		for($i = 0 ; $i < $this->index_max();$i++)
@@ -147,17 +148,18 @@ function event_message_in($type,&$obj)
 				$tag_array[$tmp->get_attribute('name')] = $tmp->getdata();
 			}
 		}
-	
+
+	if (array_key_exists('@pos', $tag_array)) {
+		$pos_value = intval($tag_array['@pos']);
+		unset($tag_array['@pos']);
+    }
+
 	$this->get_parser()->change_URI($template);
 	$this->get_parser()->flash_result();
-	if($this->get_parser()->seek_node($tag_name,$tag_array) )
+	if($this->get_parser()->seek_node($tag_name,$tag_array, null, $pos_value) )
 	{
-		
-	$obj->set_node($this->get_parser()->show_xmlelement());
-	//echo $this->get_parser()->show_xmlelement()->name;
-	//echo $obj->name;
-
-	$this->send_messages('*',$obj); 
+		$obj->set_node($this->get_parser()->show_xmlelement());
+		$this->send_messages('*',$obj); 
 	}
 	else
 	{

@@ -32,7 +32,7 @@ class CSV_handle extends Interface_handle
 		$this->base_object = &$obj;
 	}
 	
-	function parse_document(&$source)
+	function parse_document($source)
 	{
 	               
 		if( is_Object($source))

@@ -17,7 +17,7 @@ class UniqueIdent extends plugin
 private $max_id = array();
 private $coll_col = array();
 private $std_default = array();
-private $rst = null;
+//private $rst = null;
 private $value = 1;
 var $back =  null;
 var $content = null;

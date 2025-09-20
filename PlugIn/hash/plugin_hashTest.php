@@ -18,6 +18,7 @@ require_once  $ProjectDir.'/PlugIn/hash/plugin_hash.php';  // The class under te
 // Option 1: Autoloading (Recommended - Configure composer.json)
 // Option 2: Manual require (adjust path relative to this file)
 require_once $ProjectDir.'/test/Unit/Stubs/RstStubForTesting.php';
+require_once $ProjectDir.'/test/Unit/Stubs/ExternalDataProvider.php';
 
 // --- Import the Stub Class ---
 use Tests\Stubs\RstStubForTesting; // Use the stub from its namespace
@@ -34,38 +35,6 @@ if (!class_exists('NotAFieldnameException')) {
     class NotAFieldnameException extends \Exception {}
 }
 // --- End auxiliary definitions ---
-
-/**
- * Dataprovider
- *
- * may be put in external file
- */
-
-final class ExternalDataProvider
-{
-    public static function PlugInTestDataProvider(): array
-    {   //provides Testdata for PlugIn-Classes
-        $testData1= [
-            ['grp' => 'A', 'wert' => 10,    'date' => '7.22'],
-            ['grp' => 'B', 'wert' => 100,   'date' => '7.22'],
-            ['grp' => 'A', 'wert' => -5,     'date' => '7.22'],
-            ['grp' => 'B', 'wert' => 20,    'date' => '8.22']
-        ];
-        
-        // SHOULD BE CHANGED FOR EFECTIVE TESTS
-        $testData2= [
-            ['grp' => 'A', 'wert' => 10,    'date' => '7.22'],
-            ['grp' => 'B', 'wert' => 100,   'date' => '7.22'],
-            ['grp' => 'A', 'wert' => -5,     'date' => '7.22'],
-            ['grp' => 'B', 'wert' => 20,    'date' => '8.22']
-        ];
-        
-        $testData=[[$testData1], [$testData2]];
-        
-        return $testData;
-    }
-}
-
 
 
 

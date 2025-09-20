@@ -8,6 +8,7 @@ class Interface_handle
 {
 	var $attribute_values = array();
 	var $base_object = null;
+	protected $schema = false;
 
 	
 	function check_format($example)
@@ -36,7 +37,12 @@ class Interface_handle
 		$this->base_object = &$obj;
 	}
 	
-	function parse_document(&$source)
+	function set_Schema($path)
+	{
+		$this->schema = $path;
+	}
+	
+	function parse_document($source)
 	{
 	
 	}

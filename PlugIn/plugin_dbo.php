@@ -345,11 +345,12 @@ public function freeSQL($sql_statement)
 		
 		public function set_list(&$value)
 		{
-			
+
 		if(is_object($value))
 		{
 
 			$this->obj = &$value;
+
 		}
 		}
 		
@@ -374,7 +375,7 @@ return $this;}
 
 public function test(){echo "test (" . $this->many() . ")";}
 
-public function setTestmode($bool){	$this->testmode = boolval($bool);	}
+public function setTestmode($bool){	$this->testmode = boolval($bool); $this->dbclazz->testmode();	}
 		/**
 		*@parameter: COL = gives out data to an field
 		*/
@@ -382,7 +383,14 @@ public function get_col($col_name){//echo $col_name . " " .  strval($this->rst->
 	return strval($this->rst->value($col_name));// . "blah";
 }
 		//TODO Problem mit 0 und Baum
-public function col($col_name){return $this->rst->value($col_name);}
+public function col($col_name)
+{
+	if (!is_object($this->rst)) {
+        throw new \RuntimeException("Execute request first: No result set available.");
+    }
+    
+	return $this->rst->value($col_name);
+}
 
 public function datatype($columnname){return $this->rst-> type($columnname);}
 public function fields()
@@ -439,7 +447,7 @@ public function saves_dataset_back()
 		{
 		 global $logger_class;
 
-		 if($this->testmode)echo "booho";
+		 //if($this->testmode)echo "booho";
 		//	$this->rst->show_content();
 
 
@@ -449,6 +457,9 @@ public function saves_dataset_back()
 
 			if(!$this->obj->moveFirst())return false;
 
+				if ($this->rst === null) 
+					throw new \InvalidArgumentException("Database Object is missing. Please use execute before using it.");
+				
 			        //moves to first recordset
 				$this->rst->first_ds();
 				
@@ -520,7 +531,8 @@ public function saves_dataset_back()
 			
 		}
 		else
-			$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: no plugin Obj found",0);
+			throw new ObjectBlockException('Recordset is missing');
+			//$logger_class->setAssert("plugin_dbo.php#saves_dataset_back: no plugin Obj found",0);
 				
 	}
 		

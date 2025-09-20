@@ -47,6 +47,7 @@ var $param = array();
 var $spezial = array();
 public $XMLlist = null;
 private $namespace_reg = null;
+private $schema = false;
 
 var $namespace_main = '';
 
@@ -60,6 +61,11 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		$this->XMLlist = new xml_xPath_sParqle($this);
 
 	}
+	
+	/*
+	*	Quick and dirty variable management
+	*
+	*/
 	
 	function errno()
 	{
@@ -311,7 +317,10 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		return $this->namespace_reg;
 	}
 	
-
+	function set_Schema($path)
+	{
+		$this->XMLlist->set_schema($path);
+	}
 	
 	
 	//-----------END functions for nodes-----------

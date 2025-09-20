@@ -85,7 +85,14 @@ function event_Instance(&$instance,$type,&$obj)
 {
 	/* bad style TODO make it pretty*/
 	/* this event will be called several times, this variable prevents this. */
-	if($this->was_called)return;
+	/* interesting, we need a dependency for Names */
+	/* TODO here is a point, we call this method several times */
+	//echo $this->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#ID') . " was called \n";
+	//if($this->was_called)echo "again\n";
+	//else
+	//echo "for the frist time \n";
+	
+	//if($this->was_called)return;
 	$this->was_called = true;
 //throw new ErrorException("boom");
 	$parser = &$this->get_parser();

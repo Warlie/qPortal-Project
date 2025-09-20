@@ -220,7 +220,7 @@ function process_new_xhtml(&$obj,$name,$attrib)
 	{
 		
 		//$get_fu
-		if($name == "http://www.w3.org/1999/xhtml#unqueID" )echo "start loop\n";
+
 		//tests for namespace with qname or just qname
 		//creates an object depending on Namespace 
 		if(false === ($posinStr = strpos($name,'#')))

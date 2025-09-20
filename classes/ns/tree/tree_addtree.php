@@ -40,9 +40,6 @@ function &new_Instance()
 //primar call after finishing object, ther wont be an existing childnode
 function event_initiated()
 {
-	//echo $this->getRefprev()->full_URI() . ' ' ;
-	//echo $this->get_attribute('value') . "<br>\n";
-
 	$this->to_listener();
 
 }
@@ -110,58 +107,17 @@ function event_message_in($type,&$obj)
 		//var_dump("addtree",$obj->get_node(), "for cloning", $this->get_parser()->show_xmlelement());
 		$this->get_parser()->show_xmlelement()->cloning($obj->get_node());
 		//echo "cloning done";
-		//$this->get_parser()->index_consistence();
-	//$obj->set_node($this->get_parser()->show_xmlelement());
-	//echo $this->get_parser()->show_xmlelement()->name;
-	//echo $obj->name;
-	//$this->send_messages('*',$obj); 
+
 	}
 	else
 	{
 		echo 'Tag "' . $tag_name . '" was not found in the ' . $template . " document<br>\n";
 				$this->get_parser()->test_consistence();
-		//var_dump($tag_array);
+
 	}
-	//echo $type . ' ' . get_Class($obj);
+
 	}
-	/*		
-________
-		if(count($this->documentForInsert) > 0)
-		{
-		
-	        $tmpstamp = $this->back->position_stamp();
-		
-		if(!$this->back->change_URI($this->content->get_out_template()))
-		echo $new_template . ' isn\'t a available documentident (generateEmptyTree)';
-		
-		$tmpName = $this->back->show_xmlelement();
-		$this->documentForInsert[0]->set_parser($this->back);
-		for($i = 0;$i < $many; $i++)
-			$this->documentForInsert[0]->cloning($this->back->show_xmlelement());
-		}
 
-	  $this->back->go_to_stamp($tmpstamp);
-		
-
-	
-		//echo $this->get_attribute('name') . ' ' . $type . "<br>\n";
-	//echo $type . ' ' . $obj->get_request() . ' ' . $this->name .  '<br>';
-	if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#src'))
-	{
-
-		 $tmp = str_replace( '%ROOT_DIR%', ROOT_DIR, $tmp);
-		if(is_file($tmp))
-		{
-
-			$this->get_parser()->load($tmp,0);
-		//$this->get_parser()->ALL_URI();
-			$this->get_parser()->seek_node('http://www.trscript.de/tree#final');
-			$this->get_parser()->show_xmlelement()->event_message_in($type,$obj);
-			return true;
-		}
-		
-	}
-	*/
 	}
 }
 

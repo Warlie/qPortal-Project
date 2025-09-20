@@ -270,7 +270,7 @@ if(is_Null($tmp = $url))$tmp = "";
 					
 				}
  
-                                print($system->getoutput(SEND_HEADER,'ISO 8859-1'));
+                                print($system->getoutput(SEND_HEADER)); //,'utf8'
 }
 
 /**
@@ -526,7 +526,7 @@ function service_log_out( &$system)
 					
 				}
  
-                                print($system->getoutput(SEND_HEADER,'ISO 8859-1'));
+                                print($system->getoutput(SEND_HEADER));
 }
 
 /**

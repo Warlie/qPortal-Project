@@ -310,7 +310,13 @@ image/x-xpixmap 	*.xpm 	XPM-Dateien
 		  return boolval($res) ? 'true' : 'false';
 
 	}
+	
+	public function &iter()
+	{
 
+	    //echo 'booh' . $this->test++ . '<br>';
+	    return $this;}
+	
 	public function test()
 	{
 		var_dump($_REQUEST);
@@ -414,63 +420,7 @@ public function fields()
 
 }
 
-/*
-public function in($request_name, $value)
-{
-	$this->back->heap['request'][$request_name] = $value;
-}
 
-public function to_eval($statement)
-{
-	return eval($statement);
-}
-public function sessionOut($session_index)
-{
-		if(!is_null($tmp = $_SESSION[$session_index]))
-		{
-		
-			return $tmp;
-		}
-		else
-		{
-			$tmp = "";
-			return $tmp;
-		}
-		
-}
-
-* @function: 	sessionIn 	: overwrites sessions, previous needs NAME to set key to value
-* @param: 	$session_index 	: sessionname
-* @param:	$value		: new value
-
-public function sessionIn($session_index,$value)
-		{
-
-			$this->back->heap['session'][$session_index] = trim($value);
-			$_SESSION[$session_index] = trim($value);
-			
-		}
-		*/
-
-
-		
-
-		/**
-		*@parameter: OUTPUT = boolean value true/false for giving out
-		*/
-/*		if($type == "OUTPUT")
-		{
-			if($value == 'true')
-			{
-				$this->setOutput = true;
-				
-			}
-			else
-			{
-				$this->setOutput = false;
-				
-			}
-		} */
 
 		/**
 		*@parameter: NAME = sets the key for requests and sessions
@@ -584,8 +534,6 @@ public function sessionIn($session_index,$value)
 					date('y')
 					);
 
-
-
 				$res = str_replace($needle, $replace, $pattern);
 
 				return $res;
@@ -676,27 +624,7 @@ public function sessionIn($session_index,$value)
 
 
 				}
-			
-			
-			//foreach($scanned_directory as $myfile)
-			//{
-			//	$myfile */
 		}	
-			
-		//echo $this->complete_pattern($_FILES[$identifier]['name'], $insert_rule, 1);
-			
-//		$directory = '/path/to/my/directory';
-//$scanned_directory = array_diff(scandir($directory), array('..', '.'));
-		
-		/*
-		$needle = array( '$pre', '$post', '$i', '$u' );
-		$replace = array( 'bla', '.txt', '01', 'ich' );
-		$pre = " it is a test";
-		$post = "post";
-		$i = "01";
-		$u = "me";
-		$res = str_replace($needle, $replace, $insert_rule);
-		echo $identifier . " is on $test " . $destination . " and the insert_rule $res  \n"; */
 	}
 		
 	private function get_mime($ending)

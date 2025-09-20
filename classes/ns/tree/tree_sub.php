@@ -42,6 +42,7 @@ class TREE_sub extends Interface_node
 {
 var $name = 'empty';
 var $type = 'none';
+private $contentGenerator = null;
 var $namespace = 'none';
 	
 function __construct()
@@ -68,18 +69,8 @@ function &new_Instance()
 //primar call after finishing object, ther wont be an existing childnode
 function event_initiated()
 {
-	//echo $this->getRefprev()->full_URI() . ' ' ;
-	//echo $this->get_attribute('value') . "<br>\n";
-/*
-			if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#method') )		
-				if($_SERVER['REQUEST_METHOD'] === strtoupper($tmp))
-				{
-					echo "add";
-					$this->to_listener();
-				}
-	*/
+	$contentGenerator = $this->get_parser()->get_context_generator();
 	$this->to_listener();
-
 }
 
 function complete()
@@ -128,40 +119,39 @@ function event_message_in($type,&$obj)
 	/* ------------------------------------------------------ Variable section ------------------------------------------------------------*/
 		
 		// collects all param tag info
+		// runns thought all children nodes 
 		for($i = 0 ; $i < $this->index_max();$i++)
 		{
 			$tmp = &$this->getRefnext($i,true);
 							//activates all param tags
-							if($tmp->full_URI() == 'http://www.trscript.de/tree#param')
-							{
-								$tmp->send_messages($type,$obj);
-								//echo "call";
-								$res =  $tmp->getdata();
-								// holy crap this will fullfill data collection for just one node it it
-								if($tmp->getRefnext(0) instanceof TREE_object && ($tmp->getRefnext(0)->index_max() == 0))
-								{
-									$res = $tmp->getRefnext(0)->get_attribute('id');
-								}
-								elseif($tmp->getRefnext(0) instanceof Interface_node)
-								{
-								$many_remote = $tmp->getRefnext(0)->index_max();
-								
-								if(0 < $many_remote)
-								{
-							
-								$res .= $tmp->getRefnext(0)->getRefnext($many_remote - 1)->getdata(0); //
-								//$tag_array[$tmp->get_attribute('name')] = $tmp->getRefnext($many_remote - 1)->getdata(0);
-								}
-								}
-								$param_arr[$tmp->get_attribute('name')] = $res;
-								
-							}
-							unset($tmp);
-							unset($res);
-						}
+			if($tmp->full_URI() == 'http://www.trscript.de/tree#param')
+			{
+				// calls param nodes
+				$tmp->send_messages($type,$obj);
 
-		//echo $this->get_attribute('name') . ' ' . $type . "<br>\n";
-	//echo $type . ' ' . $obj->get_request() . ' ' . $this->name .  '<br>';
+				$res =  $tmp->getdata();
+								// holy crap this will fullfill data collection for just one node it it
+				if($tmp->getRefnext(0) instanceof TREE_object && ($tmp->getRefnext(0)->index_max() == 0))
+				{
+					$res = $tmp->getRefnext(0)->get_attribute('id');
+				}
+				elseif($tmp->getRefnext(0) instanceof Interface_node)
+				{
+					$many_remote = $tmp->getRefnext(0)->index_max();
+								
+					// 
+					if(0 < $many_remote)
+					{
+						$res .= $tmp->getRefnext(0)->getRefnext($many_remote - 1)->getdata(0); //
+					}
+				}
+				$param_arr[$tmp->get_attribute('name')] = $res;
+								
+			}
+			unset($tmp);
+			unset($res);
+		}
+						
 	if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#src'))
 	{
 
@@ -205,22 +195,10 @@ function event_message_in($type,&$obj)
 		 $this->get_parser()->flash_result();
 		}
 
-/*
-			$this->get_parser()->seek_node('http://www.trscript.de/tree#first');
-			//$this->get_parser()->seek_node('http://www.trscript.de/tree#final');
-			if(count($nodes = $this->get_parser()->get_result()) > 2 && count($nodes) == 0)
-				echo "wrong results";
-			
-			var_dump(count($nodes) );
-			
-			foreach ($nodes as $value)$value->event_message_in($type,$obj);
-			*/
+
 			$this->get_parser()->flash_result();
 			$this->get_parser()->seek_node('http://www.trscript.de/tree#first');
-			/*
-			if(count($this->get_parser()->get_result()) > 0)
-				$this->get_parser()->show_xmlelement()->event_message_in($type,$obj);
-*/
+
 
 			$myfirst = array_pop($this->get_parser()->get_result());
 
@@ -232,14 +210,7 @@ function event_message_in($type,&$obj)
 			$myfinal = array_pop($this->get_parser()->get_result());
 			
 			$this->get_parser()->flash_result();
-			/*
-			if(count($myres = $this->get_parser()->get_result()) > 0)echo " There are results\n";
-			else
-			echo " No  results\n";
-			
-			var_dump($findIt , count($myres) );
 
-			*/
 			
 				$obj->set_node($this);
 			
@@ -252,16 +223,13 @@ function event_message_in($type,&$obj)
 					$myfinal->event_message_in($type,$obj);
 				}
 
-			//$this->get_parser()->show_xmlelement()->event_message_in($type,$obj);
 			$this->get_parser()->flash_result();
 			
 			return true;
 		}
 		
 	}
-	//echo count($this->way_out);
-	//if($obj instanceof EventObject )
-	//{
+
 	/* ------------------------------------------------------ Continue ------------------------------------------------------------*/
 	
 		$obj->set_context($this);
@@ -283,7 +251,7 @@ function event_message_in($type,&$obj)
 			}
 			}
 	//}
-	
+		// hier einfach nur result an den parent node clonen
 	}
 }
 

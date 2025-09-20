@@ -59,11 +59,6 @@ function connect_uri($uri)
 $this->connect = $uri;
 }
 
-function __construct()
-{
-
-}
-
 function &get_Instance()
 {
 return new TREE_remote();
@@ -81,17 +76,12 @@ function &new_Instance()
 }
 
 
-function complete()
-	{
-		parent::complete();
-
-	}
 
 function event_message_in($type,&$obj)
 	{
 	global $logger_class;
 //var_dump($type);
-//	echo $this->full_URI()  . " called by " . (($obj->get_requester() instanceof Interface_node)?$obj->get_requester()->full_URI(): get_class($obj->get_requester())) . " \n" ;
+	//echo "\n" . $this->full_URI()  . " called by " . (($obj->get_requester() instanceof Interface_node)?$obj->get_requester()->full_URI(): get_class($obj->get_requester())) . "(" . spl_object_id($obj->get_requester()) .") (remote(94))\n" ;
 	
 	//activates a child tree:Object object to receive its data later
 	$message = ["Identifire"=>"http://www.trscript.de/tree#object", "Command"=> ["Name"=> null, "Attribute"=>[], "Value"=> null]]; // 'http://www.trscript.de/tree#object'
@@ -125,16 +115,20 @@ function event_message_in($type,&$obj)
 	//var_dump((gettype($booh)=='object'?get_class($booh): $booh ));
 	//writes data to a linked Parameterobject
 	$send = ["Identifire"=>"http://www.w3.org/2006/05/pedl-lib#Object_Parameter", "Command"=> ["Name"=> "__set_data", "Attribute"=>[], "Value"=> "0"]] ;  // 'http://www.w3.org/2006/05/pedl-lib#Object_Parameter?__set_data=0'
-	
-	
+	//echo "--------------------------------------------------------------------->\n";
+	//var_dump("asks for parameter", $send);
 	$Event = new EventObject('',$this,$booh);
 	$Event->set_node($obj->get_node());			
 	$this->send_messages($send,$Event);
+
+	//var_dump($this);
 	
 	//receive date from a funtion object, if there is a function-object, it causes a alterdataevent
 	$send = ["Identifire"=>"http://www.w3.org/2006/05/pedl-lib#Object_Funktion", "Command"=> ["Name"=> "__get_data", "Attribute"=>[], "Value"=> "0"]]; //  'http://www.w3.org/2006/05/pedl-lib#Object_Funktion?__get_data=0' 			
-	$this->send_messages($send,$Event);
 
+		//var_dump("asks for data", $send);
+	$this->send_messages($send,$Event);
+	//echo "<---------------------------------------------------------------------\n";
 	
 	}
 

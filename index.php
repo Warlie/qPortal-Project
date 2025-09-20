@@ -31,6 +31,7 @@ $list_of_configuration_parameters = [
 	'LANGUAGE_OUTPUT_DEFAULT' => ['default', 'LANGUAGE_OUTPUT'],
 
 	'XML_CASE_FOLDING_DEFAULT' => ['default', 'XML_CASE_FOLDING'],
+	'XML_SCHEMA_DEFAULT' => ['runtime', 'XML_SCHEMA_DEFAULT'],
 	
 	'DATABASE_URL' => ['database', 'URL'],
 	'DATABASE_DB_NAME' => ['database', 'db_name'],
@@ -96,7 +97,6 @@ else
 	if(count($results[2]) > 0) throw new Exception( "Following stack of missing ini Entries:\n" .   implode("\n", $results[2]) . "\n" );
 		}
 	}
-	
 
 				define('INSTALL',false);
 				define('REPORT',5); //Reportlevel [0,5]
@@ -210,8 +210,9 @@ else
                                 	$ini_array["database"]["db_name"],
                                 	$ini_array["database"]["codeset"]
                                 	);
-                                
+
                                $content->getSQLObj()->db_profiles($ini_array["database"]["ext"]);
+                               $content->set_Schema(XML_SCHEMA_DEFAULT);
                                 
                                 
 				                 //SearchingModelObject::$treeRef = $content;
@@ -346,7 +347,7 @@ else
                                             try {
 
                                 
-                                if(!$content->generate())
+                if(!$content->generate())
 				{
 					       
 						if (!($fp = fopen('./error/404.html', "r"))) {

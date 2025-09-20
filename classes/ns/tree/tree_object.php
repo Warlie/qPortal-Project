@@ -45,11 +45,6 @@ var $name = 'empty';
 var $type = 'none';
 var $namespace = 'none';
 var $obj_init = array();
-	
-function __construct()
-{
-
-}
 
 function &get_Instance()
 {
@@ -137,7 +132,7 @@ function event_message_in($type,&$obj)
 		 // in case id and class name are mentioned, that can be seen as instancing an object. For preventing any overwrite, you will get a return
 		  if(in_array($class_Name . ':' . $instance_id,$this->obj_init))return false;
 		  $this->obj_init[] = $class_Name . ':' . $instance_id;
-		//echo ' - ' . $class_Name . ';' . $instance_id . "\n";
+
 		 }
 	//---------------------------------------------------------------------------------
 	
@@ -161,8 +156,11 @@ function event_message_in($type,&$obj)
 			$object = $parser->getControlUnit( "surface_tree_engine")->getObjectByID($instance_id);
 			//var_dump($object);
 			// class name mentioned in the former object, called by the instance id
-			$object_Class_Name = $object->get_attribute('name');
 			
+			if(is_null($object))throw new Exception($instance_id . " isn't a valid object");
+
+			$object_Class_Name = $object->get_attribute('name');
+
 			//echo "\n<br>my logic is undeniable!<br>\n";
 			
 			if(is_null($object->way_out))echo "check $instance_id (tree_object.php:163)";
@@ -198,8 +196,8 @@ function event_message_in($type,&$obj)
 							
 							//$this->getRefnext($i)->get_ns_attribute('http://www.trscript.de/tree#name');
 							//echo $this->getRefnext($i)->get_ns_attribute('http://www.trscript.de/tree#name') . "\n";
-							
-							//
+
+							//this is a string
 							$this->getRefnext($i)->connect_uri($node_func);
 							
 							//$send = '*?__redirect_node='
@@ -208,8 +206,8 @@ function event_message_in($type,&$obj)
 							$send2 = ["Identifire"=>"*", "Command"=> ["Name"=> "__redirect_node", "Attribute"=>[], "Value"=> $add /*$node_func . "?__add_in_object" */]];
 							$booh = null;
 							$Event = new EventObject('',$this,$booh);
-							$Event->set_node($this->getRefnext($i));
 
+							$Event->set_node($this->getRefnext($i));
 							$this->send_messages($send2,$Event);
 							
 						}
@@ -319,23 +317,7 @@ function event_message_in($type,&$obj)
 		* @see_also PHPhandle  
 		* TODO geeignet f�r exception
 		*/
-		//
-		
-		//if($class_Name == "XMLDO")$parser-> index_consistence();
-		//$parser->seek_node('@registry_surface_system#PhpClass');
-		/*
-		if(!$parser->seek_node('@registry_surface_system#PhpClass',array('http://www.w3.org/2006/05/pedl-lib#name' => $class_Name))) 
-		{
-			//$parser->index_consistence();
-			echo "didnt found";
-		}
-		else
-			echo $parser->show_xmlelement();
-		$parser->flash_result();
-		*/
 
-		
-		//echo $class_Name . "\n";
 		if(!$parser->seek_node('@registry_surface_system#PhpClass',array('http://www.w3.org/2006/05/pedl-lib#name' => $class_Name)))
 			{
 
@@ -344,6 +326,7 @@ function event_message_in($type,&$obj)
 				
 				//echo "nicht gefunden";
 				$load_url = $this->get_attribute('src');
+
 
 				if(!is_null($load_url))
 					$parser->load($load_url,0,'PHP');
@@ -362,12 +345,11 @@ function event_message_in($type,&$obj)
 			//prepair to find Class_Instance
 			$parser->flash_result();
 			
-			//$parser->test_consistence();
-		//echo 'booh';
+
 		
 			if($parser->seek_node('@registry_surface_system#Class_Instance',null,null,0))
 			{
-		
+				
 				if($parser->index_child() < 1) throw new ErrorException('Invalide workbench ', 0,100,"tree_object.php",236);
 				$parser->child_node(0);
 				//finds bag in node, ascertains its posstamp and creates a new instance
@@ -412,9 +394,16 @@ function event_message_in($type,&$obj)
 					}
 
 					//$parser->show_xmlelement()->get_classes();
+				/*
+				* obviously, the constructor will be called in this step
+				*/
 				$parser->executed();
 				//echo "</info><br>\n";
+				
+				//var_dump($instance_id, $node_obj);
 			}
+			else
+				throw new ErrorException('"@registry_surface_system#Class_Instance" source is missing');
 			
 			//echo $parser->cur_node();
 			//$parser->test_consistence();
@@ -426,7 +415,7 @@ function event_message_in($type,&$obj)
 			*/
 			$this->set_to_out($node_obj);
 			//echo $node_obj->full_URI();
-
+// !!!!!!!!!!!!!!!!!!!!!!! check this dings !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 				//walk through all remotenodes
 				for($i = 0;$this->index_max() > $i;$i++)
 					{
@@ -449,16 +438,10 @@ function event_message_in($type,&$obj)
 							
 							
 							$this->getRefnext($i)->connect_uri($node_func);
-// @registry_surface_system#Menue.configuration.json
+
 							$add = ["Identifire"=>$node_func, "Command"=> ["Name"=> "__add_in_object", "Attribute"=>[], "Value"=> "0"]];
 							$send2 = ["Identifire"=>$node_obj->full_URI(), "Command"=> ["Name"=> "__redirect_node", "Attribute"=>[], "Value"=> $add]];
-							//$send = $node_obj->full_URI() . '?__redirect_node=' $node_func ."?__add_in_object=0"
-					//		.  $node_func . '?__add_in_object=0'  ; //http://www.trscript.de/tree#name
-					//echo "\n--->\n";
-					//		var_dump($send, $send2);
-					//echo "\n<---\n";
-						//	$send = $node_obj->full_URI() . '?__redirect_node='
-						//	. rawurlencode( base64_encode( $node_func . '?__add_in_object=0' )) ; //http://www.trscript.de/tree#name
+
 							$booh = null;
 							$Event = new EventObject('',$this,$booh);
 							$Event->set_node($this->getRefnext($i));

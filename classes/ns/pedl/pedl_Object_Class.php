@@ -101,6 +101,14 @@ function __destruct() {
     
     }
     
+    /*
+    *	@param $full_name
+    *	@param $method
+    *	@param $type
+    *
+    *	adds a function or whatever
+    */
+    
 private function set_Class_Elements($full_name, $method, $type = 1)
 {
 	if(strlen($method) > 0)
@@ -196,11 +204,17 @@ protected function event_message_check($type,&$obj)
 
 //primar call after finishing object, ther wont be an existing childnode
 function event_initiated()
-{//echo $this->full_URI() . "------------Init------------\n";
+{
+	/*
+	*	id_of_object has this class's ID
+	*/
 	$this->id_of_object = $this->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#ID');
-	//echo "new id $this->id_of_object " . $this->position_stamp() . "\n"; 	
+
+		/*
+		*	url has this class's source
+		*/
 		for($i = 0; $this->index_max() > $i;$i++)
-		{	//echo "\n" . get_class($this->getRefnext($i)) . " " . $this->getRefnext($i)->position_stamp() . "\n";
+		{
 			$url = null;
 			if($this->getRefnext($i)->is_Node('http://www.w3.org/2006/05/pedl-lib#hasCodeResource'))
 			{
@@ -211,7 +225,10 @@ function event_initiated()
 			}
 		}
 			
-//echo "i am here $url \n";
+
+		/*
+		*	resource'll be loaded
+		*/
 			if(!is_null($url))
 				{
 				require_once($url);
@@ -227,17 +244,27 @@ function event_initiated()
 protected function addToFunctionList($list){$this->collectionFunctionElements = $list;}
 
 /**
-*	@param instance : how knows
+*	@param instance : whatever
 *	@param type : how knows ether
 *	@param obj : what ever
-*	I guess, it will be called, it a class was be called by its new definition
+*	This class can be used as a class or a instance. As an event_Instance it will be called
 */
 
 function event_Instance(&$instance,$type,&$obj)
 {
 	/* bad style TODO make it pretty*/
 	/* this event will be called several times, this variable prevents this. */
-	if($this->was_called)return;
+	/* TODO here is a point, we call this method several times */
+	/*
+	echo $this->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#ID') . " (" . count($this->way_out) . ") was called \n";
+	if($this->was_called)echo "again\n";
+	else
+	echo "for the frist time \n";
+	*/
+	
+	
+	
+	//if($this->was_called)return;
 	//if($this->was_called)throw new ErrorException($this->full_URI() . "(" . $this->get_parser()->position_stamp() . ")");
 	//echo "Arbeit Arbeit " . $this->get_parser()->position_stamp() . " [" . spl_object_id($this) . "] " . ($this->was_called? "yes":"no") . "\n";
 	$this->was_called = true;

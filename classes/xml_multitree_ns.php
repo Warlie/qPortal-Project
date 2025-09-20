@@ -155,15 +155,16 @@ class xml_ns extends xml_omni
 	   {
 
 
-	   	   //$this-> index_consistence();	   	   
-	   	   
+   	   
+	   	   // adds old results
 		   $toAdd = count($this->result_nodes);
 
+		   // shows an advice for using the type properly. Only full qualified URIs allowed
 		   if(!is_null($type) && (false === strpos($type,'#')))echo "please use full URI for '" . $type . "'<br>\n";
 		   
 		   $arg = null;
 
-		   //hashsuche
+		   //uses the look up table and creates a result variable when successful
 		   if(!is_null($type))
 		   {
 		   	  // var_dump($type, array_keys($this->looking_index[$this->idx]));
@@ -201,8 +202,8 @@ class xml_ns extends xml_omni
 		    $check = true;
 		    $value = null; 
 
-		   //-----------------------
-		   //echo $type . ' ' . count($arg) . "<br>\n";
+
+		    // 
 		   for($i = 0; count($arg) > $i ; $i++)
 		   {
 				$check = true;   
