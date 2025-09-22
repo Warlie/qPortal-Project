@@ -193,7 +193,6 @@ function event_message_in($type,&$obj)
 					$param_arr)
 					){
 					 $value->setdata( $param_arr[$var_name] ,0);
-					 var_dump($param_arr[$var_name], $var_name);
 				}
 		}
 				
