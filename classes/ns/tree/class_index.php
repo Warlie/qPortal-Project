@@ -25,6 +25,7 @@ require_once('tree_SPARQL.php');
 require_once('tree_xpath.php');
 require_once('tree_document.php');
 require_once('tree_header.php');
+require_once('tree_result.php');
 /*
 require_once('rdf_Alt.php');
 require_once('rdf_first.php');
@@ -74,6 +75,7 @@ class TREE_factory
 			$this->node['xpath'] = new TREE_xpath('xpath', $ns);
 			$this->node['document'] = new TREE_document('document', $ns);
 			$this->node['header'] = new TREE_header('header', $ns);
+			$this->node['result'] = new TREE_result('result', $ns);
 			$this->node['id'] = new Interface_node('id', $ns);
 			
 			$this->nativ->set_is_Class();

@@ -69,7 +69,7 @@ function &new_Instance()
 //primar call after finishing object, ther wont be an existing childnode
 function event_initiated()
 {
-	$contentGenerator = $this->get_parser()->get_context_generator();
+	$this->contentGenerator = $this->get_parser()->get_context_generator();
 	$this->to_listener();
 }
 
@@ -86,6 +86,10 @@ function event_message_in($type,&$obj)
 	{
 		global $_SESSION;
 
+		//back up node
+		$received_node = $obj->get_node();
+		
+		
 		//--------------------------------------- check access -------------------------------------------------
 		$param_arr = [];
 		
@@ -117,7 +121,7 @@ function event_message_in($type,&$obj)
 		if(!$result) throw new NoPermissionException('not Allowed');
 
 	/* ------------------------------------------------------ Variable section ------------------------------------------------------------*/
-		
+		$this->contentGenerator->createScope($uri_src = $this->get_ns_attribute('http://www.trscript.de/tree#src'));
 		// collects all param tag info
 		// runns thought all children nodes 
 		for($i = 0 ; $i < $this->index_max();$i++)
@@ -130,7 +134,7 @@ function event_message_in($type,&$obj)
 				$tmp->send_messages($type,$obj);
 
 				$res =  $tmp->getdata();
-								// holy crap this will fullfill data collection for just one node it it
+								// holy crap this will fullfill data collection for just one node it it ? It is just one argument? This is quite common.
 				if($tmp->getRefnext(0) instanceof TREE_object && ($tmp->getRefnext(0)->index_max() == 0))
 				{
 					$res = $tmp->getRefnext(0)->get_attribute('id');
@@ -139,31 +143,33 @@ function event_message_in($type,&$obj)
 				{
 					$many_remote = $tmp->getRefnext(0)->index_max();
 								
-					// 
+					// wild
 					if(0 < $many_remote)
 					{
 						$res .= $tmp->getRefnext(0)->getRefnext($many_remote - 1)->getdata(0); //
 					}
 				}
 				$param_arr[$tmp->get_attribute('name')] = $res;
-								
+				
+				$this->contentGenerator->addParamToScope($tmp->get_attribute('name'), $res);
 			}
 			unset($tmp);
 			unset($res);
 		}
-						
-	if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#src'))
+		//var_dump( $param_arr);
+
+	if($uri_src)
 	{
 
-		 $tmp = str_replace( '%ROOT_DIR%', ROOT_DIR, $tmp);
-		if(is_file($tmp))
+		 $uri_src = str_replace( '%ROOT_DIR%', ROOT_DIR, $uri_src);
+		if(is_file($uri_src))
 		{
 
-			$this->get_parser()->load($tmp,0);
+			$this->get_parser()->load($uri_src,0);
 		//$this->get_parser()->ALL_URI();
-		
+
 		$var_name;
-		
+		// changes content in document, based on the parameter section
 		if(count($param_arr)){
 		$this->get_parser()->flash_result();
 		$this->get_parser()->seek_node('http://www.trscript.de/tree#variable');
@@ -180,22 +186,22 @@ function event_message_in($type,&$obj)
 						$value->set_ns_attribute('http://www.trscript.de/tree#id', $param_arr[$var_name]);
 
 					//$value->setdata( $param_arr[$var_name] ,0);
-				
+				 
 			if($value instanceof TREE_variable)
 				If(array_key_exists(
 					$var_name = $value->get_ns_attribute('http://www.trscript.de/tree#name'),
 					$param_arr)
-					)
+					){
 					 $value->setdata( $param_arr[$var_name] ,0);
-
-				
+					 var_dump($param_arr[$var_name], $var_name);
+				}
 		}
 				
 		
 		 $this->get_parser()->flash_result();
 		}
 
-
+			//prepares the first and the final part in the document for seriel processing
 			$this->get_parser()->flash_result();
 			$this->get_parser()->seek_node('http://www.trscript.de/tree#first');
 
@@ -225,13 +231,47 @@ function event_message_in($type,&$obj)
 
 			$this->get_parser()->flash_result();
 			
+			
+			$uri = $this->getRefprev()->full_URI();
+			if( $uri == 'http://www.trscript.de/tree#content' 
+				|| 
+				$uri == 'http://www.trscript.de/tree#element')
+			{
+				$result = $this->contentGenerator->getResult();
+
+				for($i = 0 ; $i < count($result);$i++)
+				{
+
+				if( $result[$i] instanceof TREE_result)
+					for($j = 0 ; $j < $result[$i]->index_max();$j++)
+					{
+						
+						if($received_node)
+							$result[$i]->getRefnext($j,true)->cloning($received_node);
+						//$this->get_parser()->show_xmlelement()->cloning($obj->get_node());
+						//$result[$i]->getRefnext($j,true)->setRefprev($obj->get_node());
+						//$obj->get_node()->setRefnext($result[$i]->getRefnext($j,true));
+						//$obj->get_node()->setRefprev($result[$i]->getRefnext($j,true));
+						//$result[$i]->getRefnext($j,true)->setRefnext($obj->get_node());
+					}
+				}
+						
+	
+			}
+			
+
+					
+				//$this->get_parser()->show_xmlelement()->cloning($obj->get_node());
+				// hier einfach nur result an den parent node clonen 
+				$this->contentGenerator->leaveScope();
+			
 			return true;
 		}
 		
 	}
 
 	/* ------------------------------------------------------ Continue ------------------------------------------------------------*/
-	
+
 		$obj->set_context($this);
 	
 		$this->send_messages($type,$obj);
@@ -250,8 +290,10 @@ function event_message_in($type,&$obj)
 				$tmp->event_message_in('',$obj);
 			}
 			}
-	//}
-		// hier einfach nur result an den parent node clonen
+
+		//var_dump($this->contentGenerator->getResult());
+		// hier einfach nur result an den parent node clonen 
+		$this->contentGenerator->leaveScope();
 	}
 }
 

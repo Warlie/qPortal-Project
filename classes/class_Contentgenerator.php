@@ -49,6 +49,10 @@ public $XMLlist = null;
 private $namespace_reg = null;
 private $schema = false;
 
+// scope
+    private array $scopes = [];
+    private array $scopeStack = [];
+
 var $namespace_main = '';
 
 var $heap = array(); //muss überarbeitet werden, namenskonflikte
@@ -66,6 +70,92 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	*	Quick and dirty variable management
 	*
 	*/
+
+    /**
+     * Erstellt einen neuen Scope und macht ihn zum aktuellen.
+     * Wenn kein Name angegeben wird, wird ein eindeutiger Name generiert.
+     */
+    public function createScope(?string $name = null): string
+    {
+        if ($name === null) {
+            $name = uniqid('scope_', true);
+        }
+
+        if (array_key_exists($name, $this->scopes)) {
+            // Namen müssen eindeutig sein, hier könnte man eine Exception werfen.
+            throw new \Exception("Scope '{$name}' existiert bereits.");
+        }
+
+        $this->scopes[$name] = [
+            'params' => [],
+            'results' => []
+        ];
+
+        // Den neuen Scope auf den Stack legen
+        array_push($this->scopeStack, $name);
+        
+        return $name;
+    }
+
+    /**
+     * Fügt einen Parameter als Schlüssel-Wert-Paar zum aktuellen (oder einem bestimmten) Scope hinzu.
+     */
+    public function addParamToScope($param_name, $param_value, ?string $name = null): bool
+    {
+        $scopeName = $name ?? end($this->scopeStack);
+
+        if ($scopeName === false || !array_key_exists($scopeName, $this->scopes)) {
+            return false; // Scope existiert nicht
+        }
+
+        $this->scopes[$scopeName]['params'][$param_name] = $param_value;
+        return true;
+    }
+
+    /**
+     * Fügt ein Ergebnis zum aktuellen (oder einem bestimmten) Scope hinzu.
+     */
+    public function addResultToScope($result, ?string $name = null): bool
+    {
+        $scopeName = $name ?? end($this->scopeStack);
+
+        if ($scopeName === false || !array_key_exists($scopeName, $this->scopes)) {
+            return false; // Scope existiert nicht
+        }
+
+        array_push($this->scopes[$scopeName]['results'], $result);
+        return true;
+    }
+
+    /**
+     * Verlässt den aktuellen Scope, indem er vom Stack genommen wird.
+     */
+    public function leaveScope(): bool
+    {
+        if (count($this->scopeStack) > 0) {
+            array_pop($this->scopeStack);
+            return true;
+        }
+        return false; // Kein Scope mehr auf dem Stack
+    }
+
+	/**
+	*	delivers parameters belonging to the scope
+	*/
+	public function getParam($param_name)
+	{
+		$scopeName = end($this->scopeStack);
+		return $this->scopes[$scopeName]['params'][$param_name];
+	}
+	
+	/**
+	*	delivers result belonging to the scope
+	*/
+	public function getResult()
+	{
+		$scopeName = end($this->scopeStack);
+		return $this->scopes[$scopeName]['results'];
+	}
 	
 	function errno()
 	{

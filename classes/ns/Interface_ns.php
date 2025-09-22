@@ -541,7 +541,11 @@ function setRefnext(&$ref,$pos = -1){
 
                 }
 //orginal
-function setRefprev(&$ref){$this->prev_el = &$ref;}
+function setRefprev(&$ref)
+	{
+		$this->prev_el = &$ref;
+		//$ref->setRefnext($this, $pos);
+	}
 
 function set_parser(&$obj)
 {
