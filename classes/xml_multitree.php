@@ -1430,11 +1430,13 @@ function save_stream($format = '',$send_header = false){
 return $res;
 }
 
-        function setcdata_tag($param,$local_cdata)
+        function setcdata_tag($param,$local_cdata, $escape_quote = false)
         {
-                
+            	if($escape_quote)   $param = str_replace('"', '\"', $param);
+        	
                 if((!$this->tagcdata || (trim($param) == ""))&&!$local_cdata)
                 {
+                		
                         return $param;
                 }
                 else

@@ -5,6 +5,7 @@
 */
 
 function xmlNodeToPhp($node) {
+	//var_dump($node);
     $result = [];
     // Falls Leaf‑Node (keine Kind-Elemente), direkt Wert casten
     if ($node->count() === 0) {
@@ -92,6 +93,7 @@ class JSON_handle extends Interface_handle
 //$out = $source;
 //var_dump($out);
 				$json_array = json_decode($source, true);
+				
 				if(is_null($json_array))echo json_last_error_msg();
 				
 				$native_attribute = array();
@@ -174,7 +176,7 @@ class JSON_handle extends Interface_handle
 				//echo "---------------------\n";
 				if(is_array($value))
 					foreach ($value as $key2 => $value2)
-					{
+					{//echo "---- $key2:$value2---\n";
 						if($key2 == '@attributes')
 							$attributes = $value2;
 						
@@ -241,10 +243,11 @@ class JSON_handle extends Interface_handle
 		$handle = &My_Handle_factory::handle_factory('XML');
 		$handle->set_object($this->base_object);
 		$handle->set_attribute('XML_OPTION_CASE_FOLDING',false);
+		$handle->set_attribute('XML_OPTION_ESCAPE_DQUOTE',false);
 		
 		$xml_output = $handle->save_back("UTF-8");
 			
-		
+		//var_dump($xml_output);
 		
 		/**
 		*var_dump($xml_output);

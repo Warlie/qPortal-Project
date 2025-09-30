@@ -46,13 +46,6 @@ function &get_Instance()
 return new RDF_about();
 }
 
-function &new_Instance()
-{
-                                $obj = $this->get_Instance();
-				$obj->link_to_class = &$this;
-				//echo "\n <br/>---" . $this->full_URI() . "---<br/> \n";
-				return $obj;
-}
 
 	function event_initiated()
 	{
@@ -98,59 +91,22 @@ function &new_Instance()
 					$namespace2 = $namespace . '#' . $qname;
 				}
 			}
-				//echo "\n <br> Adresse -" . $this->getRefprev()->full_URI() . "<br> \n";
 				$new_obj = &$this->getRefprev()->new_Instance();
-				
-				
 				$new_obj->name = $data;
 				$new_obj->type = $qname;
 				$new_obj->set_idx( $this->get_idx());
 				$new_obj->namespace = $namespace;
 				$new_obj->set_parser($this);
 				
-				//$this->getRefprev()->giveOutOverview();
-				//$new_obj->giveOutOverview();
-				//echo "<br> so eine scheiße <br>";
-				//echo "\n <br> " . $data . ' ' . $this->getRefprev()->full_URI() . "<br> \n";
-				
 				$this->get_parser()->set_Object_to_Namespace($namespace2,$new_obj);
 		}
 	}	
-	
-	function event_message_in($type,&$obj)
-	{
-		
-	}
 	
 	function __toString()
 	{
 	return 'rdf:about';
 	}
-	
-	/*
-	function event($event)
-	{
-		if('start' == $event)
-		{
-		$type = $this->back->type;
-		$ns = $this->back->namespace;
-		
-			
-		if(!(false === ($tmp = strpos($this->value,'#'))))
-		{
-		
-			$prefix = substr($this->value,0,$tmp);
-			$nodename = substr(strtolower($this->value),$tmp + 1);
-			
-			if(trim($prefix) == '')
-			$this->back->parser->namespace_frameworks[$prefix]['nativ'] = &$this->back;
-			else
-			$this->back->parser->namespace_frameworks[$prefix]['node'][$nodename] = &$this->back;
-		}
-		}
-	
-	}
-	*/
+
 }
 
 ?>

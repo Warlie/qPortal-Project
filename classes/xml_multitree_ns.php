@@ -1031,7 +1031,7 @@ $durationMs = ($end - $start) / 1_000_000;
 	   }
    }
  
-
+/*  The new one needs to be tested first before deleting
    function set_Object_to_Namespace($ns,&$obj)
    {
    
@@ -1063,7 +1063,55 @@ $durationMs = ($end - $start) / 1_000_000;
 	   }
 
 	   
-   }
+   } */
+   
+   function &set_Object_to_Namespace($ns, &$obj)
+{
+    if (!is_string($ns)) {
+        // Oder eine Exception werfen, falls $ns kein String ist
+        return $obj; 
+    }
+
+    $namespace_full = $ns;
+    
+    // 1. Aufteilung der URI in Namespace und lokaler Name (Fragment)
+    $ns_parts = explode('#', $ns);
+    // Sicherstellen, dass die Teile existieren, auch wenn der Trenner fehlt
+    $namespace_uri = $ns_parts[0] ?? '';
+    $qname = $ns_parts[1] ?? $ns_parts[0]; // Wenn kein '#', den ganzen String als qname verwenden (vereinfacht)
+
+    
+    // =======================================================
+    // 2. ÜBERSCHREIBSCHUTZ / SINGLETON-VERHALTEN (Das fehlende Stück!)
+    // =======================================================
+    
+    // Prüfen, ob die Ressource bereits existiert
+    if (isset($this->namespace_frameworks[$namespace_uri]['node'][$qname])) {
+        // Wenn die Ressource existiert, geben wir die existierende Instanz zurück
+        // und IGNORIEREN das neue $obj, um die Konsistenz zu gewährleisten.
+        $existing_obj = &$this->namespace_frameworks[$namespace_uri]['node'][$qname];
+        
+        // Löse hier ggf. ein 'DuplicateURI'-Event aus, falls du es protokollieren willst.
+        
+        return $existing_obj; 
+    }
+
+    // =======================================================
+    // 3. REGISTRIERUNG des neuen Objekts
+    // =======================================================
+    
+    // Das Objekt existiert noch nicht: Speichere das neue Objekt
+    $this->namespace_frameworks[$namespace_uri]['node'][$qname] = &$obj;
+    
+    // 4. Behandlung der Ticket-Events (wie in deinem Original)
+    if (is_array($this->ticketlist[$namespace_full])) {
+        $this->fireTicketEvent($obj, $this->ticketlist[$namespace_full]);
+        unset($this->ticketlist[$namespace_full]);
+    }
+    
+    // 5. Gib das neu registrierte Objekt zurück
+    return $obj;
+}
 
    protected function fireTicketEvent(&$ticketObject , array &$listener)
    {

@@ -176,6 +176,11 @@ class XML_handle extends Interface_handle
 		
 		$encoding = $format;
 		
+		$quotes = false;
+		if($this->attribute_values['XML_OPTION_ESCAPE_DQUOTE'])
+			$quotes = true;
+		
+		
 		/**
 		*
 		*
@@ -287,7 +292,7 @@ $myhelp = 0;
    	//   set_read_event
 //echo $this->base_object->cur_node() . "\n";
     $res .=  '<' .  $this->base_object->cur_node() . $this->base_object->all_attrib_axo($format) . $this->positionstamp($modus) . '>';
-    $res .=  $this->base_object->setcdata_tag($this->base_object->show_cur_data(0),$this->base_object->show_curtag_cdata());
+    $res .=  $this->base_object->setcdata_tag($this->base_object->show_cur_data(0),$this->base_object->show_curtag_cdata(), $quotes);
     $reset = true;
 
      if(!$this->base_object->child_node(0)) 
@@ -305,7 +310,7 @@ $myhelp = 0;
         $deep[$this->base_object->idx]++;
       }elseif((($this->base_object->index_child()-1) > $this->base_object->show_pointer()) ){
                                                                        
-       $res .=  $this->base_object->setcdata_tag($this->base_object->show_cur_data($this->base_object->show_pointer()+1,$format),$this->base_object->show_curtag_cdata()); 
+       $res .=  $this->base_object->setcdata_tag($this->base_object->show_cur_data($this->base_object->show_pointer()+1,$format),$this->base_object->show_curtag_cdata(), $quotes); 
        $reset = true;
        $check = $this->base_object->child_node($this->base_object->show_pointer() + 1);
        $deep[$this->base_object->idx]++;
@@ -322,7 +327,7 @@ $myhelp = 0;
 
        }else{
 
-        $res .=  $this->base_object->setcdata_tag($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$this->base_object->show_curtag_cdata());
+        $res .=  $this->base_object->setcdata_tag($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$this->base_object->show_curtag_cdata(), $quotes);
 
         $res .=  '</' .  $this->base_object->cur_node() . '>';
 
@@ -338,7 +343,7 @@ $myhelp = 0;
                                                                         $res .=  '<' .  $this->base_object->cur_node() . $this->base_object->all_attrib_axo($format) . $this->positionstamp($modus) ;}
                                                                                 if( '' <>( $this->base_object->show_cur_data($this->base_object->show_pointer()+1)) )
                                                                                 {
-                                                                                $res .=  '>' . $this->base_object->setcdata_tag($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$this->base_object->show_curtag_cdata());
+                                                                                $res .=  '>' . $this->base_object->setcdata_tag($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$this->base_object->show_curtag_cdata(), $quotes);
                                                                                 $res .=  '</' .  $this->base_object->cur_node() . '>';   // str_repeat (" ", 2*$deep[$this->idx])
                                                                                 }
                                                                                 else
