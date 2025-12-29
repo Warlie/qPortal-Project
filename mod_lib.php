@@ -67,7 +67,7 @@ function toAssoArray($data)
 
 function giveArrayArguments($list, $data, $system = false)
 {
-	$key = toAssoArray($data);
+	$key = (array_values($data) === $data ? toAssoArray($data) : $data);
 	return array_filter($key, function ($key) use ($list, $system) { return !$system xor in_array($key, $list); }, ARRAY_FILTER_USE_KEY);
 }
 

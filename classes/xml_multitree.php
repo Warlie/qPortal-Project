@@ -1642,11 +1642,15 @@ function convert_to_XML_alt( $String , $format, $void = false)
 
         function pos_stamp_func($updown,$num = 0,$position = '')
         {
-                //echo "<h1>" . $this->deep[$this->idx] . "</h1>";
+				
+        		if(is_null($this->deep[$this->idx]))
+					$this->deep[$this->idx] = 0;
+				
                 if($updown == 0)
                 {
-//echo "hoch";
-                $this->cur_pos_array[$this->idx][$this->deep[$this->idx]]= $num;
+
+				$this->cur_pos_array[$this->idx][$this->deep[$this->idx]]= $num;
+
                 $this->deep[$this->idx]++;
 
                 }

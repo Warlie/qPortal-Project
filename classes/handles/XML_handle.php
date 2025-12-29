@@ -77,7 +77,10 @@ class XML_handle extends Interface_handle
 			}
 		
 		
-		xml_parser_free($this->parser); 
+		if (is_resource($this->parser)) {
+			xml_parser_free($this->parser);
+    	}
+
 		unset($this->parser);
 		return 0;
 		
@@ -96,15 +99,17 @@ class XML_handle extends Interface_handle
         }
 
         // Schema-Validierung aktivieren, falls ein Schema definiert ist.
+        /*
         if ($this->schema) {
             libxml_use_internal_errors(true);
             if (!$reader->setSchema($this->schema)) {
                 $errors = libxml_get_errors();
                 libxml_clear_errors();
                 var_dump($errors);
-                throw new Exception('Schema-Validierung fehlgeschlagen während des Setups.');
+                throw new Exception('Schema-Validierung fehlgeschlagen während des Setups.' . $errors->message);
             }
         }
+        */
         /*
         // Die XML-Knoten einlesen und an die entsprechenden Handler-Methoden
         // in Ihrer Basisklasse ($this->base_object) weiterleiten.
