@@ -90,8 +90,7 @@ class CSV_Pattern_Check
 			
 		if(!is_null($this->checked[$name][$id]))return $this->checked[$name][$id];
 		
-
-		if(0 == count(array_diff($this->documents[$id], $this->patterns[$name])))
+		if(0 == count(array_diff($this->patterns[$name], $this->documents[$id])))
 		
 			return json_encode($this->checked[$name][$id] = true);
 		else
@@ -104,6 +103,15 @@ class CSV_Pattern_Check
 		$result = true;
 		foreach ($this->patterns as $key => $value)
 			$result &= $this->check_Pattern($id, $key);
+		
+		return json_encode($result);
+	}
+	
+	public function check_One($id)
+	{
+		$result = true;
+		foreach ($this->patterns as $key => $value)
+			$result |= $this->check_Pattern($id, $key);
 		
 		return json_encode($result);
 	}

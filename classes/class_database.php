@@ -1111,7 +1111,7 @@ function setValue($Field,&$Value,$num=null,$editable=false){
 								
                                                                         
                                      //entscheidet, ob
-        if(!($this->value[$field]['Extra']<>'auto_increment' || $editable)) throw new RuntimeException("PrimaryKey is auto_increment");
+        if(!($this->value[$Field]['Extra']<>'auto_increment' || $editable)) throw new RuntimeException("PrimaryKey is auto_increment");
 									       
     // $new                                                                   
         if($editable) //if(is_null($num))

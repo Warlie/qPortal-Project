@@ -328,6 +328,7 @@ else
 				{
 				
 				$content->setPageParam($_REQUEST);
+				$content->setLexicalOrderParam('i');
                                 
                                 //$content->setXMLTemplate('template/text1.htm');
                                 if(isset($_SESSION['@_mod']) && $_SESSION['@_mod']=='edit')

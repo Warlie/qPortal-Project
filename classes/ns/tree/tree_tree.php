@@ -110,9 +110,12 @@ function event_message_in($type,&$obj)
 						$json =  '{ "attribute":{"http://www.trscript.de/tree#name":"';
 						$json .= $type['Attribute'][$aspect];
 						$json .= '"}}';
+						
+						//
 
 					}
-				
+						$this->get_parser()->get_context_generator()->setLexicalOrderParam($aspect);
+						//var_dump($aspect);
 
 		}			
 	

@@ -98,7 +98,7 @@ private function auto_Complete_name($className, $functionCall)
 */
 function event_message_in($type,&$obj)
 	{
-	
+$old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
 	$parser = &$this->get_parser();
 		
 		if($obj->get_node())
@@ -122,7 +122,7 @@ function event_message_in($type,&$obj)
 		$class_Name = $this->get_attribute('name');
 		$instance_id = $this->get_attribute('id');
 
-		
+		//var_dump("classname:" . $class_Name, "instanzname:" . $instance_id, '----------');
 	//---------------------------------------------------------------------------------
 	//--                       avoids multiple entry instancing                       --
 	//---------------------------------------------------------------------------------
@@ -261,7 +261,16 @@ function event_message_in($type,&$obj)
 			* 
 			*--------------------------------------------------*/
 			//adds object to engine depending to name 
-			$parser->getControlUnit( "surface_tree_engine")->setObjectByID($this,$instance_id);
+			if(is_null($instance_id) && false)
+			{
+				echo "object element with positionstamp " . $old_pos . " has an empty id";
+				$this->giveOutOverview();
+			}
+			
+			if(!is_null($instance_id))
+			{ //echo $instance_id;
+				$parser->getControlUnit( "surface_tree_engine")->setObjectByID($this,$instance_id);
+			}
 		}
 		
 		

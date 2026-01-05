@@ -93,7 +93,7 @@ function complete()
 function event_message_in($type,&$obj)
 	{
 		global $_SESSION;
-		
+		///echo "Blub:" . $this->full_URI() . "\n";
 		// requests the permission to enter a special sector tag
 		if ($att_sector = $this->get_attribute('sector'))
 		{
@@ -220,7 +220,7 @@ function process_new_xhtml(&$obj,$name,$attrib)
 	{
 		
 		//$get_fu
-
+		//if($name == "http://www.w3.org/1999/xhtml#unqueID" )echo "start loop\n";
 		//tests for namespace with qname or just qname
 		//creates an object depending on Namespace 
 		if(false === ($posinStr = strpos($name,'#')))
@@ -419,6 +419,7 @@ function process_exist_xhtml(&$obj,$attrib)
 		$cur_element = &$obj->get_node();
 		//$new_node->name = $name;
 		//collects all param-tags
+		// creates all attributes, mentioned in param section
 		if(is_array($attrib))
 			foreach ($attrib as $key => $value)
 			{
@@ -469,6 +470,8 @@ function process_exist_xhtml(&$obj,$attrib)
 
 			}
 		
+		//check for input connections	
+		//$this->giveOutOverview();
 		$new_event = new EventObject($obj->get_request(),$obj->get_requester(),$obj->get_context());
 		$new_event->set_node($cur_element);
 		//echo $obj->get_request();

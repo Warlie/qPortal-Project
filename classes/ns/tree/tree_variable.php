@@ -50,7 +50,8 @@ function event_message_in($type,&$obj)
 	{
 
 		//echo "booho";
-			$send = ["Identifire"=>"*", "Command"=> ["Name"=> '__insert_data', "Attribute"=>[], "Value"=> $this->posInPrev() + 1 ]];
+//			$send = ["Identifire"=>"*", "Command"=> ["Name"=> '__insert_data', "Attribute"=>[], "Value"=> $this->posInPrev() + 1 ]]; 
+			$send = ["Identifire"=>"*", "Command"=> ["Name"=> '__insert_data', "Attribute"=>[], "Value"=> $this->posInPrev()]]; 
 
 			$booh = $this->getdata(0);
 			

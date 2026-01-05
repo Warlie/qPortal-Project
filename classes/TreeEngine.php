@@ -32,6 +32,13 @@ private $objectList = array();
 	
 	public function setObjectByID(&$obj,$id)
 	{
+		if ($id === null) {
+        echo "<pre>--- TRACE FÜR NULL ID ---\n";
+        debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+        echo "</pre>";
+        // Wahlweise: exit; // Falls du das Skript hier anhalten willst
+    }
+		
 		$this->objectList[$id] = &$obj;
 	}
 	public function getObjectByID($id){return $this->objectList[$id];}

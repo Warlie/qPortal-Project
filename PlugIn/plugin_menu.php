@@ -40,6 +40,7 @@ private $addAspects = [];
 private $page;
 
 private $URLString = STD_URL;
+private $URLBase = "";
 
 	/**
 	* @param $back get reference to container with all trees
@@ -71,7 +72,7 @@ private $URLString = STD_URL;
 	function __construct(/* System.Parser */ &$back, /* System.Content */ &$content, /* System.CurRef */ &$cur)
 	{
 		global $_SESSION;
-		
+
                 $this->currentTreeNode = $cur; // Good for this feature
 		$this->back= &$back;
 		$this->content = &$content;
@@ -80,7 +81,28 @@ private $URLString = STD_URL;
 		
 		$this->page = $this->content->getXMLStructur();
 		
+		$paramArray = $this->content->getLexicalOrderParam();
+		//var_dump($paramArray,$this->content->getHeap()['request']);
+		
+		$res = [];
+		foreach($paramArray as $aspect)
+			array_push($res,  $aspect ."=" . $this->content->getHeap()['request'][$aspect]);
+		//	$aspect = 
+		
+		//array_push($res,  $leadingAspect ."=%s" );
+		
+		$this->URLString = 'index.php?' . implode('&',$res) ;
 
+		$pos = strrpos($this->URLString, '=');
+		
+		if ($pos !== false) {
+			$this->URLString = substr($this->URLString, 0, $pos + 1) ."%s";
+		}
+	
+		$this->aspect = array_shift($paramArray);
+		$this->addAspects = $paramArray;
+
+		$this->URLBase = 'index.php?' . $this->aspect . '=%s';
 	
 	/* array for name and value for next menupoints */
 	
@@ -150,6 +172,13 @@ private $URLString = STD_URL;
 	public function configuration($json)
 	{
 		$confi = json_decode($json, true); // TODO Exception for NULL
+		
+		// 
+
+		//var_dump($this->URLString);
+		
+
+	
 		
 		//if(array_key_exists("serial",$confi))$this->processSerialConfiguration($confi["serial"]);
 		//var_dump($confi);
@@ -243,22 +272,6 @@ private $URLString = STD_URL;
 //var_dump($page, $this->page);
 	}
 	
-	function aspects($leadingAspect, $otherAspects = null)
-	{
-		$this->aspect = $leadingAspect;
-		if($otherAspects)$this->addAspects = explode(',',$otherAspects);
-		
-		$res = [];
-		foreach($this->addAspects as $aspect)
-			array_push($res,  $aspect ."=" . $this->content->getHeap()['request'][$aspect]);
-		//	$aspect = 
-		
-		array_push($res,  $leadingAspect ."=%s" );
-		
-		
-		$this->URLString = 'index.php?' . implode('&',$res);
-	}
-	
 	function back_in_tree($name = null, $url = null)
 	{
 
@@ -304,7 +317,8 @@ private $URLString = STD_URL;
 	$tmp[$this->level[0]['URL']] = str_replace('%s', $this->back->show_ns_attrib('http://www.trscript.de/tree#name'),$this->URLString);
 	$tmp[$this->level[0]['Name']] = $this->back->show_ns_attrib('http://www.trscript.de/tree#value');
        $tmp[$this->level[1]['Name']] = 'abmelden';
-       $tmp[$this->level[1]['URL']] = str_replace('%s', '__system&modus=LOG_OUT&URL=' . $this->logout_url,$this->URLString);
+       //var_dump($this->logout_url,$this->URLString);
+       $tmp[$this->level[1]['URL']] = str_replace('%s', '__system&modus=LOG_OUT&URL=' . $this->logout_url,$this->URLBase);
        //& URL=
        	return $tmp; 
        

@@ -802,8 +802,13 @@ function setdata($data,$pos = null, $add = false){
 						
 			if($add)
 			{
+				//var_dump($this->data, $data);
 				if(is_array($this->data))
-					$res = array_splice($this->data,$index, 0, $tmp);
+				{
+					$this->data[$index] .= $tmp;
+					//$res = array_splice($this->data,$index, 0, $tmp);
+					//var_dump($res, $this->data, $tmp);
+				}
 				else
 					$this->data = [$tmp];
 				
@@ -1288,7 +1293,7 @@ global $logger_class;
 		{
 			
 			$this->set_alter_event(false);
-			
+			//$this->setdata($obj->get_context(),$com_elemnet->get_Command(0,1),true);
 			$this->setdata($obj->get_context(),$com_elemnet->get_Command(0,1),true);
 			
 			$this->set_alter_event(true);

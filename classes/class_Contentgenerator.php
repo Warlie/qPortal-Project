@@ -44,6 +44,7 @@ var $panel = true;
 var $static = false;
 var $menu = true;
 var $param = array();
+private $paramIDX = [];
 var $spezial = array();
 public $XMLlist = null;
 private $namespace_reg = null;
@@ -298,6 +299,17 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		$this->heap['request'] = $param;
 		$this->param = $param;
 		
+	}
+	
+	function setLexicalOrderParam($next)
+	{
+		$this->paramIDX[] = $next;
+	}
+	
+	function getLexicalOrderParam()
+	{
+		$ArrayObject = new ArrayObject($this->paramIDX);
+		return $ArrayObject->getArrayCopy();
 	}
 
 	function getHeap(){return $this->heap;}
