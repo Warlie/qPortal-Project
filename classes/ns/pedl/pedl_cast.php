@@ -13,7 +13,7 @@
 	function &get_Instance()
 */
 
-class PEDL_cast extends Interface_attrib
+class PEDL_cast extends Interface_node
 {
 function &get_Instance()
 {
