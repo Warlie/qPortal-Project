@@ -24,6 +24,9 @@ public const TRACE = 'TRACE';
     private $responseHeaders = []; // Empfangene Header (Key => Value/Array)
     private $responseInfo = []; // Ergebnisse von curl_getinfo()
 
+    private $verifySsl = false; //true; // only accepts trusted addresses 
+    private $authCredentials = null; // Format: "user:pass"
+    
     // Konstruktor (Beispielhaft angepasst)
     public function __construct(string $baseUrl = '') {
         $this->baseUrl = $baseUrl;
@@ -53,6 +56,24 @@ public const TRACE = 'TRACE';
         // $this->requestHeaders[$normalizedKey] = $headerOrKey . ': ' . $value;
         // Und dann am Ende $this->requestHeaders = array_values($this->requestHeaders);
         return $this;
+    }
+    
+    /**
+    * Sucht in den bereits gesetzten Request-Headern nach einem bestimmten Key.
+    * @param string $key Der gesuchte Header (z.B. "Content-Type")
+    * @return string|null Der Wert des Headers oder null, wenn nicht gefunden.
+    */
+    private function getRequestHeader(string $key): ?string {
+    	$searchKey = strtolower($key) . ':'; // Wir suchen nach "content-type:"
+    
+    	foreach ($this->requestHeaders as $header) {
+    		if (strpos(strtolower($header), $searchKey) === 0) {
+    			// Wir haben den Header gefunden, jetzt extrahieren wir den Wert nach dem Doppelpunkt
+    			$parts = explode(':', $header, 2);
+    			return isset($parts[1]) ? trim($parts[1]) : null;
+    		}
+    	}
+    	return null;
     }
     
     public function setHeaderArray(array $header): self {
@@ -92,11 +113,45 @@ public const TRACE = 'TRACE';
         return $this;
     }
 
+     /**
+     * Adds a body to the request.
+     * Following methods aren't allowed to have a body:
+     * GET, HEAD, DELETE
+     *
+     * @param string $body Content of the body.
+     * @return self To allow method chaining.
+     */
     public function setBody($body): self {
         $this->requestBody = $body;
+        //echo $this->requestBody . "\n";
         return $this;
     }
 
+     /**
+     * In default not verified SSL connections would be rejected.
+     * Set boolean value for changing this behavior
+     *
+     * @param bool $verify Updates behavior.
+     * @return self To allow method chaining.
+     */
+    public function setVerifySsl(bool $verify): self {
+    	$this->verifySsl = $verify;
+    	return $this;
+    }
+
+     /**
+     * Optional setting for authentification
+     * demands a user and password
+     *
+     * @param string $user user name.
+     * @param string $pass user password.
+     * @return self To allow method chaining.
+     */
+    public function setBasicAuth(string $user, string $pass): self {
+    	$this->authCredentials = "$user:$pass";
+    	return $this;
+    }
+    
     /**
      * Führt den eigentlichen cURL Request aus.
      * (Kann auch deine bestehende request() Methode sein, die erweitert wird)
@@ -137,9 +192,20 @@ public const TRACE = 'TRACE';
         $this->rawResponseBody = '';
         $this->responseHeaders = []; // Wichtig: für jeden Request leeren
         $this->responseInfo = [];
-
+   
         $ch = curl_init();
 
+// --- NEU: SSL Handling ---
+    if (!$this->verifySsl) {
+    	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    }
+
+    // --- NEU: Authentification via basicAuth ---
+    if ($this->authCredentials !== null) {
+        curl_setopt($ch, CURLOPT_USERPWD, $this->authCredentials);
+    }
+        
         // URL und Methode zusammenbauen (Parameter anhängen bei GET etc.)
         $processedUrl = $this->buildUrlWithParams();
         curl_setopt($ch, CURLOPT_URL, $processedUrl);
@@ -158,9 +224,63 @@ public const TRACE = 'TRACE';
 $postDataString = null; // Initialisiere Variable für den Body-String
 
 if (!in_array($this->lastMethod, ['GET', 'HEAD', 'DELETE'])) { // Prüfe auf Methoden, die einen Body haben können
+
     if ($this->requestBody !== null) {
         // 1. Expliziter Body wurde via setBody() gesetzt -> Vorrang geben
         //    Annahme: Der Body ist bereits im korrekten Format (z.B. JSON-String)
+/*
+Header	Wert	Bedeutung
+Content-Type	application/x-www-form-urlencoded	Standard: Parameter als query=... im Body.
+	application/sparql-query	Schickt den rohen Query-String ohne query= Präfix.
+Accept	application/sparql-results+json	Empfohlen: Liefert das saubere JSON, das du gerade gesehen hast.
+	application/sparql-results+xml	Liefert das klassische XML-Format.
+	text/csv	Gut für den direkten Export in Tabellenkalkulationen.
+	application/x-turtle	Wenn du ganze Graphen abfragst (CONSTRUCT Queries).
+	
+	Header	Wert	Bedeutung
+Content-Type	application/sparql-update	Standard: Schickt den rohen INSERT oder DELETE Befehl.
+	application/x-www-form-urlencoded	Alternativ: Update-Befehl als update=... Parameter.
+Accept	application/json	Fuseki gibt meist nur einen Status zurück (Erfolg/Fehler).
+
+Header	Wert	Format
+Content-Type / Accept	text/turtle	Turtle-Format (sehr lesbar, Standard für RDF).
+	application/rdf+xml	Das alte XML-basierte RDF-Format.
+	application/ld+json	JSON-LD: Sehr wichtig für Web-Integrationen und KIs.
+	application/n-triples	Sehr simpel: Ein Tripel pro Zeile (gut für riesige Datenmengen).
+	text/trig	Wie Turtle, kann aber mehrere benannte Graphen (Named Graphs) enthalten.
+	
+	Header	Wert	Bedeutung
+Content-Type	application/json	Der moderne Standard für fast alles.
+	multipart/form-data	Für Datei-Uploads (wird von cURL bei Array-Übergabe genutzt).
+	text/plain	Roher, unformatierter Text.
+Accept	* / *	"Gib mir einfach, was du hast" (Default).
+	application/pdf	Wenn dein Solver einen fertigen Report generiert.
+*/
+        if($this->getRequestHeader('Content-Type') == "application/x-www-form-urlencoded")
+        { 
+        	$dataArray = json_decode($this->requestBody, true);
+        	if (json_last_error() === JSON_ERROR_NONE) {
+        		// 3. Umwandeln in x-www-form-urlencoded
+        		$postDataString = http_build_query($dataArray);
+        		$this->setHeader('Content-Length', "" . strlen($postDataString));
+
+        		/* Hier kann ich ja alles hineinschreiben, was ich will. Also bestücken wir hier genau diesen einen Fall, und versuchen ihn zum Funktionieren zu bringen. */
+        		//die($postDataString);
+        	}
+        }
+        else
+        if($this->getRequestHeader('Content-Type') == "application/json") 
+        { 
+        	$dataArray = json_decode($this->requestBody, true);
+        	if (json_last_error() === JSON_ERROR_NONE) {
+        		// 3. Umwandeln in x-www-form-urlencoded
+        		$postDataString = $this->requestBody;
+        		
+        		//var_dump($this->flattenForFuseki($dataArray), http_build_query($this->flattenForFuseki($dataArray)));
+        		//return $this;
+        	}
+        }
+        else
         if (is_string($this->requestBody)) {
              $postDataString = $this->requestBody;
         } else {
@@ -168,10 +288,18 @@ if (!in_array($this->lastMethod, ['GET', 'HEAD', 'DELETE'])) { // Prüfe auf Met
              error_log("REST_Connection Warning: Request body set via setBody() was not a string. Sending empty body.");
              $postDataString = ''; // Oder Exception werfen?
         }
+        
+        /*
+        application/sparql-query
+        */
+        
         // WICHTIG: Der Benutzer MUSS den korrekten Content-Type Header (z.B. application/json)
         // für diesen expliziten Body selbst via setHeader() gesetzt haben!
 
     } elseif (!empty($this->requestParameters)) {
+    	
+    	
+    	
         // 2. Kein expliziter Body, aber Parameter wurden via setParameter(s) gesetzt
         //    -> Kodiere diese Parameter als JSON für den Body
         $postDataString = json_encode($this->requestParameters);
@@ -293,7 +421,7 @@ if (curl_errno($ch)) {
     $this->responseInfo = curl_getinfo($ch);
 }
 
-        curl_close($ch);
+        //curl_close($ch);
 
         return $this; // Erlaubt Chaining: $client->request()->getStatusCode();
     }
@@ -309,7 +437,66 @@ if (curl_errno($ch)) {
          return $url;
     }
 
+    //!!!!!!!!!!!!!!!!!!!!!!!!!!! muss wieder weg. !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1
+    // das Json bietet attribute und diese müssen weg
+    function flattenForFuseki(array $input): array {
+    $clean = [];
+    foreach ($input as $key => $value) {
+        // Wir nehmen NUR skalare Werte (Strings, Zahlen)
+        // Alles was ein Array ist (@attributes etc.), fliegt raus
+        if (is_scalar($value)) {
+            $clean[$key] = $value;
+        }
+    }
+    return $clean;
+}
+    
     // --- NEU: Methoden zum Abrufen der Antwort ---
+    
+    private function x_www_form_urlencoded(array $body)
+    {
+    	$url = "https://72.61.177.90/testme/query";
+$user = "admin";
+$pass = "MHdh3E3EhmH";
+
+// Die Daten müssen als String vorliegen, nicht als Array!
+$queryData = http_build_query($body);
+/*
+$queryData = http_build_query([
+    'query' => 'SELECT * WHERE { ?s ?p ?o } LIMIT 5',
+    'output' => 'json'
+]);
+*/
+//var_dump($this->requestHeaders);
+$ch = curl_init($url);
+
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS, $queryData); // Wichtig: String-Übergabe
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_USERPWD, "$user:$pass");
+
+// Wegen des Snake-Oil-Zertifikats auf Umbreon:
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+// Die entscheidenden Header
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Content-Type: application/x-www-form-urlencoded',
+    'Accept: application/sparql-results+json',
+    'Expect:' // Verhindert den 100-continue Error
+]);
+        // Request ausführen
+        $this->rawResponseBody = curl_exec($ch);
+
+        // Informationen sammeln (Status Code etc.)
+        $this->responseInfo = curl_getinfo($ch);
+        
+if (curl_errno($ch)) {
+    echo "cURL Fehler: " . curl_error($ch);
+}
+
+    	return $this;
+    }
 
     /**
      * Gibt den rohen, unverarbeiteten Body der letzten Antwort zurück.
@@ -318,6 +505,7 @@ if (curl_errno($ch)) {
      */
     public function getRaw(): string {
         // Prüfen, ob rawResponseBody überhaupt gesetzt ist (nach Fehler etc.)
+        //echo $this->rawResponseBody . "-- \n";
         return $this->rawResponseBody ?? '';
     }
 

@@ -473,6 +473,7 @@ function delete_index($index)
 					$attrib->set_idx($this->idx);
 					$attrib->namespace = $full_ns;
 					$attrib->set_parser($this);
+					$attrib->set_contentGen($this->context_generator);
 					$res ['identifier'] = $attribwithpre;
 					$res ['full_ns'] = $full_ns;
 					$res ['object'] = $attrib;
@@ -518,6 +519,7 @@ function delete_index($index)
 					$attrib->set_idx($this->idx);
 					$attrib->namespace = $full_ns;
 					$attrib->set_parser($this);
+					$attrib->set_contentGen($this->context_generator);
 					$res ['identifier'] = $k;
 					$res ['full_ns'] = $full_ns;
 					$res ['object'] = $attrib;
@@ -560,6 +562,7 @@ function delete_index($index)
 					$attrib->set_idx($this->idx);
 					$attrib->namespace = $full_ns;
 					$attrib->set_parser($this);
+					$attrib->set_contentGen( $this->context_generator );
 					$res ['identifier'] = $k;
 					$res ['full_ns'] = $full_ns;
 					$res ['object'] = $attrib;
@@ -619,6 +622,7 @@ function delete_index($index)
 				$node->set_idx($this->idx);
 				$node->namespace = $full_ns;
 				$node->set_parser($this);
+				$node->set_contentGen( $this->context_generator);
 				//echo "nativ: " . $node->full_URI() . " \n";
 			}
 			else
@@ -656,6 +660,7 @@ function delete_index($index)
 			$node->set_idx($this->idx);
 			$node->namespace = $full_ns;
 			$node->set_parser($this);
+			$node->set_contentGen( $context_generator );
 			//echo "nicht nativ: " . $node->full_URI() . " \n";
 		}	
 			
@@ -686,6 +691,7 @@ function delete_index($index)
 				$node->set_idx($this->idx);
 				$node->namespace = $glob_namespace;
 				$node->set_parser($this);
+				$node->set_contentGen( $this->context_generator);
 				//echo "nativ: " . $node->full_URI() . " (2)\n";
 			}
 			else
@@ -717,6 +723,7 @@ function delete_index($index)
 			$node->set_idx($this->idx);
 			$node->namespace = $glob_namespace;
 			$node->set_parser($this);
+			$node->set_contentGen( $this->context_generator);
 		}
 		
 	}	
@@ -765,11 +772,13 @@ function delete_index($index)
 	$this->looking_index[$internal_idx][$node->full_URI()][] = &$node;
    }
    
-
+   /**
+   *	@param Interface_node $node	node in a loading tree 
+   */
    function add_to_execute($node)
    {
    	  
-   	   if($node->has_behavior() &&  !$node->is_Class())
+   	  // if($node->has_behavior() &&  !$node->is_Class())
    	   	   $this->obj_stack[] = $node;
    }
    /*
@@ -777,32 +786,14 @@ function delete_index($index)
    */
    function executed()
    {
-// Startzeitpunkt in Nanosekunden
-$start = hrtime(true);
 
-
-
-	   for($i = 0;count($this->obj_stack) > $i ; $i++ )
-	   {
-	   	   //$first  = hrtime(true);
-		   $no_context = null;
-		   //echo $this->obj_stack[$i]->full_URI() . "---------------------starts\n";
-		   //$this->obj_stack[$i]->event_Instance($this,'*?parse_complete',new EventObject('',$this,$no_context));
-		   $this->obj_stack[$i]->event('*?parse_complete',new EventObject('',$this,$no_context));
-		   //$second   = hrtime(true);
-		   //echo sprintf("Abschnitt: %.3f ms\n", ($second - $first) / 1_000_000);  
-		   //echo $this->obj_stack[$i]->full_URI() . "------------------------ends\n";
-	   
-	   }
-	   
-	   $this->obj_stack = array();
-// Endzeitpunkt in Nanosekunden
-$end = hrtime(true);
-
-// Dauer in Millisekunden berechnen
-$durationMs = ($end - $start) / 1_000_000;
-
-//echo sprintf("Dauer: %.3f ms\n", $durationMs);   
+   	   while ($node = array_pop($this->obj_stack))
+   	   {
+   	   	   //echo spl_object_id($node) . "executed \n";
+   	   	   //$node->alter_sensity = true;
+   	   	   //$node->complete();
+   	   	   $node->event('*?parse_complete', new EventObject('', $this, $no_context));
+   	   }
    
    }
    
@@ -816,7 +807,8 @@ $durationMs = ($end - $start) / 1_000_000;
                 $num = 0;
 
                 $this->mirror[$this->idx] = $this->getInstance($tag,$attributes);
- 
+                $this->cur_pointer[$this->idx] = $this->mirror[$this->idx];
+
                 }else{
 
                         $num = $this->mirror[$this->idx]->index_max();
@@ -855,16 +847,12 @@ $durationMs = ($end - $start) / 1_000_000;
 
    function cdata($parser, $cdata)
    {
-                                  
-
-
                                         if(isset($this->cur_pointer[$this->idx])){
                                                 $tmp = $this->cur_pointer[$this->idx]->index_max();
                                                 
-
 					
 					$res;
-						if(is_Null($cdata))
+						if(is_null($cdata))
 						{
 							$res = "";
 						}
@@ -875,9 +863,10 @@ $durationMs = ($end - $start) / 1_000_000;
 					
 					$expand_data = false;
 					$text_type_name = '';
-					
+
 					if( $this->cur_pointer[$this->idx] instanceof RDF_Property)
 					{
+
 					if(is_Object($clazz = &$this->cur_pointer[$this->idx]->linkToClass()))
 					{
 					//definierendes_object
@@ -914,6 +903,7 @@ $durationMs = ($end - $start) / 1_000_000;
 								$newobj->set_idx($this->idx);
 								$newobj->namespace = $this->cur_pointer[$this->idx]->namespace;
 								$newobj->set_parser($this);
+								$newobj->set_contentGen( $this->context_generator);
 								$newobj->setRefprev($this->cur_pointer[$this->idx]);
 								$newobj->setdata($this->convert_from_XML($res),$tmp); // $this->convert_from_XML($res)
 								//$newobj->giveOutOverview();
@@ -949,6 +939,8 @@ $durationMs = ($end - $start) / 1_000_000;
 
                                         
                                         }
+                                        else
+echo $this->idx . " gibt es nicht";
    }
    
    function cdata_ref($parser, &$cdata)
@@ -978,7 +970,12 @@ $durationMs = ($end - $start) / 1_000_000;
    
    
    	if(isset($this->cur_pointer[$this->idx]))
-	{$this->cur_pointer[$this->idx]->complete();
+	{
+		// here complete is called
+		$this->cur_pointer[$this->idx]->set_alter_event_public(true);
+		$this->cur_pointer[$this->idx]->event_initiated();
+		//$this->cur_pointer[$this->idx]->complete();
+		//echo spl_object_id($this->cur_pointer[$this->idx]) . "complete \n";
         if(isset($this->cur_pointer[$this->idx]->prev_el))        
 	 $this->cur_pointer[$this->idx] = &$this->cur_pointer[$this->idx]->getRefprev();
  	//if(!$this->is_valid_node())echo "aaaah";

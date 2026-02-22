@@ -107,7 +107,7 @@ function event_message_in($type,&$obj)
 protected function event_readdata($own)
 	{
 		//echo ' in event_readdata( ';
-
+//echo $this->full_URI() . "\n";
 	global $logger_class;
 	//echo '             data in "' . $this->full_URI() . '" will read and causes an readdataevent ' . '(PEDL_Object_Funktion:event_readdata)' . "\n";
 	$logger_class->setAssert('             data in "' . $this->full_URI() . '" will read and causes an readdataevent ' . '(PEDL_Object_Funktion:event_readdata)' ,15);

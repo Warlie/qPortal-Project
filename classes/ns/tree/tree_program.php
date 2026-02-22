@@ -84,13 +84,13 @@ function event_initiated()
 	}
 	// || $uri == 'http://www.trscript.de/tree#tree' || $uri == 'http://www.trscript.de/tree#final'
 }
-
+/*
 function complete()
 	{
 		parent::complete();
 
 	}
-
+*/
 function event_message_in($type,&$obj)
 	{
 	

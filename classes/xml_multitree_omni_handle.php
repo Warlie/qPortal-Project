@@ -102,21 +102,23 @@ class xml_omni extends xml_objex
                 $this->used_parser = true;
                 $this->special = "";
 		}
+		// this function will be called  after completing all parsing
 		$this->executed();
    }
    
+   // this function is defined in the ns class
    function executed()
    {}
    
    function set_definition_context($key,$content)
    {
 
-	if($key == 'MIME')
-	$this->MIME[$this->idx] = $this->MIME_check($content);
+   	   if($key == 'MIME')
+   	   	   $this->MIME[$this->idx] = $this->MIME_check($content);
         if($key == 'DOC')        
-   	$this->DOC[$this->idx] = $this->DOC_check($content);
-	if($key == 'TYPE')	
-	$this->TYPE[$this->idx] = $content;
+        	$this->DOC[$this->idx] = $this->DOC_check($content);
+        if($key == 'TYPE')	
+        	$this->TYPE[$this->idx] = $content;
    }
    
    function handle_select(&$source,$casefolding=1,$special="",$ref='')
@@ -263,11 +265,11 @@ function save_file($format = '',$send_header=false, $filename = false)
 			$obj->set_object($this);
 			if(!is_null($this->SPECIAL) && is_Array($this->SPECIAL[$this->idx - 1]))
 			{
-			foreach($this->SPECIAL[$this->idx - 1] as $key => $value)
-			{
+				foreach($this->SPECIAL[$this->idx - 1] as $key => $value)
+				{
 			//echo $key . ' ' . $value . ' ';
-			$obj->set_attribute(strtoupper($key),strtoupper($value));
-			}
+				$obj->set_attribute(strtoupper($key),strtoupper($value));
+				}
 			}
 
 			$obj->set_attribute('XML_OPTION_CASE_FOLDING',$casefolding);

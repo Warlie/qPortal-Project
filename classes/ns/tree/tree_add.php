@@ -63,7 +63,7 @@ function &new_Instance()
 
 //primar call after finishing object, ther wont be an existing childnode
 function event_initiated()
-{
+{ 
 	$uri = $this->getRefprev()->full_URI();
 	if($uri == 'http://www.trscript.de/tree#template')
 	{
@@ -150,6 +150,18 @@ function event_message_in($type,&$obj)
 							$this->get_parser()->change_URI(
 								$obj->get_requester()->get_template($body)
 								);
+							/*
+							var_dump($com_parameter ["RequestHeaders"]);
+							
+							foreach ($com_parameter ["RequestHeaders"] as $header) {
+								if (strpos(strtolower($header), 'content-type') === 0) {
+									// Wir haben den Header gefunden, jetzt extrahieren wir den Wert nach dem Doppelpunkt
+									$parts = explode(':', $header, 2);
+									if(isset($parts[1]) ? trim($parts[1]) : null;
+								}
+							}
+							*/
+							//$this->set_definition_context('TYPE',$content);
 							$com_parameter ["RequestBody" ] = $this->get_parser()->save_Stream(); // It takes the 
 							$com_parameter ["Parameters"] = [];
 							$this->get_parser()->change_idx($cur_idx);

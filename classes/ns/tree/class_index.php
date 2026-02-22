@@ -18,6 +18,7 @@ require_once('tree_main.php');
 require_once('tree_add.php');
 require_once('tree_element.php');
 require_once('tree_object.php');
+require_once('tree_access.php');
 require_once('tree_param.php');
 require_once('tree_remote.php');
 require_once('tree_workspace.php');
@@ -67,6 +68,7 @@ class TREE_factory
 			$this->node['variable'] = new TREE_variable('variable', $ns);
 			$this->node['content'] = new TREE_content('content', $ns);
 			$this->node['element'] = new TREE_element('element', $ns);
+			$this->node['access'] = new TREE_access('access', $ns);
 			$this->node['object'] = new TREE_object('object', $ns);
 			$this->node['param'] = new TREE_param('param', $ns);
 			$this->node['remote'] = new TREE_remote('remote', $ns);

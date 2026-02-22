@@ -104,13 +104,14 @@ var $start_list = array();
 var $check_list = array();
 var $link_to_class = null;
 protected $link_to_instance = array();
+protected $contentGen = null;
 var $way_out = array();
 var $way_in = array();
 var $test = 'testme';
 private $idx = 0;
 private $alter_sensity = false;
 private $read_sensity = true;
-protected $features = [];
+protected $features = []; // TODO check for relevance 
 
 var $position=-1;
 var $mark = false;
@@ -200,9 +201,10 @@ public function get_NodeType()
 }
 
 function get_classes()
-{
-//echo $this->full_URI() . "<br>\n";
+{ 
+echo $this->full_URI() . "---------------------------------------------------------<br>\n";
 if($this->link_to_class)$this->link_to_class->get_classes();
+
 }
 
 function set_idx($idx)
@@ -240,7 +242,7 @@ function get_QName()
 return $this->type;
 }
 
-public function &linkToClass()
+public function linkToClass()
 {
 return $this->link_to_class;
 }
@@ -552,6 +554,11 @@ function set_parser(&$obj)
 	$this->parser = $obj;
 }
 
+function set_contentGen(&$obj)
+{
+	$this->contentGen = $obj;
+}
+
 function &get_parser()
 {
 	return $this->parser;
@@ -755,6 +762,9 @@ function get_attribute($name = '')
 			
 		}
 	}
+	
+public function set_alter_event_public($bool){$this->set_alter_event($bool);}
+	
 protected function set_alter_event($bool)
 {
 	$this->alter_sensity = $bool;
@@ -767,7 +777,7 @@ public function set_read_event($bool)
 
 public function freedata_(){return true;}
 //orginal
-function setdata($data,$pos = null, $add = false){
+function setdata($data,$pos = null, $add = false, $alter_sensity = true){
 
 	if(is_string($data) && 
 		(str_contains($data, '&')
@@ -819,7 +829,7 @@ function setdata($data,$pos = null, $add = false){
 		}
 			
 		//causes alterdataevent
-		if($this->alter_sensity)$this->event_alterdata(true);
+		if($this->alter_sensity && $alter_sensity)$this->event_alterdata(true);
 //echo $index . ":" . $data . "\n";
         }
 	
@@ -1000,42 +1010,47 @@ public function get_bolcdata(){return $this->cdata;}
 function final_data(){$this->index++;}
 
 //Starts behavior of tagelement, for NS
+// This function is calld in multitree_ns
 function complete()
-{
-	//calls only !attributes!
-	for($i = 0 ; count($this->start_list) > $i;$i++)
-	{
-		$this->start_list[$i]->event('*?start');
-		
-	}
-	$this->alter_sensity = true;
+{	
+	//$this->alter_sensity = true;
+	//$this->set_alter_event_public(true);
 	$this->event_initiated();
 }
 
 //distributor to inherit, fires most of all events in class
-function event($type,&$obj)
-{
-	//echo $type . " " . get_class($this) ."\n";
-/*
+function event($type,&$obj, $it = 0)
+{//*
+	$classList = $this->givesAllPrototypes();
+	//var_dump($classList);
+	$obj->set_node($this);
+	if(!empty($classList))
+		array_shift($classList)->event_Instance($obj->get_node(),$type,$obj);
 
-	//löst in allen attributen event aus
-	for($i = 0 ; count($this->start_list) > $i;$i++)
-	{
-
-		$this->start_list[$i]->event($type,$obj);
+	//foreach ($classList as $classObj)
+	//	$classObj->event_Instance($obj->get_node(),$type,$obj);
 		
-	}
-	*/
+		return;
+	//	*/
+
+	//echo "cycle:" . spl_object_id($this) . "\n";
+//throw new ErrorException("where am I");
 	if($type == '*?parse_complete')
 	{
 	//löst event aus
-
+// -------------------------------------------------
+		$classList = $this->givesAllPrototypes();
 	
+	foreach ($classList as $classObj)
+		echo $classObj->full_URI() . " " . spl_object_id($classObj) . "\n";
+	//---------------------------------------------------
 		if($this->link_to_class && !$this->is_Class)
 			{
 					//echo $this->full_URI() . "calls class " . $this->link_to_class->full_URI() . "\n";
+					//var_dump($this->givesAllClasses());
 				$obj->set_node($this);
-				$this->link_to_class->event('*?parse_complete_classes',$obj);
+				//echo "set_node:" . spl_object_id($this) . "\n";
+				$this->link_to_class->event('*?parse_complete_classes',$obj, $it + 1);
 			
 			}
 	
@@ -1044,17 +1059,38 @@ function event($type,&$obj)
 
 	if($this->link_to_class && $type == '*?parse_complete_classes')
 		{
-			//echo $this->full_URI() . " Instance called \n";
-			$this->event_Instance($obj->get_node(),$type,$obj);
-			$this->link_to_class->event('*?parse_complete_classes',$obj);
+			if($it == 2){
+				$this->event_Instance($obj->get_node(),$type,$obj);
+			echo $this->full_URI() . "->event_Instance " . spl_object_id($this) . " is called with " . $obj->get_node()->full_URI() . "(" . spl_object_id($obj->get_node()) . ")[" . ($this->is_Class()? "Class":"Instance") ."]$it\n";
+			//echo $this->full_URI() . " calls class " . $this->link_to_class->full_URI() . "\n";
 			
-			//echo $this->full_URI() . "<br>\n";
+			}
+			if($it < 2)$this->link_to_class->event('*?parse_complete_classes',$obj, $it + 1);
 		}
-		
-	//if($this->link_to_class)$this->link_to_class->event_Instance($this,$type,$obj);
+//echo "\n";
+}
 
-		//$this->event_parseComplete();
+public function givesAllClasses($me = 0 )
+{
+	$res = [];
+	if($this->is_Class())$res[] = $this;
+	
+	//echo "givesAllClasses (" . $this->full_URI() . "[$me])" . ($this->is_Class()? " is Class ": " is Instance ") . " \n";// TODO Array mit merge bauen
+	
+	if($this->link_to_class)$res = array_merge($res, $this->link_to_class->givesAllClasses($me + 1));
+	return $res;
+}
 
+public function givesAllPrototypes($me = 0 )
+{
+	$res = [];
+	if(($me > 0) && !$this->is_Class())
+		$res[] = $this;
+	
+	//echo "givesAllClasses (" . $this->full_URI() . "[$me])" . ($this->is_Class()? " is Class ": " is Instance ") . " \n";// TODO Array mit merge bauen
+	
+	if($this->link_to_class)$res = array_merge($res, $this->link_to_class->givesAllPrototypes($me + 1));
+	return $res;
 }
 
 //way to send messages
@@ -1062,44 +1098,30 @@ function send_messages($type,&$obj)
 {	//echo $this->full_URI() . ' - ' . count($this->way_out) . ":[\n";
 	
 	if(is_null($type))throw new Exception("null found");
-	//echo 'booooooooooooooooooooooooooooooh' . count($this->way_out);
-	//�bermittelt den event an alle Knoten, die an diesem Knoten h�ngen
-	//send message to all nodes, which has been sign in over set_to_out
-	//echo $type . ' ' . get_Class($this) . ' bin drin ' . count($this->way_out) . "<br>\n";
+
 
 	$com = $this->parseCommand($type);
 	
 	for($i = 0;count($this->way_out) > $i;$i++)
 	{
 		
-		//echo $this->way_out[$i]->full_URI() . "(" . get_class($this->way_out[$i]) . ") ist das aktuelle objekt <br>\n";
-		//echo ' send_messages(';
+
 		if($com->is_Node($this->way_out[$i]))
 		$this->way_out[$i]->event_message_check($com,$obj);
-		
-		///echo $this->way_out[$i]->getRefprev()->full_URI() . ' ' ;
-		//echo $this->way_out[$i]->get_attribute('value') . "<br>\n";
-		//echo ') ';
+
 	}
-	//echo"]\n\n";
+
 }
 
 //way to send messages
 function send_rev_messages($type,&$obj)
-{	//echo ' - ' . count($this->way_out);
-	//echo 'booooooooooooooooooooooooooooooh' . count($this->way_out);
-	//�bermittelt den event an alle Knoten, die an diesem Knoten h�ngen
-	//send message to all nodes, which has been sign in over set_to_out
+{	
 	$com = $this->parseCommand($type);
 	
 	for($i = 0;count($this->way_in) > $i;$i++)
 	{
-		
-		//echo get_class($this->way_in[$i]);
 		if($com->is_Node($this->way_in[$i]))
 		$this->way_in[$i]->event_message_check($com,$obj);
-		///echo $this->way_out[$i]->getRefprev()->full_URI() . ' ' ;
-		//echo $this->way_out[$i]->get_attribute('value') . "<br>\n";
 	}
 }
 
@@ -1123,8 +1145,6 @@ function event_attribute($name,&$message)
 {
 	
 }
-
-public function insert_message($type,&$obj){echo $this->name . ' event:' . get_Class($this) ;  $this->event_message_check($type,$obj);}
 
 /**
 * @function event_message_check
@@ -1165,14 +1185,6 @@ protected function event_message_check($type,&$obj)
 {
 global $logger_class;
 
-
-//var_dump($this, $this->get_idx(), $this->full_URI(), $type);
-
-//if($this->secRequest++ > 10000)throw new NotExistingBranchException("sicherheitsdings");
-
-	//if(is_array($type) || is_string($type))$com_elemnet = $this->parseCommand($type);
-	//else
-	//$com_elemnet = $type;
 	$com_elemnet = $this->parseCommand($type);
 	$bool=true;
 	for($i = 0;count($this->check_list) > $i;$i++)
@@ -1189,100 +1201,56 @@ global $logger_class;
 
 
 		
-		if($com_elemnet->matchesCommand('__redirect_node'))
+
+
+		
+		$behaviorRegistry = $this->contentGen->getRegObj();
+		$behaviorRegistry->_useGeneral();
+		//var_dump($com_elemnet->get_Command(), $behaviorRegistry);
+		if(isset($behaviorRegistry->{$com_elemnet->get_Command()}))
 		{
-		$logger_class->setAssert('  Redirect was send to "' . $this->full_URI() . '"(Interface_node:event_message_check)' ,5);
-			//$com_elemnet = $this->parseCommand($type);
-			//echo $com_elemnet->get_Command(0,1) . ' ' . get_Class($obj->get_Node()) . ' ' . get_Class($this) . ' <br>';
-
-			if(is_null($com_elemnet->get_Command(0,1)))throw new Exception("Null detected: " . $com_elemnet->get_Insert());
-			
-
-			$this->send_messages($com_elemnet->get_Command(0,1),$obj) ;
-			return true;
-			
-		}
-
-		if($com_elemnet->matchesCommand('__find_node'))
-		{//var_dump($com_elemnet);
-			//var_dump($type);
-			$structur = $com_elemnet->get_Result_Array();
-			//echo get_class($this->parser) . "\n";
-			//$structur['Command']['Attribute']['json'] = $structur['Command']['Attribute']['json'];
-			//$structur['Command']['Value'] = $structur['Command']['Value'];
-			//var_dump($this->get_idx(), $this->get_parser()->cur_idx()); //, $this->get_parser()->change_idx($index)
-			$json = json_decode($structur['Command']['Attribute']['json'], true);
-			//var_dump($json);
-			$name = null;
-			$attribute = null;
-			$value = $structur['Command']['Value'];
-			if(array_key_exists('attribute', $json))$attribute =  $json['attribute'];
-			if(array_key_exists('name', $json))$name =  $json['name'];
-
-			//var_dump(json_decode($structur['Command']['Attribute']['json'], true));
-			 $this->get_parser()->flash_result();
-			// var_dump("name",$name, "attrib", $attribute);
-			if($this->parser->seek_node($name,$attribute) && (count($this->get_parser()->get_result())>0))
-			{
-
-			$obj->set_node($this);
-		//$many_of_res = count($this->get_parser()->get_result());
-		//echo "geht durch \n";
-		foreach( $this->get_parser()->get_result() as $value_obj){
-		//	echo  spl_object_id($this) . " insert " . spl_object_id($value_obj) . " [" . $value_obj->full_URI() . "]--------\n";
-			//var_dump($value_obj);
-			
-			$value_obj->event_message_in($value,$obj) ;
+			($behaviorRegistry->{$com_elemnet->get_Command()})($this, $obj, $com_elemnet);
 		}
 				
-		//echo "fertig \n";
-		 $this->get_parser()->flash_result();
-				
-				//var_dump($name,$attribute,$this->parser->show_xmlelement());
-				//$this->parser->show_xmlelement()->event_message_in($value,$obj) ;
-			}
-			else
-			throw new NotExistingBranchException( " $name does not exist");
+		/*
+		function event($type,&$obj)
+{
+throw new ErrorException("where am I");
+	if($type == '*?parse_complete')
+	{
+	//löst event aus
 
-			//var_dump($name,$attribute,$this->parser->show_xmlelement()->full_URI(), $value);
-			//$com_elemnet = $this->parseCommand($type);
-			//echo $com_elemnet->get_Command(0,1) . ' ' . get_Class($obj->get_Node()) . ' ' . get_Class($this) . ' <br>';
-			//if(is_null($com_elemnet->get_Command(0,1)))throw new Exception("Null detected: " . $com_elemnet->get_Insert());
-
-			return true;
-			
-		}
-		
-		
-		
-		if($com_elemnet->matchesCommand('__add_in_object'))
-		{
-			if(is_Object($myNode = &$obj->get_node()))
+	
+		if($this->link_to_class && !$this->is_Class)
 			{
-			$logger_class->setAssert('  add_in_object of requester "' . $myNode->full_URI() . '" was send to "' . $this->full_URI() . '  ' . '"(Interface_node:event_message_check)' ,5);
+					//echo $this->full_URI() . "calls class " . $this->link_to_class->full_URI() . "\n";
+				$obj->set_node($this);
+				$this->link_to_class->event('*?parse_complete_classes',$obj);
 			
-				//echo get_Class($myNode);
-				$myNode->set_to_out($this);
 			}
-			
-			
-			return true;
-			
+	
+
+	}
+
+	if($this->link_to_class && $type == '*?parse_complete_classes')
+		{
+			$this->event_Instance($obj->get_node(),$type,$obj);
+			$this->link_to_class->event('*?parse_complete_classes',$obj);
 		}
+
+}
+		*/
+
 		
 		if($com_elemnet->matchesCommand('__set_data'))
 		{
 			
 			//$com_elemnet = $this->parseCommand($type);
-			$this->set_alter_event(false);
-			//echo $type . ' (' . $obj->get_context() .  ')  <b>cur.element</b> ' . $this->full_URI() . ' <b>requ.element</b> ' . $obj->get_requester()->full_URI() . '<br>';
-//echo $obj->get_context() . ' ' . $obj->get_requester()->full_URI() . ' <br>';
+			//$this->set_alter_event_public(false);
+	
+			$this->setdata($obj->get_context(),$com_elemnet->get_Command(0,1), alter_sensity: false);
 			
-			$logger_class->setAssert('  set_data of content "' . $obj->get_context() . '" was send to "' . $this->full_URI() . '  ' . '"(Interface_node:event_message_check)' ,5);
-			
-			$this->setdata($obj->get_context(),$com_elemnet->get_Command(0,1));
-			
-			$this->set_alter_event(true);
+			//$this->set_alter_event_public(true);
 			
 			//$this->event_alterdata(false);
 			return true;
@@ -1388,6 +1356,11 @@ protected function set_to_out(&$obj)
 		
 }
 */
+public function addToOutListener(Interface_node $listener): void
+{
+	$this->set_to_out($listener);
+}
+
 protected function set_to_out(Interface_node &$listener): void
 {
     // schon registriert?
@@ -1411,6 +1384,11 @@ public function &get_out_ref()
 public function &get_in_ref()
 {
 	return $this->way_in;
+}
+
+public function addToInListener(Interface_node $listener): void
+{
+	$this->set_to_in($listener);
 }
 
 protected function set_to_in(Interface_node &$origin): void
@@ -1445,7 +1423,7 @@ function to_listener()
 	{
 		echo "bin in Knoten " . $this->full_URI() . " " . $this->index_max() . " <br>" ;
 	}
-	//$this->back->start_list[count($this->back->start_list)] = &$this;
+
 }
 
 
@@ -1636,55 +1614,6 @@ $this->full_URI()*/}
 }
 
 
-class Interface_attrib
-{
-var $value;
-var $name;
-var $back;
-
-	//referenz zum knoten
-	function object_back($obj){$this->back = $obj;}
-	//wertausgabe
-	function out(){return $this->value;}
-	//eingang
-	function in($in){$this->value = $in; }
-	//liste , die von dem Knoten abgefragt wird
-	function to_listener()
-	{
-		$this->back->start_list[count($this->back->start_list)] = &$this;
-	}
-	
-	//loest bei einem Event eine Aktion aus
-	function to_check_list()
-	{
-		$this->back->check_list[count($this->back->check_list)] = &$this;
-	}
-	
-	//wird bei der initialisierung aufgerufen
-	function start()
-	{
-		
-	}
-	
-	function check($type,$bool,&$obj)
-	{
-		return $bool;
-	}
-	
-	//wird bei u.a. beim Ende des Parsens aufgerufen
-	function event($event = '')
-	{
-		
-	}
-	
-	function &get_Instance()
-	{
-		return new Interface_attrib();
-	}
-	
-	public function __debugInfo(){return [];}
-}
-
 class Command_Object extends qp_workflow 
 {
 	private $node_URI;
@@ -1773,7 +1702,9 @@ class Command_Object extends qp_workflow
 	
 	
 	public function get_URI(){return $this->listOfInformation['Identifire'];}
-	public function get_Command($num,$index)
+	
+	// TODO WTF what are these parameters?
+	public function get_Command($num=0,$index=0)
 	{
 
 	if($index == 0)return $this->listOfInformation["Command"]['Name'];
@@ -1791,10 +1722,14 @@ class Command_Object extends qp_workflow
 	public function matchesCommand( string $Command){return $this->listOfInformation["Command"]['Name'] == $Command;}
 	
 	public function is_Node($node)
-	{
-	//echo "->" . $this->listOfInformation['Identifire'] . "=>" . $node->full_URI() . "\n";
+	{/*
+		if($this->listOfInformation['Identifire'] == $node->full_URI() ||
+			$this->listOfInformation['Identifire'] == '*')
+			echo "->" . $this->listOfInformation['Identifire'] . "=>" . $node->full_URI() . "\n";
+			*/
 //var_dump("search:", $node);
 	if($this->listOfInformation['Identifire'] == '*')return true;
+
 	if($this->listOfInformation['Identifire'] == $node->full_URI())return true;
 
 	if(is_object($node->link_to_class))

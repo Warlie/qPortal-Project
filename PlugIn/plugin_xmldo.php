@@ -64,6 +64,11 @@ private $template_json;
 	*@function: HAS_TAG = returns a boolean value refering to the seeking tag, descripted by xpath 
 	* TODO muss auf xpath erweitert werden
 	*
+	*	sideeffect
+	*	template_json recieves a json string
+	*	template recives the new template
+	*	documentForInsert gets a list of tags in relation of the xpath statement
+	*	
 	*/
 	public function setXMLTemplate($new_template, $use_at_tag)
 	{
@@ -321,7 +326,12 @@ private $template_json;
 		
 	/**
 	* 
-	* @param child_pos: 
+	* @param child_pos: int : I don't know
+	* @param xpath  string : a xpath statement
+	* @param group string : a name to group levels
+	*
+	* sideeffects
+	* level pushs a list consist of type (Crotch=0) and the parameters   
 	*/
 	public function setCrotch( $child_pos, $xpath, $group)
 	{
@@ -330,6 +340,15 @@ private $template_json;
 	
 	}
 	
+	/**
+	* 
+	* @param child_pos: int : I don't know
+	* @param xpath  string : a xpath statement
+	* @param group string : a name to group levels
+	*
+	* sideeffects
+	* level pushs a list consist of type (Branch=1) and the parameters   
+	*/
 	public function setBranch($child_pos, $xpath, $group)
 	{
 
@@ -938,20 +957,23 @@ private $template_json;
 		$tmp = array();
 		$iter = -1;
 		
+		
 		foreach ($verification as $key => $value) 
 		{		
 			
 			if(!in_array($value['group'], $tmp)) 
 			{
-				$tmp[] =$value['group'];
-				$groups[$value['group']] = array('crotch'=>null, 'branch'=>null, 'data'=>array());
+				$tmp[] =$value['group']; // uses verifications to create a list tmp of all group names
+				$groups[$value['group']] = array('crotch'=>null, 'branch'=>null, 'data'=>array()); // creates an empty list for every group
 			}
 
 		}
+		// in case $relation is empty, It will be filled with a level, a group name and an empty condition
 		if(!count($relation))		
 			foreach ($tmp as $key => $value) $relation[++$iter] = array('level' => $iter, 'group' => $value, 'condition' => "" );
 		unset($tmp);
 				
+		// creates a list of permutations as a list of group names in relation to its verification entry
 		for($i = 0; count($verification) > $i; $i++ )$permutation[$verification[$i ]['group']][] = $verification[$i ] ;
 
 		//var_dump($permutation);
@@ -1048,6 +1070,14 @@ private $template_json;
 		
 		return [$groups, $permutation];
 	}
+	
+	/**
+	*	@exception
+	*	todo needs exception on verification
+	*
+	*	sideeffects
+	*	collectData()
+	*/
 	
 	public function generateBranchTree()
 	{
@@ -1335,30 +1365,40 @@ if(DEBUG)
 
 	}
 	
-	
+	/**
+	*
+	*	@throws
+	*	todo template doesn't exist
+	*
+	* createGroupArray : 
+	*	
+	*/
 	private function collectData()
 	{
 		
+		// -------------- prepare the workplace ---------------------
 		$tmpstamp = $this->back->position_stamp();
 		
 		/* chose page to collect templates */
 		if(!$this->back->change_URI($this->content->get_template($this->template)))
 		{
+			throw new Exception("template " . $this->template . " isn't a valid identifer");
 			echo $this->template . ' isn\'t a available documentident';
 			return;
 		}
 		$this->back->set_first_node();
 
-    		//var_dump($groups[$name]['branch']);
+    	// ------------------------------------------------------------
 
-		
+		//return "";
 		/* ------------------------------------------ groups ------------------------------------------------------*/
 		$groups = array();
 		$permutation= array();
 		/* -----------------------------------------------------------------------------------------------------------*/
 
 
-$tmp = $this->createGroupArray($this->verification, $this->relation, $this->level);
+		$tmp = $this->createGroupArray($this->verification, $this->relation, $this->level);
+//var_dump($this->verification, $this->relation, $this->level, $tmp);
 $groups = $tmp[0];
 $permutation = $tmp[1];
 
@@ -1369,14 +1409,23 @@ $permutation = $tmp[1];
 		$fulltbl = array();
 
 		$this->create_tbl($tbl);
-		
+
 		$this->collectDataFromDocument($fulltbl, $tbl, $groups);
 		
         $this->back->go_to_stamp($tmpstamp);
 
 	}
 	
-	
+	/**
+	*
+	*	@param
+	*	@param
+	*	@param
+	*	@return void
+	*
+	*	requires
+	*	internal_table_values contains a list of all results
+	*/
 	private function collectDataFromDocument(&$fulltbl, $tbl, $groups)
 	{
 		reset($groups);
@@ -1384,9 +1433,11 @@ $permutation = $tmp[1];
 		
 		$fulltbl[] = $tbl;
 		$this->internal_table_values = $this->iterateGroupsBranch($tbl, $fulltbl, $groups, $this->back->show_xmlelement());
+		reset($this->internal_table_values);
 		//var_dump($this->internal_table_values);
+		//var_dump($fulltbl);
 	}
-	
+	public function blub(){return "blub";}
 	/**
 	*	
 	*

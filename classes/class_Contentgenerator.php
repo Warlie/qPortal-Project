@@ -47,6 +47,7 @@ var $param = array();
 private $paramIDX = [];
 var $spezial = array();
 public $XMLlist = null;
+private $registry = null;
 private $namespace_reg = null;
 private $schema = false;
 
@@ -64,6 +65,7 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		
 		$this->dbAccess = new Database($URL, $User, $PWST, $db_name, $codeset);
 		$this->XMLlist = new xml_xPath_sParqle($this);
+		$this->registry = new NameSpaceBehaviorRegistry();
 
 	}
 	
@@ -269,6 +271,12 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	{
 		return $this->XMLlist;
 	}
+	
+	function &getRegObj()
+	{
+		return $this->registry;
+	}
+	
 	
 	function injectSQL($SQLString)
 	{
@@ -608,7 +616,7 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	}
 	
     public function __debugInfo() {
-        return 'contentgen';
+        return ['contentgen'];
     }
 
 }

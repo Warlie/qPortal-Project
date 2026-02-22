@@ -92,11 +92,10 @@ function event_Instance(&$instance,$type,&$obj)
 	//else
 	//echo "for the frist time \n";
 	
-	//if($this->was_called)return;
-	$this->was_called = true;
+
 //throw new ErrorException("boom");
 	$parser = &$this->get_parser();
-
+	
 	//wrong request
 	if($this->index_max() > 0)
 	{
@@ -105,35 +104,37 @@ function event_Instance(&$instance,$type,&$obj)
 	$res = array();
 	$go = false;
 	$all_names = array();
-	//echo $instance->full_URI() . "<br>\n";
+	
+	// TODO review 
+	// -------------------------- seems to be not in use -----------------------------------------
 	//goes to parametercontainer
 	for($j = 0; $instance->index_max() > $j;$j++) // TODO Check for relevance
 			if($instance->getRefnext($j)->is_Node('http://www.w3.org/2006/05/pedl-lib#hasParameter'))
-			{
+			{//var_dump($instance->getRefnext($j));
 				$instance = $instance->getRefnext($j);
 				for($k = 0; $instance->index_max() > $k;$k++)
 				if($instance->getRefnext($k)->is_Node('http://www.w3.org/2006/05/pedl-lib#ParameterCollection'))
 				{
-				$instance = $instance->getRefnext($k);
-				
+					$instance = $instance->getRefnext($k);
 				}
 			}
+			
 	//collects all Parameternames
 	for($j = 0; $instance->index_max() > $j;$j++) // TODO Check for relevance
 	{
 	
 		if($instance->getRefnext($j)->is_Node('http://www.w3.org/2006/05/pedl-lib#Object_Parameter'))
-			{
+			{//var_dump($instance->getRefnext($j));
 				$all_names[] = $instance->getRefnext($j)->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#name');
 			}
 	}		
-
+	// -------------------------------------------------------------------------------------------------
 	//	
 	for($i = 0; $this->index_max() > $i;$i++)
 		{
 			
 			if($this->getRefnext($i)->is_Node('http://www.w3.org/2006/05/pedl-lib#Object_Parameter'))
-				{
+				{//var_dump($instance->getRefnext($i));
 					$go = true;
 					$func = &$this->getRefnext($i);
 					$function_name = $func->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#ID');
@@ -156,8 +157,9 @@ function event_Instance(&$instance,$type,&$obj)
 				
 		
 		}
-		
-		
+
+		// $res is never used
+		/*
 		foreach($res as $key => $value)
 			{
 				
@@ -188,9 +190,10 @@ function event_Instance(&$instance,$type,&$obj)
 					}
 					
 			}
-	
+	*/
 	
 	}
+	
 	if(!is_null($this->getRefprev()) &&(get_class($this->getRefprev()) == 'PEDL_Object_Class'))
 	{
 	//echo "pedl_Object_Constructor";
@@ -201,55 +204,15 @@ function event_Instance(&$instance,$type,&$obj)
 	//otherweise PEDL-Class-Object is not able to connect instance of descripted class
 	$instance->set_to_out($instance);
 	
-	//$this->set_to_out();  ["Identifire"=>"http://www.w3.org/2006/05/pedl-lib#Object_Constructor", "Command"=> ["Name"=> 'construct', "Attribute"=>[], "Value"=> null]]
-// ["Identifire"=>"http://www.w3.org/2006/05/pedl-lib#Object_Constructor", "Command"=> ["Name"=> 'construct', "Attribute"=>[], "Value"=> null]]
+
 	$send = ["Identifire"=>"http://www.w3.org/2006/05/pedl-lib#Object_Constructor", "Command"=> ["Name"=> "construct", "Attribute"=>[], "Value"=> null]];
-//var_dump($send);
+
 	$instance->send_messages( $send /*'http://www.w3.org/2006/05/pedl-lib#Object_Constructor?construct' */ 
 		,new EventObject('',$this,$booh));
 	}
 	
-	
-	//fires event
-	
-	//if(get_class($this->getRefprev()) == 'PEDL_Object_Class' )echo 'jo';
-	
 }	
-/*
-function event($type,&$obj)
-{
 
-	if($type == '*?parse_complete')
-	{
-	//löst event aus
-
-	
-		if($this->link_to_class && !$this->is_Class)
-			{
-					echo $this->full_URI() . "calls class " . $this->link_to_class->full_URI() . "\n";
-				$obj->set_node($this);
-				$this->link_to_class->event('*?parse_complete_classes',$obj);
-			
-			}
-	
-
-	}
-
-	if($this->link_to_class && $type == '*?parse_complete_classes')
-		{
-			echo $this->full_URI() . " Instance called \n";
-			$this->event_Instance($obj->get_node(),$type,$obj);
-			$this->link_to_class->event('*?parse_complete_classes',$obj);
-			
-			//echo $this->full_URI() . "<br>\n";
-		}
-		
-	//if($this->link_to_class)$this->link_to_class->event_Instance($this,$type,$obj);
-
-		//$this->event_parseComplete();
-
-}
-*/
 function event_message_in($type,&$obj)
 	{
 		//echo $type . 'wohooo';

@@ -806,7 +806,7 @@ if(array_key_exists("Parameters", $com_parameter))
 if(array_key_exists("RequestBody", $com_parameter) && $com_parameter["RequestBody"] != "")
 	{
 		$client->setBody($com_parameter["RequestBody"]);
-		$com_parameter["RequestHeaders"]['Content-Length'] = "" . strlen($com_parameter["RequestBody"]);
+		//$com_parameter["RequestHeaders"]['Content-Length'] = "" . strlen($com_parameter["RequestBody"]);
 	}
 
 if(array_key_exists("RequestHeaders", $com_parameter))

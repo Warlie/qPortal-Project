@@ -9,6 +9,7 @@ define('CONFIG_DEFAULT','config/default.ini');
                         
 include('mod_lib.php');
 
+
 $list_of_depending_param_names = ['--p', '--m', '-i', '-u','-p'];
 $list_of_placeholders = [
 	'from' => [
@@ -118,7 +119,10 @@ else
 				require_once('classes/finite_state_machine/class_Transducer.php');
 				require_once('classes/finite_state_machine/class_Acceptor.php');
 				require_once('classes/search_model/index_model.php');
-
+				require_once('classes/NameSpaceBehaviorRegistry.php');
+//$reg = new NameSpaceBehaviorRegistry();
+//require_once('config/behavior.php');
+				
 				require_once('classes/fs_parser/qp_workflow.php');
 				require_once('classes/array_merge_recursive_distinct.php');
 				//require_once('classes/class_compute_internal_statements.php');
@@ -210,8 +214,15 @@ else
                                 	$ini_array["database"]["db_name"],
                                 	$ini_array["database"]["codeset"]
                                 	);
-
+                                //load node behavior
+                                foreach (glob(__DIR__ . "/behavior/*.php") as $file) {
+                                	require_once $file;
+                                	}
+                                	
+                               require_once('config/behavior.php');
+                                
                                $content->getSQLObj()->db_profiles($ini_array["database"]["ext"]);
+                               
                                $content->set_Schema(XML_SCHEMA_DEFAULT);
                                 
                                 

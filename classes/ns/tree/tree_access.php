@@ -14,8 +14,6 @@
 * attribute($name,(<String>||<Interface_node>)&$value) :sets attributes 
 * get_attribute($name = '') : gets an attibutes value
 * setdata($data,$pos = null) : sets a String or number to data
-* getdata($pos = null)
-* get_data_many()
 * function set_bolcdata($bool) : en/disables cdata notation
 * get_bolcdata() : show setting
 * final_data() : internal value, shows that an node is complete
@@ -39,76 +37,48 @@
 * &cloning(&$prev_obj) : add node with all branches to the prev node 
 */
 
-class RDF_about extends Interface_node
+class TREE_access extends Interface_node
 {
+var $name = 'empty';
+var $type = 'none';
+var $namespace = 'none';
+
+var $succesful = true;
+
 function &get_Instance()
 {
-return new RDF_about();
+return new TREE_access();
 }
 
 
-	function event_initiated()
+//primar call after finishing object, ther wont be an existing childnode
+function event_initiated()
+{
+	$uri = $this->getRefprev()->full_URI();
+	if($uri == 'http://www.trscript.de/tree#tree' 
+		|| $uri == 'http://www.trscript.de/tree#final'
+		|| $uri == 'http://www.trscript.de/tree#first'
+		|| $uri == 'http://www.trscript.de/tree#program')
 	{
-	//$this->to_listener();
-	
-	if($this->getRefprev()->full_URI() == 'http://www.w3.org/2002/07/owl#Ontology')
-		{
-		//echo $this->getdata() . "  \n" ;
-			$this->get_parser()->set_Namespace($this->getdata());
-		}
-		else
-		{
-			
-			//test for 
-			if(false === ($posinstr =  strpos(($data = $this->getdata()),'#')))
-			{
-				
-				if(false === ($posinstr = strpos(($data),';')))
-				{
-				$namespace = $this->get_parser()->get_NS('',$this->get_idx());
-				$qname = $data;
-				}
-				else 
-				{
-				$namespace = substr($data,1,$posinstr);
-				$qname = substr($data,$posinstr + 1);
-				$namespace = $this->get_parser()->get_NS($namespace,$this->get_idx());
-				}
-				$namespace2 = $namespace . '#' . $qname;
-			}
-			else
-			{
-				$namespace = substr($data,0,$posinstr);
-				$qname = substr($data,$posinstr + 1);
-				
-				if(strlen(trim($namespace)) > 0)
-				{
-					$namespace2 = $data;
-				}
-				else
-				{
-					$namespace = $this->get_parser()->get_NS('',$this->get_idx());
-					$namespace2 = $namespace . '#' . $qname;
-				}
-			}
-				$new_obj = &$this->getRefprev()->new_Instance();
-				$new_obj->name = $data;
-				$new_obj->type = $qname;
-				$new_obj->set_idx( $this->get_idx());
-				$new_obj->namespace = $namespace;
-				$new_obj->set_parser($this);
-				
-				$this->get_parser()->set_Object_to_Namespace($namespace2,$new_obj);
-				$new_obj->set_is_Class();
-				
-		}
-	}	
-	
-	function __toString()
+		$this->to_listener();
+
+	}
+}
+
+function event_message_in($type,&$obj)
 	{
-	return 'rdf:about';
+
+		
+
+		$this->send_messages($type,$obj);
+	
+	//$obj->get_requester()->;
+	
 	}
 
+
+
 }
+
 
 ?>

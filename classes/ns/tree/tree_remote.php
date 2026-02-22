@@ -81,7 +81,7 @@ function event_message_in($type,&$obj)
 	{
 	global $logger_class;
 //var_dump($type);
-	//echo "\n" . $this->full_URI()  . " called by " . (($obj->get_requester() instanceof Interface_node)?$obj->get_requester()->full_URI(): get_class($obj->get_requester())) . "(" . spl_object_id($obj->get_requester()) .") (remote(94))\n" ;
+	//echo "\n" . $this->full_URI() . "(" . spl_object_id($this) .")" . " called by " . (($obj->get_requester() instanceof Interface_node)?$obj->get_requester()->full_URI(): get_class($obj->get_requester())) . "(" . spl_object_id($obj->get_requester()) .") (remote(94))\n" ;
 	
 	//activates a child tree:Object object to receive its data later
 	$message = ["Identifire"=>"http://www.trscript.de/tree#object", "Command"=> ["Name"=> null, "Attribute"=>[], "Value"=> null]]; // 'http://www.trscript.de/tree#object'
@@ -129,17 +129,14 @@ function event_message_in($type,&$obj)
 		//var_dump("asks for data", $send);
 	$this->send_messages($send,$Event);
 	//echo "<---------------------------------------------------------------------\n";
-	
+	//echo $this->getdata(0) . "\n";
 	}
-
+/**
+*	Could be pointless
+*/
 protected function event_alterdata($own)
 	{
 
-	global $logger_class;
-	$logger_class->setAssert('               calls a functioncall over remote "' . $this->get_attribute('name') . '"(tree_remote:event_alterdata)' ,15);
-		
-	
-		/*echo "\n<br>" . 'alter :' . $this->get_attribute('name') . "<br>"; */
 		/*
 		* activation param from tree_object is true 
 		*/

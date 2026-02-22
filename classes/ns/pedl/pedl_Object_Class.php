@@ -144,11 +144,12 @@ function &new_Instance()
 	//is also class, when used
 	//is also class, when used
 	$this->is_Class = true;
-                                $obj = $this->get_Instance();
-				$obj->link_to_class = &$this;
-				$this->link_to_instance[count($this->link_to_instance)] = &$obj;
+                               
+	$obj = $this->get_Instance();
+	$obj->link_to_class = &$this;
+	$this->link_to_instance[] = $obj;
 				//echo $this->ManyInstance(); 
-				return $obj;
+	return $obj;
 }
 
 public function ManyInstance()
@@ -274,10 +275,6 @@ function event_Instance(&$instance,$type,&$obj)
 	$parser = &$this->get_parser();
 	$new_stamp =  '0000.' . $instance->get_idx() . $instance->position_stamp();
 
-					
-	//echo "pedl_Object_Class.php 144\n";
-	
-	//echo $this->full_URI(). " in instance " . "\n";
 
 	$res = array();
 	$go = false;
@@ -455,41 +452,7 @@ function event_Instance(&$instance,$type,&$obj)
 	//echo $this->index_max() . ' object_name:' . $this->full_URI() . ' event:' . $instance->full_URI() . ' ' . $type .  "<br>\n";
 	
 }
-/*
-function event($type,&$obj)
-{
 
-	if($type == '*?parse_complete')
-	{
-	//löst event aus
-
-	
-		if($this->link_to_class && !$this->is_Class)
-			{
-					echo $this->full_URI() . "calls class " . $this->link_to_class->full_URI() . "\n";
-				$obj->set_node($this);
-				$this->link_to_class->event('*?parse_complete_classes',$obj);
-			
-			}
-	
-
-	}
-
-	if($this->link_to_class && $type == '*?parse_complete_classes')
-		{
-			echo $this->full_URI() . " Instance called \n";
-			$this->event_Instance($obj->get_node(),$type,$obj);
-			$this->link_to_class->event('*?parse_complete_classes',$obj);
-			
-			//echo $this->full_URI() . "<br>\n";
-		}
-		
-	//if($this->link_to_class)$this->link_to_class->event_Instance($this,$type,$obj);
-
-		//$this->event_parseComplete();
-
-}
-*/
 private function find_functions(&$class, array &$result,$priority = 1)
 {
 	$go = false;

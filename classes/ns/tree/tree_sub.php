@@ -247,6 +247,7 @@ function event_message_in($type,&$obj)
 						
 						if($received_node)
 							$result[$i]->getRefnext($j,true)->cloning($received_node);
+						//var_dump($result[$i]->getRefnext($j,true)->getdata());
 						//$this->get_parser()->show_xmlelement()->cloning($obj->get_node());
 						//$result[$i]->getRefnext($j,true)->setRefprev($obj->get_node());
 						//$obj->get_node()->setRefnext($result[$i]->getRefnext($j,true));

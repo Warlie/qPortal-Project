@@ -84,9 +84,12 @@ function &new_Instance()
 				return $obj;
 }
 
-
+// TODO has to check existance
 private function auto_Complete_name($className, $functionCall)
-{
+{ 
+	if(str_contains($functionCall, "plugin"))
+		return $functionCall;
+	
 	if(!str_contains($functionCall, $className))
 		return $className . "." . $functionCall;
 
@@ -254,7 +257,7 @@ $old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
 			return false;
 		}
 		else
-		{
+		{  //rdfs:subClassOf rdf:resource="plugin" 
 		//------------------Non existing name---------------------------
 			/*-------------------------------------------------
 			* set object-node by id to workspace-control
@@ -444,7 +447,6 @@ $old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
 								$this->auto_Complete_name(
 									$class_Name, 
 									$this->getRefnext($i)->get_ns_attribute('http://www.trscript.de/tree#name'));				
-							
 							
 							$this->getRefnext($i)->connect_uri($node_func);
 

@@ -5,7 +5,6 @@
 * 	$name;
 *	$back;
 
-	function object_back($obj)
 	function out()
 	function in($in)
 	function to_listener()

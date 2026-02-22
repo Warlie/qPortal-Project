@@ -199,16 +199,16 @@ private $objectList = array();
 					$this->my_Xml_Object->tag_close($this, "System.Content");
 				
 					$this->my_Xml_Object->tag_open($this, "System.CurRef", $attrib);
-					$this->my_Xml_Object->cdata($this,null);
+//					$this->my_Xml_Object->cdata($this,null);
 					$this->my_Xml_Object->tag_close($this, "System.CurRef");
 					
 					$this->my_Xml_Object->tag_open($this, "System.EffBranch", $attrib);
-					$this->my_Xml_Object->cdata($this,null);
+//					$this->my_Xml_Object->cdata($this,null);
 					$this->my_Xml_Object->tag_close($this, "System.EffBranch");
 					
 					
 					$this->my_Xml_Object->tag_open($this, "System.Exception", $attrib);
-					$this->my_Xml_Object->cdata($this,null);
+//					$this->my_Xml_Object->cdata($this,null);
 					$this->my_Xml_Object->tag_close($this, "System.Exception");
 				
 				$this->my_Xml_Object->tag_close($this, "pedl:ParameterCollection");
