@@ -33,7 +33,8 @@ private $time = false;
 private $mem = false;
 private $pos = false;
 
-
+public static bool $active = false;
+public static string $logPath = "template/log.txt";
 
 	function __construct(){}
 
@@ -59,8 +60,10 @@ private $pos = false;
 		public function setlog($log)
 		{
 			
-			
-			return $this->write_file($log,"template/log.txt");
+			if(self::$active)
+				return $this->write_file($log,self::$logPath);
+			else
+				return false;
 		}
 		
 		/**
@@ -72,8 +75,10 @@ private $pos = false;
 		{
 			
 
-			
-			//return $this->start_file($log,"template/log.txt");
+			if(self::$active)			
+				return $this->start_file($log,self::$logPath);
+			else
+				return false;
 		}
 		
 		
@@ -111,7 +116,6 @@ private $pos = false;
 				
 
 	function write_file($content,$pos){
-		return false;
        $fs = fopen($pos,'a');
 
 
@@ -123,7 +127,6 @@ if(!$bool)echo "nö";
 	}
 	
 	function start_file($content,$pos){
-		return false;
         $fs = fopen($pos,'w');
 
 

@@ -6,7 +6,11 @@
 require_once __DIR__ . '/vendor/autoload.php';
 define('CONFIG','config/config.ini');
 define('CONFIG_DEFAULT','config/default.ini');
-                        
+
+require_once('PlugIn/plugin_log.php');
+
+$logger_class = new Logger();
+
 include('mod_lib.php');
 
 
@@ -138,8 +142,10 @@ else
                                 include('classes/class_Contentgenerator.php');
 
                                 
-				
-                                
+
+                Logger::$active = $ini_array["log"]["active"];
+                Logger::$logPath = $ini_array["log"]["path"]; //"template/log.txt";
+                
 				$logger_class->setImportance(REPORT, false, MEMORY_USAGE, TRACE);
 
                               
@@ -196,15 +202,18 @@ else
 				
 
 
-                                $logger_class->setstart("-----------------------------\nlog from " 
+                 $logger_class->setstart("-----------------------------\nlog from " 
                                 . date("l dS of F Y h:i:s A") 
                                 . " Usercount:" . $_SESSION['zaehler'] . "\n-----------------------------");
                                 //content
-                                
-                  	      $logger_class->setAssert("All Sessiondata:\n ", 0) ;
-				foreach( $_SESSION as $key => $value ) {
-				     $logger_class->setAssert("SESSION[$key]=$value\n ", 0) ;
-				} 
+                              
+               $collect_data_for_log = "All Sessiondata:\n ";
+               foreach( $_SESSION as $key => $value ) {
+				     $collect_data_for_log .= "SESSION[$key]=$value\n ";
+				}                 
+               
+                $logger_class->setAssert($collect_data_for_log, 0) ;
+
 				//WTF Concept horrible (and 15 years old XD) 
 				//TODO 
                                 $content = new ContentGenerator(
@@ -507,7 +516,7 @@ else
 				
 				
 				
-				
+				/*
 				$boobibooh = '';
 				foreach( $_SESSION as $key => $value ) {
 				     $boobibooh .= $key . "=(" . $_SESSION[$key] . "); " ;
@@ -517,6 +526,7 @@ else
 				foreach( $_SESSION as $key => $value ) {
 				     $logger_class->setAssert("SESSION[$key]=$value ", 0) ;
 				} 
+				*/
 
                         
 ?>

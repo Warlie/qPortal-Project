@@ -76,7 +76,7 @@ function event_initiated()
 
 function event_message_in($type,&$obj)
 	{
-
+global $logger_class;
 		//loads main template
 		//$obj->get_requester()->template = $this->getdata();
 		//$obj->get_requester()->maintemplate = $this->getdata();
@@ -96,7 +96,7 @@ function event_message_in($type,&$obj)
 											//echo 'no-casefold';
 											
 		$this->get_parser()->load($this->getdata(),0,$doc_type);
-											
+			$logger_class->setAssert('file "' . trim($this->getdata()) . '" was loaded output document (TREE_main:event_message_in)' ,3);											
 											
 											
 			if($preload)
@@ -109,6 +109,7 @@ function event_message_in($type,&$obj)
 		}
 		else
 		{
+			$logger_class->setAssert('file "' . trim($this->getdata()) . '" was loaded output document (TREE_main:event_message_in)' ,3);
 			$this->get_parser()->load($this->getdata(),1,$doc_type);
 		}
 		//$obj->get_requester()->set_template('@main',$this->getdata());

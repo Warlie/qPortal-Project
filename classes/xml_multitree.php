@@ -5,9 +5,7 @@
 *
 *-----------------------------------------------------------------------
 */
-require_once('PlugIn/plugin_log.php');
 
-$logger_class = new Logger();
 
 function get_Clazz(&$clazz)
 {

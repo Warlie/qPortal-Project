@@ -74,7 +74,7 @@ function event_initiated()
 
 function event_message_in($type,&$obj)
 	{
-
+global $logger_class;
 //$this->giveOutOverview();
 		// doctype contains the supported document type
 		if(is_Null($this->get_attribute('doctype')))
@@ -105,6 +105,7 @@ function event_message_in($type,&$obj)
 //var_dump($doc_type,$id);
 						$this->get_parser()->setNewTree($id);
 						//var_dump($output, $doc_type);
+
 						$this->get_parser()->load_Stream($output,$this->caseFolding,$doc_type,$id);
 
 						$obj->get_requester()->set_template($this->get_attribute('id'),$this->get_attribute('id'));
@@ -186,6 +187,8 @@ function event_message_in($type,&$obj)
 					}
 		
 
+		$logger_class->setAssert('file "' . trim($this->getdata()) . '" was loaded with id "' . $this->get_attribute('id') . '" "(TREE_add:event_message_in)' ,3);
+					
 		//calls specific parser based on doc-type									
 		$this->get_parser()->load(trim($this->getdata()),$this->caseFolding,$doc_type, $com_parameter );
 		
