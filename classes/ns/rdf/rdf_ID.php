@@ -94,6 +94,7 @@ function &get_Instance()
 				//var_dump(debug_backtrace(2,3));
 				//echo $namespace2 . ' ' . $new_obj->full_URI() . "--------------------------------------------- <br>\n";
 				$this->get_parser()->set_Object_to_Namespace($namespace2,$new_obj);
+				$new_obj->set_is_Class();
 	//echo $this->getRefprev()->ManyInstance();
 	}	
 	

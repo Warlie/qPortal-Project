@@ -118,9 +118,13 @@ public static string $logPath = "template/log.txt";
 	function write_file($content,$pos){
        $fs = fopen($pos,'a');
 
+if(!$fs){
+	if(!file_exists($pos)){echo $pos . " isn't available"; return false;}
+	if(!is_writable($pos)){echo $pos . " isn't writable"; return false;}
+	return false;
+}
+       $bool = fwrite($fs,$content . "\n");
 
-                $bool = fwrite($fs,$content . "\n");
-if(!$bool)echo "nö";
 		fclose($fs);
 		
 		return $bool;
@@ -129,7 +133,12 @@ if(!$bool)echo "nö";
 	function start_file($content,$pos){
         $fs = fopen($pos,'w');
 
-
+if(!$fs){
+	if(!file_exists($pos)){echo $pos . " isn't available"; return false;}
+	if(!is_writable($pos)){echo $pos . " isn't writable"; return false;}
+	return false;
+}
+        
                 $bool = fwrite($fs,$content . "\n");
 
 		fclose($fs);
