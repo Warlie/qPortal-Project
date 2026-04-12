@@ -125,7 +125,7 @@ function createConfigFromINIFile($ini, $list, &$pre, $project = false)
 		
 			$ini_value = str_replace($pre['from'], $pre['to'], $ini[$value[0]][$value[1]]);
 			define($key, $ini_value);
-			array_push($pre['from'], '__' . $key); array_push($pre['to'], $ini_value) ;
+			if(!is_array($ini_value)) { array_push($pre['from'], '__' . $key); array_push($pre['to'], $ini_value); }
 
 
 		}
@@ -151,7 +151,7 @@ function createConfigFromINIFile($ini, $list, &$pre, $project = false)
 
 			$ini_value = str_replace($pre['from'], $pre['to'], $ini[$value[0]][$project][$value[1]]);
 			define($key, $ini_value);
-			array_push($pre['from'], '__' . $key); array_push($pre['to'], $ini_value) ;
+			if(!is_array($ini_value)) { array_push($pre['from'], '__' . $key); array_push($pre['to'], $ini_value); }
 
 
 		}

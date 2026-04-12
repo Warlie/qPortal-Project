@@ -242,8 +242,6 @@ else
                                 	require_once $file;
                                 	}
                                 	
-                               require_once('config/behavior.php');
-                                
                                $content->getSQLObj()->db_profiles($ini_array["database"]["ext"]);
                                
                                $content->set_Schema(XML_SCHEMA_DEFAULT);
