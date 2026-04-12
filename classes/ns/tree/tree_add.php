@@ -147,6 +147,8 @@ global $logger_class;
 						if($body = $this->get_attribute('body'))
 						{
 
+							$transform = $this->get_attribute('transform_body');
+							
 							$cur_idx = $this->get_parser()->cur_idx();
 							$this->get_parser()->change_URI(
 								$obj->get_requester()->get_template($body)
@@ -162,11 +164,39 @@ global $logger_class;
 								}
 							}
 							*/
+							if($transform)
+							{
+								
+								$proc = new XSLTProcessor();
+    
+								$xsl = new DOMDocument();
+								if (!$xsl->load($transform)) {
+									return false;
+								}
+
+								$xmlDoc = new DOMDocument();
+
+
+								if (!@$xmlDoc->loadXML($this->get_parser()->save_Stream())) {
+									return "Fehler: Ungültiges XML-Format.";
+								}
+								
+								$proc->importStyleSheet($xsl);
+
+
+    							$transformedText = $proc->transformToXML($xmlDoc);
+								$com_parameter ["RequestBody" ] = $transformedText; // It takes the 
+								$com_parameter ["Parameters"] = []; 
+							}
+							else
+							{
+							
 							//$this->set_definition_context('TYPE',$content);
 							$com_parameter ["RequestBody" ] = $this->get_parser()->save_Stream(); // It takes the 
 							$com_parameter ["Parameters"] = [];
+							}
 							$this->get_parser()->change_idx($cur_idx);
-							
+
 						}
 							
 						$tmp_parameter =$this->findListByName("http://www.trscript.de/tree#param", $this);

@@ -100,10 +100,37 @@ function event_message_in($type,&$obj)
 		}
 
 	$this->get_parser()->change_URI($template);
+	
+	if($transform = $this->get_attribute('transform_output'))
+	{
+		$proc = new XSLTProcessor();
+    
+		$xsl = new DOMDocument();
+		if (!$xsl->load($transform)) {
+			return false;
+			}
+
+			$xmlDoc = new DOMDocument();
+
+			if (!@$xmlDoc->loadXML($this->get_parser()->save_Stream())) {
+					return "Fehler: Ungültiges XML-Format.";
+			}
+								
+			$proc->importStyleSheet($xsl);
+
+
+    		$transformedText = $proc->transformToXML($xmlDoc);
+    		//$obj->get_node()->set_bolcdata(true);
+    		//echo $transformedText . " " . $this->get_parser()->save_Stream();
+    		$obj->get_node()->setdata($transformedText);
+    		return;
+		//echo $transformedText;
+	}
+	
+	
 	$this->get_parser()->flash_result();
 	if($this->get_parser()->seek_node($tag_name,$tag_array) )
 	{
-
 		//var_dump("addtree",$obj->get_node(), "for cloning", $this->get_parser()->show_xmlelement());
 		$this->get_parser()->show_xmlelement()->cloning($obj->get_node());
 		//echo "cloning done";

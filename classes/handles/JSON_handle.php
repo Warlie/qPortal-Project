@@ -23,13 +23,14 @@ function xmlNodeToPhp($node) {
         $name  = $child->getName();
         $value = xmlNodeToPhp($child);
         // Mehrfach-Vorkommen als Array abbilden
+        $is_list_item = ((string)($child->attributes()['datatype'] ?? '')) === 'list_item';
         if (isset($result[$name])) {
             if (!is_array($result[$name]) || array_keys($result[$name]) !== range(0, count($result[$name]) - 1)) {
                 $result[$name] = [ $result[$name] ];
             }
             $result[$name][] = $value;
         } else {
-            $result[$name] = $value;
+            $result[$name] = $is_list_item ? [$value] : $value;
         }
     }
     return $result;
@@ -196,9 +197,9 @@ class JSON_handle extends Interface_handle
 
 				elseif(is_array($value))
 					{
-						
+						if(!is_null($arrayKey)) $attributes['datatype'] = 'list_item';
 						$this->base_object->tag_open($this, (is_null($arrayKey)? $key: $arrayKey), $attributes );
-						$this->parse_body($value);				
+						$this->parse_body($value);
 						$this->base_object->tag_close($this, (is_null($arrayKey)? $key: $arrayKey));
 						$attributes = [];
 
@@ -254,8 +255,8 @@ class JSON_handle extends Interface_handle
 		*
 		*/
 
-
-	$filechange = str_replace(array("\n", "\r", "\t"), '', $xml_output);
+	$filechange = preg_replace('/>\s+</', '><', $xml_output);
+	//$filechange = str_replace(array("\n", "\r", "\t"), '', $xml_output);
 # The trailing and leading spaces are trimmed to make sure the XML is parsed properly by a simple XML function.
 $filetrim = trim( $filechange); //str_replace('"', "'", )
 //var_dump($filetrim);
@@ -265,7 +266,7 @@ $resultxml = simplexml_load_string($filetrim);
 $typedXml = xmlNodeToPhp($resultxml);
 //var_dump($resultxml, $typedXml);
 # The final conversion of XML to JSON is done by calling the json_encode() function.
-$resultjson = json_encode($resultxml, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK);
+$resultjson = json_encode($typedXml, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK);
 //var_dump($resultjson);
 if (!$resultjson) {
     throw new \RuntimeException("Ungültiges XML");

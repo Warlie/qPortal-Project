@@ -68,9 +68,8 @@ function event_initiated()
 function event_message_in($type,&$obj)
 	{
 
-		
-
-		$this->send_messages($type,$obj);
+		$show = $this->getdata();
+		$this->hold_messages($show,$obj);
 	
 	//$obj->get_requester()->;
 	

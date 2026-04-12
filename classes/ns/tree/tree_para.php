@@ -39,7 +39,7 @@ function complete()
 
 function event_message_in($type,&$obj)
 	{
-	//echo $type . ' ' . get_Class($obj);
+	echo $type . ' ' . get_Class($obj);
 	}
 }
 

@@ -16,6 +16,9 @@ require("xml_multitree_semantic.php");
 define("SEND_HEADER",true);
 define("SEND_NO_HEADER",false);
 
+define('LOG','LOG');
+define('OUTPUT','OUTPUT');
+
 class ContentGenerator
 {
 
@@ -47,9 +50,12 @@ var $param = array();
 private $paramIDX = [];
 var $spezial = array();
 public $XMLlist = null;
+public $TreeObj = null;
 private $registry = null;
 private $namespace_reg = null;
 private $schema = false;
+private $injectedLine = false;
+private $outputMode = OUTPUT;
 
 // scope
     private array $scopes = [];
@@ -69,6 +75,19 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 
 	}
 	
+	/**
+	*	commandline injection
+	*/
+	
+	public function commandLineInjection(string $json)
+	{
+		$this->injectedLine = $json;
+	}
+
+	public function switchOutput($myout = LOG)
+	{
+		$this->outputMode = $myout;
+	}
 	/*
 	*	Quick and dirty variable management
 	*
@@ -433,6 +452,11 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	}
 	
 	
+	function get_Eff_Branch($branch)
+	{
+	
+	}
+	
 	//-----------END functions for nodes-----------
 	
 	function generate()
@@ -447,7 +471,7 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 
 		$this->heap['template'] = null;
 		
-		$treeEngine = new TreeEngine($this);
+		$this->TreeObj = $treeEngine = new TreeEngine($this);
 		//$this->XMLlist->load($this->template);
 		
 		
@@ -465,13 +489,17 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		//echo $this->XMLlist->get_URI() . " ";
 //var_dump();
 				$booh = null;
-		
+		//echo json_encode(["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> ["Identifire"=>"*", "Command"=> ["Name"=> "start" ], "Attribute"=>$this->param] ]] );
 
 		if($cur_obj = $this->XMLlist->show_xmlelement())
 		{
 //model=xpath_model&query="wubb"& //model=xpath_model,namespace=\'\',query=\'wubb\'
 // '*?__find_node(json=' . base64_encode( '{"name":"http://www.trscript.de/tree#final"}' ) . ')=' . base64_encode( '*?start' )
-		if($this->nodeName == "")
+		if($this->injectedLine)
+		{
+			$cur_obj->event_message_check($this->injectedLine,new EventObject('',$this,$booh));
+		}
+		elseif($this->nodeName == "")
 			
 			$cur_obj->event_message_check( 
 				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> ["Identifire"=>"*", "Command"=> ["Name"=> "start" ], "Attribute"=>$this->param] ]] //["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> '*?start']]
@@ -534,9 +562,13 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 
 	function getoutput($set_header,$type = "UTF-8",$special = "")
 	{
-	//echo memory_get_usage(true);
-	//echo memory_get_peak_usage(true);
-//echo  '<b>' . $this->heap['object']['reciepe']->lock . '</b><br>';
+		if($this->outputMode == LOG)
+			if (file_exists(LOG_PATH)) {
+				$inhalt = file_get_contents(LOG_PATH);
+				return $inhalt;
+			} else {
+				return "File wasn't found";
+			}
 
 	if($this->doc_out_template)$this->out_template = $this->doc_out_template;
 	//echo $this->out_template . " " . $this->XMLlist->ALL_URI();//

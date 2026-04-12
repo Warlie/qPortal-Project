@@ -103,6 +103,7 @@ function event_message_in($type,&$obj)
 	{
 $old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
 	$parser = &$this->get_parser();
+	$tech_tree = $this->get_parser()->get_context_generator()->TreeObj;
 		
 		if($obj->get_node())
 		{
@@ -301,11 +302,13 @@ $old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
 
 			}
 			
+			
+			
 			if($parser->seek_node('@registry_surface_system#System.EffBranch',null,null))
 			{
 				//echo "gefunden"; 
 				//echo get_class($obj->get_requester());
-
+//??
 				$parser->show_xmlelement()->setdata($obj->get_node(),0);
 
 				
@@ -483,7 +486,7 @@ $old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
 			if($this->index_max() > 0)
 			if($tmp = &$this->getRefnext($this->index_max() - 1)->getdata(0))
 			{
-				
+
 				if(is_Object($tmp))
 				{
 					$this->setdata($tmp,0);

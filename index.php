@@ -32,8 +32,10 @@ $list_of_configuration_parameters = [
 	'PLUG_IN_FOLDER' => ['runtime', 'PLUG_IN_FOLDER'],
 	'FRONTEND_INDEX' => ['runtime', 'FRONTEND_INDEX'],
 	'EDIT_INDEX' => ['runtime', 'EDIT_INDEX'],
+	'INTERN' => ['runtime', 'INTERN'],
 	'LANGUAGE_INPUT_DEFAULT' => ['default', 'LANGUAGE_INPUT'],
 	'LANGUAGE_OUTPUT_DEFAULT' => ['default', 'LANGUAGE_OUTPUT'],
+	'LOG_PATH' => ['log', 'path'],
 
 	'XML_CASE_FOLDING_DEFAULT' => ['default', 'XML_CASE_FOLDING'],
 	'XML_SCHEMA_DEFAULT' => ['runtime', 'XML_SCHEMA_DEFAULT'],
@@ -44,7 +46,14 @@ $list_of_configuration_parameters = [
 	'DATABASE_PWST' => ['database', 'PWST'],
 	'DATABASE_CODESET' => ['database', 'codeset'],
 	
-	'PLUGINS' => ['short', 'plugin']
+	'CONSTANTS' => ['constants', 'constant'],
+
+	'PLUGINS' => ['short', 'plugin'],
+
+	'SECURITY_CIPHER'    => ['security', 'cipher'],
+	'SECURITY_STAMP_KEY' => ['security', 'stamp_key'],
+
+	'INTERN_KEYS' => ['intern', 'key']
 	];
 
 // Parse ini with sections
@@ -188,6 +197,11 @@ else
 					$_SESSION['@_mod'] = 'edit';
 					$_REQUEST['i'] = '';
 				}
+				if($_REQUEST['i'] == '__intern')
+				{
+					$_SESSION['@_mod'] = 'intern';
+					$_REQUEST['i'] = '';
+				}				
 				if($_REQUEST['i'] == '__install' && INSTALL)
 				{
 					
@@ -351,7 +365,24 @@ else
 				$content->setLexicalOrderParam('i');
                                 
                                 //$content->setXMLTemplate('template/text1.htm');
-                                if(isset($_SESSION['@_mod']) && $_SESSION['@_mod']=='edit')
+                if(isset($_SESSION['@_mod']) && $_SESSION['@_mod']=='intern')
+                {
+				$_intern_token = null;
+				$_auth_header = $_SERVER['HTTP_AUTHORIZATION'] ?? apache_request_headers()['Authorization'] ?? '';
+				if(preg_match('/^Bearer\s+(.+)$/i', $_auth_header, $_m)) $_intern_token = $_m[1];
+
+				$_intern_keys = array_filter(INTERN_KEYS, fn($k) => $k !== '');
+				if(!empty($_intern_keys) && !in_array($_intern_token, $_intern_keys, true))
+				{
+					http_response_code(401);
+					exit;
+				}
+
+				$content->setXMLstructur(INTERN);
+				// {"Identifire":"*","Command":{"Name":"__find_node","Attribute":{"json":"{\"name\":\"http:\/\/www.trscript.de\/tree#final\"}"},"Value":{"Identifire":"*","Command":{"Name":"start"},"Attribute":{"i":""}}}}
+				$content->commandLineInjection(file_get_contents('php://input'));
+				}
+                                elseif(isset($_SESSION['@_mod']) && $_SESSION['@_mod']=='edit')
 				$content->setXMLstructur(EDIT_INDEX);
                                 else
                                 {

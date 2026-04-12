@@ -170,7 +170,14 @@ private $xpath_sec_result = array();
 		
 	}
 	
-
+	public function __toString()
+	{
+		return 'parser';
+	}
+	
+    public function __debugInfo() {
+        return ['parser'];
+    }
 
 }
 

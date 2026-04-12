@@ -97,13 +97,19 @@ function event_message_in($type,&$obj)
 		if($obj instanceof EventObject )
 		{
 
+		// ---------------------- set @me template -----------------------
+		// $this->get_parser()->indexToUri($this->get_idx() );
+			$this->contentGen->set_template("@me",$this->get_parser()->indexToUri($this->get_idx() ));
+			
 			 try{
 			
 			$res = $this->actualize_data($type,$obj);
 			
 			if($res)
 			{
+				//throw new Exception("tempasdfntifer");
 
+		
 			//$this->loop_Operation($type,$obj);
 			if($this->if_Operation($type,$obj))
 			{

@@ -934,7 +934,7 @@ function delete_index($index)
 					if(!$expand_data)
 					{
 						
-					$this->cur_pointer[$this->idx]->setdata($this->convert_from_XML($res, "UTF-8"),$tmp); // $this->convert_from_XML($res)
+					$this->cur_pointer[$this->idx]->setdata($this->convert_from_XML($res, "UTF-8"),$tmp, true); // $this->convert_from_XML($res)
                                         }
 
                                         
@@ -985,6 +985,11 @@ echo $this->idx . " gibt es nicht";
 
    }
 
+   function get_Element() : Interface_node
+   {
+   	   return $this->cur_pointer[$this->idx];
+   }
+   
    function &get_Object_of_Namespace($full_ns)
    {
 	   if(is_String($full_ns))
@@ -1129,7 +1134,7 @@ echo $this->idx . " gibt es nicht";
    }
    
    function test_consistence()
-   {
+   { 
    	   echo "<h1> uebersicht </h1>\n";
 	   foreach($this->namespace_frameworks as $key => $value)
 		   {

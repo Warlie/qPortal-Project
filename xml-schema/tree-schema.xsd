@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.trscript.de/tree" xmlns:tree="http://www.trscript.de/tree" elementFormDefault="qualified">
+
+	<xs:element name="indextree">
+		<xs:complexType>
+			<xs:sequence>
+				<xs:choice maxOccurs="unbounded">
+					<xs:element name="final" type="tree:finalType"/>
+					<xs:element name="tree" type="tree:treeType"/>
+				</xs:choice>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+
+	<xs:complexType name="finalType">
+		<xs:complexContent>
+			<xs:extension base="tree:baseNodeType">
+				<xs:sequence>
+					<xs:element name="template" type="tree:templateType" minOccurs="0"/>
+					<xs:element name="program" type="tree:programType" minOccurs="0" maxOccurs="unbounded"/>
+					<xs:element name="content" type="tree:contentType" minOccurs="0" maxOccurs="unbounded"/>
+					<xs:element name="sub" type="tree:subType" minOccurs="0" maxOccurs="unbounded"/>
+					<xs:element name="tree" type="tree:treeType" minOccurs="0" maxOccurs="unbounded"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+
+	<xs:complexType name="treeType">
+		<xs:complexContent>
+			<xs:extension base="tree:baseNodeType">
+				<xs:sequence>
+					<xs:choice maxOccurs="unbounded">
+						<xs:element name="tree" type="tree:treeType" minOccurs="0"/>
+						<xs:element name="program" type="tree:programType" minOccurs="0"/>
+						<xs:element name="template" type="tree:templateType" minOccurs="0"/>
+						<xs:element name="content" type="tree:contentType" minOccurs="0"/>
+						<xs:element name="sub" type="tree:subType" minOccurs="0"/>
+					</xs:choice>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+
+	<xs:complexType name="baseNodeType">
+		<xs:attribute name="name" type="xs:string" use="required"/>
+		<xs:attribute name="value" type="xs:string" use="optional"/>
+		<xs:attribute name="src" type="xs:string" use="optional"/>
+		<xs:attribute name="securitylevel" type="xs:integer" use="optional"/>
+		<xs:attribute name="sector" type="xs:string" use="optional"/>
+		<xs:attribute name="device" type="xs:string" use="optional"/>
+	</xs:complexType>
+
+	<xs:complexType name="programType">
+		<xs:sequence>
+			<xs:choice minOccurs="0" maxOccurs="unbounded">
+				<xs:element name="program" type="tree:programType"/>
+				<xs:element name="content" type="tree:contentType"/>
+				<xs:element name="sub" type="tree:subType"/>
+				<xs:element name="param" type="tree:paramType"/>
+			</xs:choice>
+		</xs:sequence>
+		<xs:attribute name="securitylevel" type="xs:integer" use="optional"/>
+		<xs:attribute name="sector" type="xs:string" use="optional"/>
+	</xs:complexType>
+
+	<xs:complexType name="contentType">
+		<xs:sequence>
+			<xs:element name="param" type="tree:paramType" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="element" type="tree:elementType" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="subtree" type="tree:subtreeType" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="object" type="tree:objectType" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="xs:string" use="required"/>
+		<xs:attribute name="id" type="xs:string" use="optional"/>
+		<xs:attribute name="method" type="xs:string" use="optional"/>
+		<xs:attribute name="securitylevel" type="xs:integer" use="optional"/>
+		<xs:attribute name="sector" type="xs:string" use="optional"/>
+	</xs:complexType>
+
+	<xs:complexType name="elementType" mixed="true">
+		<xs:sequence>
+			<xs:element name="param" type="tree:paramType" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="element" type="tree:elementType" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="subtree" type="tree:subtreeType" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+		<xs:attribute name="type" type="xs:string" use="required"/>
+		<xs:attribute name="value" type="xs:string" use="optional"/>
+	</xs:complexType>
+
+	<xs:complexType name="subtreeType" mixed="true">
+		<xs:sequence>
+			<xs:element name="param" type="tree:paramType" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="xs:string" use="required"/>
+		<xs:attribute name="id" type="xs:string" use="optional"/>
+	</xs:complexType>
+
+	<xs:complexType name="paramType" mixed="true">
+
+		<xs:sequence>
+			<xs:element name="object" type="tree:objectType" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="xs:string" use="required"/>
+	</xs:complexType>
+
+	<xs:complexType name="objectType">
+
+		<xs:sequence>
+			<xs:element name="remote" type="tree:remoteType" maxOccurs="unbounded"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="xs:string" use="optional"/>
+		<xs:attribute name="id" type="xs:string" use="optional"/>
+
+		<xs:attribute name="src" type="xs:string" use="optional"/>
+	</xs:complexType>
+
+
+	<xs:complexType name="remoteType">
+		<xs:sequence>
+			<xs:element name="object" type="tree:objectType" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+		<xs:attribute name="name" type="xs:string" use="required"/>
+	</xs:complexType>
+
+	<xs:complexType name="subType">
+
+		<xs:sequence>
+			<xs:element name="param" type="tree:paramType" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+		<xs:attribute name="src" type="xs:string" use="required"/>
+		<xs:attribute name="method" type="xs:string" use="optional"/>
+	</xs:complexType>
+
+	<xs:complexType name="templateType">
+		<xs:sequence>
+			<xs:element name="main" type="tree:mainType" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:element name="add" type="tree:addType" minOccurs="0" maxOccurs="unbounded"/>
+		</xs:sequence>
+	</xs:complexType>
+
+	<xs:complexType name="mainType" mixed="true">
+		<xs:attribute name="case_folding" type="xs:integer" use="optional"/>
+		<xs:attribute name="doctype" type="xs:string" use="optional"/>
+		<xs:attribute name="doctype_out" type="xs:string" use="optional"/>
+		<xs:attribute name="output_doc" type="xs:string" use="optional"/>
+		<xs:attribute name="method" type="xs:string" use="optional"/>
+	</xs:complexType>
+
+	<xs:complexType name="addType" mixed="true">
+		<xs:attribute name="case_folding" type="xs:integer" use="optional"/>
+		<xs:attribute name="doctype" type="xs:string" use="optional"/>
+		<xs:attribute name="doctype_out" type="xs:string" use="optional"/>
+		<xs:attribute name="id" type="xs:string" use="required"/>
+		<xs:attribute name="output_doc" type="xs:string" use="optional"/>
+		<xs:attribute name="method" type="xs:string" use="optional"/>
+	</xs:complexType>
+
+</xs:schema>

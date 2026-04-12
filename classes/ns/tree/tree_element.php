@@ -93,8 +93,9 @@ function complete()
 function event_message_in($type,&$obj)
 	{
 		global $_SESSION;
-		///echo "Blub:" . $this->full_URI() . "\n";
-		// requests the permission to enter a special sector tag
+		//-----------------------------------------------------------------------------------------------
+		// ---------------------- requests the permission to enter a special sector tag -----------------
+		// ----------------------------------------------------------------------------------------------
 		if ($att_sector = $this->get_attribute('sector'))
 		{
 		if (false === strpos($_SESSION['http://www.auster-gmbh.de/surface#sector'],';' . $att_sector . ';' ))return false;
@@ -119,11 +120,8 @@ function event_message_in($type,&$obj)
 		}
 		}
 		
-		//echo $this->get_attribute('value') . ' ' . $type . ' ' . $obj->get_node()->name . "<br>\n";
-	
-	//checks for type 
-	//echo $this->full_URI() . " !!!!!!!! " . spl_object_id($this) . " " . $obj->get_node()->full_URI() . ":" . spl_object_id($this) .  " \n";
-	//throw new ErrorException($this->full_URI());
+		// ------------------------------ done ---------------------------------------------------------------
+
 	$tag_array = array();
 
 			// looks for a type-attibute
@@ -164,8 +162,9 @@ function event_message_in($type,&$obj)
 					
 				}
 
-			
-				if(strtolower($att_type) == 'xhtml')
+			// TODO concept is stupid, we need another one
+			// ns just needs to be checked and used
+				if(strtolower($att_type) == 'xhtml') // att_type is used here
 					if($value = $this->get_attribute('value'))
 					{
 						
@@ -201,6 +200,7 @@ function event_message_in($type,&$obj)
 								//		$this->get_parser()->show_xmlelement()->cloning($obj->get_node());
 							}
 							else
+							// looks like a lost function 
 							if( $tmp->get_NS() == "http://www.trscript.de/tree" )
 								{
 									$tmp->cloning($obj->get_node());
@@ -484,7 +484,6 @@ function process_exist_xhtml(&$obj,$attrib)
 		{ 
 			$string = '';
 			$point = 0;
-			if($name == "http://www.w3.org/1999/xhtml#unqueID" )die();
 			for($i = 0; $i < $this->index_max() + 1;$i++)
 			{
 			

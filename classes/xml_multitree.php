@@ -384,35 +384,61 @@ function checkPointers()
         /* geht zu einem bestimmten Knoten */
    function go_to_stamp($stamp){
 		$back = null;
-                $stamp_array = explode('.',$stamp);
 
-		if($stamp_array[0] != "0000")
+		// parse: NNNN.(<idx>|me|prev|[filepath]).path
+		if (!preg_match('/^(\d{4})\.(\[[^\]]+\]|me|prev|\d+)((?:\.\d+)*)$/', $stamp, $m))
 		{
-		
-		$back = &$this->pointer[$this->idx];
+			// legacy fallback: plain dot-split
+			$m = explode('.', $stamp);
+			$hash_str = $m[0];
+			$idx_part = $m[1];
+			$path     = array_slice($m, 2);
 		}
-		
-
-                $this->change_idx($stamp_array[1]);
-
-                $this->set_first_node();
-
-                        for($f = 2; count($stamp_array) > $f;$f++){
-
-                                
-                                $this->child_node($stamp_array[$f]);
-                                //echo "<hr>" . $stamp_array[$f] . " " . $this->cur_node();
-
-                        }
-                        //echo " " . $this->cur_node() . "<p>";
-		if($stamp_array[0] != "0000" && $stamp != $this->position_hash_pos())
+		else
 		{
-		
-		$this->pointer[$this->idx] = &$back;
-		return false;
+			$hash_str = $m[1];
+			$idx_part = $m[2];
+			$path     = $m[3] !== '' ? array_slice(explode('.', $m[3]), 1) : [];
+		}
+
+		if ($hash_str != "0000")
+			$back = &$this->pointer[$this->idx];
+
+		// resolve idx
+		if ($idx_part === 'me')
+		{ /* stay on current idx */ }
+		elseif ($idx_part === 'prev')
+			$this->change_idx($this->idx - 1);
+		elseif ($idx_part[0] === '[')
+		{
+			$inner = substr($idx_part, 1, -1);
+			// external mode: base64-encoded IV+ciphertext — decrypt to recover filepath
+			if (defined('SECURITY_STAMP_KEY') && SECURITY_STAMP_KEY !== '' && strpos($inner, '/') === false && base64_decode($inner, true) !== false)
+			{
+				$raw    = base64_decode($inner);
+				$iv_len = openssl_cipher_iv_length(SECURITY_CIPHER);
+				$iv     = substr($raw, 0, $iv_len);
+				$inner  = openssl_decrypt(substr($raw, $iv_len), SECURITY_CIPHER, hex2bin(SECURITY_STAMP_KEY), OPENSSL_RAW_DATA, $iv);
+				if ($inner === false) return false;
+			}
+			if (!$this->change_URI($inner)) return false;
+		}
+		else
+			$this->change_idx(intval($idx_part));
+
+		$this->set_first_node();
+
+		foreach ($path as $step)
+			$this->child_node(intval($step));
+
+		// skip hash verification for non-numeric idx (me/prev/filepath stamps)
+		if ($hash_str != "0000" && is_numeric($idx_part) && $stamp != $this->position_hash_pos())
+		{
+			$this->pointer[$this->idx] = &$back;
+			return false;
 		}
 		return true;
-                }
+	}
    
    
    private $prim = array();
@@ -1522,7 +1548,7 @@ function &convert_from_XML(string $text, string $sourceEncoding = 'UTF-8'): stri
     {
     	
     	array_key_exists('encoding', $this->MIME[$this->idx]);
-    	
+
         $text = $text === null ? '' : $text;
         $enc = strtoupper((array_key_exists('encoding', $this->MIME[$this->idx]))?$this->MIME[$this->idx]['encoding']:$sourceEncoding);
 

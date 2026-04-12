@@ -8,6 +8,8 @@ class Test extends plugin
 
     /** @var array<string,int> Gemessene Dauern in Nanosekunden */
     private array $results = [];
+    
+    //protected $rst = [];
 
     public function __construct()
     {
@@ -40,6 +42,7 @@ class Test extends plugin
      */
     public function showResults(): void
     {
+    	if($this->rst)echo $this->render_plugin_table($this->rst);
         echo "Timer-Ergebnisse:\n";
         foreach ($this->results as $label => $ns) {
             $ms = $ns / 1_000_000; // Nanosekunden → Millisekunden
@@ -76,4 +79,41 @@ class Test extends plugin
 
         $this->showResults();
     }
+    
+    /**
+ * Erzeugt eine Text-Tabelle aus einem Cursor-basierten Plugin-Objekt.
+ *
+ * @param object $obj Das Plugin (z.B. Hash oder Database)
+ * @return string Die formatierte Tabelle
+ */
+function render_plugin_table($obj) {
+    $output = "";
+    $fields = $obj->fields(); // Holt die Spaltennamen
+
+    if (empty($fields)) {
+        return "Keine Spalten gefunden.\n";
+    }
+
+    // 1. Header erstellen
+    $output .= implode("\t", $fields) . "\n";
+    $output .= str_repeat("-", count($fields) * 8) . "\n";
+
+    // 2. Daten iterieren
+    // Wir setzen den internen Zeiger auf den Anfang
+    if ($obj->moveFirst()) {
+        do {
+            $row = [];
+            foreach ($fields as $fieldName) {
+                // Wert der aktuellen Spalte abfragen
+                $row[] = $obj->col($fieldName);
+            }
+            $output .= implode("\t", $row) . "\n";
+            
+        } while ($obj->next()); // Gehe zur nächsten Zeile, solange vorhanden
+    } else {
+        $output .= "Keine Daten vorhanden.\n";
+    }
+
+    return $output;
+}
 }

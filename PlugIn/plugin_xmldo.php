@@ -25,6 +25,7 @@ protected $rst;
 private $pos = 0;
 private $template;
 private $content;
+private $treeObj;
 private $documentForInsert;
 private $verification = array();
 private $level = array();
@@ -36,17 +37,22 @@ private $config= array('attribOnNull' => true, 'actsAsCollector' => false);
 private $testmode = false;
 private $cdata;
 
+private $cur_tree;
+private $cur_id;
+
 private $table = [];
 
 private $template_json;
 
-	function __construct(/* System.Parser */ &$back, /* System.CurRef */ &$treepos, /* System.Content */ &$content)
-	{
+	function __construct(/* System.Parser */ &$back, /* System.FuncTree */ &$tree,/* System.Content */ &$content)
+	{ //throw new Exception('Division by zero.');
 		$this->back= &$back;
-		$this->treepos = &$value;
+		//$this->treepos = &$treepos;
 		$this->content = &$content;
-		//echo $this->treepos->full_URI();
+		$this->treeObj = $tree;
+		//echo $eff->full_URI();
 		//$this->id = $value; , &$id
+
 	}
 	
 	
@@ -74,6 +80,14 @@ private $template_json;
 	{
 		
 		$this->template_json = "{\"new_template\" : \"$new_template\", \"use_at_tag\" : \"$use_at_tag\"}";
+
+		// tesst ------------------------------------
+		//var_dump($this->treeObj->get_EffBranch()->get_idx());
+		//$this->back->change_idx($this->treeObj->get_EffBranch()->get_idx());
+		$this->cur_tree = $this->treeObj->get_EffBranch();
+		$this->cur_id = $this->cur_tree->get_idx();
+		// --------------------------------------------
+		
 		$tmpstamp = $this->back->position_stamp();
 		
 		$this->template = $new_template;
@@ -81,7 +95,7 @@ private $template_json;
 		if(!$this->back->change_URI($this->content->get_template($new_template)))
 		{
 		///echo $new_template . ' isn\'t a available documentident (setXMLTemplate) ';
-		$this->back->test_consistence();
+		throw new Exception("template " . $new_template . " isn't a valid identifer");
 		}
 		
 		$this->back->set_first_node();
@@ -720,6 +734,7 @@ private $template_json;
     	//$this->back->show_xmlelement()->giveOutOverview();
     		$i = $groups[$name]['crotch']['child_pos'];
     		$this->back->append_xmlelement($this->list[$i]);
+    		//$this->cur_tree = $this->list[$i]->cloning($this->cur_tree);
     		//echo $this->back->get_URI() + '(' +  $this->back->position_stamp() . ") neues Baumelement \n";
     		$this->back->complete_list(false);
     		
@@ -1108,6 +1123,10 @@ private $template_json;
 		}
 		
 
+		/* --------------------------------- check id ---------------------------- */
+		
+		/* ----------------------------------------------------------------------- */
+		
 		
 		/* create an index of all grouppositions */
 		// TODO check whole consistence
@@ -1173,8 +1192,11 @@ $permutation = $tmp[1];
 		$this->back->freexpathresult();
 		
 		/* choose page for modification */
-		if(!$this->back->change_URI($this->content->get_out_template()))
-		echo $new_template . ' isn\'t a available documentident';
+		//echo $this->content->get_out_template() . " --- " . . "--- \n";
+		$this->back->change_idx($this->treeObj->get_EffBranch()->get_idx());
+
+		//if(!$this->back->change_URI($this->content->get_out_template()))
+		//echo $new_template . ' isn\'t a available documentident';
 		
 	
 
@@ -1360,8 +1382,6 @@ if(DEBUG)
                 
         /* return to former page */
         $this->back->go_to_stamp($tmpstamp);
-                
-                
 
 	}
 	
@@ -1379,13 +1399,17 @@ if(DEBUG)
 		// -------------- prepare the workplace ---------------------
 		$tmpstamp = $this->back->position_stamp();
 		
+		
 		/* chose page to collect templates */
 		if(!$this->back->change_URI($this->content->get_template($this->template)))
 		{
+			//$this->content->show_templates();
 			throw new Exception("template " . $this->template . " isn't a valid identifer");
 			echo $this->template . ' isn\'t a available documentident';
 			return;
 		}
+		
+		
 		$this->back->set_first_node();
 
     	// ------------------------------------------------------------
@@ -1464,7 +1488,7 @@ $permutation = $tmp[1];
 
 		foreach ($result as $value)
 		{
-		//var_dump($value->full_URI() . "-go");
+		//var_dump($value->full_URI() . " ");
 		$this->back->complete_list(false);		
 		$newTbl = [];
 		
@@ -1531,6 +1555,7 @@ $permutation = $tmp[1];
     		}
     		else
     		{
+    			//echo "--" . $data["xpath"] . ':' . $data['attrib_data'] . "->" . $data['prefix'] . '#' . $data['postfix'] . "--\n";
     			//echo "???";
     			//collects an attribute entry
     			if(($value[$data['name']] = $res->get_ns_attribute($data['prefix'] . '#' . $data['postfix'])) === false)
@@ -1719,7 +1744,9 @@ $permutation = $tmp[1];
 	}
 		
 	public function getAdditiveSource(){}
-	public function __toString(){return 'xmldo';}	
+	public function __toString(){return 'xmldo';}
+	
+	public function fields(){return array_keys(current($this->internal_table_values));}
 }
 
 ?>

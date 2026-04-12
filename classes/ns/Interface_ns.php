@@ -325,7 +325,7 @@ return new Command_Object($command);
 }
 
 /* returns last stamp element */
-public function position_last_stamp_()
+public function position_last_stamp()
 {
 	
 
@@ -410,7 +410,7 @@ function position_stamp()
 * creates a hashnumber, depending on the path, back to the root.
 * @param stamp : (callbyRef) String to create a std. stamp without an idx  
 */
-function position_hash_map_(&$stamp)
+function position_hash_map(&$stamp)
 {
  	$mult = $this->get_NodeType() + 1;
  
@@ -428,8 +428,6 @@ function position_hash_map_(&$stamp)
 		}
 	}
 	
-	if($mult == 2)$stamp . '@' . $this->full_URI();
-	if($mult == 3)$stamp . '#' . $this->get_QName();
 	
 	
 	return $mult * 7 + $elem->position_hash_map($stamp);
@@ -549,6 +547,54 @@ function setRefprev(&$ref)
 		//$ref->setRefnext($this, $pos);
 	}
 
+function removeRefnext(&$ref)
+	{
+		if (!is_array($this->next_el)) return false;
+		$pos = -1;
+		foreach ($this->next_el as $i => $child)
+			if ($child === $ref) { $pos = $i; break; }
+		if ($pos === -1) return false;
+		$tmp = [];
+		foreach ($this->next_el as $i => $child)
+			if ($i !== $pos) $tmp[] = &$this->next_el[$i];
+		$this->next_el = $tmp;
+		return true;
+	}
+
+function removeNode()
+	{
+		// detach from parent
+		$parent = $this->getRefprev();
+		if (!($parent instanceof Interface_node)) return false;
+		$parent->removeRefnext($this);
+
+		// clean up listener links on both sides
+		foreach ($this->way_out as $listener)
+			$listener->way_in = array_values(array_filter($listener->way_in, fn($n) => $n !== $this));
+		foreach ($this->way_in as $source)
+			$source->way_out = array_values(array_filter($source->way_out, fn($n) => $n !== $this));
+		$this->way_out = [];
+		$this->way_in  = [];
+
+		// reduce instance list on class node
+		// NOTE: link_to_class itself is not cleared — removing definitions requires a reload
+		if ($this->link_to_class instanceof Interface_node)
+			$this->link_to_class->link_to_instance = array_values(
+				array_filter($this->link_to_class->link_to_instance, fn($n) => $n !== $this)
+			);
+
+		return true;
+	}
+
+function remove_attribute($name)
+	{
+		if (!isset($this->attrib[$name])) return false;
+		$uri = $this->attrib[$name]->full_URI();
+		unset($this->attrib[$name]);
+		unset($this->attrib_ns[$uri]);
+		return true;
+	}
+
 function set_parser(&$obj)
 {
 	$this->parser = $obj;
@@ -557,6 +603,11 @@ function set_parser(&$obj)
 function set_contentGen(&$obj)
 {
 	$this->contentGen = $obj;
+}
+
+function get_contentGen()
+{
+	return $this->contentGen;
 }
 
 function &get_parser()
@@ -1096,21 +1147,43 @@ public function givesAllPrototypes($me = 0 )
 //way to send messages
 function send_messages($type,&$obj)
 {	//echo $this->full_URI() . ' - ' . count($this->way_out) . ":[\n";
-	
+
 	if(is_null($type))throw new Exception("null found");
 
+	if(is_array($type) && array_is_list($type))
+	{
+		foreach($type as $cmd)
+			$this->send_messages($cmd, $obj);
+		return;
+	}
 
 	$com = $this->parseCommand($type);
-	
+
 	for($i = 0;count($this->way_out) > $i;$i++)
 	{
-		
+
 
 		if($com->is_Node($this->way_out[$i]))
 		$this->way_out[$i]->event_message_check($com,$obj);
 
 	}
 
+}
+
+function hold_messages($type,&$obj)
+{
+	if(is_null($type))throw new Exception("null found");
+
+	if(is_array($type) && array_is_list($type))
+	{
+		foreach($type as $cmd)
+			$this->hold_messages($cmd, $obj);
+		return;
+	}
+
+	
+	$com = $this->parseCommand($type);
+	$this->event_message_check($com,$obj);
 }
 
 //way to send messages
@@ -1185,6 +1258,13 @@ protected function event_message_check($type,&$obj)
 {
 global $logger_class;
 
+	if(is_array($type) && array_is_list($type))
+	{
+		foreach($type as $cmd)
+			$this->event_message_check($cmd, $obj);
+		return;
+	}
+
 	$com_elemnet = $this->parseCommand($type);
 	$bool=true;
 	for($i = 0;count($this->check_list) > $i;$i++)
@@ -1194,7 +1274,6 @@ global $logger_class;
 		$this->check_list[$i]->event_attribute($type,$obj);
 		
 	}
-	if(!true)show_event_data($obj);
 		
 	if($obj instanceof EventObject && !$obj->get_locked())
 	{
@@ -1209,7 +1288,23 @@ global $logger_class;
 		//var_dump($com_elemnet->get_Command(), $behaviorRegistry);
 		if(isset($behaviorRegistry->{$com_elemnet->get_Command()}))
 		{
-			($behaviorRegistry->{$com_elemnet->get_Command()})($this, $obj, $com_elemnet);
+			$entry = $behaviorRegistry->{$com_elemnet->get_Command()};
+
+			if($entry["log"] !== false)
+			{
+				$msg = is_string($entry["log"]) ? $entry["log"] : ($entry["log"])($this, $obj, $com_elemnet);
+				$logger_class->setAssert($msg, $entry["level"]);
+			}
+			try
+			{
+				$result = ($entry["command"])($this, $obj, $com_elemnet);
+			}
+			catch(Exception $e)
+			{
+				$logger_class->setAssert('ERROR ' . get_class($e) . ': ' . $e->getMessage(), 0);
+				return false;
+			}
+			return $result;
 		}
 				
 		/*
@@ -1240,101 +1335,6 @@ throw new ErrorException("where am I");
 
 }
 		*/
-
-		
-		if($com_elemnet->matchesCommand('__set_data'))
-		{
-			
-			//$com_elemnet = $this->parseCommand($type);
-			//$this->set_alter_event_public(false);
-	
-			$this->setdata($obj->get_context(),$com_elemnet->get_Command(0,1), alter_sensity: false);
-			
-			//$this->set_alter_event_public(true);
-			
-			//$this->event_alterdata(false);
-			return true;
-			
-		}
-		
-		if($com_elemnet->matchesCommand('__insert_data'))
-		{
-			
-			$this->set_alter_event(false);
-			//$this->setdata($obj->get_context(),$com_elemnet->get_Command(0,1),true);
-			$this->setdata($obj->get_context(),$com_elemnet->get_Command(0,1),true);
-			
-			$this->set_alter_event(true);
-			
-			//echo "tes3t" . $obj->get_context() . " " . $com_elemnet->get_Command(0,1);
-			//$this
-			//$this->event_alterdata(false);
-			return true;
-			
-		}
-		
-		if($com_elemnet->matchesCommand('__get_data'))
-		{
-			//echo ' in __get_data(';
-			
-
-			
-			//$com_elemnet = $this->parseCommand($type);
-			$obj->get_requester()->set_alter_event(false);
-						
-			//if(!is_object($this->getdata($com_elemnet->get_Command(0,1))))
-				//var_dump($this->getdata($com_elemnet->get_Command(0,1)));
-
-			if(!is_null($tmp = &$this->getdata($com_elemnet->get_Command(0,1))))
-			{
-				
-				$logger_class->setAssert($obj->get_requester()->full_URI() . " gets $tmp to its datapart " ,5);
-				if(is_Object($tmp))
-				{
-					$obj->get_requester()->setdata($tmp,0);
-				}
-				elseif(strlen($tmp) > 0)
-				{
-					$booh = $tmp;
-					$obj->get_requester()->setdata($booh,0);
-				}
-
-			}
-		
-$logger_class->setAssert('__get_data of requester "' . $obj->get_requester()->full_URI() . '" was send to "' . $this->full_URI() . '" context is  "' . $tmp . '"(Interface_node:event_message_check)' ,5);
-			$obj->get_requester()->set_alter_event(true);
-				//echo ') ';
-			//$this->event_alterdata(false);
-			return true;
-			
-		}
-		
-		if($com_elemnet->matchesCommand('__set_namespace'))
-		{
-			//echo ' in __get_data(';
-			
-
-			
-			//$com_elemnet = $this->parseCommand($type);
-			$obj->get_requester()->set_alter_event(false);
-						
-			//if(!is_object($this->getdata($com_elemnet->get_Command(0,1))))
-				var_dump($this->getdata($com_elemnet->get_Command(0,1)));
-
-			if(!is_null($tmp = &$this->getdata($com_elemnet->get_Command(0,1))))
-			{
-				
-				$this->namespace = $tmp;
-
-			}
-
-			//$this->send_messages($type,&$obj)
-			
-			return true;
-			
-		}
-		
-
 		$this->event_message_in($type,$obj);
 		//}
 	}
@@ -1656,7 +1656,7 @@ class Command_Object extends qp_workflow
 		*/
 		elseif(is_array($command) )
 		{
-			//var_dump($command);
+			//var_dump(json_encode($command));
 			$this->listOfInformation = $command;
 			//echo "drin";
 		}

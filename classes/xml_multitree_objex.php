@@ -57,8 +57,8 @@ protected $complete_list = false;
         }
 
 	/* gibt die xmlelemente aus*/
-   function &show_xmlelement(){return $this->pointer[$this->idx];}	
-   
+   function &show_xmlelement(){return $this->pointer[$this->idx];}
+
    	/* pendant zu show_xmlelement() */
   function set_xmlelement(&$node)
   {
@@ -149,15 +149,20 @@ protected $complete_list = false;
    
    	protected function &xfind(&$xml_obj,$name)
 	{	
-		
+
 		if(!$xml_obj)
 			{
 				echo "knoten nicht gefunden:" . $this->xPath_name($name) . "<br>\n";
 				return false;
 			}
 			
+		if($name == '.')return $xml_obj;
+			
 		//echo $name . ' = ' . $xml_obj->name . ' : ' . $xml_obj->attrib['CLASS'] . ' <br>';
 //		echo "xpath : $name\n";
+	/*
+	*	xPath_attrib creates an array of attibutes
+	*/
 		$attrib = $this->xPath_attrib($name);
 				$hit = (count($attrib) == 0);
 			//	echo "---------\n";
@@ -195,7 +200,7 @@ protected $complete_list = false;
    	protected function &xfind2(&$xml_obj,$name)
 	{	
 		
-		
+
 		$hit = true;
 		$attrib = $this->xPath_attrib($name);
 

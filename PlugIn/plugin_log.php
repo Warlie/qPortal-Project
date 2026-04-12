@@ -36,6 +36,33 @@ private $pos = false;
 public static bool $active = false;
 public static string $logPath = "template/log.txt";
 
+private static array $log_buffer = ['global' => []];
+private static string $current_channel = 'global';
+
+public static function openChannel(string $name): void
+{
+    self::$log_buffer[$name] = [];
+}
+
+public static function setChannel(string $name): void
+{
+    if (!array_key_exists($name, self::$log_buffer))
+        self::$log_buffer[$name] = [];
+    self::$current_channel = $name;
+}
+
+public static function getChannel(string $name): array
+{
+    return self::$log_buffer[$name] ?? [];
+}
+
+public static function closeChannel(string $name): void
+{
+    unset(self::$log_buffer[$name]);
+    if (self::$current_channel === $name)
+        self::$current_channel = 'global';
+}
+
 	function __construct(){}
 
 		/**
@@ -101,12 +128,18 @@ public static string $logPath = "template/log.txt";
 		 $pos = '';
 		 if($this->mem)$mem = " [" . memory_get_peak_usage(true) . " Bytes]";
 		 if($this->pos)
-		  {	
+		  {
 			$data = debug_backtrace();
 			$pos = "\n(" . $data[0]['file'] . " )";
 		  }
 
-		$this->setlog($log . $pos . $mem);
+		$entry = $log . $pos . $mem;
+
+		// always buffer in memory — available to any channel consumer
+		self::$log_buffer[self::$current_channel][] = ['msg' => $entry, 'level' => $importance];
+
+		// physical file write only for hard-crash debugging
+		$this->setlog($entry);
 		}
 
 

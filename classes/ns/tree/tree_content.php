@@ -98,13 +98,19 @@ function event_message_in($type,&$obj)
 		}
 		}
 
+		// ---------------------- set @me template -----------------------
+		// $this->get_parser()->indexToUri($this->get_idx() );
+		$this->contentGen->set_template("@me",$this->get_parser()->indexToUri($this->get_idx() ));
+		
+		$tech_tree = $this->contentGen->TreeObj;
+		
 		// ---------------------- Start with progress --------------------
 		
 		if($obj instanceof EventObject )
 		{
-		$template = $obj->get_requester()->get_out_template($other_template); //???
+		$template = $this->contentGen->get_out_template($other_template); //???
 
-		$obj->get_requester()->set_current_template($obj->get_requester()->get_out_template()) ;
+		$this->contentGen->set_current_template($this->contentGen->get_out_template()) ; //$contentGen
 		//echo "Ich mache dinge\n";
 		//throw new ErrorException("dinge");
 			//changes maintemplate, to edit an non maintemplate
@@ -119,14 +125,14 @@ function event_message_in($type,&$obj)
 						$template = $this->get_parser()->indexToUri($this->get_idx() );
 					}
 				else
-				if($template = $obj->get_requester()->get_template($other_template))
+				if($template = $this->contentGen->get_template($other_template))
 				{
-							$obj->get_requester()->set_current_template($other_template) ;
+							$this->contentGen->set_current_template($other_template) ;
 				}	
 				else
 				{
 				echo "Der Name $other_template konnte nicht bei den Templates gefunden werden";
-				$template = $obj->get_requester()->get_out_template($other_template);
+				$template = $this->contentGen->get_out_template($other_template);
 				}
 			}
 		
@@ -158,6 +164,7 @@ function event_message_in($type,&$obj)
 	$this->get_parser()->flash_result();
 	if($this->get_parser()->seek_node($tag_name,$tag_array, null, $pos_value) )
 	{
+		//$tech_tree
 		$obj->set_node($this->get_parser()->show_xmlelement());
 		$this->send_messages('*',$obj); 
 	}

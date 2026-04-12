@@ -12,6 +12,16 @@ private $registry;
 private $reg_stamp = '';
 private $idx = 1;
 private $objectList = array();
+private $obj_cur_ref = null;
+private $obj_eff_branch = null;
+
+
+public function get_EffBranch(){ return $this->obj_eff_branch->getdata(0);}
+public function set_EffBranch($new){ $this->obj_eff_branch->setdata($new,0);}
+
+
+public function get_CurRef(){ return $this->obj_cur_ref->getdata(0);}
+public function set_CurRef($new){ $this->obj_cur_ref->setdata($new,0);}
 
 	function __construct(ContentGenerator &$nsobj)
 	{
@@ -199,10 +209,12 @@ private $objectList = array();
 					$this->my_Xml_Object->tag_close($this, "System.Content");
 				
 					$this->my_Xml_Object->tag_open($this, "System.CurRef", $attrib);
+					$this->obj_cur_ref = $this->my_Xml_Object->get_Element();
 //					$this->my_Xml_Object->cdata($this,null);
 					$this->my_Xml_Object->tag_close($this, "System.CurRef");
 					
 					$this->my_Xml_Object->tag_open($this, "System.EffBranch", $attrib);
+					$this->obj_eff_branch = $this->my_Xml_Object->get_Element();
 //					$this->my_Xml_Object->cdata($this,null);
 					$this->my_Xml_Object->tag_close($this, "System.EffBranch");
 					
@@ -306,5 +318,10 @@ private $objectList = array();
 		return 'Class_Instance';
 	}
 	public function __toString(){return "Class:TreeEngine";}
+
+	
+    public function __debugInfo() {
+        return ['Class:TreeEngine'];
+    }
 }
 ?>

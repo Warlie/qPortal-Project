@@ -248,7 +248,7 @@ private function create_factory_class()
 				//echo $this->getRefnext($j)->getdata(0) . ' istdrin';
 			}
 	}			
-	
+
 	$carrier = array();
 	//echo $this->getRefprev()->get_QName() . " is a class!\n";
 	
