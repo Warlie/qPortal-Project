@@ -204,6 +204,7 @@ private $template_json;
 
 			}
 		}
+		echo $confi["process"];
 		if(array_key_exists("process",$confi))  //define_tag
 			switch ($confi["process"]) {
 			case "Branch":
@@ -1459,7 +1460,7 @@ $permutation = $tmp[1];
 		$this->internal_table_values = $this->iterateGroupsBranch($tbl, $fulltbl, $groups, $this->back->show_xmlelement());
 		reset($this->internal_table_values);
 		//var_dump($this->internal_table_values);
-		//var_dump($fulltbl);
+		var_dump("blub" . $fulltbl);
 	}
 	public function blub(){return "blub";}
 	/**
@@ -1746,7 +1747,11 @@ $permutation = $tmp[1];
 	public function getAdditiveSource(){}
 	public function __toString(){return 'xmldo';}
 	
-	public function fields(){return array_keys(current($this->internal_table_values));}
+	public function fields()
+	{
+		var_dump($this->internal_table_values);
+		return array_keys(current($this->internal_table_values));
+	}
 }
 
 ?>

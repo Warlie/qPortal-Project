@@ -50,16 +50,18 @@ return new RDF_about();
 	function event_initiated()
 	{
 	//$this->to_listener();
-	
+	// Case Ontology needs to be defined
 	if($this->getRefprev()->full_URI() == 'http://www.w3.org/2002/07/owl#Ontology')
 		{
 		//echo $this->getdata() . "  \n" ;
+		 	$this->get_parser()->currentOntology($this->getdata());
+		//setOntologyRelationship
 			$this->get_parser()->set_Namespace($this->getdata());
 		}
 		else
-		{
+		{// public function setNodeRelationship($new, $basedOn)
 			
-			//test for 
+			//"about" defines a new resource without fully qualified URI
 			if(false === ($posinstr =  strpos(($data = $this->getdata()),'#')))
 			{
 				
@@ -78,6 +80,7 @@ return new RDF_about();
 			}
 			else
 			{
+				// "about" with fully qualified URI
 				$namespace = substr($data,0,$posinstr);
 				$qname = substr($data,$posinstr + 1);
 				
@@ -91,6 +94,8 @@ return new RDF_about();
 					$namespace2 = $namespace . '#' . $qname;
 				}
 			}
+			
+				// create a "class" instance
 				$new_obj = &$this->getRefprev()->new_Instance();
 				$new_obj->name = $data;
 				$new_obj->type = $qname;
@@ -110,5 +115,4 @@ return new RDF_about();
 	}
 
 }
-
 ?>

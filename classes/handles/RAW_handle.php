@@ -164,7 +164,7 @@ class RAW_handle extends Interface_handle
 	
 	function save_back($format,$send_header = false)
 	{
-		
+
 		/**
 		*
 		*
@@ -174,11 +174,23 @@ class RAW_handle extends Interface_handle
 
                  $header = array();
                  $csv = array();
-                                
+
                  $this->base_object->set_first_node();
-		
+
 		$this->base_object->complete_list(true);
 		$this->base_object->cloneResult(true);
+
+		// If this is a raw content document (RAW root node from parse_document),
+		// return the CDATA content directly instead of CSV processing
+		if( $this->base_object->xpath("RAW") )
+		{
+			$this->base_object->cloneResult(false);
+			$raw_result = $this->base_object->get_xpath_Result();
+			if( count($raw_result) > 0 )
+				return $raw_result[0]->getdata();
+			return "";
+		}
+
 		if(! $this->base_object->xpath("ROW")  )return "";
 		$this->base_object->cloneResult(false);
 		

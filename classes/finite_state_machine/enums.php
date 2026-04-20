@@ -2,47 +2,52 @@
 
 namespace Finite\Elements;
 
+/**
+ * Controls which matching strategy a transition uses when the Acceptor
+ * tries to advance through the input string.
+ *
+ *  ApplyResult   — fire if the previous regex result matches a sub-pattern
+ *  PassByHit     — fire if the transition's regex matches at the current offset
+ *  PassByDefault — fire unconditionally (ε-transition / default fallthrough)
+ *
+ * Acceptor sorts transitions by priority: ApplyResult(1) > PassByHit(2) > PassByDefault(3).
+ */
 enum TransitionType
 {
-    case PassByHit; //Use the mentioned transition
-    case ApplyResult; //Use the result for transition
-    case PassByDefault; //Use, if noting is left to try
+    case PassByHit;
+    case ApplyResult;
+    case PassByDefault;
 }
 
+/**
+ * Tells the Transducer what tree-building action to perform when a
+ * transition fires.
+ *
+ *  StartsNode   — open a new node (tag_open equivalent)
+ *  EndsNode     — close the current node (tag_close equivalent)
+ *  ContinuesNode— stay in the current node, just emit data
+ *  NextNode     — close the current node, then open a new sibling
+ *  SingleNode   — open, emit, and immediately close a self-contained node
+ */
 enum TransduceProjectionBehavior
 {
-	case StartsNode; //Use the mentioned transition
-    case EndsNode; //Use the mentioned transition
+    case StartsNode;
+    case EndsNode;
     case ContinuesNode;
     case NextNode;
     case SingleNode;
-    
-
 }
 
+/**
+ * Controls how the Transducer harvests data from the regex match.
+ *
+ *  ReturnsResult — use the full match result as node data
+ *  ProcessResult — apply an additional regex to extract a sub-match
+ *  NoResult      — no data is emitted
+ */
 enum TransduceInformationHarvest
 {
-	case ReturnsResult; //Use the mentioned transition
-    case ProcessResult; //Use the mentioned transition
-    case NoResult;		//No data event will happen
-
-    
-
+    case ReturnsResult;
+    case ProcessResult;
+    case NoResult;
 }
-
-function cmp($a, $b)
-{
-	
-	$give_value = function($enum)
-	{
-		switch ($enum) {
-		case TransitionType::ApplyResult: return 1;
-		case TransitionType::PassByHit: return 2; 
-		case TransitionType::PassByDefault :return 3; }
-
-	};
-
-	return $give_value($b['mode']) - $give_value($a['mode']);
-}
-
-?>

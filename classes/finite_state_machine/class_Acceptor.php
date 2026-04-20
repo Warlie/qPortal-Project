@@ -1,357 +1,277 @@
 <?php
-//use Finite\State;
+
 namespace Finite\Elements;
 
-/** 
-* Acceptor for checking strings 
-* 
-* The acceptor uses the finite state machine to manage the states and uses regular expressions to hop from state to state.
-* It supports clones but holds only references to the state machine.
-* An exception will be thrown if the current state is not a stop state. 
-* 
-* if (Example_Class::example()) { 
-* print "I am an example."; 
-* } 
-* 
-* @package Example 
-* @author Stefan Wegerhoff  
-* @version $Revision: 0.1 $ 
-* @access public 
-* @internal "yohang/finite" is used
-* @see http://www.example.com/pear 
-*/
-class Acceptor implements \Finite\StatefulInterface
+/**
+ * Regex-driven finite-state acceptor / transducer driver.
+ *
+ * Works with yohang/finite 2.0:
+ *   - States are PHP backed enums implementing \Finite\State.
+ *   - Transitions are \Finite\Transition\Transition objects whose $properties
+ *     array carries the Acceptor-specific config: reg, mode, move, transduce.
+ *   - The yohang StateMachine is NOT used for driving — the Acceptor manages
+ *     its own state pointer directly so it stays generic across any state enum.
+ *   - MermaidDumper works independently of the StateMachine and is exposed via
+ *     dumpGraph() for free graph visualisation.
+ *
+ * Usage pattern:
+ *
+ *   $acceptor = new Acceptor(MyState::START, $transducer);
+ *   $acceptor->setStringToCheck($input);
+ *   $acceptor->initialize();
+ *   echo $acceptor->dumpGraph();   // Mermaid stateDiagram-v2
+ *
+ * @author Stefan Wegerhoff
+ */
+class Acceptor
 {
-    private $state;
-    private string $prevState = '';
-    private string $transition = '';
-    private \Finite\StateMachine\StateMachine $stateMachine;
-    private \Finite\Loader\ArrayLoader $loader;
-    private string $command = "";
+    /**
+     * Current parser state — always a backed enum implementing \Finite\State.
+     * Typed as \BackedEnum so ->value is available without casting.
+     *
+     * @var \BackedEnum&\Finite\State
+     */
+    private \BackedEnum $state;
+
+    /** The string being parsed. */
+    private string $command = '';
+
+    /** Current read position within $command. */
     private int $offset = 0;
+
+    /** The last regex capture group match, forwarded to the Transducer. */
     private string $result = '';
-    private int $posInArray = 0;
-    private Transducer $tranceducer;
+
+    /** Optional output transducer — builds the node tree from parser events. */
+    private ?Transducer $transducer;
+
+
+    // -------------------------------------------------------------------------
+    // Construction
+    // -------------------------------------------------------------------------
 
     /**
-    *	@param array = [] : array 			Specifired in yohang's library
-    *	@param trans = null : Transducer	optional transducer 
-    *	@see a static function 'createTransition' offers 
-    *	@example array(
-    *    'class'       => 'Acceptor',
-    *    'states'      => array(
-    *    	'Start'    => array(
-    *            'type'       => Finite\State\StateInterface::TYPE_INITIAL,
-    *            'properties' => [ Acceptor::createTransition('',TransitionType::PassByDefault, 'to_identifire', 0 , 
-    *            		Transducer::createTransduce( TransduceProjectionBehavior::StartsNode, TransduceInformationHarvest::NoResult, array('node_name' => 'Identifire')))]
-    *        ),
-    *        'Identifire'    => array(
-    *            'type'       => Finite\State\StateInterface::TYPE_NORMAL,
-    *            'properties' => [ Acceptor::createTransition('/^(.*?)(?=\?)/',TransitionType::PassByHit, 'to_questionmark', 1 , 
-    *            		Transducer::createTransduce( TransduceProjectionBehavior::NextNode, TransduceInformationHarvest::ReturnsResult, array('node_name' => 'Command', 'var_name' => 'valueX')))
-    *            , Acceptor::createTransition('/^(.*?)(?=$)/',TransitionType::PassByHit, 'to_end' , 0 , 
-    *            		Transducer::createTransduce( TransduceProjectionBehavior::EndsNode, TransduceInformationHarvest::ReturnsResult, array('node_name' => 'Command', 'var_name' => 'valueY')))]
-    *        ),
-    *        ...
-    *        'EOF' => array(
-    *            'type'       => Finite\State\StateInterface::TYPE_FINAL,
-    *            'properties' => [],
-    *        )
-    *    ),
-    *    'transitions' => array(
-    *    	'to_identifire' => array('from' => array('Start'), 'to' => 'Identifire'),
-    *        'to_questionmark' => array('from' => array('Identifire'), 'to' => 'Command'),
-    *        'to_open_bracet'  => array('from' => array('Command'), 'to' => 'Bracet'),
-    *        ...
-    *        'to_end'  => array('from' => array('Command', 'Value', 'Identifire'), 'to' => 'EOF')
-    *    )
-    *)   
-    */
-    public function __construct( array $array = array(), ?Transducer $trans = null)
+     * @param \BackedEnum&\Finite\State $initialState  Starting state of the FSM.
+     * @param Transducer|null           $trans          Optional transducer for output.
+     */
+    public function __construct(\BackedEnum $initialState, ?Transducer $trans = null)
     {
-    	
-    	$this->stateMachine = new \Finite\StateMachine\StateMachine($this);
-    	$this->loader       = new \Finite\Loader\ArrayLoader($array);
-    	$this->loader->load($this->stateMachine);
-    	
+        $this->state      = $initialState;
+        $this->transducer = $trans;
+    }
 
-    	
-    	$this->stateMachine->getDispatcher()->addListener(
-    \Finite\Event\FiniteEvents::POST_TRANSITION,
-    \Finite\Event\Callback\CallbackBuilder::create($this->stateMachine)
-        ->setCallable(function () {
 
-            $this->applyTransition($this->getStateMachine()->getCurrentState()->getProperties());
+    // -------------------------------------------------------------------------
+    // Public API
+    // -------------------------------------------------------------------------
 
-        })
-        ->getCallback()
+    /**
+     * Returns the string value of the current state (for the Transducer callback).
+     */
+    public function getFiniteState(): string
+    {
+        return (string) $this->state->value;
+    }
+
+    /**
+     * Sets the input string and resets the read position.
+     */
+    public function setStringToCheck(string $command): void
+    {
+        $this->command = $command;
+        $this->offset  = 0;
+        $this->result  = '';
+    }
+
+    /**
+     * Kicks off the parsing run from the current state.
+     * Call after setStringToCheck().
+     */
+    public function initialize(): void
+    {
+        $this->runTransitions();
+    }
+
+    /**
+     * Returns a Mermaid stateDiagram-v2 block for the FSM.
+     * Paste into any Markdown renderer that supports Mermaid.
+     */
+    public function dumpGraph(): string
+    {
+        $dumper = new \Finite\Dumper\MermaidDumper();
+        return $dumper->dump($this->state::class);
+    }
+
+    /**
+     * Factory helper — builds the $properties array for a \Finite\Transition\Transition.
+     *
+     * Example:
+     *   new Transition('to_cmd', [MyState::START], MyState::CMD,
+     *       Acceptor::props('/^(\w+)/', TransitionType::PassByHit, 1,
+     *           Transducer::createTransduce(TransduceProjectionBehavior::StartsNode, ...)))
+     *
+     * @param  string          $reg       Regex pattern (capture group 1 = matched token).
+     * @param  TransitionType  $mode      Matching strategy.
+     * @param  int             $move      Extra offset advance after the match (e.g. 1 to skip delimiter).
+     * @param  array|null      $transduce Output from Transducer::createTransduce(), or null.
+     * @return array           Ready to pass as the 4th argument to new Transition(…).
+     */
+    public static function props(
+        string $reg,
+        TransitionType $mode,
+        int $move = 0,
+        ?array $transduce = null
+    ): array {
+        $p = ['reg' => $reg, 'mode' => $mode, 'move' => $move];
+        if ($transduce !== null) {
+            $p['transduce'] = $transduce;
+        }
+        return $p;
+    }
+
+    /**
+     * Returns the captured string, optionally post-processed.
+     * Called by Transducer::callTransducer() to harvest data.
+     *
+     * @param  TransduceInformationHarvest $type
+     * @param  array                       $modifier  ['reg'=>…, 'move'=>…] for ProcessResult.
+     */
+    public function givesResult(TransduceInformationHarvest $type, array $modifier): string
+    {
+        return match ($type) {
+            TransduceInformationHarvest::ReturnsResult => $this->result,
+            TransduceInformationHarvest::NoResult      => '',
+            TransduceInformationHarvest::ProcessResult => $this->extractFromResult($modifier),
+        };
+    }
+
+
+    // -------------------------------------------------------------------------
+    // Core parsing engine
+    // -------------------------------------------------------------------------
+
+    /**
+     * Main driver loop.
+     *
+     * 1. Collects all transitions whose source-states include the current state.
+     * 2. Sorts them by priority (ApplyResult → PassByHit → PassByDefault).
+     * 3. Tries each in order; the first one that fires ends this call.
+     * 4. No match on a non-final state → RuntimeException.
+     */
+    private function runTransitions(): void
+    {
+        $available = array_values(array_filter(
+            $this->state::getTransitions(),
+            fn($t) => in_array($this->state, $t->getSourceStates(), true)
+        ));
+
+        // No outgoing transitions → final/accepting state, done.
+        if (empty($available)) {
+            return;
+        }
+
+        usort($available, function ($a, $b) {
+            $pri = fn(TransitionType $m): int => match ($m) {
+                TransitionType::ApplyResult   => 1,
+                TransitionType::PassByHit     => 2,
+                TransitionType::PassByDefault => 3,
+            };
+            return $pri($a->getPropertyValue('mode')) <=> $pri($b->getPropertyValue('mode'));
+        });
+
+        foreach ($available as $t) {
+            $applied = match ($t->getPropertyValue('mode')) {
+                TransitionType::ApplyResult   => $this->doApplyResult($t),
+                TransitionType::PassByHit     => $this->doPassByHit($t),
+                TransitionType::PassByDefault => $this->doPassByDefault($t),
+            };
+            if ($applied) {
+                return;
+            }
+        }
+
+        // Transitions existed but none fired — input doesn't match any pattern.
+        throw new \RuntimeException(
+            'Acceptor: state "' . $this->state->value . '" has no matching transition for input at offset ' . $this->offset
         );
-
-    	if(!is_null($trans)){
-    		$this->tranceducer = $trans;
-        
-    		$this->stateMachine->getDispatcher()->addListener(
-    			\Finite\Event\FiniteEvents::PRE_TRANSITION,
-    			\Finite\Event\Callback\CallbackBuilder::create($this->stateMachine)
-    			->setCallable(function () {
-
-    					$this->callTransducer(
-    						((array_key_exists(
-    							'transduce', 
-    							$prop = $this->getStateMachine()->getCurrentState()->getProperties()[$this->posInArray]))? $prop['transduce'] : array() )
-    							);
-            	})
-            	->getCallback()
-            	);
-        }	
     }
-    
+
     /**
-    * inherit getter method for current state
-    *
-    * @return state : string
-    */
-    public function getFiniteState()
+     * Tries to match the transition's regex at the current offset.
+     * On success: advances the offset, stores the result, fires the transducer,
+     * moves to the target state, and recurses.
+     */
+    private function doPassByHit(\Finite\Transition\Transition $t): bool
     {
-        return $this->state;
+        $reg = $t->getPropertyValue('reg');
+        preg_match($reg, $this->command, $results, PREG_OFFSET_CAPTURE, $this->offset);
+
+        if (empty($results)) {
+            return false;
+        }
+
+        $this->offset += strlen($results[1][0]) + $t->getPropertyValue('move');
+        $this->result  = $results[1][0];
+
+        $this->fireTransducer($t);
+        $this->state = $t->getTargetState();
+        $this->runTransitions();
+
+        return true;
     }
 
     /**
-    * inherit setter method for current state
-    */
-    public function setFiniteState($state)
+     * ε-transition: always fires. Fires transducer, advances state, recurses.
+     */
+    private function doPassByDefault(\Finite\Transition\Transition $t): bool
     {
-        $this->state = $state;
+        $this->fireTransducer($t);
+        $this->state = $t->getTargetState();
+        $this->runTransitions();
+        return true;
     }
-    
+
     /**
-    * Is setter for a string to accept. If there is a transducer, you will get a result beside the acceptance.
-    *
-    * @param command : string
-    *
-    * TODO var name 'command' could be missleading.   
-    */
-    public function setStringToCheck(string $command){ $this->command = $command;}
-    
-    /**
-    * Starts the accepting process
-    */
-    public function initialize()
+     * ApplyResult: fires only when the previous result itself matches a sub-pattern.
+     * Stub — implement when needed.
+     */
+    private function doApplyResult(\Finite\Transition\Transition $t): bool
     {
-    	$this->stateMachine->initialize();
-
-    	$this->applyTransition($this->stateMachine->getCurrentState()->getProperties());
+        return false;
     }
-    
+
     /**
-    * @param args : array
-    * @return void
-    */
-    function callTransducer($args) : void {
-    	if(isset($this->tranceducer) && $this->tranceducer instanceof Transducer)
-    		$this->tranceducer->callTransducer($this, $this->state, $args);
+     * Calls the transducer if present and the transition carries transduce config.
+     */
+    private function fireTransducer(\Finite\Transition\Transition $t): void
+    {
+        if ($this->transducer !== null && $t->hasProperty('transduce')) {
+            $this->transducer->callTransducer(
+                $this,
+                (string) $this->state->value,
+                $t->getPropertyValue('transduce')
+            );
+        }
     }
-    //moved to Transducer
-    private function callTransducer2($args)
-    { 
-    	if(!isset($this->tranceducer))return;					
 
-    	switch ($args['projection']) {
-    	case TransduceProjectionBehavior::StartsNode:
-
-    		$this->tranceducer->internal_open_node($this, $this->state, $args['properties']);
-    		if($args['harvest'] != TransduceInformationHarvest::NoResult) $this->tranceducer->internal_c_data($this->state, $this->givesResult($args['harvest'] , $args['modify']));
-    		
-    		break;
-    	case TransduceProjectionBehavior::EndsNode:
-    		if($args['harvest'] != TransduceInformationHarvest::NoResult) $this->tranceducer->internal_c_data($this->state, $this->givesResult($args['harvest'] , $args['modify']));
-    		$this->tranceducer->internal_close_node($this, $this->state);
-    		
-    		break;
-    	case TransduceProjectionBehavior::ContinuesNode:
-    		
-    		if($args['harvest'] != TransduceInformationHarvest::NoResult) $this->tranceducer->internal_c_data($this->state, $this->givesResult($args['harvest'] , $args['modify']));
-    		
-    		break;
-    	case TransduceProjectionBehavior::NextNode:
-if($args['harvest'] != TransduceInformationHarvest::NoResult) $this->tranceducer->internal_c_data($this->state, $this->givesResult($args['harvest'] , $args['modify']));
-    		$this->tranceducer->internal_close_node($this, $this->state);
-    		$this->tranceducer->internal_open_node($this, $this->state, $args['properties']);
-    		
-    					
-    		
-    		break;
-    	case TransduceProjectionBehavior::SingleNode:
-
-    		$this->tranceducer->internal_open_node($this, $this->state, $args['properties']);
-    		if($args['harvest'] != TransduceInformationHarvest::NoResult) $this->tranceducer->internal_c_data($this->state, $this->givesResult($args['harvest'] , $args['modify']));
-    		$this->tranceducer->internal_close_node($this, $this->state);
-
-
-    					
-    		
-    		break;
-    	}
-
-    	
-    }
-    /*
-        		$result['reg'] = $reg;
-    		$result['move'] = $move;
-    */
     /**
-    * 
-    */
-    function givesResult(TransduceInformationHarvest $type , array $modifier) : string
+     * Applies an additional regex to $this->result (for ProcessResult harvest).
+     */
+    private function extractFromResult(array $modifier): string
     {
-    	switch ($type) {
-    	case TransduceInformationHarvest::ReturnsResult: return $this->result;
-    	case TransduceInformationHarvest::NoResult: return [];
-    	case TransduceInformationHarvest::ProcessResult:
-    		   	    $results;
-    		   	    
-    						
-    	    preg_match($modifier['reg'], $this->result, $results, PREG_OFFSET_CAPTURE, $modifier['move']);
-    		if(is_array($results) && (count($results)>0))
-    		{
-    			return $results[1][0];
-    		}
-    		throw new Exception("The reg doesn't apply on the result" );
-    		
-    		break;
-
-    	}
+        preg_match($modifier['reg'], $this->result, $results, PREG_OFFSET_CAPTURE, $modifier['move']);
+        if (!empty($results)) {
+            return $results[1][0];
+        }
+        throw new \RuntimeException("Acceptor: ProcessResult regex didn't match the captured result");
     }
-    
-    private function applyTransition($constrains)
+
+    public function __debugInfo(): array
     {
-		
-
-    	usort($constrains, "Finite\\Elements\\cmp");
-    	
-    	for ($i = 0; $i < count($constrains); $i++) {
-
-
-    	//var_dump($constrains[$i]);
-  //  		var_dump($constrains[$i]['reg'], $this->command,  $this->offset, $constrains[$i]['mode']);
-
-  			$this->transition = $constrains[$i]['transition'];
-  			$this->posInArray = $i;
-  			
-    		switch ($constrains[$i]['mode']) {
-    		case TransitionType::ApplyResult: if($this->doApplyResult($constrains[$i]))return; break; 
-    		case TransitionType::PassByHit: if($this->doPassByHit($constrains[$i]))return; break;
-    		case TransitionType::PassByDefault : if($this->doPassByDefault($constrains[$i]))return; break; }
-    		};
-    		//echo "here" . $this->state;
-    	if(!$this->stateMachine->getCurrentState()->isFinal())
-    		throw new \Finite\Exception\StateException('State '. $this->state . ' is not a final state!');
-
-    	}
-
-
-    	//var $result;
-    	//preg_match('/\((.*?)\)/', $result[$i], $param);
-    	//$this->command
-    	//var_dump($constrains);
-
-    
-    private function doPassByHit($constrain){
-
-    	    $results;
-    	    preg_match($constrain['reg'], $this->command, $results, PREG_OFFSET_CAPTURE, $this->offset);
-//var_dump($constrain['reg'], $this->command,  $this->offset, $constrain['mode']);
-    		if(is_array($results) && (count($results)>0))
-    		{
-
-    			$this->offset += strlen($results[1][0]) + $constrain['move'];
-    			//echo "Content(" . $this->offset . "):" .  substr($this->command, $this->offset) . "\n";
-    			//echo "apply tranistion:" . $constrains[$i]['transition'] . "\n";
-    			$this->result = $results[1][0];
-    			
-    			
-    			$this->stateMachine->apply($constrain['transition']);
-    			return true;
-    		}
-    		
-    		return false;
+        return [
+            'state'  => $this->state->value,
+            'offset' => $this->offset,
+            'result' => $this->result,
+        ];
     }
-    
-    private function doApplyResult($constrain){
-
-    }
-    private function doPassByDefault($constrain){
-    			$this->stateMachine->apply($constrain['transition']);
-    }
-    
-    public function getStateMachine(){return $this->stateMachine;}
-    
-    public static function createTransition(
-    	string $reg, 					// regular expression
-    	TransitionType $mode, 	// Element from enum TransitionType
-    	string $transition, 			// name of the transition to choose when apply successful
-    	int $move = 0,				// addition to the offset in string
-    	$transduce = null) {  	// optional transducer parameter
-    	if(!is_null($transduce))
-    		return ['reg' => $reg, 'mode' => $mode, 'transition' => $transition, 'move'=> $move, 'transduce' => $transduce ]; 
-    	else
-    		return ['reg' => $reg, 'mode' => $mode, 'transition' => $transition, 'move'=> $move ]; }
-    	
-    public function __debugInfo() {
-        return [];
-    }
-    
 }
-
-/*
-$stateMachine->getDispatcher()->addListener(\Finite\Event\FiniteEvents::PRE_TRANSITION, function(\Finite\Event\TransitionEvent $e) {
-    echo 'This is a pre transition', "\n";
-});
-
-$foobar = 42;
-$stateMachine->getDispatcher()->addListener(
-    \Finite\Event\FiniteEvents::POST_TRANSITION,
-    \Finite\Event\Callback\CallbackBuilder::create($stateMachine)
-        ->setCallable(function () use ($foobar) {
-            echo "\$foobar is ${foobar} and this is a post transition\n";
-        })
-        ->getCallback()
-);
-*/
-/*
-try {
-	
-var_dump($stateMachine->getCurrentState()->getName(),  $stateMachine->getCurrentState()->getTransitions());
-	
-$stateMachine->apply('to_questionmark');
-
-var_dump($stateMachine->getCurrentState()->getName(),  $stateMachine->getCurrentState()->getTransitions());
-
-$stateMachine->apply('to_open_bracet');
-
-var_dump($stateMachine->getCurrentState()->getName(),  $stateMachine->getCurrentState()->getTransitions());
-
-$stateMachine->apply('to_param_equal');
-
-var_dump($stateMachine->getCurrentState()->getName(),  $stateMachine->getCurrentState()->getTransitions());
-
-$stateMachine->apply('to_param_comma');
-
-var_dump($stateMachine->getCurrentState()->getName(),  $stateMachine->getCurrentState()->getTransitions());
-$stateMachine->apply('to_equal');
-
-    
-} catch (\Finite\Exception\StateException $e) {
-    echo $e->getMessage();
-}
-*/
-
-// Display Script End time
-//$time_end = microtime(true);
-
-//dividing with 60 will give the execution time in minutes, otherwise seconds
-//$execution_time = ($time_end - $time_start);
-
-//execution time of the script
-//echo '<b>Total Execution Time:</b> '.$execution_time.' Secs';
-?>

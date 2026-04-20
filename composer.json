@@ -3,7 +3,7 @@
     "description": "Scriptbased processor",
     "type": "project",
 "require": {
-        "yohang/finite": "^1.3",
+        "yohang/finite": "*",
         "twbs/bootstrap": "*"
     },
     "require-dev": {

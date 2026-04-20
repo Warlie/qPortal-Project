@@ -46,55 +46,20 @@ require_once('xml_multitree_xPath.php');
 
 class xml_presave_semantic extends xml_xPath_sParqle
 {
-	private $switch = false;
-	private $direkt = true;
-	public $heap;
-
-
-	public function load_Stream(&$source,$casefolding=1,$special="",$ref='')
-	{
+	private $ref = [];
+	private $ontRef = [];
+	private $curOnt = "RDF/RDFS";
 	
+	public function currentOntology($onto){$this->curOnt = $onto;}
 	
-		parent::load_Stream($source,$casefolding,$special,$ref);
-	}
-
-	public function tag_open($parser, $tag, $attributes, $pos = -1)
+	public function setOntologyRelationship($new, $basedOn)
 	{
-	   
-		if($this->switch || $this->direkt)parent::tag_open($parser, $tag, $attributes, $pos);
-		if(!$this->switch)$this->tag_access_open($parser, $tag, $attributes);
-	}
-	   
-	public function cdata($parser, $cdata)
-   	{
-   		if($this->switch || $this->direkt)parent::cdata($parser, $cdata);
-   		if(!$this->switch)$this->access_cdata($parser, $cdata);
+		$this->ontRef[] = ["base" =>  $basedOn, "new" => $new];
 	}
 	
-	public function tag_close($parser, $tag)
+	public function setNodeRelationship($new, $basedOn)
 	{
-		if($this->switch || $this->direkt)parent::tag_close($parser, $tag);
-		if(!$this->switch)$this->tag_access_close($parser, $tag);
-	}
-	
-	private function tag_access_open($parser, $tag, $attributes)
-	{
-		
-	}
-	
-	private function access_cdata($parser, $cdata)
-	{
-		
-	}
-	
-	public function tag_access_close($parser, $tag)
-	{
-		
-	}
-	
-	public function showCurrentTree()
-	{
-		
+		$this->ref[] = ["base" =>  $basedOn, "new" => $new];
 	}
 }
 

@@ -1,156 +1,153 @@
 <?php
-namespace Finite\Elements;
-/** 
-* Example_Class is a sample class for demonstrating PHPDoc 
-* 
-* Example_Class is a class that has no real actual code, but merely * exists to help provide people with an understanding as to how the 
-* various PHPDoc tags are used. * * Example usage: 
-* if (Example_Class::example()) { 
-* print "I am an example."; 
-* } 
-* 
-* @package Example 
-* @author David Sklar 
-* @author Adam Trachtenberg 
-* @version $Revision: 1.3 $ 
-* @access public 
-* @see http://www.example.com/pear 
-*/
 
+namespace Finite\Elements;
+
+/**
+ * Abstract Transducer — maps Acceptor parser events to open/data/close node calls.
+ *
+ * Subclasses implement open_node(), c_data(), close_node() to build whatever
+ * output structure they need (e.g. qp_workflow fills $listOfInformation).
+ *
+ * The internal_* methods manage a node-name stack so that close_node() always
+ * receives the name of the node that was opened, regardless of how many levels
+ * deep the parser currently is.
+ *
+ * @author Stefan Wegerhoff
+ */
 abstract class Transducer
 {
-	protected array $node_structure = [];
-	 /** 
-	 * static function for creating an normed array of arguments 
-	 *
-	 * @param TransduceProjectionBehavior behavior 	: gives advice to call the output functions
-	 * @param TransduceInformationHarvest harvest 	: modifies the way collected data will be preprocessed
-	 * @param array properties 						: List of properties as an argument in open_node function
-	 * @param string reg (optional)					: regular expression for extracting substring
-	 * @param int move (optional) 					: offset for regular expression
-	 * @return array 								: array of arguments for the transducing part 
-	 * @access public
-	 */
-	public static function createTransduce(
-		TransduceProjectionBehavior $behaviour, // 
-		TransduceInformationHarvest $harvest,
-		array $properties = array(),
-    	string $reg = '', 
-    	int $move = 0) : array {
-    
-    	$result = array('projection' => $behaviour, 'harvest' => $harvest, 'properties' => $properties, 'modify' => array());
+    /** Tracks the currently open node chain. */
+    protected array $node_structure = [];
 
-    	switch ($harvest) {
+    private array $node_stack  = [['node' => 'undefined', 'attribute' => []]];
+    private array $current_node = ['node' => 'undefined', 'attribute' => []];
 
-    	case TransduceInformationHarvest::ProcessResult:
-    		return array_merge_recursive($result, array('modify' => array('reg' => $reg, 'move' => $move)));
-    		break;
 
-    	}
-    	
-    	return $result;
-    	}
-  
+    // -------------------------------------------------------------------------
+    // Static factory
+    // -------------------------------------------------------------------------
+
     /**
-    *	@param acceptor	
-    */
-    function callTransducer( Acceptor $acceptor, string $state, array $args)
-    { 
-					
+     * Builds the transduce-config array that goes into Acceptor::props().
+     *
+     * @param TransduceProjectionBehavior $behaviour  What tree action to perform.
+     * @param TransduceInformationHarvest $harvest    How to extract data from the match.
+     * @param array                       $properties Node properties passed to open_node().
+     * @param string                      $reg        Sub-regex for ProcessResult harvest.
+     * @param int                         $move       Offset for the sub-regex.
+     */
+    public static function createTransduce(
+        TransduceProjectionBehavior $behaviour,
+        TransduceInformationHarvest $harvest,
+        array $properties = [],
+        string $reg = '',
+        int $move = 0
+    ): array {
+        $result = [
+            'projection' => $behaviour,
+            'harvest'    => $harvest,
+            'properties' => $properties,
+            'modify'     => [],
+        ];
 
-    	switch ($args['projection']) {
-    	case TransduceProjectionBehavior::StartsNode:
-    		
-    		
-    			
-    			$this->internal_open_node($this, $acceptor->getFiniteState(), $args['properties']);
-    			if($args['harvest'] != TransduceInformationHarvest::NoResult){ 
-    				$this->internal_c_data($acceptor->getFiniteState(), 
-    				$acceptor->givesResult($args['harvest'] , $args['modify']));
-    		echo "$state in c_data";}
-    		
-    		break;
-    	case TransduceProjectionBehavior::EndsNode:
-    		//var_dump($acceptor->givesResult($args['harvest'] , $args['modify']));
-    		if($args['harvest'] != TransduceInformationHarvest::NoResult) 
-    			$this->internal_c_data(
-    				$acceptor->getFiniteState(), 
-    				$acceptor->givesResult($args['harvest'] , $args['modify']));
-    		$this->internal_close_node($this, $acceptor->getFiniteState());
-    		
-    		break;
-    	case TransduceProjectionBehavior::ContinuesNode:
-    		
-    		if($args['harvest'] != TransduceInformationHarvest::NoResult) 
-    			$this->internal_c_data(
-    				$acceptor->getFiniteState(), 
-    				$acceptor->givesResult($args['harvest'] , $args['modify']));
-    		
-    		break;
-    	case TransduceProjectionBehavior::NextNode:
-if($args['harvest'] != TransduceInformationHarvest::NoResult){ $this->internal_c_data(
-	$acceptor->getFiniteState(), 
-$acceptor->givesResult($args['harvest'] , $args['modify']));
-}
-    		$this->internal_close_node($this, $acceptor->getFiniteState());
-    		$this->internal_open_node($this, $acceptor->getFiniteState(), $args['properties']);
-    		
-    					
-    		
-    		break;
-    	case TransduceProjectionBehavior::SingleNode:
+        if ($harvest === TransduceInformationHarvest::ProcessResult) {
+            $result['modify'] = ['reg' => $reg, 'move' => $move];
+        }
 
-    		$this->internal_open_node($this, $acceptor->getFiniteState(), $args['properties']);
-    		if($args['harvest'] != TransduceInformationHarvest::NoResult) $this->internal_c_data($acceptor->getFiniteState(), $acceptor->givesResult($args['harvest'] , $args['modify']));
-    		$this->internal_close_node($this, $acceptor->getFiniteState());
-
-
-    					
-    		
-    		break;
-    	}
-
-    	
+        return $result;
     }
-    	
-    	
-    protected function createNodeRequirements($node_name, $property_array ){
-    	// create or alter array of nodes with its necessary attributes
-    	if(array_key_exists($node_name, $this->node_structure))
-    	{
-    		$this->node_structure[$node_name] = array_merge($this->node_structure , $property_array);
-    	}
-    	else
-    	{
-    		$this->node_structure[$node_name] = $property_array;
-    	}
+
+
+    // -------------------------------------------------------------------------
+    // Main dispatch — called by Acceptor::fireTransducer()
+    // -------------------------------------------------------------------------
+
+    /**
+     * Dispatches the transduce config to the right open/data/close sequence.
+     *
+     * @param Acceptor $acceptor  The live acceptor (for givesResult()).
+     * @param string   $state     Current state name (before the transition fires).
+     * @param array    $args      Output of createTransduce().
+     */
+    public function callTransducer(Acceptor $acceptor, string $state, array $args): void
+    {
+        $data = fn() => $acceptor->givesResult($args['harvest'], $args['modify']);
+
+        switch ($args['projection']) {
+        case TransduceProjectionBehavior::StartsNode:
+            $this->internal_open_node($this, $state, $args['properties']);
+            if ($args['harvest'] !== TransduceInformationHarvest::NoResult) {
+                $this->internal_c_data($state, $data());
+            }
+            break;
+
+        case TransduceProjectionBehavior::EndsNode:
+            if ($args['harvest'] !== TransduceInformationHarvest::NoResult) {
+                $this->internal_c_data($state, $data());
+            }
+            $this->internal_close_node($this, $state);
+            break;
+
+        case TransduceProjectionBehavior::ContinuesNode:
+            if ($args['harvest'] !== TransduceInformationHarvest::NoResult) {
+                $this->internal_c_data($state, $data());
+            }
+            break;
+
+        case TransduceProjectionBehavior::NextNode:
+            if ($args['harvest'] !== TransduceInformationHarvest::NoResult) {
+                $this->internal_c_data($state, $data());
+            }
+            $this->internal_close_node($this, $state);
+            $this->internal_open_node($this, $state, $args['properties']);
+            break;
+
+        case TransduceProjectionBehavior::SingleNode:
+            $this->internal_open_node($this, $state, $args['properties']);
+            if ($args['harvest'] !== TransduceInformationHarvest::NoResult) {
+                $this->internal_c_data($state, $data());
+            }
+            $this->internal_close_node($this, $state);
+            break;
+        }
     }
-    
-    protected function addNodeContent(){}
-    
-	function internal_open_node($parser, $node_name, $attribute){$this->open_node($parser, $node_name, $attribute);}
-	function internal_c_data($node_name,$data){$this->c_data($node_name,$data);}
-	function internal_close_node($parser, $node_name){$this->close_node($parser, $node_name);}
-    	
-    /** 
-	* static function for creating an normed array of arguments 
-	*
-	* @param TransduceProjectionBehavior behavior 	: gives advice to call the output functions
-	* @param TransduceInformationHarvest harvest 	: modifies the way collected data will be preprocessed
-	* @param array properties 						: List of properties as an argument in open_node function
-	* @param string reg (optional)					: regular expression for extracting substring
-	* @param int move (optional) 					: offset for regular expression
-	* @return array 								: array of arguments for the transducing part 
-	* @access public
-	*/
-	/*
-	abstract protected function open_node($parser, $node_name, $attribute);
-	abstract protected function c_data($node_name,$data);
-	abstract protected function close_node($parser, $node_name);
-	*/
+
+
+    // -------------------------------------------------------------------------
+    // Node-stack management (internal_ methods)
+    // Subclasses may override these for custom stack behaviour.
+    // -------------------------------------------------------------------------
+
+    public function internal_open_node($parser, string $node_name, array $attribute): void
+    {
+        if (array_key_exists('node_name', $attribute)) {
+            $this->current_node = ['node' => $attribute['node_name'], 'attribute' => $attribute];
+            array_push($this->node_stack, $this->current_node);
+            unset($attribute['node_name']);
+        } else {
+            echo "MISSING NODENAME! (state: $node_name)";
+        }
+        $this->open_node($this->current_node['node'], $this->current_node['attribute']);
+    }
+
+    public function internal_c_data(string $node_name, string $data): void
+    {
+        $this->c_data($this->current_node['node'], $this->current_node['attribute'], $data);
+    }
+
+    public function internal_close_node($parser, string $node_name): void
+    {
+        $this->close_node($this->current_node['node'], $this->current_node['attribute']);
+        array_pop($this->node_stack);
+        $this->current_node = end($this->node_stack) ?: ['node' => 'undefined', 'attribute' => []];
+    }
+
+
+    // -------------------------------------------------------------------------
+    // Abstract output interface — implement in subclasses
+    // -------------------------------------------------------------------------
+
+    abstract public function open_node(string $node, array $attribute): void;
+    abstract public function c_data(string $node, array $attribute, string $data): void;
+    abstract public function close_node(string $node, array $attribute): void;
 }
-
-
-
-
-?>

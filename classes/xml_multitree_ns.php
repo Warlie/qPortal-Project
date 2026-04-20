@@ -429,6 +429,10 @@ function delete_index($index)
    
    }
    
+   /**
+   * ???
+   */
+
    public function create_node_to_attribute(string $identifire, mixed $value) : array
    {
    	   $k = $identifire;
@@ -733,7 +737,7 @@ function delete_index($index)
 	   /* attributes in specific node */
             foreach ($attributes as $k => $v)   // TODO seems to be a good code sequence for the factory method in interface_ns
 	    {
-		   
+		   // TODO chcke this function
 	    	$attrib_to_node = $this->create_node_to_attribute($k, $v);
 	    	//var_dump($attrib_to_node, $k, $v);
 	    	$node->attribute(
@@ -1067,6 +1071,10 @@ echo $this->idx . " gibt es nicht";
 	   
    } */
    
+   /**
+   *	Adds 
+   */
+   
    function &set_Object_to_Namespace($ns, &$obj)
 {
     if (!is_string($ns)) {
@@ -1114,6 +1122,11 @@ echo $this->idx . " gibt es nicht";
     // 5. Gib das neu registrierte Objekt zurück
     return $obj;
 }
+
+	public function showNamespaces()
+	{
+		var_dump(array_keys($this->namespace_frameworks));
+	}
 
    protected function fireTicketEvent(&$ticketObject , array &$listener)
    {

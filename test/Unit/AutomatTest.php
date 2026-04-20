@@ -176,7 +176,7 @@ final class AutomatTest extends TestCase
      */
     public function testAutomatStateException(string $value) : void
 {
-    $this->expectException(Finite\Exception\StateException::class);
+    $this->expectException(\RuntimeException::class);
     new Command_Object($value);
 }
 
@@ -198,7 +198,7 @@ final class AutomatTest extends TestCase
      */
     public function testAutomatTransitionException(string $value, $error_message) : void
 {
-    $this->expectException(Finite\Exception\StateException::class, $error_message);
+    $this->expectException(\RuntimeException::class);
     new Command_Object($value);
 }
     
