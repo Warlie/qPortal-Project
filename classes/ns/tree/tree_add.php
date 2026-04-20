@@ -75,6 +75,7 @@ function event_initiated()
 function event_message_in($type,&$obj)
 	{
 global $logger_class;
+$content = $this->get_parser()->get_context_generator();
 //$this->giveOutOverview();
 		// doctype contains the supported document type
 		if(is_Null($this->get_attribute('doctype')))
@@ -84,9 +85,6 @@ global $logger_class;
 										
 
 										
-		//it is the conventional case-folding
-		if($this->get_attribute('case_folding')) 
-			$this->caseFolding = intval($this->get_attribute('case_folding'));
 
 		//var_dump($this->getdata());
 		/*
@@ -106,9 +104,9 @@ global $logger_class;
 						$this->get_parser()->setNewTree($id);
 						//var_dump($output, $doc_type);
 
-						$this->get_parser()->load_Stream($output,$this->caseFolding,$doc_type,$id);
+						$this->get_parser()->load_Stream($output,0,$doc_type,$id);
 
-						$obj->get_requester()->set_template($this->get_attribute('id'),$this->get_attribute('id'));
+						$content->set_template($this->get_attribute('id'),$this->get_attribute('id'));
 						return;
 
 					}else
@@ -240,7 +238,7 @@ global $logger_class;
 			if($uri == 'http://www.trscript.de/tree#template' )
 			{
 				//var_dump(get_class($obj->get_requester()),$this->get_attribute('id'), trim($this->getdata() ));
-				$obj->get_requester()->set_template($this->get_attribute('id'),trim($this->getdata()));
+				$content->set_template($this->get_attribute('id'),trim($this->getdata()));
 				
 				
 	

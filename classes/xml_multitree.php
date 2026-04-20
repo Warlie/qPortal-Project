@@ -806,7 +806,7 @@ echo 'booh';
    @param case_folder : parses case sensitive
    @param spezial : specific type of resource
    
-   
+   TODO Case_folder wech
    */
    function load($ref,$case_folder = 1,$spezial = 'XML', $com_parameter = ["Method"=>'GET'])
    {

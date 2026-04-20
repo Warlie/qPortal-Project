@@ -36,10 +36,14 @@
 * &new_Instance() //advanced instance with connection to classobject and could be a subtree
 * &cloning(&$prev_obj) : add node with all branches to the prev node 
 */
-
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!! Not used !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 class TREE_first extends Interface_node
 {
 
+function event_initiated()
+{
+	$this->to_listener('http://www.trscript.de/tree#indextree');
+}
 
 function &get_Instance()
 {

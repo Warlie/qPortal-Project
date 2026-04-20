@@ -1257,15 +1257,27 @@ private function show_event_data($obj)
 protected function event_message_check($type,&$obj)
 {
 global $logger_class;
-
+/*
 	if(is_array($type) && array_is_list($type))
 	{
 		foreach($type as $cmd)
 			$this->event_message_check($cmd, $obj);
 		return;
 	}
+*/
+	if(is_array($type))
+	{
+		$logger_class->setAssert("WARNING " . $this->full_URI() . " got an array instead of an command object", 6);
+		var_dump($type);
+		debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+		$com_element = $this->parseCommand($type);
+	}
+	else
+		$com_element = $type; //$this->parseCommand($type);
 
-	$com_elemnet = $this->parseCommand($type);
+
+	if(!$com_element->check_URI($this->get_NS(), $this->get_QName()))return false;
+	
 	$bool=true;
 	for($i = 0;count($this->check_list) > $i;$i++)
 	{
@@ -1278,34 +1290,21 @@ global $logger_class;
 	if($obj instanceof EventObject && !$obj->get_locked())
 	{
 
-
-		
-
-
 		
 		$behaviorRegistry = $this->contentGen->getRegObj();
-		$behaviorRegistry->_useGeneral();
 		//var_dump($com_elemnet->get_Command(), $behaviorRegistry);
-		if(isset($behaviorRegistry->{$com_elemnet->get_Command()}))
-		{
-			$entry = $behaviorRegistry->{$com_elemnet->get_Command()};
+        try {
+        	
+		return $this->callRegContent($behaviorRegistry->_useGeneral(), $com_element, $obj)
+			|| $this->callRegContent($behaviorRegistry->_useNS($this->get_NS())->_useLN($this->get_QName()), $com_element, $obj);
+			
+        } catch (\Throwable $e) {
+        	$logger_class->setAssert("INFO " . $this->full_URI() . " has no registry and calls the instance's method", 6);
+            return $this->event_message_in($type,$obj);
+        }
 
-			if($entry["log"] !== false)
-			{
-				$msg = is_string($entry["log"]) ? $entry["log"] : ($entry["log"])($this, $obj, $com_elemnet);
-				$logger_class->setAssert($msg, $entry["level"]);
-			}
-			try
-			{
-				$result = ($entry["command"])($this, $obj, $com_elemnet);
-			}
-			catch(Exception $e)
-			{
-				$logger_class->setAssert('ERROR ' . get_class($e) . ': ' . $e->getMessage(), 0);
-				return false;
-			}
-			return $result;
-		}
+
+		
 				
 		/*
 		function event($type,&$obj)
@@ -1335,14 +1334,47 @@ throw new ErrorException("where am I");
 
 }
 		*/
-		$this->event_message_in($type,$obj);
+		
 		//}
 	}
 }
 
+// TODO  review and beautyfy
+private function callRegContent(
+    NameSpaceBehaviorRegistry $behaviorRegistry, 
+    Command_Object $com_element, 
+    object $obj // Hier ist der Übeltäter!
+): bool {
+    global $logger_class;
+    
+    $commandName = $com_element->get_Command();
+
+    if (isset($behaviorRegistry->$commandName)) {
+        $entry = $behaviorRegistry->$commandName;
+
+        if ($entry["log"] !== false) {
+            $msg = is_string($entry["log"]) 
+                ? $entry["log"] 
+                : $entry["log"]($this, $obj, $com_element);
+            
+            $logger_class->setAssert($msg, $entry["level"]);
+        }
+
+        try {
+            // Wir casten das Ergebnis auf bool, um den Rückgabetyp zu garantieren
+            return (bool) $entry["command"]($this, $obj, $com_element);
+        } catch (\Throwable $e) { 
+            $logger_class->setAssert('ERROR ' . get_class($e) . ': ' . $e->getMessage(), 0);
+            return false;
+        }
+    }
+
+    return false; 
+}
+
 protected function event_message_in($type,&$obj)
 {
-	
+	return true;
 }
 //sign in to be a listener
 /*
@@ -1409,21 +1441,33 @@ function set_to_check(&$obj)
 }
 
 //automatic sign in func
-function to_listener()
+public function to_listener(?string $uri = null): void
 {
-	
-	if(is_object($this->prev_el))
-	{
-	$this->prev_el->set_to_out($this);
-	
-	//echo "habe Knoten " . $this->full_URI() . " in " . $this->prev_el->full_URI() . " eingetragen <br>\n" ;
-	
-	}
-	else
-	{
-		echo "bin in Knoten " . $this->full_URI() . " " . $this->index_max() . " <br>" ;
-	}
+    if (is_string($uri)) {
+        $condition = $this->prev_el;
 
+        while (is_object($condition)) {
+            if ($uri === $condition->full_URI()) {
+                $condition->set_to_out($this);
+                // Target found, stop searching up the chain
+                break; 
+            }
+            // Move to the next parent element
+            $condition = $condition->prev_el;
+        }
+    }
+
+    if (is_object($this->prev_el)) {
+        $this->prev_el->set_to_out($this);
+    } else {
+        // Throw exception if the structure is broken (missing parent)
+        throw new \RuntimeException(
+            sprintf(
+                "Structure Error: Node [%s] could not be registered because prev_el is missing.",
+                $this->full_URI()
+            )
+        );
+    }
 }
 
 
@@ -1629,13 +1673,13 @@ class Command_Object extends qp_workflow
 	private $pos_command = 0;
 	private $current_node = '';
 	private $node_stack = array();
-	
+	private $allowed = [];
 	private $struct_tree = array();
 	
 
 
 	function __construct($command) 
-	{
+	{ 
 		//if(strlen($command) < 5)throw new ErrorException( $command );
 		//if(is_null()) var_dump(DEBUG_BACKTRACE_PROVIDE_OBJECT|DEBUG_BACKTRACE_IGNORE_ARGS));
 		//if(is_null($command))$command ='';
@@ -1663,11 +1707,11 @@ class Command_Object extends qp_workflow
 		/*
 		* here are common cases*/
 		elseif($command == '*?start')
-			$this->listOfInformation = ["Identifire"=>"*", "Command"=> ["Name"=>"start", "Attribute"=>[], "Value"=> null]];
+			$this->listOfInformation = ["Identifire"=>"*", "Command"=> ["Name"=> "start", "Attribute"=>[], "Value"=> null]];
 		elseif($command == '')
-			$this->listOfInformation = ["Identifire"=>"*", "Command"=> ["Name"=> null, "Attribute"=>[], "Value"=> null]];
+			$this->listOfInformation = ["Identifire"=>"*", "Command"=> ["Name"=> "start", "Attribute"=>[], "Value"=> null]];
 		elseif($command == '*')
-			$this->listOfInformation = ["Identifire"=>"*", "Command"=> ["Name"=> null, "Attribute"=>[], "Value"=> null]];
+			$this->listOfInformation = ["Identifire"=>"*", "Command"=> ["Name"=> "start", "Attribute"=>[], "Value"=> null]];
 		/* 
 		* common cases done 
 		* next one aspect it to be in json notation 
@@ -1698,10 +1742,40 @@ class Command_Object extends qp_workflow
 			
 			if($this->listOfInformation["Command"]['Name'] == '__find_node2')throw new ErrorException( );
 
+			
+			$this->allowed = $this->createPermissonList($this->listOfInformation['Identifire']);
+			
 	}
 	
 	
 	public function get_URI(){return $this->listOfInformation['Identifire'];}
+	
+public function check_URI($ns, $name): bool
+{
+    // 1. Wenn keine Liste gesetzt ist (oder explizit alles erlaubt), return true
+    if (empty($this->allowed)) {
+        return true;
+    }
+
+    // 2. Wir gehen die Blöcke durch
+    foreach ($this->allowed as $rule) {
+        // Check, ob der Namespace passt (oder Wildcard im Array ist)
+        $nsMatch = in_array('*', $rule['allowed_namespaces']) 
+                || in_array($ns, $rule['allowed_namespaces']);
+        
+        // Check, ob der Name passt (oder Wildcard im Array ist)
+        $nameMatch = in_array('*', $rule['allowed_names']) 
+                  || in_array($name, $rule['allowed_names']);
+
+        // Wenn beides im SELBEN Block zutrifft, ist die URI erlaubt
+        if ($nsMatch && $nameMatch) {
+            return true;
+        }
+    }
+
+    // 3. Wenn kein Block gepasst hat
+    return false;
+}
 	
 	// TODO WTF what are these parameters?
 	public function get_Command($num=0,$index=0)
@@ -1778,6 +1852,39 @@ class Command_Object extends qp_workflow
 		. ', "Attribute"=>[' . implode(',',$attibute) . '], "Value"=> ' . (is_null($value)? 'null' : "\"$value\"" ) . ']]';
 
 	}
+	
+	
+private function createPermissonList($input)
+{
+    if ($input === '*') return [];
+
+    $definitions = explode('||', $input);
+    $dispatchMap = [];
+
+    foreach ($definitions as $block) {
+        $parts = explode('#', $block);
+
+        if (count($parts) === 2) {
+            // Dieser RegEx findet:
+            // 1. Inhalt zwischen < und >  ODER
+            // 2. Alles außer <, >, # und |
+            $pattern = '/<([^>]+)>|([^<>#|]+)/';
+
+            $matches = [[], []];
+            foreach ($parts as $index => $part) {
+                preg_match_all($pattern, $part, $found);
+                // Wir führen die beiden Capture-Groups (mit/ohne Klammern) zusammen
+                $matches[$index] = array_filter(array_merge($found[1], $found[2]));
+            }
+
+            $dispatchMap[] = [
+                'allowed_namespaces' => array_values($matches[0]),
+                'allowed_names'      => array_values($matches[1]),
+            ];
+        }
+    }
+    return $dispatchMap;
+}
 
 }
 ?>

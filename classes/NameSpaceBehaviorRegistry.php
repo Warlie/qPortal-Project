@@ -15,6 +15,7 @@ class NameSpaceBehaviorRegistry
 	{
 		$this->currentNSName = "";
 		$this->currentLocalName = '';
+		return $this;
 	}
 
 	public function _addNS($ns)

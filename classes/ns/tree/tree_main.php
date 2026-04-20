@@ -77,51 +77,37 @@ function event_initiated()
 function event_message_in($type,&$obj)
 	{
 global $logger_class;
+
+		$content = $this->get_parser()->get_context_generator();
+
 		//loads main template
 		//$obj->get_requester()->template = $this->getdata();
 		//$obj->get_requester()->maintemplate = $this->getdata();
 		//$obj->get_requester()->out_template = $this->getdata();
-		if(is_Null($this->get_attribute('doctype')))
-		$doc_type = 'XML';
-		else
-		$doc_type = $this->get_attribute('doctype');
-										
-				//echo 'casefolding -' . $this->get_attribute('case_folding') . '-<br>';
-										
-		if($this->get_attribute('case_folding')=="0")
-		{
-		$preload = $this->get_attribute('doctype_out');
-		
-											
-											//echo 'no-casefold';
-											
-		$this->get_parser()->load($this->getdata(),0,$doc_type);
-			$logger_class->setAssert('file "' . trim($this->getdata()) . '" was loaded output document (TREE_main:event_message_in)' ,3);											
-											
-											
-			if($preload)
-			{
-													
-				$this->get_parser()->TYPE[$this->get_parser()->idx] = $preload;
-									
-			}
-											
-		}
-		else
-		{
-			$logger_class->setAssert('file "' . trim($this->getdata()) . '" was loaded output document (TREE_main:event_message_in)' ,3);
-			$this->get_parser()->load($this->getdata(),1,$doc_type);
-		}
+$doc_type = $this->get_attribute('doctype') ?? 'XML';
+$preload = $this->get_attribute('doctype_out');
+
+// We strictly use case_folding = 0 because SGML is dead
+$this->get_parser()->load($this->getdata(), 0, $doc_type);
+
+$logger_class->setAssert(
+    sprintf('file "%s" was loaded as output document (TREE_main:event_message_in)', trim($this->getdata())), 
+    3
+);
+
+if ($preload) {
+    $this->get_parser()->TYPE[$this->get_parser()->idx] = $preload;
+}
 		//$obj->get_requester()->set_template('@main',$this->getdata());
 		
 		$this->get_parser()->set_first_node();
-		$obj->get_requester()->set_Main_NS($this->get_parser()->get_NS()); //saves URI of maintemplate 
+		$content->set_Main_NS($this->get_parser()->get_NS()); //saves URI of maintemplate 
 		
 										
 			$uri = $this->getRefprev()->full_URI();
 			if($uri == 'http://www.trscript.de/tree#template' )
 			{
-				$obj->get_requester()->set_template($this->getdata(),$this->getdata());
+				$content->set_template($this->getdata(),$this->getdata());
 				
 				if($output_doc = $this->get_attribute('output_doc'))
 				{
@@ -131,11 +117,11 @@ global $logger_class;
 						$pre = substr($output_doc,0,$special);
 						$post = substr($output_doc,$special + 1);
 
-						$obj->get_requester()->set_doc_out($pre);
+						$content->set_doc_out($pre);
 						//SPECIAL
 						$idx = $this->get_parser()->cur_idx();
 						
-						$this->get_parser()->change_URI($obj->get_requester()->doc_out_template);
+						$this->get_parser()->change_URI($content->doc_out_template);
 						
 						$array = explode(';',$post);
 						for($i = 0;$i < count($array);$i++)
@@ -161,11 +147,11 @@ global $logger_class;
 						$this->get_parser()->change_IDX($idx);
 					}
 					else
-					$obj->get_requester()->set_doc_out($output_doc);
+					$content->set_doc_out($output_doc);
 					
 				}
 				
-					$obj->get_requester()->set_out_template($this->getdata());
+					$content->set_out_template($this->getdata());
 	
 			}
 										//$this->TYPE[$this->idx]

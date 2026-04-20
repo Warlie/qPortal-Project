@@ -493,15 +493,32 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 
 		if($cur_obj = $this->XMLlist->show_xmlelement())
 		{
-//model=xpath_model&query="wubb"& //model=xpath_model,namespace=\'\',query=\'wubb\'
-// '*?__find_node(json=' . base64_encode( '{"name":"http://www.trscript.de/tree#final"}' ) . ')=' . base64_encode( '*?start' )
+//$this->param
+		$path = [];
+		
+		if (array_key_exists('i', $this->param) && !empty($this->param['i']))$path[] = $this->param['i'];
+		
+			
+		$cur_obj->hold_messages( 
+				["Identifire"=>"http://www.trscript.de/tree#indextree", "Command"=> ["Name"=> "start" ], "Attribute"=>$path] //["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> '*?start']]
+				,new EventObject('',$this,$booh));
+			
+			
+		
+		
+		if($this->id_output_template)
+		$this->doc_out_template = $this->heap['template'][$this->id_output_template];
+		
+	
+		return true; //EnD
+		
 		if($this->injectedLine)
 		{
-			$cur_obj->event_message_check($this->injectedLine,new EventObject('',$this,$booh));
+			$cur_obj->hold_messages($this->injectedLine,new EventObject('',$this,$booh));
 		}
 		elseif($this->nodeName == "")
 			
-			$cur_obj->event_message_check( 
+			$cur_obj->hold_messages( 
 				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> ["Identifire"=>"*", "Command"=> ["Name"=> "start" ], "Attribute"=>$this->param] ]] //["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> '*?start']]
 				,new EventObject('',$this,$booh));
 			else
@@ -512,7 +529,7 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 */
 			try{
 				//echo "jojo\n";
-			$cur_obj->event_message_check(
+			$cur_obj->hold_messages(
 				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{ "attribute":{"http://www.trscript.de/tree#name":"' . $this->nodeName . '"}}'], "Value"=> ["Identifire"=>"*", "Command"=> ["Name"=> "start" ], "Attribute"=>$this->param]  ]]
 				,new EventObject('',$this,$booh)); //  "name":"http://www.trscript.de/tree#tree",
 			//echo "donedone\n";

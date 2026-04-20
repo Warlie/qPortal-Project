@@ -36,6 +36,7 @@ $list_of_configuration_parameters = [
 	'LANGUAGE_INPUT_DEFAULT' => ['default', 'LANGUAGE_INPUT'],
 	'LANGUAGE_OUTPUT_DEFAULT' => ['default', 'LANGUAGE_OUTPUT'],
 	'LOG_PATH' => ['log', 'path'],
+	'LOG_LEVEL' => ['log', 'level'],
 
 	'XML_CASE_FOLDING_DEFAULT' => ['default', 'XML_CASE_FOLDING'],
 	'XML_SCHEMA_DEFAULT' => ['runtime', 'XML_SCHEMA_DEFAULT'],
@@ -113,7 +114,7 @@ else
 	}
 
 				define('INSTALL',false);
-				define('REPORT',5); //Reportlevel [0,5]
+				define('REPORT',LOG_LEVEL); //Reportlevel [0,5]
 				define('MEMORY_USAGE', true);
 				define('TRACE', true);
 
@@ -395,8 +396,7 @@ else
                                 $mtime = hrtime(true);
                                 
                                             try {
-
-                                
+         
                 if(!$content->generate())
 				{
 					       

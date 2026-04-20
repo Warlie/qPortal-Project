@@ -43,6 +43,13 @@ class TREE_tree extends Interface_node
 var $name = 'empty';
 var $type = 'none';
 var $namespace = 'none';
+private $contentGenerator = null;
+
+function event_initiated()
+{
+	$this->contentGenerator = $this->get_parser()->get_context_generator();
+	$this->to_listener('http://www.trscript.de/tree#indextree');
+}
 
 function &get_Instance()
 {
@@ -68,6 +75,16 @@ function event_message_in($type,&$obj)
 //	echo spl_object_id($this) . "--->\n";
 
 //if(spl_object_id($obj->get_node())==354 && spl_object_id($this) == 354)throw new ErrorException("jap");
+
+	    	 $structur = $type->get_Result_Array();
+    		 $listTreeNames = $structur["Attribute"];
+
+    		 if(!empty($listTreeNames) &&
+    		 	 $listTreeNames[0] != $this->get_ns_attribute('http://www.trscript.de/tree#name')
+    		 )return false;
+    		 
+    		 array_shift($listTreeNames);
+
 	$obj->set_node($this);
 		global $_SESSION;
 		$json = '{"name":"http://www.trscript.de/tree#final"}';
@@ -76,10 +93,7 @@ function event_message_in($type,&$obj)
 
 		if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#sector') )		
 			$result = in_array($tmp, explode(';', trim_with_null($_SESSION['http://www.auster-gmbh.de/surface#sector'], ';')));
-		/*
-		if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#method') )		
-			$result = $_SERVER['REQUEST_METHOD'] === $tmp;
-*/
+
 				
 		if($tmp =  intval($this->get_ns_attribute('http://www.trscript.de/tree#securitylevel')) )
 		{
@@ -119,6 +133,7 @@ function event_message_in($type,&$obj)
 
 		}			
 	
+		
 	$find = ["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>$json], "Value"=>$type ]] ;
 		
 	//var_dump($find);
@@ -139,7 +154,9 @@ function event_message_in($type,&$obj)
 			//var_dump($this->get_parser()->show_xmlelement());
 			//echo  "deeper " . spl_object_id($this) . " insert " . spl_object_id($this->get_parser()->show_xmlelement()) . " [" . $this->get_parser()->show_xmlelement()->full_URI() . "]--------\n";
 			//var_dump($find);
-			$this->get_parser()->show_xmlelement()->event_message_check($find ,$obj);
+			$this->get_parser()->show_xmlelement()->hold_messages(
+				["Identifire"=>"http://www.trscript.de/tree#indextree", "Command"=> ["Name"=> "start" ], "Attribute"=>$listTreeNames] 
+				,$obj); //event_message_check($find ,$obj);
 			//$this->get_parser()->show_xmlelement()->event_message_in($find ,$obj);
 			
 
@@ -170,8 +187,10 @@ function event_message_in($type,&$obj)
 
 	
 		$obj->set_context($this);
-		$this->send_messages($type,$obj);
-
+		$this->send_messages(
+			["Identifire"=>"*", "Command"=> ["Name"=> "start" ], "Attribute"=>""]
+			,$obj);
+		return true;
 		/*
 		//calls all childnodes, which are not template and tree
 		for($i = 0 ; $i < $this->index_max();$i++)
