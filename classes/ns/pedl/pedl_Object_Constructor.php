@@ -118,13 +118,13 @@ function event_Instance(&$instance,$type,&$obj)
 					$instance = $instance->getRefnext($k);
 				}
 			}
-			
+
 	//collects all Parameternames
 	for($j = 0; $instance->index_max() > $j;$j++) // TODO Check for relevance
 	{
 	
 		if($instance->getRefnext($j)->is_Node('http://www.w3.org/2006/05/pedl-lib#Object_Parameter'))
-			{//var_dump($instance->getRefnext($j));
+			{
 				$all_names[] = $instance->getRefnext($j)->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#name');
 			}
 	}		
@@ -135,11 +135,12 @@ function event_Instance(&$instance,$type,&$obj)
 			
 			if($this->getRefnext($i)->is_Node('http://www.w3.org/2006/05/pedl-lib#Object_Parameter'))
 				{//var_dump($instance->getRefnext($i));
+
 					$go = true;
 					$func = &$this->getRefnext($i);
 					$function_name = $func->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#ID');
 					$pedl_name = $func->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#name');
-
+//var_dump($pedl_name,$all_names);
 					if(!in_array($pedl_name,$all_names))
 					{
 					$attrib2 = array('pedl:name' => $pedl_name);

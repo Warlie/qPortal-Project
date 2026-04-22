@@ -70,7 +70,7 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	{
 		
 		$this->dbAccess = new Database($URL, $User, $PWST, $db_name, $codeset);
-		$this->XMLlist = new xml_xPath_sParqle($this);
+		$this->XMLlist = new xml_semantic($this);
 		$this->registry = new NameSpaceBehaviorRegistry();
 
 	}
@@ -495,12 +495,15 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		{
 //$this->param
 		$path = [];
+
+		foreach (array_map('trim', explode(',', QUERY_PARAM)) as $p) {
+			if (!empty($this->param[$p])) $path[] = $this->param[$p];
+		}
+
+		//var_dump($path);
 		
-		if (array_key_exists('i', $this->param) && !empty($this->param['i']))$path[] = $this->param['i'];
-		
-			
-		$cur_obj->hold_messages( 
-				["Identifire"=>"http://www.trscript.de/tree#indextree", "Command"=> ["Name"=> "start" ], "Attribute"=>$path] //["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> '*?start']]
+		$cur_obj->hold_messages(
+				["Identifire"=>"http://www.trscript.de/tree#indextree", "Command"=> ["Name"=> "start" ], "Attribute"=>$path]
 				,new EventObject('',$this,$booh));
 			
 			

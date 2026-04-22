@@ -17,19 +17,18 @@ try {
     		 $structur = $event->get_Result_Array();
     		 $listTreeNames = $structur["Attribute"];
     		 
-    		 
     		 $node->send_messages(
     		 	["Identifire"=>"http://www.trscript.de/tree#first", "Command"=> ["Name"=> "start" ], "Attribute"=>[]]
-				,new EventObject('',$node,$booh));
-    		 
+				, $obj);
+
 			 if(empty($listTreeNames))
     		 $node->send_messages(
     		 	["Identifire"=>"http://www.trscript.de/tree#final", "Command"=> ["Name"=> "start" ], "Attribute"=>[]]
-				,new EventObject('',$node,$booh));
+				, $obj);
 			 else
 			    $node->send_messages(
     		 	["Identifire"=>"http://www.trscript.de/tree#tree", "Command"=> ["Name"=> "start" ], "Attribute"=>$listTreeNames]
-				,new EventObject('',$node,$booh));
+				, $obj);
 			 
     		//$node->hold_messages($event->get_Command(0,1),$obj) ;
 			return true;

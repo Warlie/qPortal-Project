@@ -158,7 +158,7 @@ $old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
 			//gives out first existing instance to id
 			//echo $instance_id . "\n";
 			$object = $parser->getControlUnit( "surface_tree_engine")->getObjectByID($instance_id);
-			//var_dump($object);
+
 			// class name mentioned in the former object, called by the instance id
 			
 			if(is_null($object))throw new Exception($instance_id . " isn't a valid object");

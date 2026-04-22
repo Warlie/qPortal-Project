@@ -106,21 +106,20 @@ function event_message_in($type,&$obj)
 	}
 protected function event_readdata($own)
 	{
-		//echo ' in event_readdata( ';
+//		echo ' in event_readdata( ';
 //echo $this->full_URI() . "\n";
 	global $logger_class;
 	//echo '             data in "' . $this->full_URI() . '" will read and causes an readdataevent ' . '(PEDL_Object_Funktion:event_readdata)' . "\n";
-	$logger_class->setAssert('             data in "' . $this->full_URI() . '" will read and causes an readdataevent ' . '(PEDL_Object_Funktion:event_readdata)' ,15);
+	$logger_class->setAssert('event_readdata in "' . $this->full_URI() . '" will read and causes an readdataevent' ,5);
 
 		if($own)
 		{
 
 		//echo 'function-alter(' . $this->id_of_object . '):';
 		$myarray = &$this->getRefprev()->getobj();
-		//var_dump($myarray);
+
 		if(is_null($myarray))
 		{
-			echo "no existing object in " . $this->getRefprev()->full_URI()  . " :" . $this->full_URI() . "(" . get_class($this) . ") [" . $this->position_stamp() . "]\n";
 			return;
 		}
 		$reflectionObject = $myarray[0];

@@ -71,21 +71,33 @@ function &new_Instance()
 	
 function event_message_in($type,&$obj)
 	{
-//echo "Das Ding hier " . " [" . $this->full_URI() . "]" . spl_object_id($this) . " wurde aufgerufen von " . spl_object_id($obj->get_node()) .  "\n";
+//echo "Das Ding hier " . " [" . $this->full_URI() . "]" . spl_object_id($this) . " wurde aufgerufen von \n"; // . spl_object_id($obj->get_node()) .  "\n";
 //	echo spl_object_id($this) . "--->\n";
 
 //if(spl_object_id($obj->get_node())==354 && spl_object_id($this) == 354)throw new ErrorException("jap");
 
 	    	 $structur = $type->get_Result_Array();
     		 $listTreeNames = $structur["Attribute"];
+$showName = "";
+
+    		 if(is_null($listTreeNames))$listTreeNames = []; //debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+    		 if(is_string($listTreeNames)) // WTF
+    		 {	//debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+    		 	 $listTreeNames = []; 
+    		 }
 
     		 if(!empty($listTreeNames) &&
-    		 	 $listTreeNames[0] != $this->get_ns_attribute('http://www.trscript.de/tree#name')
+    		 	 $listTreeNames[0] != $showName = $this->get_ns_attribute('http://www.trscript.de/tree#name')
     		 )return false;
-    		 
-    		 array_shift($listTreeNames);
 
-	$obj->set_node($this);
+    		 
+//echo "Das Ding hier " . " [" . $this->full_URI() . "]" . spl_object_id($this) . " hat den Namen $showName " . count($listTreeNames) . " \n"; // . spl_object_id($obj->get_node()) .  "\n";
+array_shift($listTreeNames);
+/*
+if($this->full_URI() == "http://www.trscript.de/tree#final")
+	debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+*/
+$obj->set_node($this);
 		global $_SESSION;
 		$json = '{"name":"http://www.trscript.de/tree#final"}';
 
@@ -113,36 +125,27 @@ function event_message_in($type,&$obj)
 
 		
 		// consider the aspect for the next branch (tree)
-		
+		/*
 		if($aspect = $this->get_ns_attribute('http://www.trscript.de/tree#consider_aspect') )
 		{
-			
-				if(array_key_exists('Attribute',$swap = $type))
-					if(array_key_exists($aspect,$type['Attribute']))
-					{
-						
-						$json =  '{ "attribute":{"http://www.trscript.de/tree#name":"';
-						$json .= $type['Attribute'][$aspect];
-						$json .= '"}}';
-						
-						//
-
-					}
-						$this->get_parser()->get_context_generator()->setLexicalOrderParam($aspect);
-						//var_dump($aspect);
-
-		}			
+			if(!empty($listTreeNames))
+			{
+				$json =  '{ "attribute":{"http://www.trscript.de/tree#name":"';
+				$json .= $listTreeNames[0];
+				$json .= '"}}';
+			}
+			$this->get_parser()->get_context_generator()->setLexicalOrderParam($aspect);
+		}
 	
 		
 	$find = ["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>$json], "Value"=>$type ]] ;
-		
+		*/
 	//var_dump($find);
 	
 //var_dump($type, $this);
 	if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#src'))
 	{
 		
-		//echo $tmp . "\n";
 		$tmp = str_replace( '%ROOT_DIR%', ROOT_DIR, $tmp);
 				 
 		if(is_file($tmp))

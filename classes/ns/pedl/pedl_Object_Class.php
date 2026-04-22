@@ -262,8 +262,7 @@ function event_Instance(&$instance,$type,&$obj)
 	else
 	echo "for the frist time \n";
 	*/
-	
-	
+
 	
 	//if($this->was_called)return;
 	//if($this->was_called)throw new ErrorException($this->full_URI() . "(" . $this->get_parser()->position_stamp() . ")");
@@ -317,8 +316,6 @@ function event_Instance(&$instance,$type,&$obj)
 			
 	for($i = 0; $this->index_max() > $i;$i++)
 		{
-			
-
 			
 			//collects all Object_functions and lists it up 
 			if($this->getRefnext($i)->is_Node('http://www.w3.org/2006/05/pedl-lib#Object_Funktion'))
@@ -507,10 +504,10 @@ private function find_functions(&$class, array &$result,$priority = 1)
 		}
 
 	}
-
+/*
 	function event_message_in($type,&$obj)
 	{
-		
+		echo "mööööp";
 		if($this->is_Command($type,'seek'))
 		{
 			$com_elemnet = $this->parseCommand($type);
@@ -522,7 +519,7 @@ private function find_functions(&$class, array &$result,$priority = 1)
 							
 		}
 
-	}
+	} */
 /*
 function send_messages($message,&$event)
 {

@@ -82,9 +82,9 @@ function event_message_in($type,&$obj)
 	global $logger_class;
 //var_dump($type);
 	//echo "\n" . $this->full_URI() . "(" . spl_object_id($this) .")" . " called by " . (($obj->get_requester() instanceof Interface_node)?$obj->get_requester()->full_URI(): get_class($obj->get_requester())) . "(" . spl_object_id($obj->get_requester()) .") (remote(94))\n" ;
-	
-	//activates a child tree:Object object to receive its data later
-	$message = ["Identifire"=>"http://www.trscript.de/tree#object", "Command"=> ["Name"=> null, "Attribute"=>[], "Value"=> null]]; // 'http://www.trscript.de/tree#object'
+	//$this->showListeners();
+	//activates a child tree:Object object to receive its data later // http://www.trscript.de/tree#object
+	$message = ["Identifire"=>'http://www.trscript.de/tree#object', "Command"=> ["Name"=> null, "Attribute"=>[], "Value"=> null]]; // 'http://www.trscript.de/tree#object'
 
 	$booh = null;
 	$Event = new EventObject('',$this,$booh);
@@ -142,7 +142,7 @@ protected function event_alterdata($own)
 		*/
 		if($own)
 		{
-		$logger_class->setAssert('               own(tree_remote:event_alterdata)' ,15);
+		$logger_class->setAssert('               own(tree_remote:event_alterdata)' ,5);
 		$booh = null;
 		//;
 

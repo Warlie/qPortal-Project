@@ -44,7 +44,7 @@
 require_once('xml_multitree_xPath.php');
 
 
-class xml_presave_semantic extends xml_xPath_sParqle
+class xml_semantic extends xml_xPath_sParqle
 {
 	private $ref = [];
 	private $ontRef = [];

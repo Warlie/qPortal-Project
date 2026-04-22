@@ -39,6 +39,7 @@
 * set_to_out(&$obj) : parameter becomes listed to nodes gets an event by outgoing by "send_message"
 * set_to_check(&$obj) : parameter becommes listed to nodes, see an event, before it has be seen by the node
 * to_listener() : easy way to be listed to parentnode
+* showListeners() : shows all listeners
 * deprecated : event_check($type,$bool,&$obj) would be not nessesary because of event_attribute()
 * to_check_list() : add to checklist node (for attributes)
 * &get_Instance() // a simple row instance
@@ -180,6 +181,18 @@ $res = array();
 	return $res;
 }
 
+public function showListeners()
+{
+	
+	echo "\n" . $this->full_URI() . " with " . $this->idx . $this->position_stamp() . "\n";
+	echo "has following listeners: \n";
+	for($i = 0;$i < count($this->way_out);$i++)
+	{
+		echo $this->way_out[$i]->full_URI() . " in " . $this->way_out[$i]->idx . $this->way_out[$i]->position_stamp() . "\n";
+	}
+	echo "\n";
+}
+
 public function Class_stamp($add)
 {
 
@@ -295,7 +308,7 @@ public function is_Node($name)
 
 public function is_Command($name,$funcName)
 {
-	//echo '(' . $name . ')<br>';
+	//echo "($name,$funcName)\n";
 if($this->is_Node($name))
 	{
 		//echo $name . ' !<br>';
@@ -1268,16 +1281,18 @@ global $logger_class;
 	if(is_array($type))
 	{
 		$logger_class->setAssert("WARNING " . $this->full_URI() . " got an array instead of an command object", 6);
-		var_dump($type);
-		debug_print_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
 		$com_element = $this->parseCommand($type);
 	}
 	else
 		$com_element = $type; //$this->parseCommand($type);
 
 
-	if(!$com_element->check_URI($this->get_NS(), $this->get_QName()))return false;
-	
+	if(!$com_element->check_object($this)) // $com_element->check_URI($this->get_NS(), $this->get_QName())
+	{
+		$logger_class->setAssert("WARNING '" . $this->full_URI() . "' rejected '" . $com_element->get_Result_Array()['Identifire'] . "'", 5);
+		return false;
+	}
+
 	$bool=true;
 	for($i = 0;count($this->check_list) > $i;$i++)
 	{
@@ -1294,11 +1309,11 @@ global $logger_class;
 		$behaviorRegistry = $this->contentGen->getRegObj();
 		//var_dump($com_elemnet->get_Command(), $behaviorRegistry);
         try {
-        	
+        	//echo $this->get_NS() . " " . $this->get_QName() . "\n"; 
 		return $this->callRegContent($behaviorRegistry->_useGeneral(), $com_element, $obj)
 			|| $this->callRegContent($behaviorRegistry->_useNS($this->get_NS())->_useLN($this->get_QName()), $com_element, $obj);
 			
-        } catch (\Throwable $e) {
+        } catch (RegistryNotFoundException $e) {
         	$logger_class->setAssert("INFO " . $this->full_URI() . " has no registry and calls the instance's method", 6);
             return $this->event_message_in($type,$obj);
         }
@@ -1341,35 +1356,38 @@ throw new ErrorException("where am I");
 
 // TODO  review and beautyfy
 private function callRegContent(
-    NameSpaceBehaviorRegistry $behaviorRegistry, 
-    Command_Object $com_element, 
-    object $obj // Hier ist der Übeltäter!
+    NameSpaceBehaviorRegistry $behaviorRegistry,
+    Command_Object $com_element,
+    object $obj
 ): bool {
     global $logger_class;
-    
-    $commandName = $com_element->get_Command();
 
-    if (isset($behaviorRegistry->$commandName)) {
+    try {
+        $commandName = $com_element->get_Command();
+
+        if (!isset($behaviorRegistry->$commandName))
+            return false;
+
         $entry = $behaviorRegistry->$commandName;
 
         if ($entry["log"] !== false) {
-            $msg = is_string($entry["log"]) 
-                ? $entry["log"] 
+            $msg = is_string($entry["log"])
+                ? $entry["log"]
                 : $entry["log"]($this, $obj, $com_element);
-            
             $logger_class->setAssert($msg, $entry["level"]);
         }
 
-        try {
-            // Wir casten das Ergebnis auf bool, um den Rückgabetyp zu garantieren
-            return (bool) $entry["command"]($this, $obj, $com_element);
-        } catch (\Throwable $e) { 
-            $logger_class->setAssert('ERROR ' . get_class($e) . ': ' . $e->getMessage(), 0);
-            return false;
-        }
-    }
+        return (bool) $entry["command"]($this, $obj, $com_element);
 
-    return false; 
+    } catch (\Throwable $e) {
+        $logger_class->setAssert(
+            'ERROR ' . get_class($e) . ': ' . $e->getMessage()
+            . ' in ' . $behaviorRegistry->getKey()
+            . ' [' . $e->getFile() . ':' . $e->getLine() . ']',
+            0
+        );
+        return false;
+    }
 }
 
 protected function event_message_in($type,&$obj)
@@ -1456,6 +1474,7 @@ public function to_listener(?string $uri = null): void
             $condition = $condition->prev_el;
         }
     }
+    else
 
     if (is_object($this->prev_el)) {
         $this->prev_el->set_to_out($this);
@@ -1744,6 +1763,7 @@ class Command_Object extends qp_workflow
 
 			
 			$this->allowed = $this->createPermissonList($this->listOfInformation['Identifire']);
+
 			
 	}
 	
@@ -1777,6 +1797,17 @@ public function check_URI($ns, $name): bool
     return false;
 }
 	
+
+public function check_object($object)
+{
+	$node_collection = array_merge([$object], $object->givesAllClasses());
+	
+	foreach ($node_collection as $node)
+		if($this->check_URI($node->get_NS(), $node->get_QName()))return  true;
+	
+	return false;
+}
+
 	// TODO WTF what are these parameters?
 	public function get_Command($num=0,$index=0)
 	{
@@ -1831,10 +1862,16 @@ public function check_URI($ns, $name): bool
 			$attibute[] = "$key:$content";
 
 		$value = $this->listOfInformation["Command"]['Value'];
+		/*
+		return '["Identifire"=>"' . $this->listOfInformation['Identifire'] 
+		. '", "Command"=> ["Name"=> ' . (is_null($name) ? 'null' : '"' . $name . '"' )
+		. ', "Attribute"=>[' . implode(',',$attibute) . '], "Value"=> ' . (is_null($value)? 'null' : "\"$value\"" ) . ']]';
+		*/
 		
 		return $this->listOfInformation['Identifire'] . (is_null($name) ? '' : "?$name" ) 
 			. (count($attibute) != 0 ? '(' . implode(',',$attibute) . ')' : '' )
 			. (is_null($value)? '' : "=$value" );
+			
 	}
 	
 	public function outputArray()

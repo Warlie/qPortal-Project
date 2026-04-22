@@ -173,13 +173,6 @@ private $URLBase = "";
 	{
 		$confi = json_decode($json, true); // TODO Exception for NULL
 		
-		// 
-
-		//var_dump($this->URLString);
-		
-
-	
-		
 		//if(array_key_exists("serial",$confi))$this->processSerialConfiguration($confi["serial"]);
 		//var_dump($confi);
 		if(array_key_exists("config",$confi))

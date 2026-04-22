@@ -54,7 +54,9 @@ $list_of_configuration_parameters = [
 	'SECURITY_CIPHER'    => ['security', 'cipher'],
 	'SECURITY_STAMP_KEY' => ['security', 'stamp_key'],
 
-	'INTERN_KEYS' => ['intern', 'key']
+	'INTERN_KEYS' => ['intern', 'key'],
+
+	'QUERY_PARAM' => ['runtime', 'QUERY_PARAM']
 	];
 
 // Parse ini with sections
@@ -449,9 +451,11 @@ else
 				
 					//echo "	computed time " . hrtime(true) -$mtime  . "\n";	
 						
-                                print($content->getoutput(SEND_HEADER)); 
-                                 //echo "	Complete  time " . hrtime(true) -$mtime  . "\n";	
+                                //print($content->getoutput(SEND_HEADER));
+                                 //echo "	Complete  time " . hrtime(true) -$mtime  . "\n";
 				//print($content->getSystemDocument(SEND_HEADER,'ISO-8859-1'));
+				print($content->getoutput(SEND_HEADER));
+				
 				}
                 else
 				{

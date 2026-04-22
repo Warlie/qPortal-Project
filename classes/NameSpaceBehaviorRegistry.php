@@ -1,4 +1,6 @@
 <?PHP
+class RegistryNotFoundException extends \RuntimeException {}
+
 class NameSpaceBehaviorRegistry
 {
 	// TODO Das Konzept ist Müll. Definiere lieber Funktionen und Kompositionen. Dann weise diese den Tags zu. Dafür gibt es dann ein "Standard" und ein Tag spezifisches Ding
@@ -30,7 +32,7 @@ class NameSpaceBehaviorRegistry
 	public function _useNS($ns)
     {
         if (!array_key_exists($ns, $this->behaviors)) {
-            throw new Exception($ns . " is unknown");
+            throw new RegistryNotFoundException($ns . " is unknown");
         }
         $this->currentNSName = $ns;
         return $this;
@@ -52,7 +54,7 @@ class NameSpaceBehaviorRegistry
 	public function _useLN($localName)
     {
         if (!array_key_exists($localName, $this->behaviors[$this->currentNSName])) {
-            throw new Exception($localName . " is unknown");
+            throw new RegistryNotFoundException($localName . " is unknown");
         }
         $this->currentLocalName = $localName;
         return $this;
@@ -88,6 +90,11 @@ class NameSpaceBehaviorRegistry
 	{
 		$this->checkContext();
 		return array_key_exists($name, $this->behaviors[$this->currentNSName][$this->currentLocalName]);
+	}
+
+	public function getKey(): string
+	{
+		return implode('.', [$this->currentNSName, $this->currentLocalName, $this->commandName]);
 	}
 
 	// Call immediately after registering a command via __set.

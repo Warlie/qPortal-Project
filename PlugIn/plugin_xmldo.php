@@ -204,7 +204,6 @@ private $template_json;
 
 			}
 		}
-		echo $confi["process"];
 		if(array_key_exists("process",$confi))  //define_tag
 			switch ($confi["process"]) {
 			case "Branch":

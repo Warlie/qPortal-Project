@@ -221,11 +221,11 @@ function event_message_in($type,&$obj)
 			
 			if($myfirst)
 				{
-					$myfirst->event_message_in($type,$obj);
+					$myfirst->hold_messages($type,$obj);
 				}
 			if($myfinal )
 				{
-					$myfinal->event_message_in($type,$obj);
+					$myfinal->hold_messages($type,$obj);
 				}
 
 			$this->get_parser()->flash_result();
@@ -287,7 +287,7 @@ function event_message_in($type,&$obj)
 			{
 				//echo $tmp->full_URI() . "- \n";
 				
-				$tmp->event_message_in('',$obj);
+				$tmp->hold_messages('',$obj);
 			}
 			}
 
