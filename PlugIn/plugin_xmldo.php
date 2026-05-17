@@ -44,6 +44,8 @@ private $table = [];
 
 private $template_json;
 
+private $insertedLeafCount = 0;
+
 	function __construct(/* System.Parser */ &$back, /* System.FuncTree */ &$tree,/* System.Content */ &$content)
 	{ //throw new Exception('Division by zero.');
 		$this->back= &$back;
@@ -52,7 +54,7 @@ private $template_json;
 		$this->treeObj = $tree;
 		//echo $eff->full_URI();
 		//$this->id = $value; , &$id
-
+		$this->testmode = DEBUG;
 	}
 	
 	
@@ -66,15 +68,18 @@ private $template_json;
 
 
 	/**
-	* XMLTEMPLATE
-	*@function: HAS_TAG = returns a boolean value refering to the seeking tag, descripted by xpath 
-	* TODO muss auf xpath erweitert werden
+	* Loads a named template document and locates all nodes matching $use_at_tag.
+	* Results land in $this->documentForInsert for later cloning. Restores parser
+	* position afterwards.
 	*
-	*	sideeffect
-	*	template_json recieves a json string
-	*	template recives the new template
-	*	documentForInsert gets a list of tags in relation of the xpath statement
-	*	
+	* @param string $new_template  Template identifier (registered in content system)
+	* @param string $use_at_tag    XPath / tag to locate clone roots within the template
+	* @return string  "true" if xpath produced results, "false" if empty
+	* @throws Exception  if template identifier is invalid
+	*
+	* @sideeffects $this->template_json, $this->template, $this->documentForInsert,
+	*              $this->cur_tree, $this->cur_id
+	* @called-by processSerialConfiguration()
 	*/
 	public function setXMLTemplate($new_template, $use_at_tag)
 	{
@@ -105,6 +110,7 @@ private $template_json;
 		$this->back->xpath($use_at_tag);
 		$this->back->cloneResult(false);
 		$this->documentForInsert = $this->back->get_xpath_Result();
+		
 //echo " " . count($this->back->get_xpath_Result()) . " \n";
 		/*
 		$orginal = &$this->generator()->XMLlist->show_xmlelement();
@@ -118,7 +124,7 @@ private $template_json;
 		{
 		$mytemp = "true";
 		}	
-		
+
 		$this->back->go_to_stamp($tmpstamp);
 		return $mytemp;
 	}
@@ -144,15 +150,39 @@ private $template_json;
 		
 	}
 	
+	/**
+	* Public entry point for JSON-based plugin configuration.
+	* Decodes the JSON string and delegates to processSerialConfiguration().
+	*
+	* @param string $json  JSON with top-level key "serial"
+	* @calls processSerialConfiguration()
+	*/
 	public function configuration($json)
 	{
-		$confi = json_decode($json, true, 512, JSON_THROW_ON_ERROR); // TODO Exception for NULL
-		
-		if(array_key_exists("serial",$confi))$this->processSerialConfiguration($confi["serial"]);
-		
+		// JsonException on malformed JSON is thrown by JSON_THROW_ON_ERROR
+		$confi = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
+		if(!array_key_exists("serial", $confi))
+			throw new \RuntimeException("XMLDO configuration: JSON missing required top-level key 'serial'");
+
+		$this->processSerialConfiguration($confi["serial"]);
+		//$this->showConfiguration();
 	}
 	
+	/**
+	* Applies a "serial" config block in fixed order:
+	*   1. "config"     → setEmptyCaseText(), setCDATAmode(), or $this->config[] directly
+	*   2. "template"   → setXMLTemplate()
+	*   3. "structure"  → setBranch() / setCrotch() per entry
+	*   4. "definition" → define_tag() per entry
+	*   5. "process"    → generateBranchTree() or generateTagTree()
+	*
+	* @param array $confi  Decoded "serial" section (from configuration())
+	* @throws RuntimeException  if template xpath returns no results, or define_tag TypeError
+	* @calls setEmptyCaseText(), setXMLTemplate(), setBranch(), setCrotch(),
+	*        define_tag(), generateBranchTree(), generateTagTree()
+	* @called-by configuration()
+	*/
 	private function processSerialConfiguration(array $confi)
 	{
 		if(array_key_exists("config",$confi))
@@ -179,9 +209,10 @@ private $template_json;
 
 		//if(array_key_exists("template",$confi))
 		//if(array_key_exists("template",$confi))
-		if(array_key_exists("template",$confi))$this->setXMLTemplate(...$confi["template"]);
+		if(array_key_exists("template",$confi))
+			$this->setXMLTemplate(...$confi["template"]);
 		if(array_key_exists("structure",$confi))
-		{//$this->setXMLTemplate(...$confi["template"]);
+		{
 			foreach ($confi["structure"] as $command) {
 				$type = $command["type"];
 				unset($command["type"]);
@@ -196,15 +227,18 @@ private $template_json;
 		}
 		
 		if(array_key_exists("definition",$confi))  //define_tag
-		{			//var_dump($confi["structure"]);
-			foreach ($confi["definition"] as $command) {
-
+		{
+			foreach ($confi["definition"] as $idx => $command) {
+				try {
 					$this->define_tag(...$command);
-
-
+				} catch (\TypeError $e) {
+					throw new \RuntimeException("XMLDO definition[$idx]: " . $e->getMessage(), 0, $e);
+				}
 			}
 		}
-		if(array_key_exists("process",$confi))  //define_tag
+		// "process" is optional — configuration can be applied in stages and the caller
+		// may trigger generateBranchTree() / generateTagTree() separately afterwards.
+		if(array_key_exists("process", $confi))
 			switch ($confi["process"]) {
 			case "Branch":
 				$this->generateBranchTree();
@@ -212,6 +246,8 @@ private $template_json;
 			case "Tag":
 				$this->generateTagTree();
 				break;
+			default:
+				throw new \RuntimeException("XMLDO processSerialConfiguration: unknown process type '" . $confi["process"] . "' — expected 'Branch' or 'Tag'");
 			}
 
 	}
@@ -258,10 +294,24 @@ private $template_json;
 		
 	}
 	/**
-	* SETTAG
+	* Registers one column/field mapping in $this->verification[].
+	* Each entry describes which DB column (name), where in the template (xpath),
+	* whether to write as 'data' or 'attrib', an optional constant (value),
+	* a group name, and a branch index.
 	*
+	* @param string      $name        DB column name (key into rst->col())
+	* @param string      $xpath       XPath into the cloned template node ("." = self)
+	* @param string|null $attrib_data 'data' | 'attrib'
+	* @param int|null    $pos         (unused/legacy)
+	* @param string|null $prefix      Namespace prefix for attribute
+	* @param string|null $postfix     Attribute local name
+	* @param mixed|null  $value       Constant override (skips DB column when set)
+	* @param string|null $group       Group name (links to setBranch/setCrotch)
+	* @param int|null    $branch      (unused/legacy branch index)
+	* @param bool        $allowEmpty  If false, throws when xpath returns nothing (default: false)
+	* @called-by processSerialConfiguration()
 	*/
-	public function define_tag($name, $xpath, $attrib_data = null, $pos = null, $prefix = null, $postfix = null, $value = null, $group = null, $branch = null)
+	public function define_tag($name, $xpath, $attrib_data = null, $pos = null, $prefix = null, $postfix = null, $value = null, $group = null, $branch = null, $allowEmpty = false)
 	{	
 
 		$cur_pos = count($this->verification);
@@ -272,9 +322,10 @@ private $template_json;
 		$this->verification[$cur_pos]['pos'] = intval($pos);
 		$this->verification[$cur_pos]['prefix'] = $prefix; /* prefix like dc(:autor) */
 		$this->verification[$cur_pos]['postfix'] = $postfix; /* postfix like (dc:)autor */
-		$this->verification[$cur_pos]['value'] = $value;  /* constant value */
-		$this->verification[$cur_pos]['group'] = $group;  /* to concern several columns into groups */
+		$this->verification[$cur_pos]['value'] = $value;       /* constant value */
+		$this->verification[$cur_pos]['group'] = $group;       /* to concern several columns into groups */
 		$this->verification[$cur_pos]['branch'] = intval($branch);  /* number of the child at the rootnode */
+		$this->verification[$cur_pos]['allowEmpty'] = $allowEmpty;
 	}
 	
 	
@@ -308,6 +359,12 @@ private $template_json;
 
 	public function setTestmode($bool){	$this->testmode = $bool;	}
 	
+	/**
+	* Debug dump: prints verification columns and all rows from $this->rst.
+	* Only active when $this->testmode is true (→ setTestmode()).
+	*
+	* @called-by generateBranchTree(), generateTagTree()
+	*/
 	private function show_content()
 	{
 		if(!$this->testmode)return;
@@ -339,34 +396,38 @@ private $template_json;
 		
 		
 	/**
-	* 
-	* @param child_pos: int : I don't know
-	* @param xpath  string : a xpath statement
-	* @param group string : a name to group levels
+	* Registers a "fork" level in $this->level[] (type=0).
+	* A Crotch navigates INTO an existing node (doesn't clone a new branch).
 	*
-	* sideeffects
-	* level pushs a list consist of type (Crotch=0) and the parameters   
+	* @param int    $child_pos   Index into $this->list[] (template child nodes)
+	* @param string $xpath       XPath to the target node within the crotch element
+	* @param string $group       Group name(s), comma-separated; links to define_tag() entries
+	* @param bool   $allowEmpty  If true, an empty xpath result is silently accepted (default: true)
+	* @called-by processSerialConfiguration()
+	* @see setBranch() for type=1 (clones a new node instead)
 	*/
-	public function setCrotch( $child_pos, $xpath, $group)
+	public function setCrotch( $child_pos, $xpath, $group, $allowEmpty = true)
 	{
 
-	  $this->level[] = array('type'=> 0, 'child_pos' => intval($child_pos),  'xpath' => $xpath, 'group' => $group);
-	
+	  $this->level[] = array('type'=> 0, 'child_pos' => intval($child_pos),  'xpath' => $xpath, 'group' => $group, 'allowEmpty' => $allowEmpty);
+
 	}
 	
 	/**
-	* 
-	* @param child_pos: int : I don't know
-	* @param xpath  string : a xpath statement
-	* @param group string : a name to group levels
+	* Registers a "branch" level in $this->level[] (type=1).
+	* A Branch clones a template child node and appends it to the document.
 	*
-	* sideeffects
-	* level pushs a list consist of type (Branch=1) and the parameters   
+	* @param int    $child_pos   Index into $this->list[] (template child nodes)
+	* @param string $xpath       XPath to the target node inside the cloned element
+	* @param string $group       Group name(s), comma-separated; links to define_tag() entries
+	* @param bool   $allowEmpty  If true, an empty xpath result is silently accepted (default: true)
+	* @called-by processSerialConfiguration()
+	* @see setCrotch() for type=0 (navigates into existing node instead)
 	*/
-	public function setBranch($child_pos, $xpath, $group)
+	public function setBranch($child_pos, $xpath, $group, $allowEmpty = true)
 	{
 
-	  $this->level[] = array('type'=> 1, 'child_pos' => intval($child_pos),  'xpath' => $xpath, 'group' => $group);
+	  $this->level[] = array('type'=> 1, 'child_pos' => intval($child_pos),  'xpath' => $xpath, 'group' => $group, 'allowEmpty' => $allowEmpty);
 	}
 	 
 	public function setRelation($lvl, $group, $condition )
@@ -374,6 +435,8 @@ private $template_json;
 	$this->relation[] = array('level' => intval($lvl), 'group' => $group, 'condition' => $condition ); 
 	}
 
+
+// TODO Macht das was? Es sieht so unfertig aus
 	private function deepRoot(&$finish, &$groups, &$node, $deep = 0)
 	{
 	$param_node = &$this->list[$this->level[$deep]['child_pos']]->cloning($node);
@@ -383,9 +446,12 @@ private $template_json;
 
 
 	/**
-	* creates an assoziatied array and set all entries to null
+	* Initializes $tbl as an associative array: one null entry per verification
+	* column, keyed by the column's 'name' field.
+	*
+	* @param array $tbl  Output array (by ref)
+	* @called-by generateBranchTree(), collectData()
 	*/
-	
 	private function create_tbl(&$tbl)
 	{
 			for($i = 0; count($this->verification) > $i; $i++ )
@@ -395,8 +461,13 @@ private $template_json;
 	}
 	
 	/**
-	* compares every entry in array to have altered
-	* @return changed key
+	* Reads the current DB row from $this->rst into $tbl (updates all entries).
+	* Returns the name of the last column that changed.
+	*
+	* @param array $tbl  Column map to update (by ref)
+	* @return string     Key of the last changed column
+	* @requires $this->rst  DB datasource (set by set_list())
+	* @called-by generateBranchTree()
 	*/
 	private function test_alter(&$tbl)
 	{
@@ -432,7 +503,13 @@ private $template_json;
 	{
 	}
 	
-	// TODO it is just a copy function
+	/**
+	* Returns a shallow copy of $tbl (snapshot of the current row).
+	*
+	* @param array $tbl  Source row
+	* @return array      Copied row
+	* @called-by generateBranchTree()
+	*/
 	private function &buildRow($tbl)
 	{
 		$res = array();
@@ -443,6 +520,14 @@ private $template_json;
 		  return $res;
 	}
 	
+	/**
+	* Returns the key of the first null entry in $tbl, or "" if all are set.
+	* Used to determine how far into the current row data has been filled.
+	*
+	* @param array $tbl  Column map
+	* @return string     Key of first null entry, or ""
+	* @called-by generateBranchTree()
+	*/
 	private function last_col(&$tbl)
 	{
 
@@ -457,6 +542,10 @@ private $template_json;
 		  return "";
 	}
 	
+	/**
+	* Clones $Root via $Node and navigates via $xpath to the result.
+	* Legacy / appears unused — no callers found in this file.
+	*/
 	private function &build_root($xpath, &$Node,  &$Root )
 	{
 			if($this->back->freexpath($xpath, $Node->cloning($Root)) != 0)
@@ -478,6 +567,11 @@ private $template_json;
                 	}
     }
     
+    /**
+	* Runs $xpath on $Root and clones the deepest-level result into $Node.
+	* If $last=false, takes first result instead of deepest.
+	* Legacy / appears unused — no callers found in this file.
+	*/
     private function &build_element($xpath, &$Node,  &$Root, $last = true)
 	{
 		//$in = "in";
@@ -517,14 +611,13 @@ private $template_json;
     }
     
   /**
-  * @param $lvl : level in tree
-  * @param $tbl : complete table
-  * @return name of group
-  * ---------------------------------------
-  * dependencies
-  * $this->relation
+  * Returns the group name for a given tree level, looked up from $this->relation.
   *
-  * returns name of the Group, depenending on level
+  * @param int   $lvl  Tree level
+  * @param array $tbl  (unused — kept for API consistency with older callers)
+  * @return string|null  Group name, or null if no relation entry for this level
+  * @requires $this->relation  (populated by setRelation() or auto-filled in createGroupArray())
+  * @called-by processingBox(), generateBranchTree(), hasNextlvl()
   */
     private function gotoGroup($lvl, &$tbl)
     {
@@ -538,6 +631,15 @@ private $template_json;
     	return $res;
     }
     
+    /**
+	* Computes the remainder of $box1 after removing $without from one end.
+	* Returns null if there is no remainder or the ranges don't overlap.
+	*
+	* @param array $box1     [start, end] outer range
+	* @param array $without  [start, end] inner range to subtract
+	* @return array|null  Remainder range, or null
+	* @called-by processingBox()
+	*/
     private function boxWithout($box1, $without)
     {
     	$res = null; 
@@ -552,6 +654,16 @@ private $template_json;
     	
     }
 
+    /**
+	* Narrows $range to a contiguous block where all $groups values stay identical
+	* to the first row. Returns null if the first row has no data for this group.
+	*
+	* @param array $range   [start, end] candidate row range into $tbl
+	* @param array $tbl     Full result table (fulltbl from generateBranchTree)
+	* @param array $groups  Data definitions for the group to check (groups[name]['data'])
+	* @return array|null    [start, end] of the matching block, or null
+	* @called-by processingBox(), hasNextlvl()
+	*/
     private function defineBlock( $range, &$tbl, &$groups)
     {
 
@@ -592,6 +704,18 @@ private $template_json;
     	return $res;
     }
     
+    /**
+	* Writes one row of data into the current branch node for all definitions in $groups.
+	* Uses $value['value'] constant when set; otherwise reads from $tbl[$range[0]].
+	* Dispatches to setData() for 'data' type, setAttrib() for 'attrib' type.
+	*
+	* @param array $range   [start, end] — only $range[0] is read
+	* @param int   $lvl     Current level (debug indent only)
+	* @param array $tbl     Full result table
+	* @param array $groups  Current group's data definitions (groups[name]['data'])
+	* @calls setData(), setAttrib()
+	* @called-by processingBox()
+	*/
     private function writeData($range, $lvl, &$tbl, &$groups)
     {
     
@@ -599,23 +723,24 @@ private $template_json;
     				 	 {
     				 	 	 if(DEBUG)echo str_repeat("   ", $lvl) . " [" . $value['name'] . "]={'value'=" .  $tbl[$range[0]][$value['name']] . ", 'xpath'=" .  $value['xpath'] . ", 'type'=" .  $value['attrib_data'] . "}\n";
     				 	 	 
+    				 	 	 $data_val = !is_null($value['value']) ? $value['value'] : $tbl[$range[0]][$value['name']];
     				 	 	 if(strcmp($value['attrib_data'], 'data') == 0)
     				 	 	 {
 
-    				 	 	 	 $this->setData( $value['xpath'], $tbl[$range[0]][$value['name']]);
+    				 	 	 	 $this->setData( $value['xpath'], $data_val);
     				 	 	 }
     				 	 	 else
     				 	 	 {
     				 	 	 	 //var_dump($tbl[$range[0]][$value['name']]);
-    				 	 	 	if(!is_null($tbl[$range[0]][$value['name']]) || $this->config['attribOnNull'] )
+    				 	 	 	if(!is_null($data_val) || $this->config['attribOnNull'] )
     				 	 	 	{
     				 	 	 		//echo str_pad($value['name'],40," ") . ":";
-    				 	 	 	//var_dump($tbl[$range[0]][$value['name']]);	
-    				 	 	 	$this->setAttrib( $value['xpath'], 
-    				 	 	 		$value['prefix'] , 
-    				 	 	 		$value['postfix'], $tbl[$range[0]][$value['name']]);
+    				 	 	 	//var_dump($tbl[$range[0]][$value['name']]); showDocumentsNamespaces()
+    				 	 	 	$this->setAttrib( $value['xpath'],
+    				 	 	 		$value['prefix'] ,
+    				 	 	 		$value['postfix'], $data_val);
     				 	 	 	}
-    				 	 	 		
+
     				 	 	}
     				 	 }
     				 	 
@@ -623,9 +748,17 @@ private $template_json;
     }
     
     
-    /** 
-    *TODO Needs javadoc
-    */
+    /**
+	* Checks whether the next sub-level (lvl+1) has any data rows in the current $box.
+	*
+	* @param array $tbl     Full result table
+	* @param array $groups  Group index (from createGroupArray)
+	* @param array $box     [start, end] current row range
+	* @param int   $lvl     Current level (checks lvl+1)
+	* @return bool
+	* @calls gotoGroup(), defineBlock()
+	* @called-by processingBox(), generateBranchTree()
+	*/
     private function hasNextlvl($tbl, &$groups, $box, $lvl)
     {
     	 $lookfor = $this->gotoGroup($lvl + 1, $tbl);
@@ -639,24 +772,30 @@ private $template_json;
     	return  !is_null($newbox);
     }
     
-  /**
-  * @param $lvl : level in tree
-  * @param $tbl : complete table
-  * @return name of group
-  * ---------------------------------------
-  * dependencies
-  * $this->relation
-  */
-    
-    
-      /**
-  * @param $lvl : level in tree
-  * @param $tbl : complete table
-  * @return name of group
-  * ---------------------------------------
-  * dependencies
-  * $this->relation
-  */
+    /**
+	* Recursive box processor — the core of the write pipeline.
+	* For the row range $box, finds the matching group, clones the branch into the
+	* document, writes column data, recurses into sub-levels, then processes the
+	* remainder of the box at the same level.
+	*
+	* Flow per call:
+	*   gotoGroup()      — find group name for this level
+	*   defineBlock()    — narrow box to contiguous block for this group
+	*   boxWithout()     — compute remainder box (rows after the block)
+	*   buildBranch()    — clone branch template node into document
+	*   writeData()      — write DB values into the cloned node
+	*   buildCrotch()    — navigate to the sub-crotch
+	*   processingBox()  [recursive, lvl+1]  — process children
+	*   processingBox()  [recursive, same lvl] — process remainder
+	*
+	* @param array $tbl    Full result table (rows × columns)
+	* @param array $groups Group index (from createGroupArray)
+	* @param array $box    [start, end] row range in $tbl
+	* @param int   $lvl    Current recursion depth / tree level
+	* @calls gotoGroup(), defineBlock(), boxWithout(), hasNextlvl(),
+	*        buildBranch(), writeData(), buildCrotch(), processingBox()
+	* @called-by generateBranchTree(), processingBox()
+	*/
     private function processingBox(&$tbl, &$groups, $box, $lvl)
     {
     	//var_dump($box);
@@ -664,7 +803,14 @@ private $template_json;
     	$subBranch = &$this->back->show_xmlelement();
     	if(is_null($lookfor = $this->gotoGroup($lvl, $tbl)))
     		{
-    			if(DEBUG)echo "\n";
+    			if(DEBUG)
+    			{
+    				echo "processingBox: gotoGroup(lvl=$lvl) returned null — no relation entry for this level.\n";
+    				echo "  available groups: " . implode(', ', array_keys($groups)) . "\n";
+    				echo "  relation table: ";
+    				foreach($this->relation as $r) echo "[lvl=" . $r['level'] . " → " . $r['group'] . "] ";
+    				echo "\n";
+    			}
     			return;
     		}
     	//set new box
@@ -698,7 +844,10 @@ private $template_json;
     	if($hasSubLvl)
     	$cur_crotch = &$this->buildCrotch($groups, $this->gotoGroup($lvl + 1, $tbl));
     	else
-    	$cur_crotch = &$run_branch;
+    	{
+    		$this->insertedLeafCount++;  // leaf branch: one entry written per block
+    		$cur_crotch = &$run_branch;
+    	}
     	
     	$this->back->set_xmlelement($cur_crotch);
     	$this->processingBox($tbl, $groups, $newbox, $lvl + 1);
@@ -718,12 +867,16 @@ private $template_json;
     }
     
     /**
-    * buildCrotch
-    * @param array(string) byRef groups 
-    * @param string name
-    * @return xml_element
-    */
-    
+	* Navigates to the crotch (fork) node for the given group.
+	* If the group has a crotch configured: appends that template child node
+	* ($this->list[$i]) and navigates via its xpath.
+	* If no crotch configured: returns the current element unchanged (write directly).
+	*
+	* @param array  $groups  Group index (from createGroupArray)
+	* @param string $name    Group name whose 'crotch' entry to use
+	* @return xml_element    Reference to the crotch node (or current element)
+	* @called-by processingBox(), generateBranchTree()
+	*/
     private function &buildCrotch(&$groups, $name)
     {
     	
@@ -739,7 +892,8 @@ private $template_json;
     		$this->back->complete_list(false);
     		
     		$res = &$this->back->xpath($groups[$name]['crotch']['xpath']);
-    		//echo $res->full_URI() + "\n";
+    		if(!$res)
+    			throw new \RuntimeException("XMLDO: buildCrotch — xpath '" . $groups[$name]['crotch']['xpath'] . "' not found in group '$name' (position: " . $this->back->position_stamp() . ")");
     		$this->back->set_xmlelement($res);
     			$this->back->complete_list(true);
     		//$this->back->overview_xpath_Result();
@@ -758,114 +912,124 @@ private $template_json;
     }
 	
     /**
-    * buildBranch
-    * @param array(string) byRef groups 
-    * @param string name
-    * @return xml_element
-    *
-    * c
-    */
-    
+	* Appends the branch template node ($this->list[$i]) to the document and
+	* navigates via xpath to the target element inside it.
+	* Unlike buildCrotch(), this always clones a new node — one branch per DB row group.
+	*
+	* @param array  $groups  Group index (from createGroupArray)
+	* @param string $name    Group name whose 'branch' entry to use
+	* @return xml_element    Reference to the target element inside the new branch
+	* @throws RuntimeException  if group missing, branch not configured, or xpath returns nothing
+	* @called-by processingBox()
+	*/
     private function &buildBranch(&$groups, $name)
     {
-    	if($groups[$name]['branch'])
-    	{
-    		//echo "--------------------------------------startet in buildBranch-------------------------------------------\n";
-    		//echo $this->back->position_stamp() . " Unterzweig fuer einen neuen Zweig \n";
-    		//$this->back->show_xmlelement()->giveOutOverview();
-    	
-    		//Es wird ein neuer zweig ab der akutellen Position angehangen. Dieser ist der entsprechende
-    		// Kindsknoten von der Hauptwurzel an
-    		
-    		$i = $groups[$name]['branch']['child_pos'];
-    		$res = $this->back->append_xmlelement($this->list[$i]);
-    		//echo $this->back->position_stamp() . " neuer Zweig \n";
-    			
-    		$this->back->complete_list(false);
-    		//var_dump($groups[$name]['branch']);
-     		$res = &$this->back->xpath($groups[$name]['branch']['xpath']);
-     		/*
-     		echo "---------------------------------------------------------------------------------\n";
-     		if(is_object($res))
-     		{
-     		echo "looking for: " . $groups[$name]['branch']['xpath'] . "\n <br>";
-     		//echo $res->giveOutOverview();
-     		}
-     		else
-     		echo "vor Die Wand " + $groups[$name]['branch']['xpath'] +"\n";
-     		echo "---------------------------------------------------------------------------------\n"; 
-     		*/
-    		//$this->back->set_xmlelement($res);
-    		$this->back->complete_list(true);
-    		//$this->back->overview_xpath_Result();
-    		//$obj_ref_array = &$this->back->get_xpath_Result();
-    		$this->back->free_xpath_Result();
-    		
-    		 // echo $this->back->position_stamp() . "  \n";
-    		//$this->back->set_xmlelement($obj_ref_array[0]);
-    		return $res;
-    	//var_dump($groups[$name]['crotch']);
-    	}
+    	if(!isset($groups[$name]))
+    		throw new \RuntimeException("XMLDO: buildBranch — group '$name' does not exist (available: " . implode(', ', array_keys($groups)) . ")");
+    	if(!$groups[$name]['branch'])
+    		throw new \RuntimeException("XMLDO: buildBranch — group '$name' has no branch configuration");
 
+    	$i = $groups[$name]['branch']['child_pos'];
+    	$res = $this->back->append_xmlelement($this->list[$i]);
+
+    	$this->back->complete_list(false);
+    	$res = &$this->back->xpath($groups[$name]['branch']['xpath']);
+    	$this->back->complete_list(true);
+    	$this->back->free_xpath_Result();
+
+    	if(!$res)
+    		throw new \RuntimeException("XMLDO: buildBranch — xpath '" . $groups[$name]['branch']['xpath'] . "' not found in group '$name' (position: " . $this->back->position_stamp() . ")");
+
+    	return $res;
     }
     
+    	/**
+	* Navigates to $xpath from the current position and writes $value as CDATA.
+	* Saves and restores the current element; throws on xpath miss.
+	* Note: "." as xpath = self-reference (the current node itself).
+	*
+	* @param string $xpath  XPath from current position ("." = self)
+	* @param mixed  $value  Data value to write
+	* @throws RuntimeException  if xpath not found
+	* @called-by writeData(), generateTagTree()
+	*/
     	private function setData( $xpath, $value)
 	{
-		
-	//	echo $this->back->position_stamp() . " start Zweig fuer data \n";
-    	
-//		echo $value . " --------------------------------------------";
 		$backjump = &$this->back->show_xmlelement();
-		   	//	echo "->" . $backjump->name . "<-\n";
-    			
+
     		$this->back->complete_list(false);
     		$res = &$this->back->xpath($xpath);
-    		if(!$res)echo "alles klar, das kann gar nicht klappen, $xpath gibt es nicht";
-     		//$this->back->set_xmlelement();
-    		$this->back->set_xmlelement($res);
     		$this->back->complete_list(true);
     		$this->back->free_xpath_Result();
 
-    		//$res =&$this->back->show_xmlelement()  ;
-    		//echo $res->name . "-----------...---";
-    		$this->back->set_node_cdata($value);
-    		
-    		$this->back->set_xmlelement($backjump);
-    		
-    		 // echo $this->back->position_stamp() . "  \n";
-    		//$this->back->set_xmlelement($obj_ref_array[0]);
+    		if(!$res)
+    		{
+    			$this->back->set_xmlelement($backjump);
+    			throw new \RuntimeException("XMLDO: setData — xpath '$xpath' not found at " . $this->back->position_stamp());
+    		}
 
-    		
+    		$this->back->set_xmlelement($res);
+    		$this->back->set_node_cdata($value);
+    		$this->back->set_xmlelement($backjump);
 	}
     
-    	private function setAttrib( $xpath, $ns, $attrib, $value)
+    	/**
+	* Navigates to $xpath from the current position and sets an attribute.
+	* Saves and restores the current element; throws on xpath miss.
+	* "." as xpath = self-reference.
+	* When $prefix is null, sets a bare (unnamespaced) attribute.
+	* When $prefix is a short namespace prefix (e.g. "rdf"), resolves it via the
+	* document's xmlns declarations, creates a typed attribute object from the
+	* namespace framework, and registers it with the correct prefix:local name
+	* using get_Prefix() on the parser index — same pattern as generateTagTree().
+	*
+	* @param string $xpath   XPath from current position ("." = self)
+	* @param string|null $prefix  Short namespace prefix (e.g. "rdf"), or null for bare attribute
+	* @param string $attrib  Attribute local name
+	* @param mixed  $value   Attribute value
+	* @throws RuntimeException  if xpath not found or prefix unknown
+	* @called-by writeData()
+	*/
+    	private function setAttrib( $xpath, $prefix, $attrib, $value)
 	{
-
-//		echo $this->back->position_stamp() . " start Zweig fuer attib \n";
-    	
-//		echo " $ns:$attrib=$value  \n";
 		$backjump = &$this->back->show_xmlelement();
-		  // 		echo "->" . $backjump->name . "<-\n";
-    			
+
     		$this->back->complete_list(false);
     		$res = &$this->back->xpath($xpath);
-    		if(!$res)echo "alles klar, das kann gar nicht klappen, $xpath gibt es nicht";
-     		//$this->back->set_xmlelement();
-    		$this->back->set_xmlelement($res);
     		$this->back->complete_list(true);
     		$this->back->free_xpath_Result();
-    		    		
-    		//$res =&$this->back->show_xmlelement()  ;
-    		//echo $res->name . "-----------...---";
-    	//	echo 'Hier kommt jetzt das Attribut rein: ' . $this->back->position_stamp() . "  \n";
-//TODO prefixe werden ignoriert
-    		$this->back->set_node_attrib("$attrib", $value);
+
+    		if(!$res)
+    		{
+    			$this->back->set_xmlelement($backjump);
+    			throw new \RuntimeException("XMLDO: setAttrib — xpath '$xpath' not found at " . $this->back->position_stamp() . " (attrib: $prefix:$attrib)");
+    		}
+
+    		$this->back->set_xmlelement($res);
+
+    		if(is_null($prefix))
+    		{
+    			$this->back->set_node_attrib($attrib, $value);
+    		}
+    		else
+    		{
+    			$nsMap = $res->showDocumentsNamespaces();
+    			if(!isset($nsMap[$prefix]))
+    				throw new \RuntimeException("XMLDO: setAttrib — unknown prefix '$prefix' (attrib: $prefix:$attrib)");
+
+    			$fullURI = $nsMap[$prefix];
+    			$attrib_obj = &$this->back->get_Object_of_Namespace($fullURI . '#' . $attrib);
+    			$attrib_obj->setdata($value, 0);
+
+    			$shortPrefix = $this->back->get_Prefix($fullURI, $res->get_idx());
+    			$attrib_obj->name = (strlen((string)$shortPrefix) > 0)
+    				? $shortPrefix . ':' . $attrib
+    				: $attrib;
+
+    			$res->attribute($attrib_obj->name, $attrib_obj);
+    		}
 
     		$this->back->set_xmlelement($backjump);
-    		
-   // 		 echo 'Und zurueck' . $this->back->position_stamp() . "  \n";
-    		//$this->back->set_xmlelement($obj_ref_array[0]);
-
 	}
     
 	public function showConfiguration()
@@ -948,15 +1112,21 @@ private $template_json;
 	}
 	
 	/**
-	*	requirements:
-	*	this->rst : DB Datasource
-	*	this->template: 
-	*	$this->verification: contains description, how to use template and dbsource
-	*	
-	*	calls:
-	*	this->deepCollect( bool, array[][], xmlElement)
+	* Builds the $groups index from $verification, $relation, and $level arrays.
+	*
+	* Each $groups entry: ['crotch' => level-entry|null, 'branch' => level-entry|null, 'data' => [...definitions]]
+	* - Reads group names from $verification entries (define_tag's 'group' field)
+	* - If $relation is empty, auto-generates one level-entry per group in order
+	* - Distributes $verification entries into groups['data'] (bucket sort)
+	* - Assigns $level entries (from setBranch/setCrotch) to groups['crotch'/'branch']
+	*
+	* @param array $verification  Column definitions (from define_tag())
+	* @param array $relation      Level→group mapping (from setRelation(); auto-filled if empty)
+	* @param array $level         Branch/Crotch entries (from setBranch()/setCrotch())
+	* @return array  [$groups, $permutation]
+	* @throws RuntimeException  if a structure entry references an unknown group, or a branch is duplicated
+	* @called-by generateBranchTree(), collectData()
 	*/
-	
 	private function createGroupArray(&$verification, &$relation, &$level)
 	{
 		/* ------------------------------------------ groups ------------------------------------------------------*/
@@ -993,11 +1163,12 @@ private $template_json;
 
 		//var_dump($permutation);
 		
-		$names[$verification[0]['name']]  = $verification[0]['group']; 
+		$names[$verification[0]['name']]  = $verification[0]['group'];
+		$hold = $verification[0]['group'];
 		for($i = 1; count($verification) > $i; $i++ )
 		{
-			$names[$verification[$i]['name']] = $verification[$i]['group'];  
-			
+			$names[$verification[$i]['name']] = $verification[$i]['group'];
+
 			if($hold != $verification[$i]['group'])
 			{
 			  $hold = $verification[$i]['group'];
@@ -1041,15 +1212,13 @@ private $template_json;
 					{
 
 							if(is_null($groups[trim($value2)]))
-								echo "wrong groupnames in level";
-						
+								throw new \RuntimeException("XMLDO: structure references unknown group '" . trim($value2) . "' (available: " . implode(', ', array_keys($groups)) . ")");
+
 							if(is_null($groups[trim($value2)]['branch']))
 							$groups[trim($value2)][$type[$value['type']]] = &$this->level[$key];
 							else
 							{
-								//var_dump($groups[trim($value2)]);
-							//echo "oh, doof";
-							throw new Exception($value2); //$groups[trim($value2)]['branch']
+								throw new \RuntimeException("XMLDO: group '" . trim($value2) . "' already has a branch assigned — duplicate structure entry");
 							}
 					}
 					
@@ -1058,51 +1227,42 @@ private $template_json;
 
 		}
 		
-/* ----------------------------------------------------------------------------------------------------------------------------
-* Bucketsort
-*
-* -----------------------------------------------------------------------------------------------------------------------------
-*/
-		
-		                // appends branch and crotch to groups
-                		
-        for($i = 0; count($this->level) > $i; $i++ )
-		{
-			$arr = explode(',', $this->level[$i]["group"]);
-			for($j = 0; count($arr) > $j; $j++ )
-			{
-				if($this->level[$i]["type"] == 0)
-				{
-					$groups[$arr[$j]]['crotch'] = &$this->level[$i];
-				}
-				else
-				{
-					$groups[$arr[$j]]['branch'] = &$this->level[$i];
-				}
-			}
-
-		}	
 		
 		return [$groups, $permutation];
 	}
 	
 	/**
-	*	@exception
-	*	todo needs exception on verification
+	* Main write pipeline — reads rows from $this->rst and writes them into the
+	* XML template document, respecting the group/branch/crotch hierarchy.
 	*
-	*	sideeffects
-	*	collectData()
+	* Flow:
+	*   createGroupArray()         — build group/branch/crotch index from verification+level+relation
+	*   create_tbl()               — init empty row template
+	*   [loop over rst rows via next()]:
+	*     test_alter()             — fill tbl from current DB row
+	*     last_col()               — find first null column (boundary detection)
+	*     buildRow()               — snapshot row into fulltbl
+	*   buildCrotch()              — navigate to top-level crotch node in document
+	*   processingBox()            — recursive: clone branches, write data, recurse
+	*
+	* If $this->config['actsAsCollector'] is true → delegates to collectData() instead.
+	*
+	* @throws RuntimeException  if no definition entries, or template not found
+	* @requires $this->rst          DB datasource (set by set_list()); null = static data
+	* @requires $this->template     Template name (set by setXMLTemplate())
+	* @requires $this->verification Column definitions (set by define_tag())
+	* @requires $this->level        Branch/Crotch structure (set by setBranch()/setCrotch())
+	* @calls createGroupArray(), create_tbl(), show_content(), test_alter(), last_col(),
+	*        buildRow(), hasNextlvl(), buildCrotch(), gotoGroup(), processingBox(),
+	*        collectData() [if actsAsCollector]
+	* @called-by processSerialConfiguration()
 	*/
-	
 	public function generateBranchTree()
 	{
 
 		/* check verification */
 		if(count($this->verification) == 0)
-		{
-			echo "need Infomation about branches, please use define_tag";
-			return;
-		}
+			throw new \RuntimeException("XMLDO: no definition entries — use define_tag() or add a 'definition' section to the configuration");
 		
 		// case of XMLDO as a collector
 		if($this->config['actsAsCollector'])
@@ -1116,11 +1276,8 @@ private $template_json;
 		$this->config['setTreeType'] = "Branch";
 		
 		/*moveFirst*/
-		if(!(is_null($this->rst) || $this->rst->moveFirst()))
-		{
-			//echo " no static data or recordset ";
-			return '';
-		}
+		if(!is_null($this->rst) && !$this->rst->moveFirst())
+			throw new \RuntimeException("XMLDO generateBranchTree: rst->moveFirst() returned false — datasource contains 0 records (check DBO query and connection)");
 		
 
 		/* --------------------------------- check id ---------------------------- */
@@ -1169,10 +1326,7 @@ $permutation = $tmp[1];
 
 		/* chose page to collect templates */
 		if(!$this->back->change_URI($this->content->get_template($this->template)))
-		{
-			echo $this->template . ' isn\'t a available documentident';
-			return;
-		}
+			throw new \RuntimeException("XMLDO: template '$this->template' not found — check the 'template' section in the configuration");
 		
 		$this->list = array();
 
@@ -1184,6 +1338,9 @@ $permutation = $tmp[1];
 		  $this->list[$i] = $this->back->show_xmlelement();
 		  $this->back->parent_node();
 		}
+
+		if(count($this->list) == 0)
+			throw new \RuntimeException("XMLDO: template '$this->template' has no child nodes — setBranch/setCrotch reference child indices that don't exist");
 
 		
 		//TODO feld erstellen, das der Menge der Gruppen entspricht
@@ -1371,27 +1528,42 @@ if(DEBUG)
 
 		
 
+			$this->insertedLeafCount = 0;
 		$this->processingBox($fulltbl, $groups, array(0, count($fulltbl) - 1), 0);
 		if(DEBUG)echo "}\n";
 
+		/* record count sanity check:
+		 * $pos = rows read from DB (fulltbl entries)
+		 * insertedLeafCount = leaf branches written to document
+		 * In a flat single-group config these must be equal.
+		 * In multi-level configs the leaf count reflects unique bottom-level groups —
+		 * divergence from $pos indicates rows were silently skipped or merged unexpectedly. */
+		if(!is_null($this->rst) && $this->insertedLeafCount !== $pos)
+			throw new \RuntimeException(
+				"XMLDO: record count mismatch — " . $pos . " rows from datasource, " .
+				$this->insertedLeafCount . " leaf entries written to document"
+			);
 
-		
                 /* check level */
 		//TODO gruppen einzeln durchtesten und für mehrere Gruppen pro Tiefe auslegen
 
-                
         /* return to former page */
         $this->back->go_to_stamp($tmpstamp);
 
 	}
 	
 	/**
+	* Collector path: reads data FROM the XML document into $this->internal_table_values.
+	* Called by generateBranchTree() when $this->config['actsAsCollector'] is true.
 	*
-	*	@throws
-	*	todo template doesn't exist
+	* Flow:
+	*   createGroupArray()         — build group index
+	*   create_tbl()               — init empty row template
+	*   collectDataFromDocument()  — traverse document nodes, fill rows
 	*
-	* createGroupArray : 
-	*	
+	* @throws Exception  if template not found
+	* @calls createGroupArray(), create_tbl(), collectDataFromDocument()
+	* @called-by generateBranchTree()
 	*/
 	private function collectData()
 	{
@@ -1441,14 +1613,14 @@ $permutation = $tmp[1];
 	}
 	
 	/**
+	* Top-level entry for document traversal in collector mode.
+	* Writes results into $this->internal_table_values via iterateGroupsBranch().
 	*
-	*	@param
-	*	@param
-	*	@param
-	*	@return void
-	*
-	*	requires
-	*	internal_table_values contains a list of all results
+	* @param array $fulltbl  Accumulator for collected rows (by ref)
+	* @param array $tbl      Empty row template (from create_tbl)
+	* @param array $groups   Group index (from createGroupArray)
+	* @calls iterateGroupsBranch()
+	* @called-by collectData()
 	*/
 	private function collectDataFromDocument(&$fulltbl, $tbl, $groups)
 	{
@@ -1459,12 +1631,23 @@ $permutation = $tmp[1];
 		$this->internal_table_values = $this->iterateGroupsBranch($tbl, $fulltbl, $groups, $this->back->show_xmlelement());
 		reset($this->internal_table_values);
 		//var_dump($this->internal_table_values);
-		var_dump("blub" . $fulltbl);
+		//var_dump("blub" . $fulltbl);
 	}
 	public function blub(){return "blub";}
 	/**
-	*	
+	* Recursive document traversal for the collect path (mirror of processingBox).
+	* For each node found via the current group's branch xpath:
+	*   - recurses into the next group (next($groups)) → iterateGroupsBranch()
+	*   - then collects field values from that node → iterateGroupsData()
+	* Uses current() / next() to advance the $groups cursor.
 	*
+	* @param array       $tbl          Row template (empty or partially filled)
+	* @param array       $fulltbl      Accumulated result rows (by ref)
+	* @param array       $groups       Group index cursor (by ref — advances with next())
+	* @param xml_element $root_object  Document node to start traversal from
+	* @return array  All collected rows for this branch level
+	* @calls iterateGroupsBranch() [recursive], iterateGroupsData()
+	* @called-by collectDataFromDocument(), iterateGroupsBranch()
 	*/
 	private function iterateGroupsBranch($tbl,  &$fulltbl,  &$groups, $root_object)
 	{
@@ -1483,8 +1666,13 @@ $permutation = $tmp[1];
     	$this->back->set_xmlelement($this->back->xpath($branch['xpath']));
 
 		$result = &$this->back->get_xpath_Result();
-		
-		if(count($result) == 0)$resultTbl[] = $tbl;
+
+		if(count($result) == 0)
+		{
+			if(!$branch['allowEmpty'])
+				throw new \RuntimeException("XMLDO: iterateGroupsBranch — xpath '" . $branch['xpath'] . "' returned no results (set allowEmpty:true in setBranch/setCrotch to suppress)");
+			$resultTbl[] = $tbl;
+		}
 
 		foreach ($result as $value)
 		{
@@ -1520,12 +1708,16 @@ $permutation = $tmp[1];
 	}
 	
 	/**
-	*	subfunc collects data out of every data section array.
-	*	It starts at the specific buttom of every collection and fills out every 
-	*	table in the table section
-	*	@param tbl array[mixed] : result array with empty fields to fill 
-	*	@param dataset array[mixed]] : array with description how to fill the result array
-	*	@param root_object Interface_NS : basement node for statirng with
+	* Fills each row in $tbl with values read from $root_object in the document.
+	* For 'data' type: reads node CDATA via getdata().
+	* For 'attrib' type: reads attribute via get_ns_attribute().
+	* If $value['value'] is set (constant override), skips xpath entirely.
+	* Recurses with next($dataset) to process all definition entries for this group.
+	*
+	* @param array       $tbl          Rows to fill (by ref) — each row is key→value map
+	* @param array       $dataset      Column definitions cursor (by ref — advances with next())
+	* @param xml_element $root_object  Document node to read data from
+	* @called-by iterateGroupsBranch()
 	*/
 	private function iterateGroupsData(&$tbl, &$dataset, $root_object)
 	{
@@ -1538,11 +1730,13 @@ $permutation = $tmp[1];
 		//var_dump($tbl);
 		foreach ($tbl as &$value)
 		{
+		if(!is_null($data['value'])){$value[$data['name']] = $data['value'];continue;}
 
 		//applies a xpath statement on the root node
     	if(!$res = &$this->back->xpath($data["xpath"]))
     		{
-    			//echo $data["xpath"] . " in " . $root_object->full_URI() . " not found";
+    			if(!$data['allowEmpty'])
+    				throw new \RuntimeException("XMLDO: iterateGroupsData — xpath '" . $data['xpath'] . "' returned no result for field '" . $data['name'] . "' (set allowEmpty:true in define_tag to suppress)");
     			continue;
     		}
 //echo "--" . $data["xpath"] . ':' . $data['attrib_data'] . "--\n";
@@ -1590,11 +1784,26 @@ $permutation = $tmp[1];
 	
 	}
 		
+	/**
+	* Alternative write pipeline — flat mode, no grouping or recursion.
+	* Clones $this->documentForInsert[0] once per DB row and writes column values
+	* directly into each clone via xpath (data as CDATA, attribs inline).
+	* Simpler than generateBranchTree() but does not support tree hierarchy.
+	*
+	* @requires $this->documentForInsert  Clone source (set by setXMLTemplate())
+	* @requires $this->verification       Column definitions (set by define_tag())
+	* @requires $this->rst                DB datasource (null = run once for static data)
+	* @calls show_content()
+	* @called-by processSerialConfiguration()
+	*/
 	public function generateTagTree( )
 	{
 
+		if(count($this->documentForInsert) == 0)
+			throw new \RuntimeException("XMLDO generateTagTree: documentForInsert is empty — check 'use_at_tag' in template config (setXMLTemplate found no matching element)");
+
 		$this->show_content();
-		
+
 				$this->config['setTreeType'] = "Tag";
 		
 		if(is_null($this->rst) || $this->rst->moveFirst())
@@ -1631,7 +1840,8 @@ $permutation = $tmp[1];
 		{
 		$tmp = $obj_ref[count($obj_ref) - 1]->index_max();
 		
-		if(!is_null($this->rst))$datarec = $this->rst->col($this->verification[$i]['name']);
+		if(!is_null($this->verification[$i]['value']))$datarec = $this->verification[$i]['value'];
+		elseif(!is_null($this->rst))$datarec = $this->rst->col($this->verification[$i]['name']);
 		$obj_ref[count($obj_ref) - 1]->setdata($datarec,$tmp);
 		$obj_ref[count($obj_ref) - 1]->set_bolcdata($this->cdata);
 		unset($tmp);
@@ -1640,7 +1850,8 @@ $permutation = $tmp[1];
 		}elseif($this->verification[$i]['attrib_data'] == 'attrib')
 		{
 			
-			$tmp = $this->rst->col($this->verification[$i]['name']);	
+			if(!is_null($this->verification[$i]['value']))$tmp = $this->verification[$i]['value'];
+			else $tmp = $this->rst->col($this->verification[$i]['name']);
 					  	
 			if(is_null($tmp) && !$this->config['attribOnNull'] )continue;
     				 	 	 
@@ -1650,8 +1861,8 @@ $permutation = $tmp[1];
 				{
 					
 
-					$myattrib = &$this->back->get_Object_of_Namespace( $this->content->get_Main_NS() . '#' . 
-					  $this->verification[$cur_pos]['postfix'] );
+					$myattrib = &$this->back->get_Object_of_Namespace( $this->content->get_Main_NS() . '#' .
+					  $this->verification[$i]['postfix'] );
 					  
 					
 					$myattrib->setdata($tmp,0);

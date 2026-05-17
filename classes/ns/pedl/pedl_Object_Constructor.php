@@ -145,7 +145,7 @@ function event_Instance(&$instance,$type,&$obj)
 					{
 					$attrib2 = array('pedl:name' => $pedl_name);
 					if(!$parser->create_Ns_Node($function_name,$stamp,$attrib2))
-					throw new ErrorException('Cannot instancing following class:' . $function_name . ' ', 0,75,"pedl_Object_Construktor",119); //$value->getParam_name()
+					throw new ErrorException('Cannot instantiate "' . $function_name . '" (pedl function): namespace node creation failed (pedl:name="' . $pedl_name . '")', 0,75,"pedl_Object_Constructor",119);
 					}
 					if($func->data_many() > 0)$parser->show_xmlelement()->setdata($func->getdata(0),0);
 					

@@ -16,11 +16,9 @@ class Alias extends plugin
 {
 
 private $alias;
-private $filename; 
-private $hash; 
-private $output;
+private $newColumn;
 
-var $rst = null;
+protected $rst = null;
 
 //var $obj = null;
 
@@ -34,7 +32,7 @@ var $rst = null;
 	
 	public function col($columnname)
 	{
-		//echo $columnname . "\n";
+
 	if($this->rst)
 	{
 		
@@ -48,7 +46,7 @@ var $rst = null;
 	return $this->rst->col($columnname);
 	}
 	
-	  return 'no dataset';
+	  throw new \RuntimeException("alias: recordset is missing");
 	}
 	
 	/**
@@ -62,27 +60,27 @@ var $rst = null;
 	
 	public function alias($column, $alias)
 	{
+		$this->newColumn = $alias;
 		$this->alias[$alias] = $column;
 	}
 	
 	
 	function getAdditiveSource(){;}
 	public function moveFirst(){if($this->rst)return $this->rst->moveFirst(); else return false;}
-    	public function moveLast(){if($this->rst)return $this->rst->moveLast();else return false;}
+    
+	public function moveLast(){if($this->rst)return $this->rst->moveLast();else return false;}
     	
 	public function next(){if($this->rst)return $this->rst->next();else return false;}
-    	public function set_list(&$value)
-    	{
-
+	
+    public function set_list(&$value)
+    {
     	if(is_object($value))
-	{
-		$this->rst = &$value;
-	}
-	else
-	return 'no element received';
-    	}
+    		$this->rst = &$value;
+		else
+			throw new \RuntimeException("alias: set_list went wrong, the argument value isn't an object");
+    }
     	
-    	public function fields(){if($this->rst) return $this->rst->fields();else return array();}
+    public function fields(){if($this->rst) return array_merge($this->rst->fields(), [$this->newColumn]);else return array();}
 
 }
 ?>

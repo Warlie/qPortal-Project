@@ -12,6 +12,7 @@ require_once('owl_Ontology.php');
 require_once('owl_Class.php');   
 require_once('owl_imports.php');
 require_once('owl_DatatypeProperty.php');
+require_once('owl_ObjectProperty.php');
 //require_once('rdfs_Datatype.php');    
 //require_once('rdfs_Container.php');
 //require_once('rdfs_ContainerMembershipProperty.php');
@@ -40,6 +41,7 @@ class OWL_factory
 			$this->node['Class'] = new OWL_Class('Class', $ns);
 			$this->node['imports'] = new OWL_imports('imports', $ns);
 			$this->node['DatatypeProperty'] = new OWL_DatatypeProperty('DatatypeProperty', $ns);
+			$this->node['ObjectProperty'] = new OWL_ObjectProperty('ObjectProperty', $ns);
 			//$this->node['literal'] = new RDFS_Literal();
 			//$this->node['class'] = new RDFS_Class();
 			//$this->node['datatype'] = new RDFS_Datatype();

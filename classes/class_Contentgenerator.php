@@ -467,7 +467,7 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		
 		if(is_Null($this->structur))return false;
 
-		if(is_Null($this->nodeName))return false;
+		//if(is_Null($this->nodeName))return false;
 
 		$this->heap['template'] = null;
 		
@@ -502,68 +502,23 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 
 		//var_dump($path);
 		
-		$cur_obj->hold_messages(
-				["Identifire"=>"http://www.trscript.de/tree#indextree", "Command"=> ["Name"=> "start" ], "Attribute"=>$path]
-				,new EventObject('',$this,$booh));
-			
-			
-		
-		
-		if($this->id_output_template)
-		$this->doc_out_template = $this->heap['template'][$this->id_output_template];
-		
-	
-		return true; //EnD
-		
 		if($this->injectedLine)
 		{
 			$cur_obj->hold_messages($this->injectedLine,new EventObject('',$this,$booh));
+			if($this->id_output_template)
+				$this->doc_out_template = $this->heap['template'][$this->id_output_template];
+			return true;
 		}
-		elseif($this->nodeName == "")
-			
-			$cur_obj->hold_messages( 
-				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> ["Identifire"=>"*", "Command"=> ["Name"=> "start" ], "Attribute"=>$this->param] ]] //["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> '*?start']]
-				,new EventObject('',$this,$booh));
-			else
-/*
-'*?__find_node(json=' . 
-				base64_encode( '{"name":"http://www.trscript.de/tree#tree", "attribute":{ "http://www.trscript.de/tree#name":"' . $this->nodeName . '" }}' ) . ')=' . 
-				base64_encode( '*?start' )
-*/
-			try{
-				//echo "jojo\n";
-			$cur_obj->hold_messages(
-				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{ "attribute":{"http://www.trscript.de/tree#name":"' . $this->nodeName . '"}}'], "Value"=> ["Identifire"=>"*", "Command"=> ["Name"=> "start" ], "Attribute"=>$this->param]  ]]
-				,new EventObject('',$this,$booh)); //  "name":"http://www.trscript.de/tree#tree",
-			//echo "donedone\n";
-			}  //$this->XMLlist->show_xmlelement()->event_message_in('*?start',new EventObject('',$this,$booh));
-			catch(NotExistingBranchException $e)
-			{
-				//var_dump($this->XMLlist->show_xmlelement());
-				$cur_obj->event_message_check( 
-				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> '*?start']]
-				,new EventObject('',$this,$booh));
-			}
-			catch(EmptyTreeException $e)
-			{
-				//var_dump($this->XMLlist->show_xmlelement());
-				$cur_obj->event_message_check( 
-				["Identifire"=>"*", "Command"=> ["Name"=> "__find_node", "Attribute"=>["json"=>'{"name":"http://www.trscript.de/tree#final"}'], "Value"=> '*?start']]
-				,new EventObject('',$this,$booh));
-			}
-		}
-		
-    		
-		//
 
-		
-		
-		/* alters outputtemplate */
-		//var_dump($this->heap['template']);
+		$cur_obj->hold_messages(
+				["Identifire"=>"http://www.trscript.de/tree#indextree", "Command"=> ["Name"=> "start" ], "Attribute"=>$path]
+				,new EventObject('',$this,$booh));
+
 		if($this->id_output_template)
 		$this->doc_out_template = $this->heap['template'][$this->id_output_template];
-		
-		return true; //EnD
+
+		return true;
+		}
 }
 	
 

@@ -19,7 +19,7 @@ require_once("plugin_interface.php");
 class JSEngine extends plugin 
 {
 private $test = 0;
-private $rst = array();
+protected $rst = array();
 private $uri;
 private $template;
 private $tag_name;
@@ -35,11 +35,10 @@ private $type_script = 'text/ecmascript'; //text/javascript //text/ecmascript
 private $script_link = 'xlink:href';
 private $additional_files = [];
 
-	function __construct(/* System.Content */ &$back, /* System.CurRef */ &$treepos)
+	function __construct(/* System.Content */ &$back = null, /* System.CurRef */ &$treepos = null)
 	{
-		$this->back= &$back->getXMLObj();
-		$this->treepos = &$value;
-		$this->content = &$back;
+		if($back !== null) { $this->back = &$back->getXMLObj(); $this->content = &$back; }
+		if($treepos !== null) $this->treepos = &$treepos;
 	}
 	
 			

@@ -629,8 +629,6 @@ function &get_parser()
 }
 
 
-
-
 // TODO attribute is worth a check for the cases, it actual uses
 function attribute($name,&$value){
 	
@@ -655,6 +653,21 @@ function attribute($name,&$value){
 	{
 		$teile = explode("#", $uri);		
 		$attrib = &$this->parser->namespace_frameworks[$teile[0]]['node'][$teile[1]]->new_Instance();
+
+		$ns = $this->showDocumentsNamespaces();
+		$prefix = "";
+		var_dump($ns);
+		if(!isset($ns[$teile[0]]))
+		{
+			trigger_error("NODE set_ns_attribute: there is no namespace to " . $teile[1], E_USER_WARNING);
+			$prefix = $teile[0];
+		}
+		else
+		{
+			$prefix = $ns[$teile[0]];
+		}
+			var_dump($prefix);
+			//throw new \RuntimeException("NODE set_ns_attribute: there is no namespace to " . $teile[1]);
 		
 					$attrib->setdata($value,0);
 					$attrib->name  = $teile[1];
@@ -906,7 +919,8 @@ function &getdata($pos = null)
                 if(is_null($pos))
                 {
                 	//echo count($this->data); $this->index_max()
-                         for($i = 0;$i <= count($this->data);$i++)
+                	$res1 = '';
+                         for($i = 0;$i < count($this->data);$i++)
                         {
 				if(is_Object($this->data[$i]))
 				{
@@ -952,7 +966,7 @@ function &getdata($pos = null)
 
 public function data_many()
 {
-return count($this->data);
+return is_array($this->data) ? count($this->data) : 0;
 }
 
 public function giveOutOverview()
@@ -1542,6 +1556,33 @@ function &new_Instance()
 				//$obj->set_parser($this->get_parser());
 				return $obj;
 }
+
+function showDocumentsNamespaces()
+{ 
+	if($this->get_attribute('xmlns'))
+	{
+		$cleanArray = [];
+
+		foreach ($this->get_attribute() as $key => $value) {
+
+    	if ($key === 'xmlns')
+    		$newKey = '';
+    	elseif (strpos($key, 'xmlns:') === 0)
+    		$newKey = substr($key, 6);
+
+    	$cleanArray[$newKey] = $value;
+    
+    	}
+		
+		return $cleanArray;
+	}
+	else
+		if(!is_null($tmp = $this->getRefprev()))
+			return $tmp->showDocumentsNamespaces();
+		
+	return [];
+}
+
 /**
 *	@param prev_obj : previous node in data tree
 *	@param called_by_cloning : tells the method it is called by itself or someone other
@@ -1552,7 +1593,10 @@ function &cloning(&$prev_obj, $called_by_cloning = false)
                 {
                 	
                 		
-                		
+                		$nsSource = is_object($prev_obj) ? $prev_obj : $this;
+                		$allNamespaces = $nsSource->showDocumentsNamespaces();
+
+                		$nsPrefix = array_search($this->namespace, $allNamespaces);
                 	
                 		/* instances a new object of the current node */
                 		if(is_object($prev_obj))
@@ -1591,13 +1635,12 @@ function &cloning(&$prev_obj, $called_by_cloning = false)
                                 
                                 /* here it gets all its common data */
                                 $obj->name =  $this->name;
-                                
                                 //attribute($name,&$value){
                                 
-
                                 $obj->data =  $this->data;
                                 $obj->namespace =  $this->namespace;
-                                $obj->type =  $this->type;
+                                //$obj->type =  $this->type;
+                                $obj->type =  $nsPrefix ?: $this->type;
                                 $obj->cdata = $this->cdata;
                                 // cdata fehlt
 

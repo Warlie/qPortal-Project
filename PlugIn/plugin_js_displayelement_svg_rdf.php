@@ -19,7 +19,6 @@ require_once("plugin_interface_js.php");
 class JSDisplay extends plugin_js
 {
 private $test = 0;
-private $rst;
 private $uri;
 private $template;
 private $tag_name;
@@ -27,12 +26,10 @@ private $nodeId = '';
 private $nodeBarId = '';
 private $full_uri = array();
 
-	function __construct(/* System.Parser */ &$back, /* System.CurRef */ &$treepos)
+	function __construct(/* System.Parser */ &$back = null, /* System.CurRef */ &$treepos = null)
 	{
-		
-		$this->back= &$back;
-		$this->treepos = &$value;
-		//$this->id = $value; , &$id
+		if($back !== null) $this->back = &$back;
+		if($treepos !== null) $this->treepos = &$treepos;
 		
 	}
 	

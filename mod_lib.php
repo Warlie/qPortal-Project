@@ -654,6 +654,8 @@ $xml = $system->getXMLObj();
 
 function service_call_ontology( &$system , $URI )
 {
+	global $logger_class;
+
 $db = $system->getSQLObj();
 $xml = $system->getXMLObj();
 
@@ -666,8 +668,10 @@ $rst->first_ds();
 if($rst->rst_num() > 0)
 {
 
-	if(is_file( $rst->value('tbl_surface_doc_overview.txt_doc_URL'))) 
+	if(is_file( $rst->value('tbl_surface_doc_overview.txt_doc_URL')))
 	{
+
+				$logger_class->setAssert($rst->value('tbl_surface_doc_overview.txt_doc_URL') ." was found", 0) ;
 
 				$system->setXMLstructur($rst->value('tbl_surface_doc_overview.txt_doc_URL'));
 				
@@ -715,6 +719,8 @@ if($rst->rst_num() > 0)
 	echo $rst->value('tbl_surface_doc_overview.txt_doc_URL') . " gib it nich";
 	}
 }
+else
+$logger_class->setAssert($URI ." was found:" . "SELECT * FROM tbl_surface_doc_overview WHERE tbl_surface_doc_overview.txt_doc_URI = '" . $URI . "';", 0) ;
 //echo $query . " " . $rst->value('tbl_surface_doc_overview.txt_doc_URL') . " " . $rst->rst_num();
 
 /*

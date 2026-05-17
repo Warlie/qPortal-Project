@@ -190,7 +190,10 @@ class PHP_handle extends Interface_handle
 		 $myPrivateModel->set_first_node();
 		 $parser->set_first_node();
 		
-		 	foreach($myPrivateModel->array_Of_Objects_Related_To_Tag_Name('http://www.w3.org/2006/05/pedl-lib#hasCodeResource') as $source)
+		 	$code_resources = $myPrivateModel->array_Of_Objects_Related_To_Tag_Name('http://www.w3.org/2006/05/pedl-lib#hasCodeResource');
+		 	if(count($code_resources) === 0) return false;
+
+		 	foreach($code_resources as $source)
 		 	{
 		 		if(false !== ($hash = $source->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#hash')))
 		 		{
@@ -199,7 +202,7 @@ class PHP_handle extends Interface_handle
 		 				if(hash_file('sha256', $src) != $hash)
 		 					return false;
 		 			}
-		 			
+
 		 		}
 		 		else
 		 		{

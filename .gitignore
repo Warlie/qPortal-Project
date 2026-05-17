@@ -1,0 +1,29 @@
+# Generated files — never commit
+*.pedl
+*_shortcut.php
+
+# Editor temp files
+*#*
+*.marks
+
+# Template directory — managed separately, not part of this repo
+template/
+
+# Logs
+classes/php.err.log
+
+# Config with credentials — never commit
+config/config.ini
+config/config_console.ini
+
+# Local dev / debug
+phpinfo.php
+request_info.php
+.htaccess_aus
+
+# Dependencies
+node_modules/
+vendor/
+
+# Cache / test artifacts
+.phpunit.result.cache

@@ -256,7 +256,18 @@ else
                                 
                 if($_REQUEST['i'] == '__system')
 				{
+					
+					$filteredRequest = array_diff_key($_REQUEST, array_flip(['modus']));
 
+					// Zu einem String im Format "key1=value1, key2=value2" zusammenbauen
+					$debugString = implode(', ', array_map(
+						function ($v, $k) { return sprintf("%s=%s", $k, $v); },
+						$filteredRequest,
+						array_keys($filteredRequest)
+						));
+					
+					$logger_class->setAssert("System Request with modus:" . $_REQUEST['modus'] . " arguments;" . $debugString, 0) ;
+					
 					//$_SESSION['@_mod'] = '';
 					if($_REQUEST['modus'] == 'CREATE_ACCOUNT')
 					service_create_account( $content ,

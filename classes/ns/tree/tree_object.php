@@ -381,12 +381,16 @@ $old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
 					}
 					//create instance and throws exception in case of not existing class
 					$attrib = array('rdf:ID' => $instance_id);
-					//echo "<info style=\"color:blue;font-size:200%\" >";
+					if(!class_exists($class_Name))
+					{
+						$_e = error_get_last();
+						$_hint = $_e ? ' | last PHP error: "' . $_e['message'] . '" in ' . $_e['file'] . ':' . $_e['line'] : ' | no prior PHP error recorded';
+						throw new ErrorException('Cannot instantiate "' . $class_Name . '": PHP class not defined — src file not loaded or fatal error during require_once' . $_hint, 0,75,$parser->getControlUnit( "surface_tree_engine")->getSystemSpace(),1);
+					}
 					if(!$parser->create_Ns_Node($class_Name,$new_stamp,$attrib))
 					{
-						
-					$parser->test_consistence();
-						throw new ErrorException('Cannot instancing following class:' . $class_Name . ' ', 0,75,$parser->getControlUnit( "surface_tree_engine")->getSystemSpace(),1);
+						$parser->test_consistence();
+						throw new ErrorException('Cannot instantiate "' . $class_Name . '": namespace node creation failed — undefined prefix or prototype conflict (stamp="' . $new_stamp . '")', 0,75,$parser->getControlUnit( "surface_tree_engine")->getSystemSpace(),1);
 					}
 					
 					
@@ -404,8 +408,8 @@ $old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
 					$attrib = array();
 					if(!$parser->create_Ns_Node($class_Name . '.__construct',null,$attrib))
 					{
-					!$parser->test_consistence();
-						throw new ErrorException('Cannot instancing following constructor:' . $class_Name . '.__construct ', 0,75,$parser->getControlUnit( "surface_tree_engine")->getSystemSpace(),1);
+						$parser->test_consistence();
+						throw new ErrorException('Cannot instantiate constructor "' . $class_Name . '.__construct": namespace node creation failed', 0,75,$parser->getControlUnit( "surface_tree_engine")->getSystemSpace(),1);
 					}
 
 					//$parser->show_xmlelement()->get_classes();

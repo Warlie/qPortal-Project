@@ -19,7 +19,6 @@ require_once("plugin_interface_js.php");
 class JSControl extends plugin_js
 {
 private $test = 0;
-private $rst;
 private $uri;
 private $template;
 private $tag_name;
@@ -28,13 +27,10 @@ private $full_uri = array();
 private $start_id = '';
 private $seeGraphs = false;
 
-	function __construct(/* System.Parser */ &$back, /* System.CurRef */ &$treepos)
+	function __construct(/* System.Parser */ &$back = null, /* System.CurRef */ &$treepos = null)
 	{
-		
-		$this->back= &$back;
-		$this->treepos = &$value;
-		//$this->id = $value; , &$id
-		
+		if($back !== null) $this->back = &$back;
+		if($treepos !== null) $this->treepos = &$treepos;
 	}
 	
 			
@@ -489,7 +485,7 @@ private $seeGraphs = false;
   	
   	}
   	
-  	/* functions of the class Controlelement */
+  	/* functions of the class JSControl */
   	
   	
   	/* onFocus */

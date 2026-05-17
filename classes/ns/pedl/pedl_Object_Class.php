@@ -389,7 +389,7 @@ function event_Instance(&$instance,$type,&$obj)
 					
 					if(!$pos = $parser->create_Ns_Node($value->q_name(),$new_stamp,$attrib))
 						{
-							throw new ErrorException('Cannot instancing following class:' . $value->q_name() . ' ', 0,75,$parser->getControlUnit( "surface_tree_engine")->getSystemSpace(),1);
+							throw new ErrorException('Cannot instantiate "' . $value->q_name() . '" (pedl class): namespace node creation failed — undefined prefix or prototype conflict (pedl:name="' . $value->pedl_name() . '")', 0,75,$parser->getControlUnit( "surface_tree_engine")->getSystemSpace(),1);
 						}
 						else
 						{
@@ -415,8 +415,7 @@ function event_Instance(&$instance,$type,&$obj)
 							
 							if(!$parser->create_Ns_Node($value->getParam_name(),$stamp,$attrib2))
 							{
-							
-								throw new ErrorException('Cannot instancing following class:' . $value->getParam_name() . ' ', 0,75,"pedl_Object_Class",132);
+								throw new ErrorException('Cannot instantiate "' . $value->getParam_name() . '" (pedl param): namespace node creation failed (pedl:name="' . $value->getParam_pedl_name() . '")', 0,75,"pedl_Object_Class",132);
 							}
 							else
 							{

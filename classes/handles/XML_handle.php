@@ -168,7 +168,7 @@ class XML_handle extends Interface_handle
 	{
 	$this->bool_first_tag = false;
 	
-		return ' xmlns:sg="http://www.auster-gmbh.de/surface-generator-lib" sg:p="' . $this->base_object->position_hash_pos() . '" ';
+		return ' xmlns:sg="http://www.auster-gmbh.de/surface-generator-lib#" sg:p="' . $this->base_object->position_hash_pos() . '" ';
 	
 	}
 	//echo $this->base_object->position_hash_pos() . "\n";

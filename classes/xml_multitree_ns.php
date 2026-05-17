@@ -494,9 +494,9 @@ function delete_index($index)
 					if('xml' == $prefix)$prefix = 0;
 					
 					if(!is_null($this->prefixes[$prefix]))
-						$full_ns = end($this->prefixes[$prefix]);
-					else 
-						$full_ns = $this->prefixes[$prefix][0];
+						$full_ns = end($this->prefixes[$prefix]) ?: '';
+					else
+						$full_ns = ($prefix === 0) ? 'http://www.w3.org/XML/1998/namespace' : '';
 					
 					if($this->namespace_frameworks[$full_ns]['node'][$attribname])
 					{
@@ -796,7 +796,8 @@ function delete_index($index)
    	   	   //echo spl_object_id($node) . "executed \n";
    	   	   //$node->alter_sensity = true;
    	   	   //$node->complete();
-   	   	   $node->event('*?parse_complete', new EventObject('', $this, $no_context));
+   	   	   $evt = new EventObject('', $this, $no_context);
+   	   	   $node->event('*?parse_complete', $evt);
    	   }
    
    }
