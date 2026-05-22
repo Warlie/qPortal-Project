@@ -221,6 +221,10 @@ function __construct($Server = "", $User = "", $pwt = "", $db_name = false, $cod
 	* @param $SQLString : SQL
 	* Immidiate SQL command
 	*/
+	public function escape($value) {
+		return $this->db->real_escape_string($value);
+	}
+
 	function SQL($SQLString){
 
                         if(is_object($this->table_db)) $this->table_db->free_result();

@@ -184,7 +184,7 @@ $xml = $system->getXMLObj();
 $decode_key = md5($keyword);
 
 //detects redundant entries and blocks on invalid name pass combinations
-$db->SQL('SELECT `ID`  FROM `tbl_user_management` WHERE (`User` = "' . $user . '" AND `Key` = "' . $decode_key . '" ) ;');
+$db->SQL('SELECT `ID`  FROM `tbl_user_management` WHERE (`User` = "' . $db->escape($user) . '" AND `Key` = "' . $decode_key . '" ) ;');
 
 if(is_Null($tmp = $altUrl))$tmp = "";
 
@@ -209,7 +209,7 @@ SELECT * FROM (`tbl_user_management` LEFT JOIN `tbl_user_to_group` ON `tbl_user_
 `securityclass`
 )
 VALUES (
-NULL , \'' . $user . '\', \'' . $decode_key . '\', \'' . $forename . '\', \'' . $surname . '\', 1
+NULL , \'' . $db->escape($user) . '\', \'' . $decode_key . '\', \'' . $db->escape($forename) . '\', \'' . $db->escape($surname) . '\', 1
 );';
 
 $db->SQL($entry);
@@ -366,7 +366,7 @@ $xml = $system->getXMLObj();
 if(!($id = $_SESSION['http://www.auster-gmbh.de/surface#id']))return false;
 
 
-$db->SQL('SELECT tbl_marked_for_group.groups, tbl_marked_for_group.to_person FROM tbl_marked_for_group WHERE `code` = "' . $code . '" ;');
+$db->SQL('SELECT tbl_marked_for_group.groups, tbl_marked_for_group.to_person FROM tbl_marked_for_group WHERE `code` = "' . $db->escape($code) . '" ;');
 
 if(($max = $db->sEffectNum()) == 0)return false;
 
@@ -385,7 +385,7 @@ foreach ($groups as $group) {
  	
 if($to_person)$db->SQL("INSERT INTO tbl_user_to_person (user_id, person_id) VALUES ($id, $to_person);"); 
 
-$db->SQL('DELETE FROM tbl_marked_for_group WHERE `code` = "' . $code . '" ;');
+$db->SQL('DELETE FROM tbl_marked_for_group WHERE `code` = "' . $db->escape($code) . '" ;');
 
 
 
@@ -682,15 +682,16 @@ if($rst->rst_num() > 0)
                                 $system->setTreeNodeName($tmp);
                                 if(!$system->generate())
                                 {
-					       
+					http_response_code(404);
+					$logger_class->setAssert('ONTOLOGY generate() failed for URI="' . $URI . '" file="' . $rst->value('tbl_surface_doc_overview.txt_doc_URL') . '"', 0);
 						if (!($fp = fopen('./error/404.html', "r"))) {
-                
+
 							print("This page is not supported");
 							return false;
 						}
 
 
-						while ($data = fread($fp, 4096)) 
+						while ($data = fread($fp, 4096))
 						{
 
 
@@ -698,11 +699,9 @@ if($rst->rst_num() > 0)
 
 						}
 						return false;
-						
-					
-					
+
 				}
- 				
+
  				$xmlobj = $system->getXMLObj();
 
  				$xmlobj->set_special('modus', 'trace');
@@ -716,11 +715,22 @@ if($rst->rst_num() > 0)
 	}
 	else
 	{
-	echo $rst->value('tbl_surface_doc_overview.txt_doc_URL') . " gib it nich";
+		$missing_url = $rst->value('tbl_surface_doc_overview.txt_doc_URL');
+		$logger_class->setAssert('ONTOLOGY file not found on disk: "' . $missing_url . '" (URI="' . $URI . '")', 0);
+		http_response_code(404);
+		if ($fp = fopen('./error/404.html', 'r')) { while ($data = fread($fp, 4096)) print($data); fclose($fp); }
+		else print('404 Not Found');
+		return false;
 	}
 }
 else
-$logger_class->setAssert($URI ." was found:" . "SELECT * FROM tbl_surface_doc_overview WHERE tbl_surface_doc_overview.txt_doc_URI = '" . $URI . "';", 0) ;
+{
+	$logger_class->setAssert('ONTOLOGY URI not found in database: "' . $URI . '"', 0);
+	http_response_code(404);
+	if ($fp = fopen('./error/404.html', 'r')) { while ($data = fread($fp, 4096)) print($data); fclose($fp); }
+	else print('404 Not Found');
+	return false;
+}
 //echo $query . " " . $rst->value('tbl_surface_doc_overview.txt_doc_URL') . " " . $rst->rst_num();
 
 /*
@@ -1371,8 +1381,8 @@ $decode_key = md5($key);
 $db = $system->getSQLObj();
 
 //detects redundant entries and blocks on invalid name pass combinations
-$db->SQL('SELECT 
-	tbl_user_management.ID, 
+$db->SQL('SELECT
+	tbl_user_management.ID,
 	tbl_user_management.User,
 	tbl_user_management.forename,
 	tbl_user_management.surname,
@@ -1380,7 +1390,7 @@ $db->SQL('SELECT
 	tbl_group_management.groupname,
 	tbl_group_management.groupdescription,
 	tbl_group_management.sector
-	FROM (`tbl_user_management` LEFT JOIN `tbl_user_to_group` ON `tbl_user_management`.id=`tbl_user_to_group`.user_id ) LEFT JOIN `tbl_group_management` ON `tbl_user_to_group`.group_id=`tbl_group_management`.id WHERE (`User` = "' . $user . '" AND `Key` = "' . $decode_key . '" ) ;');
+	FROM (`tbl_user_management` LEFT JOIN `tbl_user_to_group` ON `tbl_user_management`.id=`tbl_user_to_group`.user_id ) LEFT JOIN `tbl_group_management` ON `tbl_user_to_group`.group_id=`tbl_group_management`.id WHERE (`User` = "' . $db->escape($user) . '" AND `Key` = "' . $decode_key . '" ) ;');
 if(($max = $db->sEffectNum()) == 0)return false;
 
 
