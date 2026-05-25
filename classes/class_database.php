@@ -340,7 +340,6 @@ global $logger_class;
 	* @param mysec
 	*/
 if($this->showSQL)echo $sql . "\n";
-			
 if(!function_exists('extract_table')){
 
         //findet alle tabellennamen in einem SQL-String
@@ -441,7 +440,6 @@ if(!function_exists('extract_table')){
 	//                                                 programm
 	//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-
                  //erstellt neuen rst()
                  $rst = new rst($listOfTBLs = extract_table($sql)
                  	 , 	$this->define_rst_fields(
@@ -451,14 +449,12 @@ if(!function_exists('extract_table')){
                  	 	 )
                  	 ,	$this->db
                  	 );
-                                                     
                  //uebergibt alle tabellennamen
                  //$rst->table = extract_table($sql); //zeile 125
 
 				 
                  $res = /* zeile 445 */ $this->load_field_rst($rst,$sql,($cols == '*')?false:true,$this->mycodeset);
-                 
-                 
+
 		 //$rst->show_content();
 		 return $res;
 }
@@ -480,17 +476,22 @@ private function load_field_rst($rst,$sql,$add_pri,$encode = 'UTF-8'){
           if(is_null($rst->field)){echo '<b>Recordset besitzt noch keine tabellennamen</b>';return false;}
           if(is_null($sql)){echo '<b>Es wurde kein SQL-String uebergeben</b>';return false;}
 
-          $prim = $rst->prim_field(); // prim problem
-	      
+          $prim = $rst->prim_field();
 	      if($add_pri && (false ===(strpos(strtoupper($sql),'DISTINCT'))))
 	      {
-             	if(!$prim)throw InvalidArgumentException("no primary key definiert");
-              	$sql = 'SELECT ' . implode(',',$prim) . ',' . substr($sql,7);
+	      	if(!$prim) {
+	      		if(count($rst->table) > 1)
+	      			throw new InvalidArgumentException("no primary key definiert");
+	      		$rst->readonly = true;
+	      	} else {
+	      		$sql = 'SELECT ' . implode(',',$prim) . ',' . substr($sql,7);
+	      	}
 	      }
-
 	      // sql request with worse error handling
-          $fdresult = $this->db->query($sql); 
-          if($this->db->errno <>0)echo 'Fehler aufgetreten: ' . $this->db->errno . '(' . $sql . ")\n";                              
+          $fdresult = $this->db->query($sql);
+          if($this->db->errno <>0) {
+          	  throw new InvalidArgumentException("DB-Error occured:" . $this->db->errno . ":" . $this->db->connect_error);
+          }
 
           // fetch all over the result
           while ($zeile = $fdresult->fetch_row()) {
@@ -904,6 +905,7 @@ var $tmp = null;
 var $var_cur_pos=0;
 var $pos_in_array=0;
 public $table;
+public $readonly = false;
 private $index;
 private $db_connection;
 
@@ -935,7 +937,8 @@ private function set_index(array $record, int $pos)
 	
 	foreach($this->table as $value)
 	{
-		
+		if(empty($this->prim_fields[$value])) continue;
+
 		$idx = '';
 		foreach($this->prim_fields[$value] as $prims)
 		{
@@ -996,13 +999,14 @@ function update(){
 
     if(is_null($this->tmp))
 	{
-		
+
 		$this->set_index( $this->value[$this->pos_in_array] , $this->pos_in_array);
-		
-		$this->pos_in_array++; 
+
+		$this->pos_in_array++;
 		}
 		else
 		{
+			if($this->readonly) throw new RuntimeException("rst is readonly: no primary key available");
 			//echo "\n tmp \n";
 			$completeRow = [];
 			$sortedRow = [];

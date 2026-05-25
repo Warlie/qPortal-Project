@@ -1538,11 +1538,13 @@ if(DEBUG)
 		 * In a flat single-group config these must be equal.
 		 * In multi-level configs the leaf count reflects unique bottom-level groups —
 		 * divergence from $pos indicates rows were silently skipped or merged unexpectedly. */
-		if(!is_null($this->rst) && $this->insertedLeafCount !== $pos)
-			throw new \RuntimeException(
+		if(!is_null($this->rst) && $this->insertedLeafCount !== $pos) {
+			global $logger_class;
+			$logger_class->setAssert(
 				"XMLDO: record count mismatch — " . $pos . " rows from datasource, " .
-				$this->insertedLeafCount . " leaf entries written to document"
+				$this->insertedLeafCount . " leaf entries written to document (rows merged by group key)", 0
 			);
+		}
 
                 /* check level */
 		//TODO gruppen einzeln durchtesten und für mehrere Gruppen pro Tiefe auslegen

@@ -247,9 +247,9 @@ public function execute()
 			if($this->testmode)echo $sql . "\n";
 
 			$this->rst = $this->dbclazz->get_rst($sql);
-			if($this->testmode)echo "sql statement has effected:" . $this->rst->rst_num() . " records!\n";;
 			$this->rst->first_ds();
-		}
+
+}
 
 public function execute_no_result()
 		{
