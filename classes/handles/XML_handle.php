@@ -18,7 +18,7 @@ class XML_handle extends Interface_handle
 		$this->parse_document_neu($source);		
 //		if(!$is_obj)
 		//$this->parser = xml_parser_create_ns();
-		$this->parser = xml_parser_create(); //'UTF-8'
+		$this->parser = xml_parser_create('UTF-8');
 
             xml_parser_set_option( $this->parser, XML_OPTION_CASE_FOLDING, $this->attribute_values['XML_OPTION_CASE_FOLDING'] );
 			//xml_parser_set_option( $this->parser, XML_OPTION_TARGET_ENCODING, 'ISO-8859-1' );

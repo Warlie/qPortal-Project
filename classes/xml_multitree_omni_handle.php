@@ -45,8 +45,11 @@ require_once('xml_multitree_objex.php');
 require_once('xml_multitree_ns.php');
 require_once('handles/class_index.php');
 
-class xml_omni extends xml_objex 
+class xml_omni extends xml_objex
 {
+    // Depth counter for stamp-insert mode — set by load_Stream($stamp≠null),
+    // read by tag_open/tag_close to skip the outermost wrapper element.
+    public ?int $stamp_insert_depth = null;
 
 	var $TYPE = array();
 	public $SPECIAL = array();
@@ -67,34 +70,39 @@ class xml_omni extends xml_objex
 	}
 	
      /* läd ein XML-Dokument */
-      function load_Stream(&$source,$casefolding=1,$special="",$ref='')
+      function load_Stream(&$source,$casefolding=1,$special="",$ref='',$stamp=null)
         {
-        	//echo $special . "\n";
-        //echo $source . "\n\n";
         	global $logger_class;
 
-		//echo 'load dokument with identifer "' . $ref . '" and special "' . $special . '"(xml_omni:load_Stream)<br>\n';
+		if ($stamp !== null)
+		{
+			// Stamp-insert mode: navigate to the target position in an existing tree slot.
+			// No new slot is created; parsed content is inserted at the stamp position.
+			// tag_open/tag_close skip the outermost wrapper element (e.g. rdf:RDF).
+			$this->go_to_stamp($stamp);
+			$this->cur_pointer[$this->idx] = &$this->pointer[$this->idx];
+			$this->stamp_insert_depth = 0;
+			$this->handle_select($source,$casefolding,$special,$ref);
+			unset($this->stamp_insert_depth);
+			$this->executed();
+			return;
+		}
+
 		if($special <> 'PHP')
 		{
                 $this->special = $special;
                 $this->MIME[$this->idx] = $this->MIME_check($source);
                 $this->DOC[$this->idx] = $this->DOC_check($source);
 		$this->TYPE[$this->idx] = strtok($special, ";"); //strtok is a tokenizer. TODO Check using
-		
-		//var_dump($this->MIME, $this->DOC, $this->TYPE, $this->NAMESPACES);
-		//echo "\n--------------------------------------------------\n";
 		}
-                       
+
                         $encoding = "";
                         if($this->MIME[$this->idx]['encoding'])$encoding = $this->MIME[$this->idx]['encoding'];
-			
-			
+
+
 			$this->handle_select($source,$casefolding,$special,$ref);
-                        //$this->idx = $this->max_idx++;
                         $this->used_parser = true;
-                        
-                       
- 
+
                 if($special <> 'PHP')
                 {
                 $this->cur_pos_array[$this->idx] = array(); //

@@ -804,6 +804,15 @@ function delete_index($index)
    
    function tag_open($parser, $tag, $attributes, $pos = -1)
    {
+	// Stamp-insert mode: skip the outermost wrapper element so its children
+	// are inserted directly at cur_pointer rather than inside a new wrapper node.
+	if (isset($this->stamp_insert_depth)) {
+		if ($this->stamp_insert_depth === 0) {
+			$this->stamp_insert_depth = 1;
+			return;
+		}
+		$this->stamp_insert_depth++;
+	}
 
 	//echo "&lt;<font color=\"#00dd00\">$tag</font>&gt;\n";
 	   
@@ -972,8 +981,13 @@ echo $this->idx . " gibt es nicht";
 
    function tag_close($parser, $tag)
    {
-   
-   
+	// Stamp-insert mode: skip the close of the outermost wrapper element.
+	if (isset($this->stamp_insert_depth)) {
+		$this->stamp_insert_depth--;
+		if ($this->stamp_insert_depth === 0)
+			return;
+	}
+
    	if(isset($this->cur_pointer[$this->idx]))
 	{
 		// here complete is called
@@ -995,15 +1009,25 @@ echo $this->idx . " gibt es nicht";
    	   return $this->cur_pointer[$this->idx];
    }
    
+   function isURIused($full_ns)
+   {
+   	   $ns = explode('#',$full_ns);
+   	   if(count($ns)==1)
+   	   	   return array_key_exists($ns[0], $this->namespace_frameworks);
+   	   else
+   	   	return array_key_exists($ns[0], $this->namespace_frameworks) && array_key_exists($ns[1], $this->namespace_frameworks[$ns[0]]['node']);
+   }
+   
    function &get_Object_of_Namespace($full_ns)
    {
 	   if(is_String($full_ns))
 	   {
-		   $ns = explode($full_ns,'#');
+		   $ns = explode('#',$full_ns);
 		   
 		   if($ns[0] && $ns[1])
 		   {
-			   if($tmp = &$this->namespace_frameworks[$ns[0]]['node'][$ns[1]]->new_Instance())
+			   if(isset($this->namespace_frameworks[$ns[0]]['node'][$ns[1]])
+			      && is_object($this->namespace_frameworks[$ns[0]]['node'][$ns[1]]))
 			   return $this->namespace_frameworks[$ns[0]]['node'][$ns[1]]->new_Instance();
 			   else
 			   return My_NameSpace_factory::alt_namespace_factory($ns[1], $ns[0]);
@@ -1038,6 +1062,26 @@ echo $this->idx . " gibt es nicht";
 	   }
    }
  
+   // Returns the actual tree node (Interface_node) for a fully-qualified URI.
+   // get_Class_of_Namespace returns the registered instance2; its link_to_class
+   // is instance1 — the node that was inserted into mirror[$idx] during tag_open.
+   // Returns null if the URI is unknown or has no '#' fragment.
+   public function &get_Tree_Node_of_Namespace(string $full_ns): ?Interface_node
+   {
+       $null = null;
+       if (strpos($full_ns, '#') === false) return $null;
+       try {
+           $registered = &$this->get_Class_of_Namespace($full_ns);
+           if (is_object($registered) && is_object($registered->link_to_class))
+               return $registered->link_to_class;
+           if (is_object($registered))
+               return $registered;
+       } catch (\ErrorException $e) {
+           // URI not registered
+       }
+       return $null;
+   }
+
 /*  The new one needs to be tested first before deleting
    function set_Object_to_Namespace($ns,&$obj)
    {

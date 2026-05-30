@@ -4,7 +4,8 @@
     "type": "project",
 "require": {
         "yohang/finite": "*",
-        "twbs/bootstrap": "*"
+        "twbs/bootstrap": "*",
+        "pietercolpaert/hardf": "^0.5.0"
     },
     "require-dev": {
         "phpunit/phpunit": "*"

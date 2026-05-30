@@ -377,19 +377,22 @@ else
 				$content->setLexicalOrderParam('i');
                                 
                                 //$content->setXMLTemplate('template/text1.htm');
-                if(isset($_SESSION['@_mod']) && $_SESSION['@_mod']=='intern')
+                $_intern_token = null;
+				$_auth_header  = $_SERVER['HTTP_AUTHORIZATION'] ?? apache_request_headers()['Authorization'] ?? '';
+				if (preg_match('/^Bearer\s+(.+)$/i', $_auth_header, $_m)) $_intern_token = $_m[1];
+				$_intern_keys  = array_filter(INTERN_KEYS, fn($k) => $k !== '');
+				$_has_session  = isset($_SESSION['@_mod']) && $_SESSION['@_mod'] === 'intern';
+				$_token_valid  = !empty($_intern_keys) && in_array($_intern_token, $_intern_keys, true);
+
+                if (!empty($_intern_token) && !$_token_valid) {
+                    http_response_code(401);
+                    header('Content-Type: application/json');
+                    echo json_encode(['error' => 'Unauthorized']);
+                    exit;
+                }
+
+                if ($_has_session || $_token_valid)
                 {
-				$_intern_token = null;
-				$_auth_header = $_SERVER['HTTP_AUTHORIZATION'] ?? apache_request_headers()['Authorization'] ?? '';
-				if(preg_match('/^Bearer\s+(.+)$/i', $_auth_header, $_m)) $_intern_token = $_m[1];
-
-				$_intern_keys = array_filter(INTERN_KEYS, fn($k) => $k !== '');
-				if(!empty($_intern_keys) && !in_array($_intern_token, $_intern_keys, true))
-				{
-					http_response_code(401);
-					exit;
-				}
-
 				$content->setXMLstructur(INTERN);
 				// {"Identifire":"*","Command":{"Name":"__find_node","Attribute":{"json":"{\"name\":\"http:\/\/www.trscript.de\/tree#final\"}"},"Value":{"Identifire":"*","Command":{"Name":"start"},"Attribute":{"i":""}}}}
 				$content->commandLineInjection(file_get_contents('php://input'));

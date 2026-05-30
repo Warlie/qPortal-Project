@@ -13,8 +13,9 @@ require_once('PHP_handle.php');
 require_once('SVG_Overview_handle.php');
 require_once('XML_handle_registry_output.php');
 require_once('SPARQL_handle.php');
+require_once('Turtle_handle.php');
 
-class My_Handle_factory 
+class My_Handle_factory
 {
 
 	public static function &handle_factory($type)
@@ -45,6 +46,8 @@ class My_Handle_factory
 			return new XML_handle_registry();
 			case 'SPARQL' :
 			return new SPARQL_handle();
+			case 'TURTLE' :
+			return new Turtle_handle();
 			default:
 			throw new ErrorException('There is no "' .  strtoupper($type) . '";');
 		}

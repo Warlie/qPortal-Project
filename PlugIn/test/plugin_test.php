@@ -116,4 +116,11 @@ function render_plugin_table($obj) {
 
     return $output;
 }
+
+public function table_to_log($obj, $tag)
+{
+	global $logger_class;
+	$logger_class->setAssert( $tag . ": " . $this->render_plugin_table($obj),0);
+}
+
 }

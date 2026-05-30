@@ -44,7 +44,12 @@ class Interface_handle
 	
 	function parse_document($source)
 	{
-	
+
+	}
+
+	function parse_document_from_array(array $data): void
+	{
+
 	}
 	
 	function save_back($format,$send_header = false)
