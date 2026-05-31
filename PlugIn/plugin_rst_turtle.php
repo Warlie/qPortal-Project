@@ -119,6 +119,8 @@ class RstTurtle extends plugin
     {
         $cfg = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
 
+        $this->predicate_defs = [];
+
         foreach ($cfg['prefixes'] ?? [] as $prefix => $ns)
             $this->setPrefix($prefix, $ns);
 

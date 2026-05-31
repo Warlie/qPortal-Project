@@ -48,14 +48,14 @@ class Turtle_handle extends Interface_handle
         }
 
         if ($direct) {
-            // Pfad A (stamp insert) — find the TURTLE output slot, navigate to its root,
-            // and load new subjects there via load_Stream with position stamp.
+            // Pfad A (stamp insert) — navigate to the target slot root and inject via load_Stream.
             // omni_handle skips the outer rdf:RDF wrapper; subjects land directly in the tree.
+            // Works for TURTLE slots and XML slots (e.g. doctype_out="XML" with OWL skeleton).
             if (!empty($new)) {
-                $turtle_idx = $this->_find_turtle_idx();
-                if ($turtle_idx !== null) {
+                $target_idx = $this->_find_turtle_idx() ?? $this->_find_main_doc_idx();
+                if ($target_idx !== null) {
                     $saved_idx = $this->base_object->idx;
-                    $this->base_object->change_idx($turtle_idx);
+                    $this->base_object->change_idx($target_idx);
                     $this->base_object->set_first_node();
                     $stamp    = $this->base_object->position_stamp();
                     $new_data = ['prefixes' => $data['prefixes'], 'subjects' => $new];
@@ -90,6 +90,26 @@ class Turtle_handle extends Interface_handle
             }
         }
         return $result;
+    }
+
+    // Returns the idx of the main RDF output document — first rdf:RDF-rooted slot whose
+    // loaded_URI is a regular file path (not a @system-slot like @registry_surface_system).
+    // Used as injection target when no TURTLE slot exists (XML/OWL output mode).
+    private function _find_main_doc_idx(): ?int
+    {
+        $RDF_ROOT = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#RDF';
+        $max = $this->base_object->max_idx ?? 0;
+        for ($i = 0; $i <= $max; $i++) {
+            $uri = $this->base_object->loaded_URI[$i] ?? '';
+            $m   = $this->base_object->mirror[$i] ?? null;
+            if (is_object($m)
+                && $m->full_URI() === $RDF_ROOT
+                && $uri !== ''
+                && $uri[0] !== '@') {
+                return $i;
+            }
+        }
+        return null;
     }
 
     // Appends new predicate nodes to already-registered subjects.
@@ -347,6 +367,11 @@ class Turtle_handle extends Interface_handle
                 if ($uri) $prefixes[$key] = $uri . '#';
             }
         }
+
+        // qPortal core hardcodes xmlns:xsd = rdfs namespace (historical bug in TreeEngine.php).
+        // Override with correct standard URIs so Turtle output is valid.
+        $prefixes['xsd']  = 'http://www.w3.org/2001/XMLSchema#';
+        $prefixes['rdfs'] = 'http://www.w3.org/2000/01/rdf-schema#';
 
         $writer = new \pietercolpaert\hardf\TriGWriter(['prefixes' => $prefixes]);
 
