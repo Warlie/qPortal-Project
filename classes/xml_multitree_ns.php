@@ -1014,9 +1014,11 @@ echo $this->idx . " gibt es nicht";
    {
    	   $ns = explode('#',$full_ns);
    	   if(count($ns)==1)
-   	   	   return array_key_exists($ns[0], $this->namespace_frameworks);
+   	   	   return isset($this->namespace_frameworks[$ns[0]]) && is_array($this->namespace_frameworks[$ns[0]]);
    	   else
-   	   	return array_key_exists($ns[0], $this->namespace_frameworks) && array_key_exists($ns[1], $this->namespace_frameworks[$ns[0]]['node']);
+   	   	// isset() returns false for null — avoids false positives from null entries
+   	   	// created by get_Class_of_Namespace's reference assignment on failed lookups
+   	   	return isset($this->namespace_frameworks[$ns[0]]['node'][$ns[1]]);
    }
    
    function &get_Object_of_Namespace($full_ns)
