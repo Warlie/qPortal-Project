@@ -7,3 +7,6 @@
 [submodule "dependency/jquery"]
 	path = dependency/jquery
 	url = git@github.com:jquery/jquery.git
+[submodule "anttree"]
+	path = anttree
+	url = git@github.com:Warlie/anttree.git
