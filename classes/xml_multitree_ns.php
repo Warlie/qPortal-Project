@@ -809,6 +809,7 @@ function delete_index($index)
 	if (isset($this->stamp_insert_depth)) {
 		if ($this->stamp_insert_depth === 0) {
 			$this->stamp_insert_depth = 1;
+			$this->add_new_namespace_from_attributes($attributes);
 			return;
 		}
 		$this->stamp_insert_depth++;

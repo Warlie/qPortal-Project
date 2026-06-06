@@ -89,7 +89,8 @@ class RstTurtle extends plugin
         ?string $column_predicate,
         string  $column_name,
         ?string $datatype        = null,
-        ?string $column_datatype = null
+        ?string $column_datatype = null,
+        bool    $is_uri          = false
     ): void {
         if ($predicate !== null && $column_predicate !== null)
             throw new \RuntimeException(
@@ -112,6 +113,7 @@ class RstTurtle extends plugin
             'column_name'      => $column_name,
             'datatype'         => $datatype,
             'column_datatype'  => $column_datatype,
+            'is_uri'           => $is_uri,
         ];
     }
 
@@ -140,7 +142,8 @@ class RstTurtle extends plugin
                 $p['column_predicate'] ?? null,
                 $p['column'],
                 $p['datatype']         ?? null,
-                $p['column_datatype']  ?? null
+                $p['column_datatype']  ?? null,
+                ($p['object_type']     ?? 'literal') === 'uri'
             );
         }
     }
@@ -206,7 +209,9 @@ class RstTurtle extends plugin
 
                 $triples[] = [
                     'predicate' => $pred_uri,
-                    'object'    => ['type' => 'literal', 'value' => (string)$value, 'datatype' => $dt, 'lang' => null],
+                    'object'    => $def['is_uri']
+                        ? ['type' => 'uri',     'value' => $this->_resolve((string)$value), 'datatype' => null, 'lang' => null]
+                        : ['type' => 'literal', 'value' => (string)$value, 'datatype' => $dt, 'lang' => null],
                 ];
             }
 

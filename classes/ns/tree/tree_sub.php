@@ -137,7 +137,8 @@ function event_message_in($type,&$obj)
 								// holy crap this will fullfill data collection for just one node it it ? It is just one argument? This is quite common.
 				if($tmp->getRefnext(0) instanceof TREE_object && ($tmp->getRefnext(0)->index_max() == 0))
 				{
-					$res = $tmp->getRefnext(0)->get_attribute('id');
+					$bare_id = $tmp->getRefnext(0)->get_attribute('id');
+					$res = str_contains($bare_id, '?') ? $bare_id : $bare_id . '?' . $this->get_idx();
 				}
 				elseif($tmp->getRefnext(0) instanceof Interface_node)
 				{

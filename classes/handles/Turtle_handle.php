@@ -118,7 +118,8 @@ class Turtle_handle extends Interface_handle
     private function _extend_existing(array $existing_subjects, array $prefixes): void
     {
         $RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
-        $idx      = $this->base_object->idx;
+
+        $idx = $this->base_object->idx;
 
         foreach ($existing_subjects as $subject_uri => $triples) {
             $tree_node = &$this->base_object->get_Tree_Node_of_Namespace($subject_uri);

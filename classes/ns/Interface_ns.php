@@ -656,7 +656,7 @@ function attribute($name,&$value){
 
 		$ns = $this->showDocumentsNamespaces();
 		$prefix = "";
-		var_dump($ns);
+		//var_dump($ns);
 		if(!isset($ns[$teile[0]]))
 		{
 			trigger_error("NODE set_ns_attribute: there is no namespace to " . $teile[1], E_USER_WARNING);
@@ -666,7 +666,7 @@ function attribute($name,&$value){
 		{
 			$prefix = $ns[$teile[0]];
 		}
-			var_dump($prefix);
+			//var_dump($prefix);
 			//throw new \RuntimeException("NODE set_ns_attribute: there is no namespace to " . $teile[1]);
 		
 					$attrib->setdata($value,0);

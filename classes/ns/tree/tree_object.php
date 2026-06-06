@@ -104,6 +104,7 @@ function event_message_in($type,&$obj)
 $old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
 	$parser = &$this->get_parser();
 	$tech_tree = $this->get_parser()->get_context_generator()->TreeObj;
+	$caller_idx = $this->get_idx();
 		
 		if($obj->get_node())
 		{
@@ -134,8 +135,8 @@ $old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
 		if($class_Name)
 		 {	
 		 // in case id and class name are mentioned, that can be seen as instancing an object. For preventing any overwrite, you will get a return
-		  if(in_array($class_Name . ':' . $instance_id,$this->obj_init))return false;
-		  $this->obj_init[] = $class_Name . ':' . $instance_id;
+		  if(in_array($class_Name . ':' . $instance_id . '?' . $caller_idx,$this->obj_init))return false;
+		  $this->obj_init[] = $class_Name . ':' . $instance_id . '?' . $caller_idx;
 
 		 }
 	//---------------------------------------------------------------------------------
@@ -157,7 +158,9 @@ $old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
 	//------------------Allready existing name---------------------------
 			//gives out first existing instance to id
 			//echo $instance_id . "\n";
-			$object = $parser->getControlUnit( "surface_tree_engine")->getObjectByID($instance_id);
+			$object = $parser->getControlUnit( "surface_tree_engine")->getObjectByID(
+				str_contains($instance_id, '?') ? $instance_id : $instance_id . '?' . $caller_idx
+			);
 
 			// class name mentioned in the former object, called by the instance id
 			
@@ -273,7 +276,7 @@ $old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
 			
 			if(!is_null($instance_id))
 			{ //echo $instance_id;
-				$parser->getControlUnit( "surface_tree_engine")->setObjectByID($this,$instance_id);
+				$parser->getControlUnit( "surface_tree_engine")->setObjectByID($this,$instance_id . '?' . $caller_idx);
 			}
 		}
 		
@@ -380,7 +383,7 @@ $old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
 						}
 					}
 					//create instance and throws exception in case of not existing class
-					$attrib = array('rdf:ID' => $instance_id);
+					$attrib = array('rdf:ID' => $instance_id . '?' . $caller_idx);
 					if(!class_exists($class_Name))
 					{
 						$_e = error_get_last();
