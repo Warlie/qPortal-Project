@@ -370,7 +370,7 @@ if($printall) $res .=  '</root>';
 
 	//convert_to_XML(
 
-				return $this->base_object->convert_to_XML($res, $encoding, true);
+			return $this->base_object->convert_to_XML($res, $encoding, true);
 		
 	}
 	

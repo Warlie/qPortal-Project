@@ -115,17 +115,34 @@ class Turtle_handle extends Interface_handle
     // Appends new predicate nodes to already-registered subjects.
     // Sets cur_pointer to the canonical node, calls tag_open/cdata/tag_close,
     // then restores cur_pointer so the tree remains consistent.
+    //
+    // MUST run with the OWL document's idx (target_idx) so that:
+    //   (a) tag_open creates nodes with the correct idx
+    //   (b) the saved_cur for the restore is rdf:RDF root (idx=2), not an
+    //       arbitrary node from the sub-script's slot
+    //
+    // ALIAS BUG: tag_close does  cur_pointer[$idx] = &var->prev_el, making
+    // them reference aliases.  A plain  cur_pointer[$idx] = $saved_cur  would
+    // then corrupt var->prev_el.  Break the alias with unset() first.
     private function _extend_existing(array $existing_subjects, array $prefixes): void
     {
         $RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
 
-        $idx = $this->base_object->idx;
+        $target_idx = $this->_find_turtle_idx() ?? $this->_find_main_doc_idx();
+        if ($target_idx === null) return;
+
+        $saved_idx = $this->base_object->idx;
+        $this->base_object->change_idx($target_idx);
+        $idx = $target_idx;
 
         foreach ($existing_subjects as $subject_uri => $triples) {
             $tree_node = &$this->base_object->get_Tree_Node_of_Namespace($subject_uri);
             if (!is_object($tree_node)) continue;
 
             $saved_cur = $this->base_object->cur_pointer[$idx] ?? null;
+            // Break any alias between cur_pointer[$idx] and mirror[$idx] before
+            // assigning — a plain value-assign would otherwise corrupt mirror[$idx].
+            unset($this->base_object->cur_pointer[$idx]);
             $this->base_object->cur_pointer[$idx] = $tree_node;
 
             foreach ($triples as $t) {
@@ -148,9 +165,15 @@ class Turtle_handle extends Interface_handle
                 $this->base_object->tag_close($this, $pred_qname);
             }
 
-            // tag_close walked back to canonical via prev_el — restore original position
+            // tag_close left cur_pointer[$idx] aliased to the last predicate node's
+            // prev_el.  A plain value-assign would corrupt that prev_el through the
+            // shared PHP reference container.  Break the alias with unset() first so
+            // the predicate node's prev_el (= the subject node) stays intact.
+            unset($this->base_object->cur_pointer[$idx]);
             $this->base_object->cur_pointer[$idx] = $saved_cur;
         }
+
+        $this->base_object->change_idx($saved_idx);
     }
 
     private function _ontology_uri(array $data): string
