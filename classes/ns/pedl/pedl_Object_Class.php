@@ -358,19 +358,15 @@ function event_Instance(&$instance,$type,&$obj)
 				}
 				else
 				{
-					/*TODO gescheite Fehlerbeschreibung  Laber Exception*/
-				
-				echo $this->name; 
-				$name = $this->get_ns_attribute_obj("http://www.w3.org/2006/05/pedl-lib#name")->getdata();
-				echo ' <b>' . $name .'</b><br>';
-				echo "Missing RDF edge ref:";
-				echo $this->full_URI() . '->' . $this->getRefnext($i)->full_URI();
-				echo '(' . get_class($this->getRefnext($i)) . ')->';
-				echo $this->getRefnext($i)->get_ns_attribute_obj('http://www.w3.org/1999/02/22-rdf-syntax-ns#resource')->full_URI();
-				echo '(' . get_class($this->getRefnext($i)->get_ns_attribute_obj('http://www.w3.org/1999/02/22-rdf-syntax-ns#resource')) . ")<br>\n";
-				$this->giveOutOverview();
-				$this->get_parser()->test_consistence();
-				die();
+					/* dangling subClassOf: Referenz nicht aufgeloest — fangbar/loggbar statt echo+die() */
+				throw new ErrorException(
+					'Missing RDF edge ref (dangling subClassOf): ' . $this->full_URI()
+					. ' (pedl:name="' . $this->get_ns_attribute_obj("http://www.w3.org/2006/05/pedl-lib#name")->getdata() . '") -> '
+					. $this->getRefnext($i)->full_URI() . '(' . get_class($this->getRefnext($i)) . ') -> '
+					. $this->getRefnext($i)->get_ns_attribute_obj('http://www.w3.org/1999/02/22-rdf-syntax-ns#resource')->full_URI()
+					. '(' . get_class($this->getRefnext($i)->get_ns_attribute_obj('http://www.w3.org/1999/02/22-rdf-syntax-ns#resource')) . ')',
+					0, 75, $parser->getControlUnit("surface_tree_engine")->getSystemSpace(), 1
+				);
 				
 				}
 				

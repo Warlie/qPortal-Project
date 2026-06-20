@@ -123,6 +123,8 @@ not is ''
 	public function rule($rule, $concat = 'AND')
 	{
 		if(is_null($concat))$concat = 'AND';
+		// Operatoren duerfen ohne umgebende Leerzeichen geschrieben werden: "year=25" == "year = 25"
+		$rule = trim(preg_replace('/\s*(>=|<=|=|>|<)\s*/', ' $1 ', $rule));
 		// (feld1 = 'bla') or (feld2 = 'blub')
 		$statement = $this->collect($rule,0);
 		//echo "-----------\n";

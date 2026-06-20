@@ -34,10 +34,10 @@ class PHP_handle extends Interface_handle
 	
 	function parse_document($source)
 	{
-	
+		global $logger_class;
 		$corr_xml_file = str_replace(".php", ".pedl", $this->attribute_values['URI']);
 		
-		$ws = null;
+		$ws = null; //TODO option for external ns
 		if(!$ws)$ws = "surface_tree_engine";
 		
 		$this->base_object->set_first_node();
@@ -66,8 +66,6 @@ class PHP_handle extends Interface_handle
 			}
 		}
 
-
-
 		$is_obj = ($source instanceof FileHandle );
 		
 		$str_source;	
@@ -88,7 +86,6 @@ class PHP_handle extends Interface_handle
 					$source->close_File();
 
 			}
-			//echo $this->attribute_values['URI'];
 			
 			// TODO Reflection could do this job better because of it's allways up to date parser
 			$filescanner = new File_Scan();
@@ -183,8 +180,17 @@ class PHP_handle extends Interface_handle
 		}
 	}
 	
+	
+	/**
+	If referenced file has the same hash as mentioned, it will be cloned to the parsers position
+	Sideeffect it mentioned a missmatch to the log
+	@param xmlparser with position
+	@param a path of a file
+	@return boolean
+	*/
 	private function use_PEDL_file( $parser, string $xml_file)
 	{
+		global $logger_class;
 		$myPrivateModel = new xml_xPath_sParqle();
 		 $myPrivateModel ->load($xml_file, false);
 		 $myPrivateModel->set_first_node();
@@ -200,8 +206,13 @@ class PHP_handle extends Interface_handle
 		 			if(false !== ($src = $source->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#src')))
 		 			{
 		 				if(hash_file('sha256', $src) != $hash)
+		 				{
+		 					$logger_class->setAssert("INFO " . $src . " has no or an altered pedl file.", 0);
 		 					return false;
+		 				}
 		 			}
+		 			else
+		 				return false;
 
 		 		}
 		 		else
@@ -214,7 +225,7 @@ class PHP_handle extends Interface_handle
 		 	foreach($myPrivateModel->array_Of_Objects_Related_To_Tag_Name('http://www.w3.org/2000/01/rdf-schema#seeAlso') as $seeAlso)
 		 		if(false !== ($data = $seeAlso->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#src')) && 
 		 			file_exists($data))
-		 				$this->use_PEDL_file( $parser, $data);
+		 				if(!$this->use_PEDL_file( $parser, $data))return false;
 
 		 /* -------------------------------------------------------------------------- */
 		 

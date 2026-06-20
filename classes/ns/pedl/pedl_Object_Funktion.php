@@ -159,8 +159,43 @@ protected function event_readdata($own)
 							}
 						}
 
+						// --- Diagnose: Argument-Table am PEDL-Dispatch (cashflow_renter set_list(null)) ---
+						$value_dump = array();
+						foreach($all_values as $vk => $vv)
+							$value_dump[] = $vk . '=>' . (is_object($vv) ? get_class($vv) : (is_null($vv) ? 'NULL' : '"' . (string)$vv . '"'));
+						$logger_class->setAssert(
+							'PEDL-dispatch ' . $this->id_of_object . "." . $methodname
+							. ' -> ' . (is_object($myarray[1]) ? get_class($myarray[1]) : gettype($myarray[1]))
+							. ' @ ' . $this->full_URI() . ' idx=' . $this->get_idx()
+							. ' table=[' . implode(', ', $value_dump) . ']',
+							0
+						);
+
+						// --- Geist-Jagd (erledigt 2026-06-19): Backtrace am set_list-Dispatch ---
+						// Hat den Phantom DBO.set_list(null) auf getoutput()/prevent_read_event zurückgeführt.
+						// Auskommentiert; bei Bedarf wieder einschalten.
+						/*
+						if($methodname == 'set_list')
+						{
+							$bt = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 12);
+							$frames = array();
+							foreach($bt as $fk => $f)
+								$frames[] = '#' . $fk . ' '
+									. (isset($f['class']) ? $f['class'] . '::' : '')
+									. $f['function']
+									. ' @ ' . (isset($f['file']) ? basename($f['file']) : '?')
+									. ':' . (isset($f['line']) ? $f['line'] : '?');
+							$logger_class->setAssert(
+								'GHOST set_list dispatch on ' . $this->id_of_object
+								. ' (' . (is_object($myarray[1]) ? get_class($myarray[1]) : gettype($myarray[1])) . ')'
+								. ' backtrace: ' . implode(' | ', $frames),
+								0
+							);
+						}
+						*/
+
 						$result;
-						
+
 
 					$this->set_alter_event(false);
 
@@ -181,6 +216,17 @@ protected function event_readdata($own)
 					{
 						//print_r('in '.$e->getFile().' at line '.$e->getLine());
 						$this->parser->get_ExceptionManager()->catchException($e);
+					}
+					catch(\Throwable $e)
+					{
+						// Stolperdraht sichtbar machen: set_list-Guards werfen \RuntimeException,
+						// die der ObjectBlockException-Catch oben NICHT fängt (sonst still durch).
+						$logger_class->setAssert(
+							'GHOST exception in ' . $this->id_of_object . '.' . $methodname
+							. ' -> ' . get_class($e) . ': ' . $e->getMessage()
+							. ' @ ' . basename($e->getFile()) . ':' . $e->getLine(),
+							0
+						);
 					}
 					$this->setdata($refl,0);
 

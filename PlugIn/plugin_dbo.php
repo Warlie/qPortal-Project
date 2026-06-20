@@ -352,6 +352,8 @@ public function freeSQL($sql_statement)
 			$this->obj = &$value;
 
 		}
+		else
+			throw new \RuntimeException("Receive input object: got Null or string in dbo");
 		}
 		
 		/**

@@ -29,7 +29,15 @@ abstract class plugin
 
     public function set_list(&$value)
     {
-        $this->rst = &$value;
+    	if(is_object($value))
+		{
+
+			$this->rst = &$value;
+
+		}
+		else
+			throw new \RuntimeException("Receive input object: got Null or string");
+        
     }
     public function &iter()
     {

@@ -19,7 +19,7 @@ private $filename;
 private $hash; 
 private $output;
 
-var $rst = null;
+//var $rst = null;
 private $criteria = [];
 //var $obj = null;
 
@@ -125,6 +125,7 @@ private $criteria = [];
 
     	
 	public function next(){if($this->rst)return $this->rst->next();else return false;}
+	/*
     	public function set_list(&$value)
     	{
 
@@ -135,7 +136,7 @@ private $criteria = [];
 	else
 	return 'no element received';
     	}
-    	
+    	*/
     	public function datatype($columnname){
     	//var_dump($columnname, $this->rst->datatype($columnname), $this->rst->fields());
     	return $this->rst->datatype($columnname);}

@@ -553,8 +553,11 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		//if($type == "")$out = 'UTF-8';
 		//else $out = $type;
 		$out = $type;
-		
-		
+
+		// Serialisieren = Lesen, nicht Ausführen: unterdrückt readdata-Nebeneffekt
+		// (geerbte, un-ausgeführte Funktionsknoten wie DBO.set_list). Analog getSystemDocument.
+		$this->XMLlist->prevent_read_event(true);
+
 		if($special == "HTML")
 		{
 			
@@ -574,7 +577,9 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		else
 		
 			$res = $this->XMLlist->save_Stream($out,$set_header);
-		
+
+		$this->XMLlist->prevent_read_event(false);
+
 		if(!is_null($this->rst))
 		{
 		if(0 == $this->rst->rst_num())
