@@ -99,7 +99,7 @@ private $criteria = [];
 	  	  }
 
 	  	  $logger_class->setAssert("CLASSIFICATION col() result name=" . var_export($columnname, true)
-	  	  	. " res=" . var_export($res, true), 0);
+	  	  	. " res=" . var_export($res, true), 5);
 
 	  return $res;
 	  }
