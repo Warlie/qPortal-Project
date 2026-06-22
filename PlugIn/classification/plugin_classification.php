@@ -52,15 +52,27 @@ private $criteria = [];
 	
 	public function col($columnname)
 	{
+		global $logger_class;
 		//echo $columnname . "\n";
 	if($this->rst)
 	{
 		$found_key = array_search($columnname, array_column($this->criteria, "name" ));
+		// DEBUG classification (prod vs. local): which path is taken?
+		$logger_class->setAssert("CLASSIFICATION col() columnname=" . var_export($columnname, true)
+			. " found_key=" . var_export($found_key, true)
+			. " criteria_names=" . var_export(array_column($this->criteria, "name"), true), 0);
 	  if($found_key !== false)
 	  {
 	  	  $element = $this->rst->col($columnname);
 	  	  $add = $this->criteria[$found_key]['add'];
 	  	  $res = $element;
+
+	  	  $cls_datatype = $this->criteria[$found_key]['datatype'];
+	  	  $logger_class->setAssert("CLASSIFICATION col() matched name=" . var_export($columnname, true)
+	  	  	. " datatype=" . var_export($cls_datatype, true)
+	  	  	. " strtok=" . var_export(strtok($cls_datatype, '('), true)
+	  	  	. " add=" . var_export($add, true)
+	  	  	. " element=" . var_export($element, true), 0);
 
 	  	  switch(strtok($this->criteria[$found_key]['datatype'], '('))
 	  	  {
@@ -81,10 +93,13 @@ private $criteria = [];
 
 	  	  	  break;
 	  	  default:
+	  	  	  $logger_class->setAssert("CLASSIFICATION col() DEFAULT (no reduction) name=" . var_export($columnname, true)
+	  	  	  	. " datatype=" . var_export($this->criteria[$found_key]['datatype'], true), 0);
 	  	  	  var_dump($this->criteria[$found_key]['datatype']);
 	  	  }
 
-	  	  
+	  	  $logger_class->setAssert("CLASSIFICATION col() result name=" . var_export($columnname, true)
+	  	  	. " res=" . var_export($res, true), 0);
 
 	  return $res;
 	  }
