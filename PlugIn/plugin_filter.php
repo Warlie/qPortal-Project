@@ -279,7 +279,9 @@ printf("value\n");
 				if($command == '=')
 				{
 					//echo "\n $i:" . ($neg? "not '":" '") . $arg[0] . "' = '" . $arg[1] . "' ";
-					if($arg[0] == $arg[1] xor  !$neg )
+					// Wildcard: '*' als Operand laesst alles durch (zaehlt immer als Treffer)
+					$match = ($arg[0] === '*' || $arg[1] === '*') ? true : ($arg[0] == $arg[1]);
+					if($match xor  !$neg )
 					{
 						/*
 						if($and)

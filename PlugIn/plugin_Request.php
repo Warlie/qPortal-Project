@@ -340,9 +340,12 @@ image/x-xpixmap 	*.xpm 	XPM-Dateien
 
 	
 	
-public function request($name)
+public function request($name, $default)
  {
  	 global $logger_class;
+ 	 
+ 	 if(!$default)$default = '';
+ 	 
  	if(is_array($name))
  	$res = $name[0];
  	else
@@ -386,7 +389,7 @@ public function request($name)
 			return htmlspecialchars($tmp);
 			}
 		}
-	return null;
+	return $default;
  }
  
  
