@@ -134,6 +134,11 @@ private $minute = null;
 	  return 'no dataset';
 	}
 	
+	/**
+	*@parameter: ITER = gives out a object to LIST-parameter
+	*/
+	public function &iter(){ return $this; }
+
 	public function setsource($column){ $this->source = $column; }
 	public function setcolumn($column, $format, $modify){ $this->rel[$column] = $format; if($modify)$this->mod[$column] = $modify;}
 	

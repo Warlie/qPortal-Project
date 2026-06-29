@@ -32,6 +32,7 @@ var $lvl = array();
 private $opStatement = array();
 private $testme = array();
 var $orderby = array();
+var $groupby = array();
 var $limit = 0;
 var $distinct = false;
 var $asc = array(); 
@@ -141,6 +142,11 @@ public function setOrderBy($columnName, $sort = 'asc')
 		
 	}
 	
+public function setGroupBy($columnName)
+	{
+		$this->groupby[] = $columnName;
+	}
+
 public function setDistinct()
 	{
 		$this->distinct = true;
@@ -224,11 +230,16 @@ public function execute()
 			
 			}
 
+			if(count($this->groupby) > 0)
+			{
+			$sql .= ' GROUP BY ' . implode(",", $this->groupby);
+			}
+
 			if(count($this->orderby) > 0)
 			{
 			$sql .= ' ORDER BY ';
 			$tmp = array();
-			
+
 			for($i = 0; count($this->orderby) > $i; $i++ )
 			{
 			if(!$this->asc[$i])
