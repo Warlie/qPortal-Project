@@ -4,7 +4,7 @@
 *   
 */
 
-function xmlNodeToPhp($node) {
+function xmlNodeToPhp($node, $key_override = false) {
 	//var_dump($node);
     $result = [];
     // Falls Leaf‑Node (keine Kind-Elemente), direkt Wert casten
@@ -21,7 +21,13 @@ function xmlNodeToPhp($node) {
     // Ansonsten: über alle Kinder iterieren
     foreach ($node->children() as $child) {
         $name  = $child->getName();
-        $value = xmlNodeToPhp($child);
+        // 'key'-Attribut uebersteuert den Tagnamen als Map-Schluessel (nur YAML-Dialekt) —
+        // XMLDO klont feste Strukturen und kann keine Tagnamen generieren,
+        // wohl aber Attribute setzen (<character key="acoba"> → acoba:)
+        if ($key_override && isset($child->attributes()['key'])) {
+            $name = (string)$child->attributes()['key'];
+        }
+        $value = xmlNodeToPhp($child, $key_override);
         // Mehrfach-Vorkommen als Array abbilden
         $is_list_item = ((string)($child->attributes()['datatype'] ?? '')) === 'list_item';
         if (isset($result[$name])) {
