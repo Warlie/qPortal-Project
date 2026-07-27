@@ -162,7 +162,7 @@ function event_message_in($type,&$obj)
 	if($uri_src)
 	{
 
-		 $uri_src = str_replace( '%ROOT_DIR%', ROOT_DIR, $uri_src);
+		 $uri_src = str_replace( ['%ROOT_DIR%', '%PROGRAM_DIR%'], [ROOT_DIR, PROGRAM_DIR], $uri_src);
 		if(is_file($uri_src))
 		{
 

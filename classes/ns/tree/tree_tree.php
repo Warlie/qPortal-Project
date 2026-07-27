@@ -146,7 +146,7 @@ $obj->set_node($this);
 	if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#src'))
 	{
 		
-		$tmp = str_replace( '%ROOT_DIR%', ROOT_DIR, $tmp);
+		$tmp = str_replace( ['%ROOT_DIR%', '%PROGRAM_DIR%'], [ROOT_DIR, PROGRAM_DIR], $tmp);
 				 
 		if(is_file($tmp))
 		{

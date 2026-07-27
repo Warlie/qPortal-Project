@@ -29,6 +29,8 @@ $list_of_configuration_parameters = [
 	'STD_URL' => ['runtime', 'STD_URL'],
 	'CUR_PATH' => ['runtime', 'CUR_PATH'],
 	'ROOT_DIR' => ['runtime', 'ROOT_DIR'],
+	// resolved before the entries below so they can use __PROGRAM_DIR
+	'PROGRAM_DIR' => ['runtime', 'PROGRAM_DIR'],
 	'PLUG_IN_FOLDER' => ['runtime', 'PLUG_IN_FOLDER'],
 	'FRONTEND_INDEX' => ['runtime', 'FRONTEND_INDEX'],
 	'EDIT_INDEX' => ['runtime', 'EDIT_INDEX'],
@@ -59,11 +61,13 @@ $list_of_configuration_parameters = [
 	'QUERY_PARAM' => ['runtime', 'QUERY_PARAM']
 	];
 
-// Parse ini with sections
+// Parse ini with sections.
+// config.ini is laid over default.ini instead of replacing it: entries the
+// installation does not set stay inherited, and additions to default.ini
+// (new plugin shortcuts in [short]) reach existing installations.
+$ini_array = file_exists(CONFIG_DEFAULT) ? parse_ini_file_multi(CONFIG_DEFAULT, true) : [];
 if(file_exists(CONFIG))
-	$ini_array = parse_ini_file_multi(CONFIG, true); //$ini_array = parse_ini_file(CONFIG, true);
-else
-	$ini_array = parse_ini_file_multi(CONFIG_DEFAULT, true);  //$ini_array = parse_ini_file(CONFIG_DEFAULT, true);
+	$ini_array = array_replace_recursive($ini_array, parse_ini_file_multi(CONFIG, true));
 	
 	$shortCut = [];
 
