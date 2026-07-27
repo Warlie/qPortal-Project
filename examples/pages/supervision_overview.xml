@@ -1,0 +1,136 @@
+<?xml version='1.0' encoding="ISO-8859-1"?>
+<indextree xmlns="http://www.trscript.de/tree"  >
+<final name="home" value="Hauptseite" >
+	<template>	
+	<main case_folding="0" doctype="XML" >%PROGRAM_DIR%/templates/shell_page.htm</main>  
+	<add case_folding="0" doctype="XML" id="in" >%PROGRAM_DIR%/templates/xml_elements/xml_table_user_overview.xml</add>
+	</template>
+<!--
+<main case_folding="0" doctype="XML" >%PROGRAM_DIR%/templates/shell_plain.htm</main> 
+<main case_folding="0" doctype="XML" doctype_out="SVG_OVERVIEW" output_doc="@registry_surface_system;output:ONE" >%PROGRAM_DIR%/templates/shell_plain.htm</main>
+-->
+	
+	
+<!-- creates headline -->	
+	<content name="http://www.w3.org/1999/xhtml#div"  >
+	<param name="http://www.w3.org/1999/xhtml#id" >header</param>
+	<element type="xhtml" value="http://www.w3.org/1999/xhtml#h1" >Benutzereinstellungen</element>
+	
+	
+		
+	<element type="xhtml" securitylevel="1" value="http://www.w3.org/1999/xhtml#div" ><param name="http://www.w3.org/1999/xhtml#style" >position:absolute;right:0px;top:20px;color:black;color:white;</param>
+		
+<element type="xhtml" value="http://www.w3.org/1999/xhtml#form" ><param name="action" >index.php?i=__system</param><param name="method" >post</param>
+		
+		
+		
+<element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >URL</param><param name="type" >hidden</param><param name="value" >home</param></element><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >modus</param><param name="type" >hidden</param><param name="value" >LOG_OUT</param></element>
+
+
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#p" ><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="type" >image</param><param name="src" >img/buttons/Button_out.png</param><param name="value" >Logout</param></element></element>
+		</element>
+		
+		</element>
+	</content>
+	
+	<program>
+	<object id="db" name="DBO" src="PlugIn/plugin_dbo.php" >
+	<remote name="DBO.sql.sql_Statement" >SELECT tbl_user_management.ID, tbl_user_management.User, tbl_user_management.forename, tbl_user_management.surname, tbl_user_management.securityclass, tbl_group_management.groupname, tbl_group_management.sector FROM tbl_user_management LEFT JOIN tbl_user_to_group ON tbl_user_management.ID = tbl_user_to_group.user_id LEFT JOIN tbl_group_management ON tbl_user_to_group.group_id = tbl_group_management.ID;</remote>
+	<remote name="DBO.sql" />
+	<!--<remote name="DBO.test" />-->
+	</object>
+
+	</program>  
+			
+	 <!--
+	<remote name="add_path" >../PlugIn</remote>
+	<param name="RELATIVE_PATH" >true</param>
+	<param name="ADD_PATH" >../PlugIn</param>
+	<param name="ADD_FIX" >*.php</param>
+	<param name="START_SCAN" /> </object>-->
+	 
+	<content name="http://www.w3.org/1999/xhtml#div"  >
+	<param name="http://www.w3.org/1999/xhtml#id" >content</param>
+					
+<element type="xhtml" value="http://www.w3.org/1999/xhtml#span" ><![CDATA[Gesamtuebersicht]]><element type="xhtml" value="http://www.w3.org/1999/xhtml#p" />
+<param name="http://www.w3.org/1999/xhtml#style" >width:60%;color:#008840;</param></element>
+	
+<element type="xhtml" value="http://www.w3.org/1999/xhtml#table" >
+  <element type="xhtml" value="http://www.w3.org/1999/xhtml#tr" >
+    <element type="xhtml" value="http://www.w3.org/1999/xhtml#th" >ID</element>
+    <element type="xhtml" value="http://www.w3.org/1999/xhtml#th" >User</element>
+    <element type="xhtml" value="http://www.w3.org/1999/xhtml#th" >Vorname</element>
+    <element type="xhtml" value="http://www.w3.org/1999/xhtml#th" >Nachname</element>
+    <element type="xhtml" value="http://www.w3.org/1999/xhtml#th" >Sicherheitsklasse</element>
+    <element type="xhtml" value="http://www.w3.org/1999/xhtml#th" >Gruppe</element>
+    <element type="xhtml" value="http://www.w3.org/1999/xhtml#th" >Sektor</element>
+  </element><object id="table" name="XMLDO" src="PlugIn/plugin_xmldo.php">
+	<remote name="XMLDO.set_list.value" ><object id="db" ><remote name="DBO.iter" /></object></remote>
+	<remote name="XMLDO.set_list" />
+	<remote name="XMLDO.setXMLTemplate.new_template">in</remote>
+	<remote name="XMLDO.setXMLTemplate.use_at_tag">tr</remote>
+	<remote name="XMLDO.setXMLTemplate" />
+	<remote name="XMLDO.define_tag.name" >tbl_user_management.ID</remote>
+	<remote name="XMLDO.define_tag.xpath" >input[@name='userid']</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >attrib</remote>
+	<remote name="XMLDO.define_tag.prefix" >http://www.w3.org/1999/xhtml</remote>
+	<remote name="XMLDO.define_tag.postfix" >value</remote>
+	<remote name="XMLDO.define_tag" />
+	<remote name="XMLDO.define_tag.name" >tbl_user_management.ID</remote>
+	<remote name="XMLDO.define_tag.xpath" >span[@id='id']</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >data</remote>
+	<remote name="XMLDO.define_tag" />
+	<remote name="XMLDO.define_tag.name" >tbl_user_management.User</remote>
+	<remote name="XMLDO.define_tag.xpath" >span[@id='user']</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >data</remote>
+	<remote name="XMLDO.define_tag" />
+	<remote name="XMLDO.define_tag.name" >tbl_user_management.forename</remote>
+	<remote name="XMLDO.define_tag.xpath" >span[@id='forename']</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >data</remote>
+	<remote name="XMLDO.define_tag" />
+	<remote name="XMLDO.define_tag.name" >tbl_user_management.surname</remote>
+	<remote name="XMLDO.define_tag.xpath" >span[@id='surname']</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >data</remote>
+	<remote name="XMLDO.define_tag" />
+	<remote name="XMLDO.define_tag.name" >tbl_user_management.securityclass</remote>
+	<remote name="XMLDO.define_tag.xpath" >span[@id='securityclass']</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >data</remote>
+	<remote name="XMLDO.define_tag" />
+	<remote name="XMLDO.define_tag.name" >tbl_group_management.groupname</remote>
+	<remote name="XMLDO.define_tag.xpath" >span[@id='group']</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >data</remote>
+	<remote name="XMLDO.define_tag" />
+	<remote name="XMLDO.define_tag.name" >tbl_group_management.sector</remote>
+	<remote name="XMLDO.define_tag.xpath" >span[@id='sector']</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >data</remote>
+	<remote name="XMLDO.define_tag" />
+
+	<remote name="XMLDO.generateTagTree" />
+	</object>
+	
+	<param name="http://www.w3.org/1999/xhtml#style" >width:60%;color:#008840;</param>
+<param name="http://www.w3.org/1999/xhtml#id" >users</param></element>	
+	
+	</content>
+	
+
+	<content name="http://www.w3.org/1999/xhtml#div"  >
+	<param name="http://www.w3.org/1999/xhtml#id" >bars</param>
+	<element type="xhtml" >
+		<object id="menu" name="Menue" src="PlugIn/plugin_menu.php" >
+		<remote name="Menue.build_menu" />
+		</object>
+	</element>
+				
+	</content>
+	<!--
+	<content name="http://www.w3.org/1999/xhtml#div"  >
+		<param name="http://www.w3.org/1999/xhtml#id" >foot</param>
+		<element type="xhtml" >
+			<param name="http://www.w3.org/1999/xhtml#style" >position:absolute;top:2200px;left:0px;width:100%;height:100px;background-color:#663333;</param><object id="db" ><remote name="DBO.many" /></object>
+		</element>
+	</content>
+	-->
+	
+</final>
+</indextree>

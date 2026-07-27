@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding="ISO-8859-1"?>
+<indextree xmlns="http://www.trscript.de/tree"  >
+<final  name="login" value="anmelden" >
+	
+	<template>
+		<main case_folding="0" >%PROGRAM_DIR%/templates/shell_plain.htm</main>
+
+		
+	</template>
+	
+	<content name="http://www.w3.org/1999/xhtml#div"  >
+	<param name="http://www.w3.org/1999/xhtml#class" >highline</param>
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#h1" ><![CDATA[register]]></element>
+
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#a" ><![CDATA[back to frondend]]><param name="http://www.w3.org/1999/xhtml#style" >position:absolute;right:0px;top:0px;color:white;</param>
+		<param name="http://www.w3.org/1999/xhtml#href" >index.php?i=__main</param>
+		</element>
+	
+	</content>
+	
+	<content name="http://www.w3.org/1999/xhtml#div"  >
+	<param name="http://www.w3.org/1999/xhtml#id" >bars</param>
+	<element type="xhtml" >
+		<object id="menu" name="Menue" src="PlugIn/plugin_menu.php" >
+		<remote name="Menue.build_menu" />
+		</object>
+	</element>
+	</content>
+	
+		<content name="http://www.w3.org/1999/xhtml#div"  >
+		<param name="http://www.w3.org/1999/xhtml#class" >bereich</param>
+		
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#h2" ><![CDATA[Bitte Code eingeben:]]></element>
+		
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#form" ><param name="action" >index.php?i=__system</param><param name="method" >post</param>
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#p" ><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >CODE</param><param name="type" >text</param><param name="size" >20</param><param name="maxlength" >20</param></element></element>
+
+		
+<element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >URL</param><param name="type" >hidden</param><param name="value" >home</param></element><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >modus</param><param name="type" >hidden</param><param name="value" >APPLY_CODE</param></element><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >URLalt</param><param name="type" >hidden</param><param name="value" >login</param></element>
+
+
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#p" ><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="type" >submit</param><param name="value" >Submit</param></element></element>
+		</element>
+		
+		</content>
+	
+</final>
+</indextree>

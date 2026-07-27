@@ -1,0 +1,83 @@
+<?xml version='1.0' encoding="ISO-8859-1"?>
+<indextree xmlns="http://www.trscript.de/tree" >
+<final name="home" value="Hauptseite" >
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one" >%PROGRAM_DIR%/templates/bootstrap-snippits/std-body-xhtml.xml</main>
+		<!--<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="menu.htm;output:one" >template/bootstrap_snippit/simplebody.htm</main>-->
+		<!--<add case_folding="0" doctype="XML" id="container" >template/bootstrap-snippits/container-auster-standard.xml</add>-->
+		<add case_folding="0" doctype="XML" id="row" >%PROGRAM_DIR%/templates/xml_elements/bootstrap_table.xml</add>
+	</template>
+
+
+	
+		
+	<program>
+	<content name="http://www.w3.org/1999/xhtml#body" ><sub src="%PROGRAM_DIR%/templates/navbar.xml" /></content>
+	<!--<content name="http://www.w3.org/1999/xhtml#body" ><subtree name="http://www.w3.org/1999/xhtml#div" id="container" /></content>
+	<content name="http://www.w3.org/1999/xhtml#body" ><sub src="template/sub_scripts/footer.xml" /></content>-->
+	</program>
+	
+	<content  name="http://www.w3.org/1999/xhtml#head" securitylevel="1"  >
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#script" ><param name="http://www.w3.org/1999/xhtml#src" >script/startpage.js</param></element>
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#link" ><param name="http://www.w3.org/1999/xhtml#href" >carousel.css</param><param name="http://www.w3.org/1999/xhtml#rel" >stylesheet</param></element>
+	</content>
+
+	<program>
+	<sub src="%ROOT_DIR%/%PROGRAM_DIR%/pages/test.xml">
+	<param name="realm" >/img/backgrounds/fae_realm_desktop.jpg</param>
+	</sub>
+	</program>
+	
+
+	
+	<content name="http://www.w3.org/1999/xhtml#body"  securitylevel="-1">
+	<element type="xhtml" value="http://www.w3.org/1999/xhtml#div" >
+	<param name="http://www.w3.org/1999/xhtml#class" >container</param>
+
+	<element type="xhtml" value="http://www.w3.org/1999/xhtml#p" >Bitte melde Dich hier an.</element>
+	
+	<element type="xhtml" value="http://www.w3.org/1999/xhtml#form" ><param name="action" >index.php?i=__system</param><param name="method" >post</param><param name="class" >was-validated</param>
+    <element type="xhtml" value="http://www.w3.org/1999/xhtml#div" ><param name="http://www.w3.org/1999/xhtml#class" >form-group</param>
+	<element type="xhtml" value="http://www.w3.org/1999/xhtml#label" ><param name="http://www.w3.org/1999/xhtml#for" >user</param><![CDATA[Benutzername:]]></element>
+	<element type="xhtml" value="http://www.w3.org/1999/xhtml#input" >
+	<param name="http://www.w3.org/1999/xhtml#type" >text</param>
+	<param name="http://www.w3.org/1999/xhtml#required" >required</param>
+	<param name="http://www.w3.org/1999/xhtml#name" >user</param>
+	<param name="http://www.w3.org/1999/xhtml#size" >15</param>
+	<param name="http://www.w3.org/1999/xhtml#maxlength" >120</param>
+	<param name="http://www.w3.org/1999/xhtml#class" >form-control</param>
+	<param name="http://www.w3.org/1999/xhtml#id" >user</param></element>
+	<element type="xhtml" value="http://www.w3.org/1999/xhtml#div" ><param name="http://www.w3.org/1999/xhtml#class" >valid-feedback</param><![CDATA[Sieht gut aus.]]></element>
+	<element type="xhtml" value="http://www.w3.org/1999/xhtml#div" ><param name="http://www.w3.org/1999/xhtml#class" >invalid-feedback</param><![CDATA[Reicht nicht!]]></element>
+	</element>
+    <element type="xhtml" value="http://www.w3.org/1999/xhtml#div" ><param name="http://www.w3.org/1999/xhtml#class" >form-group</param>
+    <element type="xhtml" value="http://www.w3.org/1999/xhtml#label" ><param name="http://www.w3.org/1999/xhtml#for" >key</param><![CDATA[Passwort:]]></element>
+	<element type="xhtml" value="http://www.w3.org/1999/xhtml#input" >
+	<param name="http://www.w3.org/1999/xhtml#name" >key</param>
+	<param name="http://www.w3.org/1999/xhtml#required" >required</param>
+	<param name="http://www.w3.org/1999/xhtml#type" >password</param>
+	<param name="http://www.w3.org/1999/xhtml#size" >15</param>
+	<param name="http://www.w3.org/1999/xhtml#maxlength" >120</param>
+	<param name="http://www.w3.org/1999/xhtml#class" >form-control</param>
+	<param name="http://www.w3.org/1999/xhtml#id" >key</param></element>
+	<element type="xhtml" value="http://www.w3.org/1999/xhtml#div" ><param name="http://www.w3.org/1999/xhtml#class" >valid-feedback</param><![CDATA[Sieht gut aus.]]></element>
+	<element type="xhtml" value="http://www.w3.org/1999/xhtml#div" ><param name="http://www.w3.org/1999/xhtml#class" >invalid-feedback</param><![CDATA[Reicht nicht!]]></element>
+	</element>
+
+	<element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >URL</param><param name="type" >hidden</param><param name="value" >home</param></element><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >modus</param><param name="type" >hidden</param><param name="value" >LOG_IN</param></element><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >URLalt</param><param name="type" >hidden</param><param name="value" >home</param></element>
+	<element type="xhtml" value="http://www.w3.org/1999/xhtml#input" >
+	<param name="http://www.w3.org/1999/xhtml#type" >submit</param>
+	<param name="http://www.w3.org/1999/xhtml#class" >btn btn-primary</param>
+	<param name="http://www.w3.org/1999/xhtml#value" >login</param></element>
+	</element>
+	<element type="xhtml" value="http://www.w3.org/1999/xhtml#p" >Oder mach Dir hier einen Account.</element>
+	<element type="xhtml" value="http://www.w3.org/1999/xhtml#a" ><param name="href" >index.php?i=register</param>Registrieren</element>
+	</element>
+	</content>
+	
+		<content name="http://www.w3.org/1999/xhtml#body"  securitylevel="1">
+<element type="xhtml" value="http://www.w3.org/1999/xhtml#a" ><param name="href" >index.php?i=realm_strangerpunk</param>Hier geht es weiter</element>
+</content>
+
+</final>
+</indextree>

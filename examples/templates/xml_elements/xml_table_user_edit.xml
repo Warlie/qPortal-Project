@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<table>
+<tr>
+<td>
+<form action="?i=.edit" method="post" >
+<table>
+<tr>
+<td>
+<span style="color:green;" >ID</span>
+</td>
+<td>
+<span style="color:green;" id="id" />
+<input type="hidden" name="userid" />
+</td>
+</tr>
+<tr>
+<td>
+<span style="color:blue;" >Nutzer</span>
+</td>
+<td>
+<input name="newuser" type="text" size="30" maxlength="30" id="user" />
+</td>
+</tr>
+<tr>
+<td>
+<span style="color:grey;" >Vorname:</span>
+</td>
+<td>
+<input name="newforename" type="text" size="30" maxlength="30" id="forename" />
+</td>
+</tr>
+<tr>
+<td>
+<span style="color:grey;" >Nachname:</span>
+</td>
+<td>
+<input name="newsurname" type="text" size="30" maxlength="30" />
+</td>
+</tr>
+<tr>
+<td>
+<span style="color:black;"  >Sicherheitsstufe:</span>
+</td>
+<td>
+<span style="color:black;" id="securityclass" />
+<select name="newsecurityclass" size="1">
+      <option id="cur"></option>
+      <option>0</option>
+      <option>1</option>
+      <option>2</option>
+      <option>3</option>
+      <option>4</option>
+      <option>5</option>
+      <option>6</option>
+      <option>7</option>
+      <option>8</option>
+      <option>9</option>
+      <option>10</option>
+    </select>
+
+
+</td>
+</tr>
+</table>
+<input type="submit" value="Editieren" />
+</form>
+</td>
+</tr >
+</table>

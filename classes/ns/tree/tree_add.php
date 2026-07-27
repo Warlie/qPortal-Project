@@ -218,7 +218,7 @@ $content = $this->get_parser()->get_context_generator();
 		$logger_class->setAssert('file "' . trim($this->getdata()) . '" was loaded with id "' . $this->get_attribute('id') . '" "(TREE_add:event_message_in)' ,3);
 					
 		//calls specific parser based on doc-type									
-		$this->get_parser()->load(trim($this->getdata()),$this->caseFolding,$doc_type, $com_parameter );
+		$this->get_parser()->load(resolve_path(trim($this->getdata())),$this->caseFolding,$doc_type, $com_parameter );
 		
 		//TODO expands parser with Exceptions
 		if($this->get_parser()->error_num() <> 0)
@@ -238,7 +238,7 @@ $content = $this->get_parser()->get_context_generator();
 			if($uri == 'http://www.trscript.de/tree#template' )
 			{
 				//var_dump(get_class($obj->get_requester()),$this->get_attribute('id'), trim($this->getdata() ));
-				$content->set_template($this->get_attribute('id'),trim($this->getdata()));
+				$content->set_template($this->get_attribute('id'),resolve_path(trim($this->getdata())));
 				
 				
 	

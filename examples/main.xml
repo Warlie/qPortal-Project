@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding="UTF-8" ?>
+<!--
+	Routing-Baum der Beispielinstallation. FRONTEND_INDEX zeigt hierauf.
+
+	name         Name in der URL: index.php/?i=<name>
+	             Ein fuehrender Punkt haelt den Eintrag aus der Navigation heraus.
+	value        Beschriftung in der Navigation
+	securitylevel  -1 = auch ohne Anmeldung erreichbar
+	sector       Zugehoerigkeit statt Stufe
+	src          Dokument. %PROGRAM_DIR% wird aufgeloest, damit dieser Baum
+	             nach dem Kopieren nach program/ unveraendert weiterlaeuft.
+-->
+<indextree xmlns="http://www.trscript.de/tree" >
+<final name="home" value="Hauptseite" src="%PROGRAM_DIR%/pages/startpage.xml" >
+
+	<tree name="login"    value="anmelden"             securitylevel="-1" src="%PROGRAM_DIR%/pages/login.xml" />
+	<tree name="register" value="Registrieren"         securitylevel="-1" src="%PROGRAM_DIR%/pages/register.xml" />
+	<tree name="grpcode"  value="Gruppencode eingeben" securitylevel="1"  src="%PROGRAM_DIR%/pages/connect_to_groups.xml" />
+
+	<tree name="supervision" value="verwalten" sector="technical_support" src="%PROGRAM_DIR%/pages/supervision_overview.xml" >
+		<tree name=".edit"     value="editieren"            sector="technical_support" src="%PROGRAM_DIR%/pages/supervision_edit_user.xml" />
+		<tree name="givecode2" value="Neuer Code"           securitylevel="10" src="%PROGRAM_DIR%/pages/create_code_for_groups.xml" />
+		<tree name="grpcode2"  value="Gruppencode eingeben" securitylevel="1"  src="%PROGRAM_DIR%/pages/connect_to_groups.xml" />
+	</tree>
+
+</final>
+</indextree>

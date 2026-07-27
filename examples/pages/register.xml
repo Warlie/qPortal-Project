@@ -1,0 +1,67 @@
+<?xml version='1.0' encoding="ISO-8859-1"?>
+<indextree xmlns="http://www.trscript.de/tree" >
+<final name="home" value="Hauptseite" >
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one" >%PROGRAM_DIR%/templates/bootstrap-snippits/std-body-xhtml.xml</main>
+		<!--<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="menu.htm;output:one" >template/bootstrap_snippit/simplebody.htm</main>-->
+		<!--<add case_folding="0" doctype="XML" id="container" >template/bootstrap-snippits/container-auster-standard.xml</add>-->
+		<add case_folding="0" doctype="XML" id="row" >%PROGRAM_DIR%/templates/xml_elements/bootstrap_table.xml</add>
+	</template>
+
+
+	
+		
+	<program>
+	<content name="http://www.w3.org/1999/xhtml#body" ><sub src="%PROGRAM_DIR%/templates/navbar.xml" /></content>
+	<!--<content name="http://www.w3.org/1999/xhtml#body" ><subtree name="http://www.w3.org/1999/xhtml#div" id="container" /></content>
+	<content name="http://www.w3.org/1999/xhtml#body" ><sub src="template/sub_scripts/footer.xml" /></content>-->
+	</program>
+	
+	<content  name="http://www.w3.org/1999/xhtml#head" securitylevel="1"  >
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#script" ><param name="http://www.w3.org/1999/xhtml#src" >script/startpage.js</param></element>
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#link" ><param name="http://www.w3.org/1999/xhtml#href" >carousel.css</param><param name="http://www.w3.org/1999/xhtml#rel" >stylesheet</param></element>
+	</content>
+
+	<program>
+	<sub src="%ROOT_DIR%/%PROGRAM_DIR%/pages/test.xml">
+	<param name="realm" >/img/backgrounds/fae_realm_desktop.jpg</param>
+	</sub>
+	</program>
+	
+
+	
+	<content name="http://www.w3.org/1999/xhtml#body"  >>
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#h1" ><![CDATA[Registrierung]]></element>
+		
+	
+	</content>
+	
+	
+		<content name="http://www.w3.org/1999/xhtml#body"  >
+
+		
+
+		
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#form" ><param name="action" >index.php?i=__system</param><param name="method" >post</param>
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#p" >User:<element type="xhtml" value="http://www.w3.org/1999/xhtml#br" /><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >user</param><param name="type" >text</param><param name="size" >30</param><param name="maxlength" >120</param></element></element>
+		
+
+		
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#p" >Keyword:<element type="xhtml" value="http://www.w3.org/1999/xhtml#br" /><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >key</param><param name="type" >password</param><param name="size" >30</param><param name="maxlength" >120</param></element></element>
+		
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#p" >Forename:<element type="xhtml" value="http://www.w3.org/1999/xhtml#br" /><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >forename</param><param name="type" >text</param><param name="size" >30</param><param name="maxlength" >120</param></element></element>
+		
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#p" >Surname:<element type="xhtml" value="http://www.w3.org/1999/xhtml#br" /><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >surname</param><param name="type" >text</param><param name="size" >30</param><param name="maxlength" >120</param></element></element>
+		
+<element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >URL</param><param name="type" >hidden</param><param name="value" >home</param></element><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >modus</param><param name="type" >hidden</param><param name="value" >CREATE_ACCOUNT</param></element><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >URLalt</param><param name="type" >hidden</param><param name="value" >login</param></element>
+
+
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#p" ><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="type" >submit</param><param name="value" >Submit</param></element></element>
+		</element>
+		
+		</content>
+	
+
+
+</final>
+</indextree>
