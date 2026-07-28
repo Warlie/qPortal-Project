@@ -13,7 +13,7 @@ try {
     $reg->_addLN('indextree');
     $reg->start = function($node, $obj, $event)
     {
-    	
+
     		 $structur = $event->get_Result_Array();
     		 $listTreeNames = $structur["Attribute"];
     		 

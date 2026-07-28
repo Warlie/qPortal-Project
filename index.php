@@ -378,7 +378,7 @@ if(file_exists(CONFIG))
 				{
 				
 				$content->setPageParam($_REQUEST);
-				$content->setLexicalOrderParam('i');
+				/* Achsenfolge kommt jetzt aus QUERY_PARAM, gefuellt in generate() */
                                 
                                 //$content->setXMLTemplate('template/text1.htm');
                 $_intern_token = null;
@@ -419,7 +419,13 @@ if(file_exists(CONFIG))
          
                 if(!$content->generate())
 				{
-					       
+						// Niemand hat gerendert - die Seite gibt es nicht. Das muss auch
+						// im Statuscode stehen, sonst meldet der Server einen Erfolg.
+						if (headers_sent($hdr_file, $hdr_line))
+							error_log("404 konnte nicht gesetzt werden, Ausgabe lief schon ab $hdr_file:$hdr_line");
+						else
+							http_response_code(404);
+
 						if (!($fp = fopen('./error/404.html', "r"))) {
                 
 							print("This page is not supported");

@@ -153,7 +153,7 @@ $obj->set_node($this);
 			$this->get_parser()->load($tmp,0);
 			
 		//$this->get_parser()->ALL_URI();
-			
+
 			//var_dump($this->get_parser()->show_xmlelement());
 			//echo  "deeper " . spl_object_id($this) . " insert " . spl_object_id($this->get_parser()->show_xmlelement()) . " [" . $this->get_parser()->show_xmlelement()->full_URI() . "]--------\n";
 			//var_dump($find);
@@ -193,6 +193,10 @@ $obj->set_node($this);
 		$this->send_messages(
 			["Identifire"=>"*", "Command"=> ["Name"=> "start" ], "Attribute"=>""]
 			,$obj);
+		
+		
+		$obj->myrequester->found_relevant_page(); // found relevant page
+		
 		return true;
 		/*
 		//calls all childnodes, which are not template and tree

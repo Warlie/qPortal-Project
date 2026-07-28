@@ -86,7 +86,7 @@ private $URLBase = "";
 		
 		$res = [];
 		foreach($paramArray as $aspect)
-			array_push($res,  $aspect ."=" . $this->content->getHeap()['request'][$aspect]);
+			array_push($res,  $aspect ."=" . ($this->content->getHeap()['request'][$aspect] ?? ''));
 		//	$aspect = 
 		
 		//array_push($res,  $leadingAspect ."=%s" );
