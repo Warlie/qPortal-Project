@@ -220,7 +220,11 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 		return [
 			'kind'       => 'method',
 			'name'       => $name,
-			'constructor'=> (0 === strcasecmp($name, $class) || '__construct' === $name),
+			/* Bewusst schreibungsempfindlich, wie die alte Regel: eine Klasse Filter darf
+			*  eine gewoehnliche Methode filter() haben. Nur der gleich geschriebene Name
+			*  ist der PHP-4-Konstruktor - sonst bekaeme die Klasse zwei Konstruktoren.
+			*/
+			'constructor'=> ($name === $class || '__construct' === $name),
 			'visibility' => $this->visibility($method->flags),
 			'static'     => $method->isStatic(),
 			'abstract'   => $method->isAbstract(),
