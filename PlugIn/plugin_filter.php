@@ -1,15 +1,23 @@
 <?PHP
 
 /**
-*
-*
-* creates a menu
 * @-------------------------------------------
-* @title:DBO
+* @title:Filter
 * @autor:Stefan Wegerhoff
-* @description: Databaseobject, needs only a columndefinition to receive data from other object
+* @description: Reicht nur die Datensaetze durch, die den gesetzten Regeln genuegen
 *
 */
+
+/*@
+   Filter sitzt zwischen einer Quelle und dem, was sie liest, und laesst nur
+   die Datensaetze durch, die den gesetzten Regeln genuegen.
+
+   Regeln kommen einzeln ueber rule() herein und werden mit AND oder OR
+   verknuepft. Geprueft wird beim Weiterschalten, Satz fuer Satz.
+
+   Als plugin_multisource kann Filter mehrere Quellen als Eingang nehmen;
+   die Spaltennamen der Regeln beziehen sich auf die zusammengefuehrte Sicht.
+@*/
 require_once("plugin_interface.php");
 require_once("plugin_interface_multisource.php");
 
@@ -120,6 +128,20 @@ not is ''
 
 	}
 
+	/*@
+	   Nimmt eine Regel entgegen und legt sie fuer check() ab.
+
+	   Operatoren duerfen ohne umgebende Leerzeichen geschrieben werden;
+	   "year=25" und "year = 25" ergeben dieselbe Regel. Zerlegt wird
+	   anschliessend an Leerzeichen, die Regel ist also eine flache Tokenliste.
+
+	   $concat verknuepft diese Regel mit den vorangegangenen - 'AND' oder 'OR',
+	   ohne Angabe 'AND'.
+
+	   collect() laeuft bereits ueber die Regel und baut den geklammerten
+	   Ausdruck auf. Sein Ergebnis wird derzeit nicht weiterverwendet: check()
+	   arbeitet auf der flachen Liste, der Automat haengt noch daneben.
+	@*/
 	public function rule($rule, $concat = 'AND')
 	{
 		if(is_null($concat))$concat = 'AND';
@@ -222,6 +244,22 @@ not is ''
 		return array('com' => $com_id, 'arg' => $arg, 'res' => $res);
 	}
 	
+	/*@
+	   Prueft die gesammelten Regeln gegen den aktuellen Datensatz.
+
+	   Innerhalb einer Regel werden 'is' und '=' uebersprungen, 'not' negiert,
+	   'empty' steht fuer die leere Zeichenkette. Ein Token, das als Spaltenname
+	   bekannt ist, wird durch den Wert des Datensatzes ersetzt; alles andere
+	   gilt als Literal und verliert nur seine Anfuehrungszeichen.
+
+	   Das Sternchen ist das neutrale Element: steht es auf einer der beiden
+	   Seiten, trifft die Regel immer zu. Unter AND ist eine solche Regel damit
+	   wirkungslos, unter OR verschluckt sie alle uebrigen. Ein "*" ist also
+	   keine Einschraenkung, sondern eine triviale Regel.
+
+	   ⚠ Im Nichttreffer-Zweig stehen echte echo-Anweisungen, die in die
+	   Ausgabe schreiben. Debug-Reste, kein Teil der Pruefung.
+	@*/
 	private function check()
 	{
 		if($this->rst)
