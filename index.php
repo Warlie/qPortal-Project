@@ -56,7 +56,9 @@ $list_of_configuration_parameters = [
 
 	'INTERN_KEYS' => ['intern', 'key'],
 
-	'QUERY_PARAM' => ['runtime', 'QUERY_PARAM']
+	'QUERY_PARAM' => ['runtime', 'QUERY_PARAM'],
+
+	'PEDL_FORCE_REBUILD' => ['runtime', 'PEDL_FORCE_REBUILD']
 	];
 
 // Parse ini with sections

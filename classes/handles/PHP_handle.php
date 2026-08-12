@@ -54,7 +54,15 @@ class PHP_handle extends Interface_handle
 			if($name = $value->get_ns_attribute("http://www.w3.org/2006/05/pedl-lib#name"))
 				$list[] =$name;
 
-		if(is_file($corr_xml_file))
+		/* PEDL_FORCE_REBUILD ignores an existing .pedl even when its stored hash still
+		*  matches, so a changed generator does not keep handing out the old result.
+		*/
+		$force_rebuild = defined('PEDL_FORCE_REBUILD') && PEDL_FORCE_REBUILD;
+
+		if($force_rebuild && is_file($corr_xml_file))
+			$logger_class->setAssert("INFO forced rebuild of " . $corr_xml_file, 0);
+
+		if(!$force_rebuild && is_file($corr_xml_file))
 		{
 
 			if($this->use_PEDL_file($this->base_object, $corr_xml_file))
@@ -87,18 +95,34 @@ class PHP_handle extends Interface_handle
 
 			}
 			
-			// TODO Reflection could do this job better because of it's allways up to date parser
-			$filescanner = new File_Scan();
-			//$mtime = hrtime(true);
-			$filescanner->insert_str($str_source, $this->attribute_values['URI']);
-			//$filescanner->add_path('/');
-			$filescanner->add_tag('class ');
-			$filescanner->add_tag('function ');
-			$filescanner->switch_cross_seek(array('include("','")'));
-			$filescanner->switch_cross_seek(array('require("','")'));
-			$filescanner->switch_cross_seek(array('require_once("','")'));
-			$filescanner->seeking();
-			$result = $filescanner->result();
+			/* Answers the old TODO on this spot - a syntax tree instead of substring
+			*  matching. The scanner that used to run here turned prose and commented out
+			*  code into registry nodes ("class " inside a sentence, //public function ..)
+			*  and split one parameter into two whenever a default value held a comma.
+			*  The entry shape is unchanged, so everything below this line stays as it was.
+			*
+			*  Includes are no longer followed: classes from an included file are already
+			*  registered and were dropped by the void list anyway - every generated .pedl
+			*  holds exactly one PhpClass.
+			*
+			*  A source PHP itself rejects is reported and left alone; writing half a .pedl
+			*  for a file that cannot even be loaded helps nobody.
+			*/
+			require_once(__DIR__ . '/PHP_ast_scan.php');
+
+			try
+			{
+				$result = PHP_Ast_Scan::scan($str_source, $this->attribute_values['URI']);
+			}
+			catch (\PhpParser\Error $e)
+			{
+				$logger_class->setAssert("ERROR " . $this->attribute_values['URI']
+					. " is not parsable, no pedl file written: " . $e->getMessage(), 0);
+
+				$this->base_object->use_ns_def_strict(false);
+				$this->base_object->go_to_stamp($xmlPos);
+				return;
+			}
 			//echo hrtime(true) -$mtime  . "\n";
 			/*
 			foreach( $result as $value)
@@ -325,37 +349,43 @@ class Obj_Class_Collection implements \IteratorAggregate, \Countable
 		
 			foreach( $structure as $value)
 			{
-				
-				if(!(false === stripos($value['tag'],'class ')))
+				/* An entry produced from the syntax tree says what it is. Entries without
+				*  that information are still recognised by their text, so a plain
+				*  File_Scan result keeps working here.
+				*/
+				$kind = $value['meta']['kind'] ?? null;
+
+				if(is_null($kind))
+					$kind = (false === stripos($value['tag'],'class '))
+						? ((false === stripos($value['tag'],'function ')) ? null : 'method')
+						: 'class';
+
+				if('class' === $kind || 'interface' === $kind || 'trait' === $kind)
 				{
-					//echo $value['tag'] . " as Class<br>\n";
 					$this->cur_node = null;
-					
-					
-					//$void_list
-					
+
 					$this->cur_node = new Obj_Class( $value, $this->list_of_resources );
 					if(!in_array($this->cur_node->get_name(), $void_list))
 					{
 						$this->collection_Array[] = $this->cur_node;
 						$name_to_path_list[$this->cur_node->get_name()] = $this->cur_node->get_Path_URL();
 					}
-				}
-				
-				if(!(false === stripos($value['tag'],'function ')))
-				{
-					//echo $value['tag'] . " as function <br>\n";
-					if(is_Object($this->cur_node))
-					{$this->cur_node->add_function($value,$xml_model);
-					}
-					else
-					{
-						echo "Error occurs on entry" . $value['tag'] . "" ;
-					}
-					
-				}
-				
 
+					continue;
+				}
+
+				if(is_null($kind))continue;
+
+				if(!is_Object($this->cur_node))
+				{
+					//a member without a class before it cannot be placed
+					echo "Error occurs on entry" . $value['tag'] . "" ;
+					continue;
+				}
+
+				if('method' === $kind)   $this->cur_node->add_function($value,$xml_model);
+				if('property' === $kind) $this->cur_node->add_member($value, 'PhpProperty');
+				if('constant' === $kind) $this->cur_node->add_member($value, 'PhpConstant');
 			}
 			
 			reset($structure);
@@ -438,28 +468,62 @@ class Obj_Class
 	private $subClassOf = null;
 	
 	private $functionList = array();
+	private $memberList = array();
 	private $my_list_of_resources = [];
-	
+
+	/* class | interface | trait - decides which registry tag is written */
+	private $kind = 'class';
+	private $implements = [];
+	private $isAbstract = false;
+	private $isFinal = false;
+
 	public function __construct($array_tag, &$list_of_resources)
 	{
 		$this->my_list_of_resources = &$list_of_resources;
 		$this->php_path = $array_tag['file'];
 		$this->xml_path = str_replace(".php", ".pedl", $this->php_path);
 		$this->num = $array_tag['pos'];
-		$name = explode(' ', $array_tag['tag']);
-		$this->name = trim($name[1]);
-		
-		
-		
-		$this->my_list_of_resources[$this->name] = $this->xml_path;
-		
-		if($name[2] == "extends")$this->subClassOf = $name[3];
 
+		if(isset($array_tag['meta']))
+		{
+			$meta = $array_tag['meta'];
+			$this->kind       = $meta['kind'];
+			$this->name       = $meta['name'];
+			$this->subClassOf = ('' === $meta['extends']) ? null : $meta['extends'];
+			$this->implements = $meta['implements'];
+			$this->isAbstract = $meta['abstract'];
+			$this->isFinal    = $meta['final'];
+		}
+		else
+		{
+			//entry without structural information: read it off the text, as before
+			$name = explode(' ', $array_tag['tag']);
+			$this->name = trim($name[1]);
+
+			if(isset($name[2]) && $name[2] == "extends")$this->subClassOf = $name[3];
+		}
+
+		$this->my_list_of_resources[$this->name] = $this->xml_path;
 	}
-	
+
 	public function add_function($array_tag ,  xml_ns &$xml_model)
 	{
 		$this->functionList[count($this->functionList)] = new Obj_Function($array_tag,$xml_model);
+	}
+
+	/* properties and class constants; both are named slots and differ only in the tag */
+	public function add_member($array_tag, string $tagname)
+	{
+		$this->memberList[] = new Obj_Member($array_tag, $tagname);
+	}
+
+	/* PhpClass | PhpInterface | PhpTrait */
+	private function registry_tag() : string
+	{
+		if('interface' === $this->kind)return 'PhpInterface';
+		if('trait' === $this->kind)    return 'PhpTrait';
+
+		return 'PhpClass';
 	}
 	
 	private function create_connection( xml_ns &$xml_model)
@@ -481,10 +545,25 @@ class Obj_Class
 	{
 
 
-		$attrib = array('rdf:ID' => $this->name , 'pedl:name' => $this->name);
-		//var_dump($attrib);
-		$xml_model->tag_open($this, "PhpClass", $attrib);
+		$tagname = $this->registry_tag();
 
+		$attrib = array('rdf:ID' => $this->name , 'pedl:name' => $this->name);
+
+		if($this->isAbstract)$attrib['pedl:abstract'] = 'true';
+		if($this->isFinal)   $attrib['pedl:final']    = 'true';
+
+		$xml_model->tag_open($this, $tagname, $attrib);
+
+		/* Implemented interfaces sit next to the inheritance edge. Both are answerable
+		*  from the tree afterwards, which is what makes "is a multisource plugin" a
+		*  question to the registry rather than to the source text.
+		*/
+		foreach($this->implements as $interface)
+		{
+			$attrib = array('rdf:resource' => trim($interface));
+			$xml_model->tag_open($this, "pedl:implements", $attrib);
+			$xml_model->tag_close($this, "pedl:implements");
+		}
 
 		if(!is_Null($this->subClassOf))
 		{
@@ -516,6 +595,9 @@ class Obj_Class
 
 			
 		
+			foreach( $this->memberList as $value)
+				$value->create_rdf_entry($xml_model, $this->name);
+
 			foreach( $this->functionList as $value)
 			{
 
@@ -523,12 +605,8 @@ class Obj_Class
 				if($prim) $this->constructor = &$prim;
 
 			}
-			
-			//$xml_model->tag_close($this, "pedl:Funktions");
-			
-		//$xml_model->tag_close($this, "pedl:hasFunktions");
-			
-		$xml_model->tag_close($this, "PhpClass");
+
+		$xml_model->tag_close($this, $tagname);
 		
 
 	}
@@ -544,6 +622,14 @@ class Obj_Function
 	private $parameterList = array();
 	private $parser;
 	
+	/* filled from the syntax tree; stays at its default for a plain File_Scan entry */
+	private $visibility = '';
+	private $isStatic = false;
+	private $isAbstract = false;
+	private $isFinal = false;
+	private $returnType = '';
+	private $isConstructor = null;
+
 	public function __construct($array_tag, &$parser)
 	{
 
@@ -551,8 +637,29 @@ class Obj_Function
 		$this->php_path = $array_tag['file'];
 		$this->num = $array_tag['pos'];
 		$this->parser = &$parser;
+
+		if(isset($array_tag['meta']))
+		{
+			$meta = $array_tag['meta'];
+
+			$this->name          = $meta['name'];
+			$this->gives_out_ref = $meta['byRef'];
+			$this->visibility    = $meta['visibility'];
+			$this->isStatic      = $meta['static'];
+			$this->isAbstract    = $meta['abstract'];
+			$this->isFinal       = $meta['final'];
+			$this->returnType    = $meta['returnType'];
+			$this->isConstructor = $meta['constructor'];
+
+			$counter = 0;
+			foreach($meta['params'] as $param)
+				$this->parameterList[] = new Obj_Parameter($param, $counter++);
+
+			return;
+		}
+
 		//gets name
-		$name = substr( $array_tag['tag'] , 
+		$name = substr( $array_tag['tag'] ,
 			$posme = (stripos($array_tag['tag'],'function') + 8),
 			stripos($array_tag['tag'],'(') - $posme) . "\n";
 		
@@ -612,43 +719,36 @@ class Obj_Function
 		//echo  $xml_model->cur_node();
 
 		$attrib = array('rdf:ID' => $name  . '.' . trim($this->name),'pedl:name' => trim($this->name));
-		
-		if( $name == trim($this->name) || '__construct' == trim($this->name) )
-		{
-			$xml_model->tag_open($this, "PhpConstructor", $attrib);
-			//$xml_model->create_Ns_Node("PhpConstructor");
-			//$res = &$xml_model->show_xmlelement() ;
-		}
-		else
-		{
-			$xml_model->tag_open($this, "PhpMethod", $attrib);
-			//$xml_model->create_Ns_Node("PhpMethod");
-		}
-		
-		if(count($this->parameterList) > 0)
-		{		
-		$attrib = array();
-		//$xml_model->tag_open($this, "pedl:hasParameter", $attrib);
-		
-			$attrib = array();
-			//$xml_model->tag_open($this, "pedl:ParameterCollection", $attrib);	
-		}	
-			
-				
+
+		/* "implicit" records that the source names no visibility at all - php treats it as
+		*  public, but the distinction is what tells an old plugin from a maintained one.
+		*/
+		if('' !== $this->visibility)$attrib['pedl:visibility'] = $this->visibility;
+		if($this->isStatic)         $attrib['pedl:static']     = 'true';
+		if($this->isAbstract)       $attrib['pedl:abstract']   = 'true';
+		if($this->isFinal)          $attrib['pedl:final']      = 'true';
+		if($this->gives_out_ref)    $attrib['pedl:byRef']      = 'true';
+		if('' !== $this->returnType)$attrib['pedl:returns']    = $this->returnType;
+
+		$is_constructor = is_null($this->isConstructor)
+			? ( $name == trim($this->name) || '__construct' == trim($this->name) )
+			: $this->isConstructor;
+
+		$tagname = $is_constructor ? "PhpConstructor" : "PhpMethod";
+
+		$xml_model->tag_open($this, $tagname, $attrib);
+
 			foreach( $this->parameterList as $value)
 			{
 				$value->create_rdf_entry($xml_model,$name,trim($this->name));
 			}
 			$res = null;
 			if( $name == trim($this->name))$res = &$xml_model->show_xmlelement() ;
-		
-		if(count($this->parameterList) > 0)
-		{		
-		
-			//$xml_model->tag_close($this, "pedl:ParameterCollection");
-		//$xml_model->tag_close($this, "pedl:hasParameter");
-		}	
-		$xml_model->tag_close($this, "PhpMethod");
+
+		/* closed under the name it was opened with; tag_close ignores the name, but a
+		*  PhpConstructor that closes as PhpMethod is a trap waiting for the day it does not
+		*/
+		$xml_model->tag_close($this, $tagname);
 			//$xml_model->parent_node();
 		
 		return $res;
@@ -666,9 +766,32 @@ class Obj_Parameter
 	private $pre_value = null;
 	private $value_content = "";
 	
+	/* filled from the syntax tree; empty for a parameter read off a text line */
+	private $decl_type = '';
+	private $is_variadic = false;
+	private $is_nullable = false;
+	private $default_value = null;
+
 	public function __construct($string_param,$counter)
 	{
-	
+		$this->num = $counter;
+
+		/* the syntax tree hands over a described parameter instead of a text fragment */
+		if(is_array($string_param))
+		{
+			$this->name          = $string_param['name'];
+			$this->decl_type     = $string_param['type'];
+			$this->is_nullable   = $string_param['nullable'];
+			$this->gives_out_ref = $string_param['byRef'];
+			$this->is_variadic   = $string_param['variadic'];
+			$this->default_value = $string_param['default'];
+
+			$this->value_content = $string_param['refersTo'];
+			$this->has_value     = ('' !== $string_param['refersTo']);
+
+			return;
+		}
+
 		$this->gives_out_ref = !(false === stripos($string_param,'&'));
 
 		$param = explode(' ',$string_param);
@@ -749,6 +872,15 @@ class Obj_Parameter
 		//echo  $xml_model->cur_node();
 		$attrib = array('rdf:ID' => trim($class_name . '.'  . $function_name . '.' . $this->name),'pedl:name' => trim($this->name));
 		if($this->has_value )$attrib['pedl:refersTo'] = $this->value_content ;
+
+		if('' !== $this->decl_type)      $attrib['pedl:type']     = $this->decl_type;
+		if($this->is_nullable)           $attrib['pedl:nullable'] = 'true';
+		if($this->gives_out_ref)         $attrib['pedl:byRef']    = 'true';
+		if($this->is_variadic)           $attrib['pedl:variadic'] = 'true';
+
+		//a default value is php source and may hold quotes; all_attrib_axo escapes them
+		if(!is_null($this->default_value))$attrib['pedl:default'] = $this->default_value;
+
 		$xml_model->tag_open($this, "PhpParameter", $attrib);
 		//if($this->has_value && !$this->gives_out_ref)$xml_model->cdata($this,$this->pre_value);
 		//if($this->has_value && $this->gives_out_ref)$xml_model->cdata_ref($this,$this->pre_value);
@@ -760,6 +892,61 @@ class Obj_Parameter
 		//$xml_model->set_node_attrib('pedl:name',trim($this->name));
 		//
 		//$xml_model->parent_node();
+	}
+}
+
+/** A named slot on a class: a property or a class constant.
+*
+*   Both are the same shape - a name, a visibility, and something optional attached - and
+*   differ only in the registry tag they are written as, so one class serves both.
+*   Only reachable from an entry that carries structural information; a text line never
+*   produced properties or constants at all.
+*/
+class Obj_Member
+{
+	private $tagname;
+	private $name;
+	private $visibility;
+	private $isStatic = false;
+	private $isReadonly = false;
+	private $decl_type = '';
+	private $value = null;
+
+	public function __construct($array_tag, string $tagname)
+	{
+		$meta = $array_tag['meta'];
+
+		$this->tagname    = $tagname;
+		$this->name       = $meta['name'];
+		$this->visibility = $meta['visibility'];
+
+		if('PhpProperty' === $tagname)
+		{
+			$this->isStatic   = $meta['static'];
+			$this->isReadonly = $meta['readonly'];
+			$this->decl_type  = $meta['type'];
+			$this->value      = $meta['default'];
+		}
+		else
+		{
+			$this->value = $meta['value'];
+		}
+	}
+
+	public function get_name(){return $this->name;}
+
+	public function create_rdf_entry( xml_ns &$xml_model, $class_name)
+	{
+		$attrib = array('rdf:ID' => trim($class_name . '.' . $this->name), 'pedl:name' => $this->name);
+
+		if('' !== $this->visibility)      $attrib['pedl:visibility'] = $this->visibility;
+		if($this->isStatic)               $attrib['pedl:static']     = 'true';
+		if($this->isReadonly)             $attrib['pedl:readonly']   = 'true';
+		if('' !== $this->decl_type)       $attrib['pedl:type']       = $this->decl_type;
+		if(!is_null($this->value))        $attrib['pedl:default']    = $this->value;
+
+		$xml_model->tag_open($this, $this->tagname, $attrib);
+		$xml_model->tag_close($this, $this->tagname);
 	}
 }
 

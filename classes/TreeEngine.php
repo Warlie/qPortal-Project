@@ -148,6 +148,27 @@ public function set_CurRef($new){ $this->obj_cur_ref->setdata($new,0);}
 		$attrib = array('rdf:ID' => 'PhpParameter');
 		$this->my_Xml_Object->tag_open($this, "pedl:Object_Parameter", $attrib);
 		$this->my_Xml_Object->tag_close($this, "pedl:Object_Parameter");
+
+		/* Interfaces and traits are declarations like a class, so they are coined from the
+		*  same pedl base and behave like one. Properties and constants are named slots and
+		*  take the parameter base. Coining them here is what makes them usable as tags at
+		*  all - no php class per tag is needed.
+		*/
+		$attrib = array('rdf:ID' => 'PhpInterface');
+		$this->my_Xml_Object->tag_open($this, "pedl:Object_Class", $attrib);
+		$this->my_Xml_Object->tag_close($this, "pedl:Object_Class");
+
+		$attrib = array('rdf:ID' => 'PhpTrait');
+		$this->my_Xml_Object->tag_open($this, "pedl:Object_Class", $attrib);
+		$this->my_Xml_Object->tag_close($this, "pedl:Object_Class");
+
+		$attrib = array('rdf:ID' => 'PhpProperty');
+		$this->my_Xml_Object->tag_open($this, "pedl:Object_Parameter", $attrib);
+		$this->my_Xml_Object->tag_close($this, "pedl:Object_Parameter");
+
+		$attrib = array('rdf:ID' => 'PhpConstant');
+		$this->my_Xml_Object->tag_open($this, "pedl:Object_Parameter", $attrib);
+		$this->my_Xml_Object->tag_close($this, "pedl:Object_Parameter");
 		
 		$attrib = array('rdf:ID' => 'System');
 		$this->my_Xml_Object->tag_open($this, "PhpClass", $attrib);
