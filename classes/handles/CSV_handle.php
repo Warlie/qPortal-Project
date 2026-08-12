@@ -234,8 +234,9 @@ class CSV_handle extends Interface_handle
         			$next = $row->getRefnext($i, true);
         			$name = $next->get_ns_attribute('http://www.csv.de/csv#NAME');
         			$value = $next->getdata();
-        			if($name && $value)
-        				$res[$name] = $value;
+        			//auch leere und '0'-Werte behalten, sonst kippt die Spalte aus dem Header
+        			if($name)
+        				$res[$name] = (false === $value || is_null($value)) ? '' : $value;
         			unset($next);
         		}
         		
@@ -245,50 +246,88 @@ class CSV_handle extends Interface_handle
         function write_Column_Values($header, $column)
         {
         	$res = array();
-        	foreach ($header as $name)$res[] = $column[$name];
+        	foreach ($header as $name)$res[] = $column[$name] ?? '';
         	return $res;
         }
-        
-	
+
+	//Aliasnamen -> Unicode-Codepoint; case-insensitiv, da der Core Parameter-Values uppercased
+	private $delimiter_alias = array(
+		'TAB' => 9, 'NL' => 10, 'CR' => 13, 'SPACE' => 32,
+		'COMMA' => 44, 'SEMICOLON' => 59, 'PIPE' => 124,
+		'FS' => 28, 'GS' => 29, 'RS' => 30, 'US' => 31
+	);
+
+	/** Trenner-Spezifikation auflösen: Dezimal-Codepoint ("9"), Hex ("x1f"),
+	*   Aliasname ("tab") oder Literalzeichen ("|"); Default ';'
+	*/
+	function resolve_delimiter($spec)
+	{
+		if(is_null($spec) || '' === ($spec = trim($spec)))return ';';
+		if(preg_match('/^[0-9]+$/', $spec))return mb_chr((int)$spec, 'UTF-8');
+		if(preg_match('/^x([0-9a-fA-F]+)$/', $spec, $hit))return mb_chr(hexdec($hit[1]), 'UTF-8');
+		if(isset($this->delimiter_alias[strtoupper($spec)]))
+			return mb_chr($this->delimiter_alias[strtoupper($spec)], 'UTF-8');
+		return $spec;
+	}
+
+	/** Trenner für die Ausgabe ermitteln: SPECIAL-Parameter DELIMITER oder
+	*   Option im Descriptor-String, z.B. doctype_out="CSV;delimiter:9"
+	*/
+	function get_output_delimiter()
+	{
+		if(isset($this->attribute_values['DELIMITER']))
+			return $this->resolve_delimiter($this->attribute_values['DELIMITER']);
+
+		$parts = explode(';', $this->base_object->TYPE[$this->base_object->idx] ?? '');
+		for($i = 1;$i < count($parts);$i++)
+		{
+			$pair = explode(':', $parts[$i], 2);
+			if(count($pair) == 2 && 'DELIMITER' == strtoupper(trim($pair[0])))
+				return $this->resolve_delimiter($pair[1]);
+		}
+		return ';';
+	}
+
+	/** RFC-4180-Quoting: Werte mit Trenner, Anführungszeichen oder Zeilenumbruch
+	*   in doppelte Anführungszeichen setzen, innere Anführungszeichen verdoppeln
+	*/
+	function escape_Column_Values($values, $delimiter)
+	{
+		foreach($values as $key => $value)
+			if(false !== strpbrk((string)$value, $delimiter . "\"\n\r"))
+				$values[$key] = '"' . str_replace('"', '""', $value) . '"';
+		return $values;
+	}
+
 	function save_back($format,$send_header = false)
 	{
-		
-		/**
-		*
-		*
-		*/
 
+		$delimiter = $this->get_output_delimiter();
 
-
-                 $header = array();
-                 $csv = array();
-                                
                  $this->base_object->set_first_node();
-		
+
 		$this->base_object->complete_list(true);
 		$this->base_object->cloneResult(true);
 		if(! $this->base_object->xpath("ROW")  )return "";
 		$this->base_object->cloneResult(false);
-		
+
 		$result = $this->base_object->get_xpath_Result();
-		
-		
+
+
 		$header = array_keys($this->extract_Columns($result[0]));
-		$res .= implode(';', $header) . "\n";
+		$res = implode($delimiter, $this->escape_Column_Values($header, $delimiter)) . "\n";
 		foreach ($result as $row)
 		{
-			//echo $row->full_URI() . "\n";
-			
-			//$csv[] = $this->write_Column_Values($header, $this->extract_Columns($row));
-			$res .= implode(';', 
-				$this->write_Column_Values($header, $this->extract_Columns($row))
+			$res .= implode($delimiter,
+				$this->escape_Column_Values(
+					$this->write_Column_Values($header, $this->extract_Columns($row))
+					,$delimiter)
 				) . "\n";
-			//get_ns_attribute
 		}
-		
+
 		return $res;
 
-		
+
 	}
 	
 	function save_stream_back(&$stream,$format, $send_header = false)
@@ -424,7 +463,7 @@ class CSV_handle extends Interface_handle
 function send_header()
 {
 
-					header("Content-type: text/html;  charset=iso-8859-1");
+					header("Content-type: text/csv; charset=iso-8859-1");
 
 }
 
