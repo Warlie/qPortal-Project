@@ -1,0 +1,74 @@
+<?xml version='1.0' encoding="utf-8"?>
+<indextree xmlns="http://www.trscript.de/tree"  >
+<final name="home" value="Hauptseite" >
+	<template>
+		<!--<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="auster_template.htm;output:one" >%PROGRAM_DIR%/templates/bootstrap-snippits/std-body-xhtml.xml</main>-->
+		<add case_folding="0" doctype="XML" id="nav" >%PROGRAM_DIR%/templates/bootstrap-snippits/navigation-slim_top.xml</add>
+		<add case_folding="0" doctype="XML" id="men" >%PROGRAM_DIR%/templates/bootstrap-snippits/navigation_elements.xml</add>
+		</template>
+	<!--  -->
+	<content name="http://www.w3.org/1999/xhtml#body" ><subtree name="http://www.w3.org/1999/xhtml#nav" id="nav" /></content>
+
+	
+	<program>
+
+	
+		<object id="menu" name="Menue" src="PlugIn/plugin_menu.php" >
+		<remote name="Menue.page.page" ><variable name="page">$default</variable></remote>
+	 <remote name="Menue.page" />
+			<remote name="Menue.configuration.json" ><![CDATA[ 
+	{"config" :{
+	"root":true,
+	"back":{"active":true,"name":"zurueck", "url":"index.php?i=home"}
+	},
+	"structure":[
+	{"name" : "n1", "url" : "u1"},
+	{"name" : "n2", "url" : "u2"},
+	{"name" : "n3", "url" : "u3"}
+	]
+	}
+
+]]></remote>
+	<remote name="Menue.configuration" />
+		</object>
+
+	
+	<content name="http://www.w3.org/1999/xhtml#div" ><param name="http://www.w3.org/1999/xhtml#id" >navbar</param>
+	
+	<object id="content" name="XMLDO" src="PlugIn/plugin_xmldo.php">
+	<remote name="XMLDO.set_list.value" ><object id="menu" ><remote name="Menue.iter" /></object></remote>
+	<remote name="XMLDO.set_list" />
+	<remote name="XMLDO.configuration.json" ><![CDATA[ 
+	{"serial" :{
+	"template":{"new_template": "men", "use_at_tag":	"html"},
+	"structure":[
+	{"type" : "Crotch", "child_pos" : 0, "xpath" : "ul", "group" : "1"},
+	{"type" : "Branch", "child_pos" : 2, "xpath" : "li", "group" : "1"},
+	{"type" : "Crotch", "child_pos" : 1, "xpath" : "ul", "group" : "2,3,4"},
+	{"type" : "Branch", "child_pos" : 3, "xpath" : "li", "group" : "2,3,4"}
+	],
+	"definition":[
+	{"name":"n2", "branch": 2, "xpath":"a","group":1, "attrib_data": "data"},
+	{"name":"u2", "branch": 2, "xpath":"a","group":1, "attrib_data": "attrib", "prefix" : "", "postfix" : "href"},
+	{"name":"n3", "branch": 3, "xpath":"a","group":2, "attrib_data": "data"},
+	{"name":"u3", "branch": 3, "xpath":"a","group":2, "attrib_data": "attrib", "prefix" : "", "postfix" : "href"},
+	{"name":"n4", "branch": 3, "xpath":"a","group":3, "attrib_data": "data"},
+	{"name":"u4", "branch": 2, "xpath":"a","group":3, "attrib_data": "attrib", "prefix" : "", "postfix" : "href"},
+	{"name":"n5", "branch": 3, "xpath":"a","group":4, "attrib_data": "data"},
+	{"name":"u5", "branch": 3, "xpath":"a","group":4, "attrib_data": "attrib", "prefix" : "", "postfix" : "href"}
+	],
+	"process":"Branch"
+	}}
+]]></remote>
+	<remote name="XMLDO.configuration" />
+	</object>
+		
+	</content>	
+
+	</program>	
+	
+<!--	<content name="http://www.w3.org/1999/xhtml#div" ><param name="http://www.w3.org/1999/xhtml#id" >navbar</param><element type="xhtml" >tralala</element></content>
+	-->
+
+</final>
+</indextree>

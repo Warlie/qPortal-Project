@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding="ISO-8859-1"?>
+<indextree xmlns="http://www.trscript.de/tree"  >
+<final>
+	<content name="http://www.w3.org/1999/xhtml#body" >
+	<element type="xhtml"  >
+	<param name="http://www.w3.org/1999/xhtml#class" >bg-image</param>
+	<param name="http://www.w3.org/1999/xhtml#style" >background-image: url('<variable name="realm_bg">/img/backgrounds/fae_realm_desktop.jpg</variable>'); height: 100vh</param>
+	<!-- /img/backgrounds/fae_realm_desktop.jpg  fae_realm_smartphone.jpg strangepunk_realm_desktop.jpg -->
+	</element>
+	</content>
+</final>
+</indextree>

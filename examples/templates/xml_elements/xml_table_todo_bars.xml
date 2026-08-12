@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<div />
+<div><a class="todo_category" /></div>
+<div style="display: none;" />
+<table class="todoBox"  style="padding: 5px;"  >
+<tr>
+<td >
+<div  style="font-weight: bold;" class="todo_title" />
+</td>
+<td >
+<div  style="font-weight: bold;" class="todo_count" />
+</td>
+</tr >
+<tr>
+<td>
+<span style="color:grey;" class="todo_comment" ></span>
+</td>
+</tr >
+<tr>
+<td>
+<div style="position:relative;color:blue;background-color: red;width: 100%;height: 10px;"  />
+<div  class="todo_bar"  />
+</td>
+</tr >
+<tr style="visibility:collapse" >
+<td ><div class="todo_tasks" />
+</td>
+</tr >
+</table>
+<ul style="list-style-type:circle;" />
+<li />
+</html>

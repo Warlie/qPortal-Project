@@ -9,6 +9,7 @@ require_once('XML_handle.php');
 require_once('CSV_handle.php');
 require_once('RAW_handle.php');
 require_once('JSON_handle.php');
+require_once('YAML_handle.php');
 require_once('PHP_handle.php');
 require_once('SVG_Overview_handle.php');
 require_once('XML_handle_registry_output.php');
@@ -38,6 +39,8 @@ class My_Handle_factory
 			return new PHP_handle();
 			case 'JSON' :
 			return new JSON_handle();
+			case 'YAML' :
+			return new YAML_handle();
 			case 'RAW' :
 			return new RAW_handle();
 			case 'SVG_OVERVIEW' :

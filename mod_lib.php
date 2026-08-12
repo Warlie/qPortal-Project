@@ -45,6 +45,38 @@ function parse_ini_file_multi($file, $process_sections = false, $scanner_mode = 
 }
 
 /**
+* Expands %NAME% placeholders in a path with the matching configuration
+* constant. Documents use these so they keep working after being copied —
+* %PROGRAM_DIR%/pages/login.xml resolves wherever PROGRAM_DIR points.
+*
+* To make a further constant available to documents, add its name here.
+* Constants that are not defined yet are left alone rather than fataling,
+* so this is safe to call before the configuration is complete.
+*
+* @param path : string possibly containing %NAME% placeholders
+* @return string
+*/
+
+function resolve_path($path)
+{
+	static $names = ['ROOT_DIR', 'PROGRAM_DIR', 'PLUG_IN_FOLDER'];
+
+	$from = [];
+	$to   = [];
+
+	foreach($names as $name)
+	{
+		if(defined($name))
+		{
+			$from[] = '%' . $name . '%';
+			$to[]   = constant($name);
+		}
+	}
+
+	return $from ? str_replace($from, $to, $path) : $path;
+}
+
+/**
 * @param data : simple array with name and value cycling
 * @return associative array
 */

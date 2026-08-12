@@ -1,6 +1,3 @@
-[submodule "dependency/finite"]
-	path = dependency/finite
-	url = git@github.com:yohang/Finite.git
 [submodule "dependency/jquery-xpath"]
 	path = dependency/jquery-xpath
 	url = git@github.com:ilinsky/jquery-xpath.git
@@ -10,3 +7,6 @@
 [submodule "anttree"]
 	path = anttree
 	url = git@github.com:Warlie/anttree.git
+[submodule "faehub"]
+	path = faehub
+	url = git@github.com:Warlie/faehub.git

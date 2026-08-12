@@ -1,0 +1,169 @@
+<?xml version='1.0' encoding="ISO-8859-1"?>
+<indextree xmlns="http://www.trscript.de/tree"  >
+<final  name="login" value="anmelden" >
+	
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="menu.htm;output:one" >%PROGRAM_DIR%/templates/shell_wide.htm</main>
+		<add case_folding="0" doctype="XML" id="in" >%PROGRAM_DIR%/templates/xml_elements/xml_table_todo_bars.xml</add>
+		<add case_folding="0" doctype="XML" id="item" >%PROGRAM_DIR%/templates/todo_templates/xhtml_todo_item.xml</add>
+		<add case_folding="0" doctype="XML" id="list" >%PROGRAM_DIR%/templates/toolbox/xhtml_table_body.xml</add>
+		<add case_folding="0" doctype="XML" id="men" >%PROGRAM_DIR%/templates/menu.htm</add>	
+	</template>
+	
+
+	
+	<program>
+		
+		<object id="menu" name="Menue" src="PlugIn/plugin_menu.php" >
+			<remote name="Menue.void_root" />
+			<remote name="Menue.setLevelName.name">n1</remote>
+			<remote name="Menue.setLevelName.url">u1</remote>
+			<remote name="Menue.setLevelName"/>
+			<remote name="Menue.setLevelName.name">n2</remote>
+			<remote name="Menue.setLevelName.url">u2</remote>
+			<remote name="Menue.setLevelName"/>
+			<remote name="Menue.setLevelName.name">n3</remote>
+			<remote name="Menue.setLevelName.url">u3</remote>
+			<remote name="Menue.setLevelName"/>
+			<!--
+			<remote name="Menue.setLevelName.name">n4</remote>
+			<remote name="Menue.setLevelName.url">u4</remote>
+			<remote name="Menue.setLevelName"/> -->
+			<remote name="Menue.collect_Content"/>
+
+			
+
+		</object>
+
+	
+	<content name="http://www.w3.org/1999/xhtml#div"  >
+	<param name="http://www.w3.org/1999/xhtml#id" >bars</param>
+	
+	<object id="content" name="XMLDO" src="PlugIn/plugin_xmldo.php">
+	<remote name="XMLDO.set_list.value" ><object id="menu" ><remote name="Menue.iter" /></object></remote>
+	<remote name="XMLDO.set_list" />
+	<remote name="XMLDO.setXMLTemplate.new_template">men</remote>
+	<remote name="XMLDO.setXMLTemplate.use_at_tag">html</remote>
+	<remote name="XMLDO.setXMLTemplate" />
+	<remote name="XMLDO.setCrotch.child_pos">0</remote>
+	<remote name="XMLDO.setCrotch.xpath" >ul</remote>
+	<remote name="XMLDO.setCrotch.group">1</remote>
+	<remote name="XMLDO.setCrotch" />
+	<remote name="XMLDO.setBranch.child_pos">2</remote>
+	<remote name="XMLDO.setBranch.xpath" >li</remote>
+	<remote name="XMLDO.setBranch.group">1</remote>
+	<remote name="XMLDO.setBranch" />
+	<remote name="XMLDO.setCrotch.child_pos">1</remote>
+	<remote name="XMLDO.setCrotch.xpath" >ul</remote>
+	<remote name="XMLDO.setCrotch.group">2,3,4</remote>
+	<remote name="XMLDO.setCrotch" />
+	<remote name="XMLDO.setBranch.child_pos">3</remote>
+	<remote name="XMLDO.setBranch.xpath" >li</remote>
+	<remote name="XMLDO.setBranch.group">2,3,4</remote>
+	<remote name="XMLDO.setBranch" />
+
+
+<!--	
+	<remote name="XMLDO.define_tag.name" >n1</remote>
+	<remote name="XMLDO.define_tag.branch" >2</remote>
+	<remote name="XMLDO.define_tag.xpath" >span[@class='t']</remote>
+	<remote name="XMLDO.define_tag.group" >1</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >data</remote>
+	<remote name="XMLDO.define_tag" />
+	<remote name="XMLDO.define_tag.name" >u1</remote>
+	<remote name="XMLDO.define_tag.branch" >3</remote>
+	<remote name="XMLDO.define_tag.xpath" >li</remote>
+	<remote name="XMLDO.define_tag.group" >1</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >attrib</remote>
+	<remote name="XMLDO.define_tag.prefix" ></remote>
+	<remote name="XMLDO.define_tag.postfix" >href</remote>
+	<remote name="XMLDO.define_tag" />
+-->	
+	<remote name="XMLDO.define_tag.name" >n2</remote>
+	<remote name="XMLDO.define_tag.branch" >2</remote>
+	<remote name="XMLDO.define_tag.xpath" >span[@class='t']</remote>
+	<remote name="XMLDO.define_tag.group" >1</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >data</remote>
+	<remote name="XMLDO.define_tag" />
+	<remote name="XMLDO.define_tag.name" >u2</remote>
+	<remote name="XMLDO.define_tag.branch" >2</remote>
+	<remote name="XMLDO.define_tag.xpath" >a</remote>
+	<remote name="XMLDO.define_tag.group" >1</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >attrib</remote>
+	<remote name="XMLDO.define_tag.prefix" ></remote>
+	<remote name="XMLDO.define_tag.postfix" >href</remote>
+	<remote name="XMLDO.define_tag" />
+	<remote name="XMLDO.define_tag.name" >n3</remote>
+	<remote name="XMLDO.define_tag.branch" >3</remote>
+	<remote name="XMLDO.define_tag.xpath" >a</remote>
+	<remote name="XMLDO.define_tag.group" >2</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >data</remote>
+	<remote name="XMLDO.define_tag" />
+	<remote name="XMLDO.define_tag.name" >u3</remote>
+	<remote name="XMLDO.define_tag.branch" >3</remote>
+	<remote name="XMLDO.define_tag.xpath" >a</remote>
+	<remote name="XMLDO.define_tag.group" >2</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >attrib</remote>
+	<remote name="XMLDO.define_tag.prefix" ></remote>
+	<remote name="XMLDO.define_tag.postfix" >href</remote>
+	<remote name="XMLDO.define_tag" />
+	<remote name="XMLDO.define_tag.name" >n4</remote>
+	<remote name="XMLDO.define_tag.branch" >3</remote>
+	<remote name="XMLDO.define_tag.xpath" >a</remote>
+	<remote name="XMLDO.define_tag.group" >3</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >data</remote>
+	<remote name="XMLDO.define_tag" />
+	<remote name="XMLDO.define_tag.name" >u4</remote>
+	<remote name="XMLDO.define_tag.branch" >2</remote>
+	<remote name="XMLDO.define_tag.xpath" >a</remote>
+	<remote name="XMLDO.define_tag.group" >3</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >attrib</remote>
+	<remote name="XMLDO.define_tag.prefix" ></remote>
+	<remote name="XMLDO.define_tag.postfix" >href</remote>
+	<remote name="XMLDO.define_tag" />
+	<remote name="XMLDO.define_tag.name" >n5</remote>
+	<remote name="XMLDO.define_tag.branch" >3</remote>
+	<remote name="XMLDO.define_tag.xpath" >a</remote>
+	<remote name="XMLDO.define_tag.group" >4</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >data</remote>
+	<remote name="XMLDO.define_tag" />
+	<remote name="XMLDO.define_tag.name" >u5</remote>
+	<remote name="XMLDO.define_tag.branch" >3</remote>
+	<remote name="XMLDO.define_tag.xpath" >a</remote>
+	<remote name="XMLDO.define_tag.group" >4</remote>
+	<remote name="XMLDO.define_tag.attrib_data" >attrib</remote>
+	<remote name="XMLDO.define_tag.prefix" ></remote>
+	<remote name="XMLDO.define_tag.postfix" >href</remote>
+	<remote name="XMLDO.define_tag" />
+
+	<remote name="XMLDO.generateBranchTree" />
+	</object>
+		
+	</content>	
+
+	</program>
+	
+	<content name="http://www.w3.org/1999/xhtml#div"  securitylevel="1" >
+	<param name="http://www.w3.org/1999/xhtml#id" >header</param>
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#h2" ><![CDATA[Bitte Code eingeben:]]></element>
+	</content>	
+	
+			<content name="http://www.w3.org/1999/xhtml#div"  securityclass="1" >
+	<param name="http://www.w3.org/1999/xhtml#id" >content</param>
+
+		
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#form" ><param name="action" >index.php?i=__system</param><param name="method" >post</param>
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#p" ><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >CODE</param><param name="type" >text</param><param name="size" >20</param><param name="maxlength" >20</param></element></element>
+
+		
+<element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >URL</param><param name="type" >hidden</param><param name="value" >home</param></element><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >modus</param><param name="type" >hidden</param><param name="value" >APPLY_CODE</param></element><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="name" >URLalt</param><param name="type" >hidden</param><param name="value" >login</param></element>
+
+
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#p" ><element type="xhtml" value="http://www.w3.org/1999/xhtml#input" ><param name="type" >submit</param><param name="value" >Submit</param></element></element>
+		</element>	
+	</content>
+	
+
+	
+</final>
+</indextree>

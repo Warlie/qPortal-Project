@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<ul class="navbar-nav me-auto"></ul>
+<ul class="dropdown-menu"/>
+<li class="nav-item"><a class="nav-link" />
+</li>
+<li><a class="dropdown-item" ></a></li>
+<!--  data-toggle="dropdown" -->
+</html>

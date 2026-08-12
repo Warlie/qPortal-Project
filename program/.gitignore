@@ -1,0 +1,5 @@
+# This directory belongs to the installation, not to the repository.
+# Copy the contents of examples/ in here, point PROGRAM_DIR at it in
+# config/config.ini, and edit freely — no update will ever touch it.
+*
+!.gitignore

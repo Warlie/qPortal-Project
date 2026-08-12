@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<table>
+<tr>
+<td>
+<span style="color:green;" id="id" />
+</td>
+<td>
+<span style="color:blue;" id="user" />
+</td>
+<td>
+<span style="color:grey;" id="forename" />
+</td>
+<td>
+<span style="color:grey;" id="surname" />
+</td>
+<td>
+<span style="color:black;" id="securityclass" />
+</td>
+<td>
+<span style="color:brown;" id="group" />
+</td>
+<td>
+<span style="color:brown;" id="sector" />
+</td>
+<td id="form">
+<form action="?i=.edit" method="post" >
+<input type="hidden" name="userid" />
+<input type="submit" value="Editieren" />
+</form>
+</td>
+</tr >
+</table>
+<html>

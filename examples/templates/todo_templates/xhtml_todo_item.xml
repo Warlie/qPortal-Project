@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<html xmlns="http://www.w3.org/1999/xhtml" >
+<div class="art-Post" >
+<div class="art-Post-tl" />
+<div class="art-Post-tr" />
+<div class="art-Post-bl" />
+<div class="art-Post-br" />
+<div class="art-Post-tc-other" />
+<div class="art-Post-bc-other" />
+<div class="art-Post-cl-other" />
+<div class="art-Post-cr-other" />
+<div class="art-Post-cc" />
+<div class="art-Post-body"  >
+<div class="art-Post-inner">
+<h2 class="art-PostHeader">
+</h2>
+<div class="art-PostContent" >
+<span />
+</div>
+<div class="cleared"></div>
+</div>
+</div>
+</div>
+<div><a class="todo_category" /></div>
+<div style="display: none;" class="booja" /><!--<div ><span/><br/></div>  <div class="booja" /> -->
+<table style="width:100%;" class="todoBox" >
+<tr>
+<td >
+<form action="./index.php?i=.tododetails" name="details" method="post" style="position:absolute;right:40px;"><input type="hidden"  name="detail_id"  /><input type="image"  src="images/Bullets.png"  /></form>
+<span  style="font-weight: bold;" class="todo_title" />
+<form action="./index.php?i=.todocreate" name="add" method="post"><input type="hidden"  name="id_todo"  /><input type="image"  src="img/objectaddsymbol.png"  />
+<input type="text"  name="part"  /><input type="hidden" name="mode" value="add_part" />
+</form>
+</td>
+</tr >
+<tr>
+<td>
+<span style="color:grey;" id="comment" ></span>
+</td>
+</tr >
+<tr>
+<td class="parts"/>
+</tr >
+</table>
+<table style="color:red;" id="parts" ></table>
+<tr>
+<td style="font-weight: kursiv;" id="part1" />
+<td  style="font-weight: bold;" id="part2" />
+<td ><form action="./index.php?i=.todocreate" name="finished" method="post"><input type="hidden" name="done"  /><input type="hidden" name="hash"  /><input type="hidden" name="mode" value="toggle_finished" /><input type="image"  /></form></td>
+</tr >
+</html>

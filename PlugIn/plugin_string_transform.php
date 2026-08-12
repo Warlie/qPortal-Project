@@ -75,7 +75,7 @@ class StringTransform extends plugin
     }
 
     public function col($columnname)
-    { echo "booho";
+    {
         if (!$this->rst) return null;
 
         if (isset($this->rules[$columnname])) {

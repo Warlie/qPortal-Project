@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>404 &ndash; Hier endet der Weg</title>
+<style>
+:root {
+	--tinte:     #f4f1ea;
+	--gedaempft: #bcb6a8;
+	--nacht:     #10130f;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+	height: 100%;
+	margin: 0;
+}
+
+body {
+	background: var(--nacht) url("/error/404-tor.jpg") center 40% / cover no-repeat;
+	color: var(--tinte);
+	font: 16px/1.6 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+
+/* Der Verlauf traegt die Lesbarkeit, nicht der Farbton: unten dunkel genug,
+   dass heller Text auf jedem Bildausschnitt sicher steht. */
+.schleier {
+	min-height: 100%;
+	display: flex;
+	align-items: flex-end;
+	justify-content: center;
+	padding: 3rem 1.5rem 3.5rem;
+	background: linear-gradient(
+		to bottom,
+		rgba(16,19,15,0.15) 0%,
+		rgba(16,19,15,0.45) 45%,
+		rgba(16,19,15,0.88) 100%);
+}
+
+.tafel {
+	max-width: 34rem;
+	text-align: center;
+	animation: auftauchen 900ms ease-out both;
+}
+
+.zahl {
+	font-size: clamp(4.5rem, 16vw, 9rem);
+	line-height: 0.9;
+	letter-spacing: 0.06em;
+	margin: 0 0 0.6rem;
+	text-shadow: 0 2px 24px rgba(0,0,0,0.75);
+}
+
+h1 {
+	font-size: clamp(1.15rem, 3.4vw, 1.6rem);
+	font-weight: 400;
+	margin: 0 0 0.9rem;
+	text-shadow: 0 1px 12px rgba(0,0,0,0.8);
+}
+
+p.text {
+	margin: 0 0 1.8rem;
+	color: var(--gedaempft);
+	text-shadow: 0 1px 10px rgba(0,0,0,0.8);
+}
+
+/* Rahmen und Unterstrich statt reinem Farbwechsel - der Zustand ist auch
+   ohne Farbunterscheidung sichtbar. */
+.zurueck {
+	display: inline-block;
+	padding: 0.6rem 1.6rem;
+	color: var(--tinte);
+	text-decoration: none;
+	border: 1px solid rgba(244,241,234,0.45);
+	border-radius: 2px;
+	letter-spacing: 0.04em;
+	background: rgba(16,19,15,0.35);
+	transition: background 200ms ease, border-color 200ms ease;
+}
+
+.zurueck:hover,
+.zurueck:focus-visible {
+	background: rgba(244,241,234,0.14);
+	border-color: var(--tinte);
+	text-decoration: underline;
+	text-underline-offset: 0.25em;
+	outline: none;
+}
+
+.zurueck:focus-visible {
+	box-shadow: 0 0 0 3px rgba(244,241,234,0.35);
+}
+
+@keyframes auftauchen {
+	from { opacity: 0; transform: translateY(0.75rem); }
+	to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.tafel { animation: none; }
+}
+</style>
+</head>
+<body>
+<div class="schleier">
+	<div class="tafel">
+		<p class="zahl">404</p>
+		<h1>Der Weg endet an einem Tor, hinter dem nichts steht.</h1>
+		<p class="text">Die Seite, die du gesucht hast, gibt es nicht &ndash; oder nicht mehr.
+		Vielleicht hat sie auch nie hier gestanden.</p>
+		<a class="zurueck" href="/">Zur&uuml;ck zum Anfang</a>
+	</div>
+</div>
+</body>
+</html>

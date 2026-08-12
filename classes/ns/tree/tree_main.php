@@ -88,7 +88,7 @@ $doc_type = $this->get_attribute('doctype') ?? 'XML';
 $preload = $this->get_attribute('doctype_out');
 
 // We strictly use case_folding = 0 because SGML is dead
-$this->get_parser()->load($this->getdata(), 0, $doc_type);
+$this->get_parser()->load(resolve_path($this->getdata()), 0, $doc_type);
 
 $logger_class->setAssert(
     sprintf('file "%s" was loaded as output document (TREE_main:event_message_in)', trim($this->getdata())), 
@@ -107,7 +107,7 @@ if ($preload) {
 			$uri = $this->getRefprev()->full_URI();
 			if($uri == 'http://www.trscript.de/tree#template' )
 			{
-				$content->set_template($this->getdata(),$this->getdata());
+				$content->set_template(resolve_path($this->getdata()),resolve_path($this->getdata()));
 				
 				if($output_doc = $this->get_attribute('output_doc'))
 				{
@@ -151,7 +151,7 @@ if ($preload) {
 					
 				}
 				
-					$content->set_out_template($this->getdata());
+					$content->set_out_template(resolve_path($this->getdata()));
 	
 			}
 										//$this->TYPE[$this->idx]

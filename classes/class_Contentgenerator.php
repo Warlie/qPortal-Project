@@ -57,6 +57,8 @@ private $schema = false;
 private $injectedLine = false;
 private $outputMode = OUTPUT;
 
+private $foundAPage = false;
+
 // scope
     private array $scopes = [];
     private array $scopeStack = [];
@@ -495,9 +497,17 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		{
 //$this->param
 		$path = [];
+		$open = true;
 
 		foreach (array_map('trim', explode(',', QUERY_PARAM)) as $p) {
 			if (!empty($this->param[$p])) $path[] = $this->param[$p];
+
+			/* Achsenfolge fuer das Menue: alle belegten Parameter plus den
+			   ersten freien - der ist die Abzweigung, die das Menue variiert */
+			if ($open) {
+				$this->setLexicalOrderParam($p);
+				$open = !empty($this->param[$p]);
+			}
 		}
 
 		//var_dump($path);
@@ -514,6 +524,11 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 				["Identifire"=>"http://www.trscript.de/tree#indextree", "Command"=> ["Name"=> "start" ], "Attribute"=>$path]
 				,new EventObject('',$this,$booh));
 
+		
+		/* Kein Knoten hat gerendert -> Route nicht aufgeloest.
+		   index.php:420 nimmt das false und liefert error/404.html aus. */
+		if(!$this->foundAPage) return false;
+		
 		if($this->id_output_template)
 		$this->doc_out_template = $this->heap['template'][$this->id_output_template];
 
@@ -522,6 +537,10 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 }
 	
 
+	function found_relevant_page()
+	{
+		$this->foundAPage = true;
+	}
 //function setSystemDocument($set_header,$type = 'UTF-8')
 
 	function getSystemDocument($set_header,$type = 'UTF-8')
