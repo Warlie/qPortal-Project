@@ -801,6 +801,8 @@ class Obj_Parameter
 	private $is_variadic = false;
 	private $is_nullable = false;
 	private $default_value = null;
+	private $desc = [];
+	private $is_optional = false;
 
 	public function __construct($string_param,$counter)
 	{
@@ -818,6 +820,9 @@ class Obj_Parameter
 
 			$this->value_content = $string_param['refersTo'];
 			$this->has_value     = ('' !== $string_param['refersTo']);
+
+			$this->desc        = $string_param['desc'] ?? [];
+			$this->is_optional = $string_param['optional'] ?? false;
 
 			return;
 		}
@@ -911,7 +916,14 @@ class Obj_Parameter
 		//a default value is php source and may hold quotes; all_attrib_axo escapes them
 		if(!is_null($this->default_value))$attrib['pedl:default'] = $this->default_value;
 
+		/* aus einem "[optional]" im Beschreibungstext. Bei Parametern ohne Vorgabewert
+		*  ist das die einzige Quelle fuer die Optionalitaet.
+		*/
+		if($this->is_optional)$attrib['pedl:optional'] = 'true';
+
 		$xml_model->tag_open($this, "PhpParameter", $attrib);
+
+		Obj_Class::write_desc($xml_model, $this, $this->desc);
 		//if($this->has_value && !$this->gives_out_ref)$xml_model->cdata($this,$this->pre_value);
 		//if($this->has_value && $this->gives_out_ref)$xml_model->cdata_ref($this,$this->pre_value);
 

@@ -268,6 +268,9 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 		$params = [];
 		foreach($method->params as $param)$params[] = $this->param_meta($param);
 
+		//was einen Parameter beim Namen nennt, gehoert an den Parameter
+		$desc = $this->route_param_desc($this->desc_entries($method), $params);
+
 		return [
 			'kind'       => 'method',
 			'name'       => $name,
@@ -283,8 +286,58 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 			'byRef'      => $method->byRef,
 			'returnType' => $this->type_text($method->returnType),
 			'params'     => $params,
-			'desc'       => $this->desc_entries($method),
+			'desc'       => $desc,
 		];
+	}
+
+	/** Haengt Beschreibungen an den Parameter, den sie beim Namen nennen.
+	*
+	*   "@parameter: tag_name = name for column" nennt sein Ziel selbst, vor dem "=".
+	*   Trifft der Name einen Parameter der Methode, wandert der Eintrag dorthin und
+	*   verliert den Namensvorspann - der steht ja jetzt am umgebenden Knoten.
+	*
+	*   Grossgeschriebene Namen wie COL oder DOCTYPE meinen keinen PHP-Parameter,
+	*   sondern die Aufrufflaeche des Plugins. Sie treffen keinen Parameter und
+	*   bleiben deshalb an der Methode - genau richtig, dort beschreiben sie das
+	*   Werkzeug und nicht sein Argument.
+	*
+	*   @param $params wird veraendert
+	*   @return die Eintraege, die an der Methode bleiben
+	*/
+	private function route_param_desc(array $desc, array &$params) : array
+	{
+		$index = [];
+		foreach($params as $pos => $one)$index[$one['name']] = $pos;
+
+		$rest = [];
+
+		foreach($desc as $entry)
+		{
+			if('desc:parameter' !== $entry['tag']
+				|| !preg_match('#^([A-Za-z_][A-Za-z_0-9]*)\s*=\s*(.*)$#s', $entry['text'], $hit)
+				|| !isset($index[$hit[1]]))
+			{
+				$rest[] = $entry;
+				continue;
+			}
+
+			$pos  = $index[$hit[1]];
+			$text = trim($hit[2]);
+
+			/* "[optional]" am Ende ist eine Angabe, keine Beschreibung. Bei Parametern
+			*  ohne Vorgabewert ist es die einzige Quelle dafuer, also wird es zur
+			*  Eigenschaft statt im Fliesstext zu bleiben.
+			*/
+			if(preg_match('#^(.*?)\s*\[optional\]\s*$#is', $text, $opt))
+			{
+				$text = trim($opt[1]);
+				$params[$pos]['optional'] = true;
+			}
+
+			$params[$pos]['desc'][] = ['tag' => 'desc:text', 'text' => $text];
+		}
+
+		return $rest;
 	}
 
 	private function param_meta(Node\Param $param) : array
@@ -310,6 +363,10 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 			'variadic' => $param->variadic,
 			'default'  => is_null($param->default) ? null : $this->printer->prettyPrintExpr($param->default),
 			'refersTo' => $refersTo,
+
+			//werden von route_param_desc gefuellt, wenn eine Beschreibung diesen Namen nennt
+			'desc'     => [],
+			'optional' => false,
 		];
 	}
 
