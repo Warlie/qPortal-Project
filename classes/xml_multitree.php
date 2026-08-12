@@ -1470,7 +1470,9 @@ return $res;
         }
 
         // hilfsfunction
-        function all_attrib_axo($format, $flags = ENT_XML1){
+        /* ENT_XML1 alone leaves the quote style at ENT_NOQUOTES, so a value holding a
+           double quote used to tear the attribute apart. ENT_QUOTES closes that. */
+        function all_attrib_axo($format, $flags = ENT_XML1 | ENT_QUOTES){
                                 $res = '';
 
                                 $attrib_array = $this->show_cur_attrib();
