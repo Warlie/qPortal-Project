@@ -3,6 +3,7 @@
 
 
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
 				require_once('classes/finite_state_machine/enums.php');
 				require_once('classes/finite_state_machine/class_Transducer.php');
 				require_once('classes/finite_state_machine/class_Acceptor.php');
@@ -140,10 +141,8 @@ final class AutomatTest extends TestCase
 	
 	
 	
-	 /**
-     * @depends testProducerFirst
-     * @dataProvider ProvideTestCases
-     */
+	 //depends on testProducerFirst dropped: the provider already fills all three parameters
+	 #[DataProvider('ProvideTestCases')]
     public function testClassConstructor(string $value, array $pattern, string $error_message) : void
 {
 
@@ -171,9 +170,7 @@ final class AutomatTest extends TestCase
     }    
 
 
-    /**
-     * @dataProvider ProvideTestWrongExitStates
-     */
+    #[DataProvider('ProvideTestWrongExitStates')]
     public function testAutomatStateException(string $value) : void
 {
     $this->expectException(\RuntimeException::class);
@@ -192,10 +189,8 @@ final class AutomatTest extends TestCase
     }    
 
 
-    /**
-     * @dataProvider ProvideTestWrongTransition
-     * TODO other exception is needed and there are still errors
-     */
+    // TODO other exception is needed and there are still errors
+    #[DataProvider('ProvideTestWrongTransition')]
     public function testAutomatTransitionException(string $value, $error_message) : void
 {
     $this->expectException(\RuntimeException::class);

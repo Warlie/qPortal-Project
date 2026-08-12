@@ -7,9 +7,8 @@ use PHPUnit\Framework\Attributes\DataProviderExternal;
 use PHPUnit\Framework\TestCase;
 
 //--- Include or Autoload required classes ---
-//get local Path to project directory dirname(__DIR__,3) possible
-$CurrentDir= explode('qPortal-Project', __DIR__);
-$ProjectDir=$CurrentDir[0].'qPortal-Project';
+//get local Path to project directory; independent of the instance's directory name
+$ProjectDir= dirname(__DIR__, 2);
 
 require_once $ProjectDir.'/PlugIn/plugin_interface.php'; // The abstract base class (adjust path)
 require_once  $ProjectDir.'/PlugIn/session/plugin_session.php';  // The class under test

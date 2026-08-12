@@ -3,6 +3,8 @@
 
 
 use PHPUnit\Framework\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Depends;
 				require_once('classes/class_FileScan.php');
 
                                 
@@ -47,9 +49,7 @@ final class FileScanTest extends TestCase
 	
 	
 	
-	 /**
-     * @depends testProducerFirst
-     */
+	 #[Depends('testProducerFirst')]
     public function testFileScan(string $value) : void
 {
 	//$test_string = "*?__find_node(model=xpath_model,namespace='',query='wubb')=wup";
@@ -88,51 +88,92 @@ final class FileScanTest extends TestCase
     //$this->assertEmpty($user->favorite_movies);
 }
 
-    /**
-     * 
-     */
-    public static function ProvideTestWrongExitStates(): array
-    {
-    	return [
-    	['*?boom(kra'],
-    	['*?boom(kra=boo'],
-    	['*?boom(kra=boo,ua'],
-    	['*?boom(kra=boo,ua=ba'],
-        ];
-    }    
-
-
-    /**
-     * @dataProvider ProvideTestWrongExitStates
-     */
-    public function testAutomatStateException(string $value) : void
+	/* Fixed source for the characterisation tests below. The comment in line 1
+	*  deliberately contains the words "class" and "function": the scanner works on
+	*  plain substrings and cannot tell prose from a declaration.
+	*/
+	private const PROBE_SOURCE = <<<'PHP'
+<?php
+// a comment that mentions class Foo and function bar on purpose
+class Demo_Thing
 {
-    $this->expectException(Finite\Exception\StateException::class);
-    new Command_Object($value);
+	private $x = 1;
+
+	function __construct($back, $treepos)
+	{
+		$this->x = $back;
+	}
+
+	public function set_Pattern($name, $pattern)
+	{
+		return true;
+	}
 }
+PHP;
 
-    /**
-     * 
-     */
-    public static function ProvideTestWrongTransition(): array
-    {
-    	return [
-    	['*?b(--,'],
-    	['*?boom((']
-        ];
-    }    
+	private function scan_probe() : array
+	{
+		$filescanner = new File_Scan();
+		$filescanner->insert_str(self::PROBE_SOURCE, 'probe.php');
+		$filescanner->add_tag('class ');
+		$filescanner->add_tag('function ');
+		$filescanner->seeking();
 
+		return $filescanner->result();
+	}
 
-    /**
-     * @dataProvider ProvideTestWrongTransition
-     * TODO other exception is needed and there are still errors
-     */
-    public function testAutomatTransitionException(string $value) : void
-{
-    $this->expectException(Finite\Exception\StateException::class);
-    new Command_Object($value);
-}
-    
+	/* Records what the scanner does today, so a later intake can be diffed against it.
+	*  Entries 0 and 1 are false positives produced by the comment line - they are part
+	*  of the current behaviour on purpose, not an accident of this test.
+	*/
+	public function testTagScanRecordsCurrentBehaviour() : void
+	{
+		$this->assertSame(
+			[
+				['tag' => 'class Foo and function bar on purpose', 'pos' => 1,  'file' => 'probe.php'],
+				['tag' => 'function bar on purpose',               'pos' => 1,  'file' => 'probe.php'],
+				['tag' => 'class Demo_Thing',                      'pos' => 2,  'file' => 'probe.php'],
+				['tag' => 'function __construct($back, $treepos)', 'pos' => 6,  'file' => 'probe.php'],
+				['tag' => 'function set_Pattern($name, $pattern)', 'pos' => 11, 'file' => 'probe.php'],
+			],
+			$this->scan_probe()
+		);
+	}
+
+	/* The declarations that really exist in the probe. This is the part a parser based
+	*  intake has to reproduce; the two entries above are the part it should drop.
+	*/
+	public function testTagScanFindsTheRealDeclarations() : void
+	{
+		$tags = array_column($this->scan_probe(), 'tag');
+
+		$this->assertContains('class Demo_Thing', $tags);
+		$this->assertContains('function __construct($back, $treepos)', $tags);
+		$this->assertContains('function set_Pattern($name, $pattern)', $tags);
+	}
+
+	/* One single comment line yields two entries, and the first of them carries both
+	*  keywords - so Obj_Class_Collection runs its class branch and its function branch
+	*  on the same string.
+	*/
+	public function testCommentLineProducesTwoEntriesAndMatchesBothBranches() : void
+	{
+		$from_comment = array_values(array_filter(
+			$this->scan_probe(),
+			static fn(array $entry) : bool => $entry['pos'] === 1
+		));
+
+		$this->assertCount(2, $from_comment);
+		$this->assertStringContainsString('class ',    $from_comment[0]['tag']);
+		$this->assertStringContainsString('function ', $from_comment[0]['tag']);
+	}
+
+    /* The automat tests that used to live here were verbatim copies of
+    *  AutomatTest::testAutomatStateException / ::testAutomatTransitionException.
+    *  They still expected the removed Finite\Exception\StateException and relied on
+    *  Command_Object being loaded by another testfile. The maintained versions are
+    *  in AutomatTest.
+    */
 }
 
 ?>

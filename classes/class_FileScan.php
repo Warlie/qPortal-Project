@@ -428,7 +428,6 @@ function loading_size($value)
                                                 }
                                         }
 
-                                 $con++;
                                 }while(!($pos1===false));   //wiederholt den vorgang f�r Konstrukte wie : i_nclude("xxx");i_nclude("yyy");
                                 $idx0=0;
                                 $pos1=0;
