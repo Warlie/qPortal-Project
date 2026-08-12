@@ -937,7 +937,14 @@ class Obj_Member
 
 	public function create_rdf_entry( xml_ns &$xml_model, $class_name)
 	{
-		$attrib = array('rdf:ID' => trim($class_name . '.' . $this->name), 'pedl:name' => $this->name);
+		/* Bewusst OHNE rdf:ID. Jede rdf:ID im Registry-Baum praegt ein Tag, und eine
+		*  Klasse darf in PHP eine Eigenschaft $out und eine Methode out() zugleich haben -
+		*  beide ergaeben "Klasse.out". Die Eigenschaft stuende vorn, gewaenne die Praegung,
+		*  und die Methode bekaeme spaeter den Parameter-Prototyp untergeschoben.
+		*  Eigenschaften und Konstanten sind beschreibend; sie muessen nicht adressierbar
+		*  sein und haengen ohnehin unter ihrer Klasse.
+		*/
+		$attrib = array('pedl:name' => $this->name);
 
 		if('' !== $this->visibility)      $attrib['pedl:visibility'] = $this->visibility;
 		if($this->isStatic)               $attrib['pedl:static']     = 'true';
