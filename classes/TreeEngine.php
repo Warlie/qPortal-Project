@@ -1,6 +1,8 @@
 <?PHP
 
 require_once('interface_ControlModul.php');
+//liefert die Namensraum-Konstanten der Beschreibungsschicht
+require_once(__DIR__ . '/handles/PHP_ast_scan.php');
 
 class TreeEngine implements ControlUnit {
 	
@@ -116,7 +118,10 @@ public function set_CurRef($new){ $this->obj_cur_ref->setdata($new,0);}
 		$namespace['xmlns:rdfs'] = 'http://www.w3.org/2000/01/rdf-schema';
 		$namespace['xmlns:xsd'] = 'http://www.w3.org/2000/01/rdf-schema';
 		$namespace['xmlns:pedl'] = 'http://www.w3.org/2006/05/pedl-lib';
-		
+		//Beschreibungsschicht: Dublin Core fuer title/creator/description, pedl-desc fuer den Rest
+		$namespace['xmlns:dc']   = PHP_Ast_Scan::NS_DC;
+		$namespace['xmlns:desc'] = PHP_Ast_Scan::NS_DESC;
+
 		//echo get_Class($this->my_Xml_Object);
 	
 		

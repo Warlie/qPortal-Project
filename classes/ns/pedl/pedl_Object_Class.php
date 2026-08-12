@@ -335,6 +335,15 @@ function event_Instance(&$instance,$type,&$obj)
 					for($j = 0; $func->index_max() > $j;$j++)
 						{
 							$elem = &$func->getRefnext($j);
+
+							/* Nur Parameter sind Parameter. Die Schleife nahm frueher jedes
+							*  Kind einer Methode, was stimmte, solange es nur Parameter gab.
+							*  Beschreibungen haengen ebenfalls unter der Methode und wuerden
+							*  sonst zu Parametern mit leerem Namen - und die Instanziierung
+							*  bricht ab. Die Geschwisterschleife oben filtert genauso.
+							*/
+							if(!$elem->is_Node('http://www.w3.org/2006/05/pedl-lib#Object_Parameter'))continue;
+
 							$param_name = $elem->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#ID');
 							$pedl_name2 = $elem->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#name');
 							$tmp->pushParam($param_name,$pedl_name2);
@@ -478,6 +487,10 @@ private function find_functions(&$class, array &$result,$priority = 1)
 					for($j = 0; $func->index_max() > $j;$j++)
 						{
 							$elem = &$func->getRefnext($j);
+
+							//dito: nur Parameter, siehe event_Instance
+							if(!$elem->is_Node('http://www.w3.org/2006/05/pedl-lib#Object_Parameter'))continue;
+
 							$param_name = $elem->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#ID');
 							$pedl_name2 = $elem->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#name');
 							$tmp->pushParam($param_name,$pedl_name2);

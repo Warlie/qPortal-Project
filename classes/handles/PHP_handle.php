@@ -186,6 +186,9 @@ class PHP_handle extends Interface_handle
 		$namespace['xmlns:rdfs'] = 'http://www.w3.org/2000/01/rdf-schema';
 		$namespace['xmlns:xsd'] = 'http://www.w3.org/2000/01/rdf-schema';
 		$namespace['xmlns:pedl'] = 'http://www.w3.org/2006/05/pedl-lib';
+		//Beschreibungsschicht: Dublin Core fuer title/creator/description, pedl-desc fuer den Rest
+		$namespace['xmlns:dc']   = PHP_Ast_Scan::NS_DC;
+		$namespace['xmlns:desc'] = PHP_Ast_Scan::NS_DESC;
 		
 		//echo get_Class($this->my_Xml_Object);
 	
@@ -476,6 +479,7 @@ class Obj_Class
 	private $implements = [];
 	private $isAbstract = false;
 	private $isFinal = false;
+	private $desc = [];
 
 	public function __construct($array_tag, &$list_of_resources)
 	{
@@ -493,6 +497,7 @@ class Obj_Class
 			$this->implements = $meta['implements'];
 			$this->isAbstract = $meta['abstract'];
 			$this->isFinal    = $meta['final'];
+			$this->desc       = $meta['desc'] ?? [];
 		}
 		else
 		{
@@ -515,6 +520,24 @@ class Obj_Class
 	public function add_member($array_tag, string $tagname)
 	{
 		$this->memberList[] = new Obj_Member($array_tag, $tagname);
+	}
+
+	/** Schreibt Beschreibungen als Kindknoten mit Textinhalt.
+	*
+	*   Kindknoten und nicht Attribut, weil eine Beschreibung Zeilenumbrueche haben darf -
+	*   und weil hier spaeter formal- und rate-Geschwister andocken sollen.
+	*   Statisch, weil Klasse, Funktion und Member dasselbe brauchen und keine
+	*   gemeinsame Basis haben.
+	*/
+	public static function write_desc(xml_ns &$xml_model, &$owner, array $desc) : void
+	{
+		foreach($desc as $one)
+		{
+			$attrib = array();
+			$xml_model->tag_open($owner, $one['tag'], $attrib);
+			$xml_model->cdata($owner, $one['text']);
+			$xml_model->tag_close($owner, $one['tag']);
+		}
 	}
 
 	/* PhpClass | PhpInterface | PhpTrait */
@@ -553,6 +576,9 @@ class Obj_Class
 		if($this->isFinal)   $attrib['pedl:final']    = 'true';
 
 		$xml_model->tag_open($this, $tagname, $attrib);
+
+		//Beschreibung zuerst: sie sagt, was das Ding ist, bevor die Struktur folgt
+		self::write_desc($xml_model, $this, $this->desc);
 
 		/* Implemented interfaces sit next to the inheritance edge. Both are answerable
 		*  from the tree afterwards, which is what makes "is a multisource plugin" a
@@ -629,6 +655,7 @@ class Obj_Function
 	private $isFinal = false;
 	private $returnType = '';
 	private $isConstructor = null;
+	private $desc = [];
 
 	public function __construct($array_tag, &$parser)
 	{
@@ -650,6 +677,7 @@ class Obj_Function
 			$this->isFinal       = $meta['final'];
 			$this->returnType    = $meta['returnType'];
 			$this->isConstructor = $meta['constructor'];
+			$this->desc          = $meta['desc'] ?? [];
 
 			$counter = 0;
 			foreach($meta['params'] as $param)
@@ -737,6 +765,8 @@ class Obj_Function
 		$tagname = $is_constructor ? "PhpConstructor" : "PhpMethod";
 
 		$xml_model->tag_open($this, $tagname, $attrib);
+
+		Obj_Class::write_desc($xml_model, $this, $this->desc);
 
 			foreach( $this->parameterList as $value)
 			{

@@ -20,6 +20,33 @@ use PhpParser\Modifiers;
 
 class PHP_Ast_Scan
 {
+	/* Beschreibungs-Namensraeume. Als Konstante gefuehrt, damit ein spaeterer
+	*  Domainwechsel eine Zeile kostet und nicht jede Fundstelle.
+	*/
+	const NS_DESC = 'http://www.trscript.de/2026/pedl-desc';
+	const NS_DC   = 'http://purl.org/dc/elements/1.1/';
+
+	/* Was ein @schluessel: im Quelltext im Baum wird.
+	*  Dublin Core, wo Dublin Core es meint - title, creator und description sind
+	*  Aussagen ueber ein Dokument. Alles Uebrige sind Aussagen ueber Code, dafuer
+	*  hat Dublin Core kein Vokabular.
+	*  Die Schreibvarianten stehen hier, damit im Quelltext nichts korrigiert werden muss.
+	*/
+	const DESC_KEYS = [
+		'title'       => 'dc:title',
+		'description' => 'dc:description',
+		'autor'       => 'dc:creator',
+		'author'      => 'dc:creator',
+
+		'function'    => 'desc:function',
+		'func'        => 'desc:function',
+		'func_tion'   => 'desc:function',
+		'parameter'   => 'desc:parameter',
+		'param'       => 'desc:parameter',
+		'tricky'      => 'desc:tricky',
+		'throws'      => 'desc:throws',
+	];
+
 	/**
 	*	@param $source : php source text
 	*	@param $file   : path recorded in every entry
@@ -55,6 +82,18 @@ class PHP_Ast_Scan
 		if(is_null($ast))return [];
 
 		$visitor = new PHP_Ast_Scan_Visitor(self::project_relative($file));
+
+		/* Der Dateikopf - @title, @autor, @description - steht in vielen Plugins vor dem
+		*  ersten require_once. Der Parser haengt ihn dann an die Einbindung, nicht an die
+		*  Klasse. Also alles vor der ersten Klasse einsammeln und ihr zuschlagen.
+		*/
+		$head = [];
+		foreach($ast as $stmt)
+		{
+			if($stmt instanceof Node\Stmt\ClassLike)break;
+			$head = array_merge($head, $visitor->desc_entries($stmt));
+		}
+		$visitor->set_head_desc($head);
 
 		$traverser = new NodeTraverser();
 		$traverser->addVisitor($visitor);
@@ -126,6 +165,11 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 	/* literal include/require targets found in this file */
 	public function includes() : array {return $this->includes;}
 
+	/* Beschreibungen aus dem Dateikopf; gehen an die erste Klasse der Datei */
+	private $head_desc = [];
+	private $head_used = false;
+	public function set_head_desc(array $entries) : void {$this->head_desc = $entries;}
+
 	/* File_Scan counts lines from zero, the parser counts from one */
 	private function add(string $tag, int $startLine, array $meta) : void
 	{
@@ -155,7 +199,14 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 		$name = $node->name->toString();
 
 		$meta = ['kind' => $kind, 'name' => $name, 'extends' => '', 'implements' => [],
-			'abstract' => false, 'final' => false];
+			'abstract' => false, 'final' => false, 'desc' => $this->desc_entries($node)];
+
+		//der Dateikopf gehoert der ersten Klasse, nicht jeder
+		if(!$this->head_used)
+		{
+			$meta['desc'] = array_merge($this->head_desc, $meta['desc']);
+			$this->head_used = true;
+		}
 
 		if($node instanceof Node\Stmt\Class_)
 		{
@@ -232,6 +283,7 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 			'byRef'      => $method->byRef,
 			'returnType' => $this->type_text($method->returnType),
 			'params'     => $params,
+			'desc'       => $this->desc_entries($method),
 		];
 	}
 
@@ -282,6 +334,82 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 			'visibility' => $this->visibility($const->flags),
 			'value'      => $this->printer->prettyPrintExpr($one->value),
 		];
+	}
+
+	/** Beschreibungen, die an einem Knoten haengen.
+	*
+	*   Zwei Formen, beide aus den Kommentaren, die der Parser dem Knoten zuordnet:
+	*
+	*   1. /*@ ... @* / — freier, mehrzeiliger Text. Der Abschluss mit @ ist Pflicht,
+	*      damit ein blosses /*@ mit gewoehnlichem Ende nicht mitgelesen wird.
+	*   2. @schluessel: wert — die Form, die im Bestand schon rund 500 mal steht.
+	*
+	*   @return Liste von ['tag' => 'dc:title', 'text' => '...']
+	*/
+	public function desc_entries(Node $node) : array
+	{
+		$res = [];
+
+		foreach($node->getComments() as $comment)
+		{
+			$raw = $comment->getText();
+
+			//Form 1: freier Block, Abschluss mit @ verpflichtend
+			if(preg_match_all('#/\*@(.*?)@\*/#s', $raw, $blocks))
+				foreach($blocks[1] as $block)
+					if('' !== ($text = $this->clean_block($block)))
+						$res[] = ['tag' => 'desc:text', 'text' => $text];
+
+			//Form 2: zeilenweise Schluessel
+			foreach(explode("\n", $raw) as $line)
+			{
+				//fuehrende Kommentarzeichen weg, dann @schluessel: rest
+				$line = preg_replace('#^\s*(/\*+|\*+/?|//)\s*#', '', $line);
+
+				if(!preg_match('#^@([a-zA-Z_]+)\s*:\s*(.*)$#', trim($line), $hit))continue;
+
+				$key = strtolower($hit[1]);
+
+				if(!isset(PHP_Ast_Scan::DESC_KEYS[$key]))continue;
+
+				if('' !== ($text = trim($hit[2])))
+					$res[] = ['tag' => PHP_Ast_Scan::DESC_KEYS[$key], 'text' => $text];
+			}
+		}
+
+		return $res;
+	}
+
+	/* Nimmt die Kommentar-Randzeichen weg und ruecke den Block aus, ohne die
+	*  Zeilenumbrueche zu verlieren - die sind der Grund, warum das ein Kindknoten wird.
+	*/
+	private function clean_block(string $block) : string
+	{
+		$lines = [];
+
+		foreach(explode("\n", $block) as $line)
+			$lines[] = rtrim(preg_replace('#^\s*\*+\s?#', '', $line));
+
+		while(count($lines) && '' === trim($lines[0]))          array_shift($lines);
+		while(count($lines) && '' === trim(end($lines)))        array_pop($lines);
+
+		/* Die Einrueckung des Blocks im Quelltext gehoert nicht zur Beschreibung.
+		*  Abgezogen wird nur der gemeinsame Vorspann, damit Struktur innerhalb des
+		*  Textes - Aufzaehlungen, eingerueckte Beispiele - erhalten bleibt.
+		*/
+		$indent = null;
+		foreach($lines as $line)
+		{
+			if('' === trim($line))continue;
+			$width = strlen($line) - strlen(ltrim($line));
+			$indent = is_null($indent) ? $width : min($indent, $width);
+		}
+
+		if($indent)
+			foreach($lines as $key => $line)
+				$lines[$key] = substr($line, $indent);
+
+		return implode("\n", $lines);
 	}
 
 	/* union, intersection and nullable types are rendered the way they are written */
