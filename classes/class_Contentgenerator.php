@@ -18,6 +18,11 @@ define("SEND_NO_HEADER",false);
 
 define('LOG','LOG');
 define('OUTPUT','OUTPUT');
+/* Antwort statt Dokument. Ein Skript laeuft nur, wenn es ein start bekommt -
+*  Befehle wie __info sind Aspekte daneben und antworten selbst. JSON_RESPONSE
+*  und nicht JSON, weil ein derart allgemeiner Konstantenname zu leicht kollidiert.
+*/
+define('JSON_RESPONSE','JSON_RESPONSE');
 
 class ContentGenerator
 {
@@ -56,6 +61,8 @@ private $namespace_reg = null;
 private $schema = false;
 private $injectedLine = false;
 private $outputMode = OUTPUT;
+private $responseBuffer = null;
+private $responseMime = 'application/json';
 
 private $foundAPage = false;
 
@@ -89,6 +96,16 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	public function switchOutput($myout = LOG)
 	{
 		$this->outputMode = $myout;
+	}
+
+	/* Legt die Antwort ab und schaltet die Ausgabe darauf um. Ein zweiter Aufruf
+	*  haengt an - eine Befehlsliste darf mehrfach antworten.
+	*/
+	public function setResponse(string $body, string $mime = 'application/json')
+	{
+		$this->responseBuffer = is_null($this->responseBuffer) ? $body : $this->responseBuffer . $body;
+		$this->responseMime   = $mime;
+		$this->switchOutput(JSON_RESPONSE);
 	}
 	/*
 	*	Quick and dirty variable management
@@ -556,6 +573,17 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 
 	function getoutput($set_header,$type = "UTF-8",$special = "")
 	{
+		/* Der Befehl hat selbst geantwortet - das Ausgabedokument wird gar nicht
+		*  erst serialisiert. Der Content-Type gehoert dazu: ein 200 mit text/html
+		*  laesst eine Antwort echt aussehen, die keine ist.
+		*/
+		if($this->outputMode == JSON_RESPONSE)
+		{
+			if($set_header && !headers_sent())
+				header('Content-Type: ' . $this->responseMime . '; charset=' . $type);
+			return $this->responseBuffer;
+		}
+
 		if($this->outputMode == LOG)
 			if (file_exists(LOG_PATH)) {
 				$inhalt = file_get_contents(LOG_PATH);
