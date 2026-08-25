@@ -9,13 +9,14 @@ immer wieder sucht.
 
 ```bash
 # Prüfstand ohne Server (lädt einen Baum selbst)
-php -d error_reporting=E_ERROR test/Integration/seek_scope.php      # 68 Fälle
+php -d error_reporting=E_ERROR test/Integration/seek_scope.php
 
 # Prüfstand über HTTP
 php -S 127.0.0.1:8002 -t . &
 QPORTAL_URL=http://127.0.0.1:8002/index.php php test/Integration/intern_walk.php
 ```
 
+`seek_scope.php` muss vollständig grün sein — jede rote Zeile dort ist neu.
 `intern_walk.php` steht bei **32 gelaufen / 1 rot** — `__get_data` ist ein Bestandsdefekt
 (über den Intern-Kanal ist der Aufrufer der ContentGenerator und damit kein Knoten). Diese
 Zahl ist die Vergleichsmarke: ändert sie sich, hat die letzte Änderung etwas gebrochen.
