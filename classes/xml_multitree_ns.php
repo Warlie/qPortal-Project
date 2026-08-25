@@ -167,10 +167,33 @@ class xml_ns extends xml_omni
 
 	/**
 	*	Universal search engine model
+	*
+	*	Reicht sich selbst als Datenmodell durch: der Baum kommt je Anfrage, nicht aus
+	*	einem statischen Verweis. Damit haelt jede Suche ihr eigenes Modell und ein
+	*	Sucher darf im Sucher stehen.
+	*
+	*	@param	string	$model	Modellname, siehe SearchingModelObject::describe_models()
+	*	@return	Searching_Model|null
 	*/
-	public function seek_by_model($model)
+	public function &seek_by_model($model)
 	{
-		return My_Model_factory::model_factory($model, $this);
+		return SearchingModelObject::model_factory($model, $this);
+	}
+
+	/**
+	*	Ein Ausdruck, ausgewertet vom benannten Modell. Kurzform fuer den haeufigen Fall,
+	*	in dem der Aufrufer das Modell nicht behalten will.
+	*
+	*	@return	array	gefundene Knoten
+	*/
+	public function query_by_model($model, string $statement): array
+	{
+		$obj = $this->seek_by_model($model);
+
+		if(is_null($obj))
+			throw new Exception('seek_by_model: es gibt kein Suchmodell "' . $model . '"');
+
+		return $obj->query($statement);
 	}
 	   /* durchsucht den Baum nach Inhalten (keine direkte optimierung)
 	   *  Huelle um collect_nodes(): haengt die Treffer an die Ergebnisliste und setzt den Cursor.

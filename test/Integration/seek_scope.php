@@ -40,6 +40,7 @@ require_once('classes/xml_multitree.php');
 require_once('classes/xml_multitree_objex.php');
 require_once('classes/xml_multitree_omni_handle.php');
 require_once('classes/xml_multitree_ns.php');
+require_once('classes/search_model/index_model.php');
 
 $pass = 0; $fail = 0;
 
@@ -247,6 +248,57 @@ $ids2 = $tree->identity_set();
 sort($ids2);
 check('Identitaetsmenge zieht nach', implode(',', $ids2),
       'http://example.org/dinge#drei,http://example.org/dinge#neu');
+
+/* -------------------------------------------------- Suchmodell-Fassade */
+
+$tree->flash_result();   // frueherer seek_node-Test hat die Ergebnisliste gefuellt
+
+$modelle = SearchingModelObject::describe_models();
+$namen = array_keys($modelle);
+sort($namen);
+check('Modelle melden sich selbst', implode(',', $namen), 'internal,xpath');
+
+$m = $tree->seek_by_model('internal');
+check('Fassade liefert ein Modell', is_object($m) ? get_class($m) : '-', 'Internal_Searching_Model');
+check('es traegt die gemeinsame Flaeche',
+      $m instanceof Searching_Model, true);
+
+$leer = $tree->seek_by_model('gibtsnicht');
+check('unbekanntes Modell gibt null', is_null($leer), true);
+
+// dasselbe Ergebnis wie der direkte Weg
+$ueber_modell = $m->query($T . 'param');
+$direkt       = $tree->collect_nodes($T . 'param');
+check('Modell und collect_nodes stimmen ueberein', count($ueber_modell), count($direkt));
+
+check('Kurzform query_by_model', count($tree->query_by_model('internal', $T . 'param')), count($direkt));
+
+// die strukturierte Form, in der der Automat einen Schritt weiterreicht
+$mit_scope = $m->requestArray('http://www.trscript.de/tree', 'param', null, null, $first[0]);
+check('requestArray mit Suchraum', count($mit_scope), 3);
+
+$mit_attr = $m->requestArray('', $T . 'param', array($T . 'name' => 'c'), null);
+check('requestArray mit Attribut', count($mit_attr), 1);
+
+// zwei Modelle nebeneinander teilen keinen Zustand — Re-Entrancy
+$m2 = $tree->seek_by_model('internal');
+$a = $m->query($T . 'param');
+$b = $m2->query($T . 'element');
+check('zwei Modelle stoeren sich nicht', count($a) . '/' . count($b), count($direkt) . '/1');
+check('result_nodes des Baums unberuehrt', count($tree->get_result()), 0);
+
+// Grenzen werden benannt statt still zu scheitern
+$fehler = '-';
+try { $m->query($T . 'param[@name="a"]'); } catch (Exception $e) { $fehler = 'Praedikat abgewiesen'; }
+check('zusammengesetzter Ausdruck', $fehler, 'Praedikat abgewiesen');
+
+$fehler2 = '-';
+try { $m->query('param'); } catch (Exception $e) { $fehler2 = 'roher Name abgewiesen'; }
+check('Name ohne Namensraum', $fehler2, 'roher Name abgewiesen');
+
+$fehler3 = '-';
+try { $tree->query_by_model('xpath', $T . 'param'); } catch (Exception $e) { $fehler3 = 'xpath meldet sich'; }
+check('xpath-Stub wirft statt null zu geben', $fehler3, 'xpath meldet sich');
 
 echo str_repeat('-', 78) . "\n";
 echo ($pass + $fail) . " gelaufen, $fail fehlgeschlagen\n";
