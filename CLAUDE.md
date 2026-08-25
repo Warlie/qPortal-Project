@@ -110,6 +110,11 @@ braucht; `config/config.ini` liegt darüber und ist **nicht im Repo** — dort s
 
 `parse_ini_file_multi` (`mod_lib.php:4`) macht aus Punkt-Schlüsseln verschachtelte Arrays:
 `sparql.fuseki.endpoint = ""` wird zu `$ini_array['search']['sparql']['fuseki']['endpoint']`.
+
+Das `sparql`-Modell kennt mehrere Quellen **nebeneinander**, nicht eine aktive: jede hat
+ihren Zweig `sparql.<quelle>.*`, und `source` darin ist der Geltungsbereich *innerhalb*
+dieser Quelle (Fuseki: Datensatz/Graph; intern: Baum). `sparql.use` ist die Vorgabe,
+`use_source()` überschreibt sie je Aufruf — gewechselt wird die Quelle, nicht die Frage.
 Pfade dürfen `__ROOT_DIR`/`__PROGRAM_DIR` enthalten, Dokumente `%NAME%` (`resolve_path`).
 
 ## Arbeitsweise

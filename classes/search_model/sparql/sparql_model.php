@@ -3,25 +3,37 @@
 /**
 *	search model for SPARQL
 *
-*	Die Quelle steht in der Konfiguration ([search] sparql.source), nicht im Ausdruck:
-*	derselbe Ausdruck kann gegen einen entfernten Endpunkt oder gegen die geladenen
-*	Dokumente dieser Instanz laufen.
+*	Das Modell kennt mehrere Quellen nebeneinander, nicht eine aktive. Jede traegt ihren
+*	eigenen Zweig in der Konfiguration ([search] sparql.<quelle>.*), und darin sagt
+*	"source", welcher Geltungsbereich innerhalb dieser Quelle gemeint ist:
 *
-*	  "fuseki"    - REST an einen SPARQL-Endpunkt. Die Antwort kommt als
-*	                SPARQL-Results-JSON und wird ueber SPARQL_handle in einen eigenen
-*	                Baum geladen; zurueck gehen dessen Knoten. Das Ergebnis einer
-*	                Fremdabfrage ist damit ein qPortal-Baum wie jeder andere und nicht
-*	                eine Sonderform, die der Aufrufer kennen muesste.
-*	  "documents" - Auswertung ueber die geladenen Dokumente. Noch nicht gebaut; die
-*	                Tripelauswertung dafuer steht in anttree/funct_parser_lib.js
-*	                (SPARQLObject.execute mit estimateCost) als durchgearbeitetes
-*	                Beispiel, der Parser in xml_multitree_SPARQL.php.
+*	  sparql.intern.source   welcher Baum dieser Instanz durchsucht wird
+*	  sparql.fuseki.source   welcher Datensatz bzw. benannte Graph auf dem Server
+*
+*	Damit ist derselbe Ausdruck gegen verschiedene Quellen laufbar, ohne dass er sich
+*	aendert — was gewechselt wird, ist die Quelle, nicht die Frage. Welche Quelle ohne
+*	Angabe gilt, steht in sparql.use; ein Aufrufer waehlt mit use_source().
+*
+*	Gebaut ist bisher die Quelle "fuseki": REST an den Endpunkt, die Antwort kommt als
+*	SPARQL-Results-JSON und wird ueber SPARQL_handle in einen eigenen Baum geladen;
+*	zurueck gehen dessen Knoten. Das Ergebnis einer Fremdabfrage ist damit ein
+*	qPortal-Baum wie jeder andere.
+*
+*	"intern" ist benannt und noch nicht gebaut. Die Tripelauswertung dafuer steht in
+*	anttree/funct_parser_lib.js (SPARQLObject.execute mit estimateCost) als
+*	durchgearbeitetes Beispiel, der Parser in xml_multitree_SPARQL.php.
 */
 
 class SPARQL_Model implements Searching_Model
 {
+	/** Quellen, die dieses Modell bedienen kann. */
+	const SOURCES = array('intern', 'fuseki');
+
 	private $data_model;
 	private array $config = array();
+
+	/** Ausdruecklich gewaehlte Quelle; leer heisst: die aus sparql.use. */
+	private string $chosen = '';
 
 	/** Baum, in den die Antwort geladen wurde. Gehalten, damit die Knoten leben. */
 	private $result_tree = null;
@@ -38,9 +50,10 @@ class SPARQL_Model implements Searching_Model
 
 	public static function model_description(): string
 	{
-		return 'SPARQL gegen eine konfigurierte Quelle: einen entfernten Endpunkt '
-		     . '(fuseki) oder die geladenen Dokumente (documents, noch nicht gebaut). '
-		     . 'Siehe [search] sparql.source.';
+		return 'SPARQL gegen eine konfigurierte Quelle. Moeglich sind "fuseki" (ein '
+		     . 'entfernter Endpunkt) und "intern" (die geladenen Dokumente, noch nicht '
+		     . 'gebaut); der Geltungsbereich steht je Quelle in [search] '
+		     . 'sparql.<quelle>.source.';
 	}
 
 	public function set_model_config(array $config)
@@ -49,12 +62,58 @@ class SPARQL_Model implements Searching_Model
 	}
 
 	/**
-	*	Welche Quelle dieses Modell befragt — auch fuer eine Selbstauskunft brauchbar,
-	*	ohne dass etwas abgeschickt wird.
+	*	Waehlt die Quelle fuer die naechsten Aufrufe. Ohne Argument zurueck zur Vorgabe.
+	*
+	*	@throws	Exception	wenn es die Quelle nicht gibt
+	*/
+	public function use_source(string $name = '')
+	{
+		if(($name !== '') && !in_array($name, self::SOURCES, true))
+			throw new Exception('SPARQL_Model: unbekannte Quelle "' . $name . '". Moeglich '
+			                  . 'sind ' . implode(', ', self::SOURCES) . '.');
+
+		$this->chosen = $name;
+
+		return $this;
+	}
+
+	/**
+	*	Die Quelle, gegen die gerade gefragt wird — ausdrueckliche Wahl vor sparql.use.
 	*/
 	public function source(): string
 	{
-		return trim((string)($this->config['source'] ?? ''));
+		if($this->chosen !== '')
+			return $this->chosen;
+
+		return trim((string)($this->config['use'] ?? ''));
+	}
+
+	/**
+	*	Der Geltungsbereich innerhalb der Quelle: bei fuseki der Datensatz bzw. Graph,
+	*	bei intern der Baum. Leer heisst, dass die Quelle selbst entscheidet.
+	*/
+	public function scope(string $source = ''): string
+	{
+		$source = ($source !== '') ? $source : $this->source();
+
+		return trim((string)($this->config[$source]['source'] ?? ''));
+	}
+
+	/**
+	*	Welche Quellen konfiguriert sind — fuer eine Selbstauskunft, ohne dass etwas
+	*	abgeschickt wird.
+	*
+	*	@return	array	Quellenname => Geltungsbereich
+	*/
+	public function configured_sources(): array
+	{
+		$res = array();
+
+		foreach(self::SOURCES as $name)
+			if(isset($this->config[$name]))
+				$res[$name] = $this->scope($name);
+
+		return $res;
 	}
 
 	/**
@@ -73,20 +132,21 @@ class SPARQL_Model implements Searching_Model
 			case 'fuseki' :
 				return $this->query_fuseki($statement);
 
-			case 'documents' :
-				throw new Exception('SPARQL_Model: die Quelle "documents" ist noch nicht '
+			case 'intern' :
+				throw new Exception('SPARQL_Model: die Quelle "intern" ist noch nicht '
 				                  . 'gebaut. Der Parser liegt in xml_multitree_SPARQL.php, '
 				                  . 'die Tripelauswertung als Beispiel in '
 				                  . 'anttree/funct_parser_lib.js.');
 
 			case '' :
-				throw new Exception('SPARQL_Model: keine Quelle konfiguriert. In config.ini '
-				                  . 'unter [search] sparql.source auf "fuseki" oder '
-				                  . '"documents" setzen.');
+				throw new Exception('SPARQL_Model: keine Quelle gewaehlt. In config.ini '
+				                  . 'unter [search] sparql.use eine der Quellen '
+				                  . implode(', ', self::SOURCES) . ' eintragen, oder '
+				                  . 'use_source() aufrufen.');
 
 			default :
 				throw new Exception('SPARQL_Model: unbekannte Quelle "' . $this->source()
-				                  . '". Moeglich sind "fuseki" und "documents".');
+				                  . '". Moeglich sind ' . implode(', ', self::SOURCES) . '.');
 		}
 	}
 
@@ -106,12 +166,21 @@ class SPARQL_Model implements Searching_Model
 		if(!class_exists('REST_Connection'))
 			throw new Exception('SPARQL_Model: classes/class_REST.php ist nicht geladen.');
 
+		$body  = array('query' => $statement);
+		$scope = $this->scope('fuseki');
+
+		/* Der Geltungsbereich geht als default-graph-uri mit — so sieht das
+		*  SPARQL-Protokoll die Einschraenkung auf einen Graphen vor, und der Ausdruck
+		*  selbst bleibt unangetastet. */
+		if($scope !== '')
+			$body['default-graph-uri'] = $scope;
+
 		$rest = new REST_Connection($endpoint);
 		$rest->setMethod('POST')
 		     ->setHeader('Accept', 'application/sparql-results+json')
 		     ->setHeader('Content-Type', 'application/x-www-form-urlencoded')
 		     ->setVerifySsl((bool)($conf['verify_ssl'] ?? true))
-		     ->setBody(array('query' => $statement));
+		     ->setBody($body);
 
 		$user = (string)($conf['user'] ?? '');
 

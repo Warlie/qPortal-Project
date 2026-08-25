@@ -268,38 +268,54 @@ $fehler3 = '-';
 try { $tree->query_by_model('xpath', $T . 'param'); } catch (Exception $e) { $fehler3 = 'xpath meldet sich'; }
 check('xpath-Stub wirft statt null zu geben', $fehler3, 'xpath meldet sich');
 
-/* ------------------------------------------- SPARQL-Modell: Quelle aus der Config */
+/* ------------------------------------------- SPARQL-Modell: Quellen mit Geltungsbereich */
 
 SearchingModelObject::set_config(array());
 $sp = $tree->seek_by_model('sparql');
 check('sparql-Modell da', is_object($sp) ? get_class($sp) : '-', 'SPARQL_Model');
 check('ohne Config keine Quelle', $sp->source(), '');
+check('ohne Config keine Quellenliste', count($sp->configured_sources()), 0);
 
 $f = '-';
 try { $sp->query('SELECT * WHERE { ?s ?p ?o }'); } catch (Exception $e) { $f = 'nennt die Config'; }
-check('unkonfiguriert sagt was fehlt', $f, 'nennt die Config');
+check('ohne Wahl sagt es, was fehlt', $f, 'nennt die Config');
 
-// Quelle documents: benannt, nicht gebaut
-SearchingModelObject::set_config(array('sparql' => array('source' => 'documents')));
+/* Beide Quellen nebeneinander, jede mit eigenem Geltungsbereich */
+SearchingModelObject::set_config(array('sparql' => array(
+	'use'    => 'intern',
+	'intern' => array('source' => 'haupt'),
+	'fuseki' => array('source' => 'http://example.org/graph/eins',
+	                  'endpoint' => '', 'user' => '', 'password' => ''))));
+
 $sp2 = $tree->seek_by_model('sparql');
-check('Quelle aus der Config gelesen', $sp2->source(), 'documents');
+check('Vorgabequelle aus sparql.use', $sp2->source(), 'intern');
+check('Geltungsbereich der Vorgabe', $sp2->scope(), 'haupt');
+check('Geltungsbereich der anderen Quelle', $sp2->scope('fuseki'), 'http://example.org/graph/eins');
+
+$liste = $sp2->configured_sources();
+check('beide Quellen gemeldet', implode(',', array_keys($liste)), 'intern,fuseki');
+check('mit ihren Bereichen', $liste['intern'] . '|' . $liste['fuseki'],
+      'haupt|http://example.org/graph/eins');
+
+/* Der Aufruf darf die Quelle wechseln, ohne den Ausdruck anzufassen */
+$sp2->use_source('fuseki');
+check('use_source wechselt', $sp2->source(), 'fuseki');
+check('und der Bereich wandert mit', $sp2->scope(), 'http://example.org/graph/eins');
+$sp2->use_source();
+check('zurueck zur Vorgabe', $sp2->source(), 'intern');
+
 $f2 = '-';
-try { $sp2->query('SELECT * WHERE { ?s ?p ?o }'); } catch (Exception $e) { $f2 = 'sagt: nicht gebaut'; }
-check('documents meldet sich ehrlich', $f2, 'sagt: nicht gebaut');
+try { $sp2->use_source('quatsch'); } catch (Exception $e) { $f2 = 'unbekannte Quelle abgewiesen'; }
+check('use_source prueft den Namen', $f2, 'unbekannte Quelle abgewiesen');
 
-// Quelle fuseki ohne Endpunkt: es wird NICHTS abgeschickt
-SearchingModelObject::set_config(array('sparql' => array('source' => 'fuseki')));
-$sp3 = $tree->seek_by_model('sparql');
 $f3 = '-';
-try { $sp3->query('SELECT * WHERE { ?s ?p ?o }'); } catch (Exception $e) { $f3 = 'kein Endpunkt, kein Versand'; }
-check('fuseki ohne Endpunkt schickt nichts', $f3, 'kein Endpunkt, kein Versand');
+try { $sp2->query('SELECT * WHERE { ?s ?p ?o }'); } catch (Exception $e) { $f3 = 'sagt: nicht gebaut'; }
+check('intern meldet sich ehrlich', $f3, 'sagt: nicht gebaut');
 
-// unbekannte Quelle
-SearchingModelObject::set_config(array('sparql' => array('source' => 'quatsch')));
 $f4 = '-';
-try { $tree->seek_by_model('sparql')->query('SELECT * WHERE { ?s ?p ?o }'); }
-catch (Exception $e) { $f4 = 'unbekannte Quelle abgewiesen'; }
-check('unbekannte Quelle', $f4, 'unbekannte Quelle abgewiesen');
+try { $sp2->use_source('fuseki')->query('SELECT * WHERE { ?s ?p ?o }'); }
+catch (Exception $e) { $f4 = 'kein Endpunkt, kein Versand'; }
+check('fuseki ohne Endpunkt schickt nichts', $f4, 'kein Endpunkt, kein Versand');
 
 check('drei Modelle gemeldet', count(SearchingModelObject::describe_models()), 3);
 
