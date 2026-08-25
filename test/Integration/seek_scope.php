@@ -8,40 +8,7 @@
 *	Aufruf:  php test/Integration/seek_scope.php
 */
 
-chdir(__DIR__ . '/../..');
-
-define('REPORT', 0);
-define('MEMORY_USAGE', false);
-define('TRACE', false);
-define('XML_SCHEMA_DEFAULT', '');
-define('XML_CASE_FOLDING_DEFAULT', '0');
-define('LANGUAGE_INPUT_DEFAULT', 'XML');
-define('LANGUAGE_OUTPUT_DEFAULT', 'XML');
-define('ROOT_DIR', __DIR__ . '/../..');
-define('CUR_PATH', '');
-define('STD_URL', 'index.php?i=%s');
-define('PLUG_IN_FOLDER', 'PlugIn/');
-define('START_PAGE', '');
-define('FRONTEND_INDEX', '');
-define('EDIT_INDEX', '');
-define('INSTALL', false);
-
-require_once('vendor/autoload.php');
-require_once('PlugIn/plugin_log.php');
-$logger_class = new Logger();
-Logger::$active = false;
-
-require_once('classes/finite_state_machine/enums.php');
-require_once('classes/finite_state_machine/class_Transducer.php');
-require_once('classes/finite_state_machine/class_Acceptor.php');
-require_once('classes/fs_parser/qp_workflow.php');
-require_once('classes/ns/Interface_ns.php');
-require_once('classes/xml_multitree.php');
-require_once('classes/xml_multitree_objex.php');
-require_once('classes/xml_multitree_omni_handle.php');
-require_once('classes/xml_multitree_ns.php');
-require_once('classes/class_REST.php');
-require_once('classes/search_model/index_model.php');
+require_once(__DIR__ . '/../bootstrap.php');
 
 $pass = 0; $fail = 0;
 
