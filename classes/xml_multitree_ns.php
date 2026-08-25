@@ -18,7 +18,8 @@
 *
 *
 *    only_child_node($bool_node) : für seek_node -> sucht dann nur alles unter dem aktuellen knoten
-*    seek_node([String $type],assoz array [attrib],string [data], int [pos]) : is looking for a list of nodes, offering in resultarray
+*    seek_node([String $type],assoz array [attrib],string [data], int [pos], [scope], int [depth]) : is looking for a list of nodes, offering in resultarray
+*    collect_nodes([String $type],assoz array [attrib],string [data], [scope], int [depth]) : same search, but returns the set instead of touching resultarray
 *    get_result() : returns resultarray of last seeking
 *    flash_result() :truncate resultarray
 *
@@ -149,118 +150,210 @@ class xml_ns extends xml_omni
 	{
 		return My_Model_factory::model_factory($model, $this);
 	}
-	
-	   /* durchsucht den Baum nach Inhalten (keine direkte optimierung)*/
-   	   public function seek_node( $type = null, ?array $attrib = null, ?array $data = null, $respos = 0)
+	   /* durchsucht den Baum nach Inhalten (keine direkte optimierung)
+	   *  Huelle um collect_nodes(): haengt die Treffer an die Ergebnisliste und setzt den Cursor.
+	   *  Verhalten und Rueckgabewert wie im Bestand.
+	   *
+	   *  @param	mixed	$scope	Knoten oder Array von Knoten; Treffer muessen darunter liegen.
+	   *				null = ganzer Baum. Ohne Angabe greift only_child_node().
+	   *  @param	int	$depth	Schrittweite bis zum Suchraum: -1 unbegrenzt (descendant-or-self),
+	   *				0 nur der Knoten selbst, 1 direkte Kinder.
+	   */
+   	   public function seek_node( $type = null, ?array $attrib = null, ?array $data = null, $respos = 0, $scope = null, int $depth = -1)
 	   {
-
-
-   	   
-	   	   // adds old results
+		   // adds old results
 		   $toAdd = count($this->result_nodes);
 
+		   /* only_child_node ist der Bestandsschalter aus xml_multitree: er begrenzt die Suche
+		   *  auf den Ast unter dem aktuellen Knoten. Die indexgestuetzte Fassung hier hat ihn
+		   *  bisher nicht ausgewertet. Ein ausdruecklich uebergebener $scope hat Vorrang. */
+		   if(is_null($scope) && $this->only_child_node
+		      && isset($this->pointer[$this->idx]) && is_object($this->pointer[$this->idx]))
+			   $scope = $this->pointer[$this->idx];
+
+		   $found = $this->collect_nodes($type, $attrib, $data, $scope, $depth);
+
+		   for($i = 0; count($found) > $i; $i++)
+			   $this->result_nodes[] = &$found[$i];
+
+		   if(count($this->result_nodes) > ($respos + $toAdd ))
+		   {
+			   $this->pointer[$this->idx] = &$this->result_nodes[($respos + $toAdd )];
+			   if(!$this->is_valid_node())
+				   $this->log_seek('seek_node: invalid node at result position ' . ($respos + $toAdd));
+		   }
+
+		   return (count($this->result_nodes) > 0);
+
+	   }
+
+	   /**
+	   *	Reine Suche ueber die Lookup-Tabelle: Menge rein, Menge raus, kein Zustand am Baum.
+	   *	Grundlage fuer seek_node und fuer die Modelle in classes/search_model/, die je Schritt
+	   *	eine eigene Ergebnismenge brauchen statt der gemeinsamen result_nodes.
+	   *
+	   *	@param	string	$type	volle URI des Knotentyps; null = jeder Typ
+	   *	@param	array	$attrib	Attributname => geforderter Wert. UND-verknuepft, null = nur Vorhandensein
+	   *	@param	array	$data	wie im Bestand noch nicht ausgewertet
+	   *	@param	mixed	$scope	Knoten oder Array von Knoten als Suchraum; null = ganzer Baum
+	   *	@param	int	$depth	Schrittweite bis zum Suchraum, -1 = unbegrenzt
+	   *	@return	array		gefundene Knoten
+	   */
+	   public function collect_nodes( $type = null, ?array $attrib = null, ?array $data = null, $scope = null, int $depth = -1)
+	   {
+		   $result = array();
+
 		   // shows an advice for using the type properly. Only full qualified URIs allowed
-		   if(!is_null($type) && (false === strpos($type,'#')))echo "please use full URI for '" . $type . "'<br>\n";
-		   
-		   $arg = null;
+		   if(!is_null($type) && (false === strpos($type,'#')))
+			   $this->log_seek("seek_node: please use full URI for '" . $type . "'");
+
+		   /* Der Suchraum wird einmal als Menge ueber die Objekt-Id aufbereitet. Damit kostet die
+		   *  Pruefung je Kandidat einen Hashgriff statt eines Durchlaufs durch die Scope-Liste. */
+		   $scope_set = $this->scope_to_set($scope);
+
+		   // leerer Suchraum ist nicht dasselbe wie kein Suchraum: er laesst nichts durch
+		   if(is_array($scope_set) && count($scope_set) == 0)
+			   return $result;
+
+		   if(!isset($this->looking_index[$this->idx]))
+			   return $result;
 
 		   //uses the look up table and creates a result variable when successful
+		   $arg = null;
+
 		   if(!is_null($type))
 		   {
-		   	  // var_dump($type, array_keys($this->looking_index[$this->idx]));
+			   /* isset statt Referenzzugriff: eine Referenzzuweisung auf einen unbekannten
+			   *  Schluessel legt ihn an, die Tabelle waechst dann bei jeder erfolglosen Suche. */
+			   if(!isset($this->looking_index[$this->idx][$type]))
+				   return $result;
 
-			   if(($arg = &$this->looking_index[$this->idx][$type]) == null) //?
-			   {
-		   		
-				   return false;
-			   }
-
-			   
-		   
-			   
+			   $arg = $this->looking_index[$this->idx][$type];
 		   }
 		   else
 		   {
-		   $cur_num = 0;
+			   $arg = array();
 
-		   	foreach($this->looking_index[$this->idx] as $key => $value )
-		   	{
-		   		for($k = 0;$k < count($this->looking_index[$this->idx][$key]);$k++)
-		   		{ 
-		   			$arg[] = &$this->looking_index[$this->idx][$key][$k];
-		   		}
-		   	}
-			   
-			   
-			  //if(!$arg)echo "und raus";
-			   if(!$arg)return false;
+			   foreach($this->looking_index[$this->idx] as $key => $value )
+			   {
+				   for($k = 0;$k < count($this->looking_index[$this->idx][$key]);$k++)
+				   {
+					   $arg[] = &$this->looking_index[$this->idx][$key][$k];
+				   }
+			   }
 
-		   
+			   if(!$arg)return $result;
 		   }
 
-		   
-		    $check = true;
-		    $value = null; 
-
-
-		    // 
 		   for($i = 0; count($arg) > $i ; $i++)
 		   {
-				$check = true;   
-		   	   
-			if(!is_null($attrib))
-				foreach($attrib as $att_key => $att_value )
-				   {
-//echo "===================";
-		//				   var_dump($check);
-				   	   
-	//			   	   echo '"' . $att_key . '"=>"' . $att_value . "\n";
-				   	   if(is_string($arg[$i]) )
-				   	   {
-				   	   	   echo "invalid string element found for: $type (" . $this->idx . ":$i) }\n";
-				   	   	   return false;
-				   	   }
-// var_dump($arg[$i], $arg[$i]->get_ns_attribute($att_key));
-						   $check = ($value = $arg[$i]->get_ns_attribute($att_key));
+			   if(is_string($arg[$i]))
+			   {
+				   $this->log_seek('seek_node: invalid string element found for ' . ($type ?? '*')
+						   . ' (' . $this->idx . ':' . $i . ')');
+				   continue;
+			   }
 
-	//					   var_dump($check, $value);
-//echo "===================";						   
-						   if(!is_Null($att_value))
-						   {
-							   $check = $check && ($value == $att_value);
-						   }
- 
-				   }
-  /*
-  
-  $obj->attrib = $this->attrib;
-                                $obj->attrib_ns
-  
-  */
-				
-					   
-				if($check)
-				{
-				//echo "element saved " . $arg[$i]->full_URI() . " <br>\n";  
-				$this->result_nodes[] = &$arg[$i];
-				}
-				    
+			   /* Suchraum zuerst pruefen: er schneidet weg, bevor Attribute gelesen werden */
+			   if(!is_null($scope_set) && !$this->node_in_scope($arg[$i], $scope_set, $depth))
+				   continue;
 
+			   if(!$this->node_matches_attributes($arg[$i], $attrib))
+				   continue;
+
+			   $result[] = &$arg[$i];
 		   }
-		   
 
-		   		
-		   
-			    if(count($this->result_nodes) > ($respos + $toAdd ))
-			    {
-				    //echo $this->result_nodes[$respos + $toAdd]->full_URI() . " xxx<br>\n";
-				    $this->pointer[$this->idx] = &$this->result_nodes[($respos + $toAdd )];
-				    if(!$this->is_valid_node())echo "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
-			    }
-			    //echo "hier " . count($this->result_nodes) . " " ;
-		   return (count($this->result_nodes) > 0);
-	
+		   return $result;
+	   }
 
+	   /**
+	   *	Bereitet den Suchraum als Menge ueber spl_object_id auf.
+	   *	@return	array|null	null = keine Einschraenkung, leeres Array = leerer Suchraum
+	   */
+	   private function scope_to_set($scope)
+	   {
+		   if(is_null($scope))
+			   return null;
+
+		   if(!is_array($scope))
+			   $scope = array($scope);
+
+		   $set = array();
+
+		   foreach($scope as $node)
+			   if(is_object($node))
+				   $set[spl_object_id($node)] = true;
+
+		   return $set;
+	   }
+
+	   /**
+	   *	Steigt vom Kandidaten ueber getRefprev() auf und prueft, ob er im Suchraum haengt.
+	   *	Kosten O(Tiefe) je Kandidat, ohne Positionsstempel und ohne Zwischenspeicher — der
+	   *	Stempel muesste sich in jeder Ebene erst unter den Geschwistern suchen.
+	   *
+	   *	@param	int	$depth	-1 unbegrenzt, 0 nur der Knoten selbst, 1 direkte Kinder
+	   */
+	   private function node_in_scope(&$node, array $scope_set, int $depth = -1)
+	   {
+		   $cur  = $node;
+		   $step = 0;
+
+		   // Sicherheitszaehler: ein verlinkter Baum kann einen Zykel enthalten
+		   $guard = 10000;
+
+		   while(is_object($cur) && $guard-- > 0)
+		   {
+			   if(isset($scope_set[spl_object_id($cur)]))
+				   return true;
+
+			   if($depth > -1 && $step >= $depth)
+				   return false;
+
+			   $cur = $cur->getRefprev();
+			   $step++;
+		   }
+
+		   if($guard <= 0)
+			   $this->log_seek('seek_node: aborted climbing at ' . $step . ' steps, tree may contain a cycle');
+
+		   return false;
+	   }
+
+	   /**
+	   *	Prueft die geforderten Attribute UND-verknuepft. Ein Wert von null verlangt nur,
+	   *	dass das Attribut ueberhaupt gesetzt ist.
+	   */
+	   private function node_matches_attributes(&$node, ?array $attrib)
+	   {
+		   if(is_null($attrib))
+			   return true;
+
+		   foreach($attrib as $att_key => $att_value )
+		   {
+			   $value = $node->get_ns_attribute($att_key);
+
+			   if(!$value)
+				   return false;
+
+			   if(!is_Null($att_value) && ($value != $att_value))
+				   return false;
+		   }
+
+		   return true;
+	   }
+
+	   /**
+	   *	Diagnosen der Suche gehen ins Log statt in die Ausgabe: ein echo verschmutzt
+	   *	JSON_RESPONSE und den Serialisierungsstrom.
+	   */
+	   private function log_seek($message)
+	   {
+		   global $logger_class;
+
+		   if(isset($logger_class) && is_object($logger_class))
+			   $logger_class->setAssert($message, 3);
 	   }
 	   
 	   public function &get_result()
