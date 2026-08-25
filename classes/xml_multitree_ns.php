@@ -85,6 +85,23 @@ class xml_ns extends xml_omni
 	*  beim Eintragen umsortiert werden muss. 0 oder gleich der Listenlaenge heisst
 	*  "sortenrein" - dann entfaellt die Pruefung je Knoten. */
 	private $index_attrib_count = array();
+	/* Menge der vorkommenden Attributwerte je Name: [idx][attrURI][wert] => true.
+	*  Kein Wert-nach-Knoten-Index, nur eine Auskunft "kommt hier ueberhaupt vor".
+	*  Speicher waechst mit der Zahl DISTINKTER Werte, nicht mit der der Knoten, und
+	*  die Menge ist als obere Schranke gebaut: ein Rest ist erlaubt, eine Luecke nicht.
+	*  Damit ist sie zugleich das, was man einem entfernten Baum voranschicken kann. */
+	private $index_value_set = array();
+	/* Merkzettel gegen Doppeleintraege - O(1) statt Durchlauf durch die Trefferliste.
+	*  Die Objekt-Id bleibt stabil, solange die Tabelle den Knoten haelt. */
+	private $indexed_attribs = array();
+	/* Identitaetstabelle: [idx][wert] => Knoten. Anders als die Wertmenge ist sie auf
+	*  Eindeutigkeit angelegt - ein Knoten je Schluessel. Sie kostet einen Eintrag je
+	*  Knoten (nicht je Attribut) und ist zugleich die Besuchsmenge, die eine Suche
+	*  ueber verlinkte Baeume braucht, um einen Zykel zu erkennen. */
+	private $identity_index = array();
+	/* Attributnamen, die als Identitaet gelten. rdf:about ist die Vorgabe, weil
+	*  RDF_about relative Formen bereits zur vollen URI aufloest. */
+	private $identity_attributes = array('http://www.w3.org/1999/02/22-rdf-syntax-ns#about');
 	private $result_nodes = array();
 	
 	private $exception_collection;
@@ -225,6 +242,15 @@ class xml_ns extends xml_omni
 
 		   if(!isset($this->looking_index[$this->idx]))
 			   return $result;
+
+		   /* Frueher Abbruch ueber die Wertmenge: kommt ein geforderter Attributwert im
+		   *  Baum ueberhaupt nicht vor, kann kein Knoten ihn tragen. Das kostet einen
+		   *  Hashgriff und erspart den Durchlauf - und es ist dieselbe Auskunft, die ein
+		   *  entfernter Baum voranschicken koennte, ohne sich laden zu lassen. */
+		   if(!is_null($attrib))
+			   foreach($attrib as $att_key => $att_value)
+				   if(!$this->may_have_attribute_value($att_key, $att_value))
+					   return $result;
 
 		   //uses the look up table and creates a result variable when successful
 		   $arg = null;
@@ -947,7 +973,7 @@ function delete_index($index)
 				$att = &$node->get_ns_attribute_obj($uri);
 
 				if(is_object($att) && ($att instanceof Interface_node))
-					$this->set_new_index($att, $internal_idx);
+					$this->index_attribute($att, $internal_idx);
 
 				unset($att);
 			}
@@ -965,15 +991,167 @@ function delete_index($index)
 	   if(!is_object($attrib_node) || !($attrib_node instanceof Interface_node))
 		   return;
 
+	   $oid = spl_object_id($attrib_node);
+
+	   if(isset($this->indexed_attribs[$oid]))
+	   {
+		   // schon eingetragen - nur der Wert kann sich seither geaendert haben
+		   $this->note_attribute_value($attrib_node, $idx);
+		   return;
+	   }
+
+	   $this->indexed_attribs[$oid] = true;
+
+	   $this->set_new_index($attrib_node, $idx);
+	   $this->note_attribute_value($attrib_node, $idx);
+	   $this->note_identity($attrib_node, $idx);
+   }
+
+   /**
+   *	Traegt den aktuellen Wert eines Attributknotens in die Wertmenge ein.
+   *	Alte Werte werden nicht entfernt: die Menge darf zu viel sagen, nie zu wenig.
+   */
+   public function note_attribute_value(&$attrib_node, int $idx = -1)
+   {
+	   if(!is_object($attrib_node) || ($attrib_node->get_NodeType() != ATTRIBUTE))
+		   return;
+
 	   $internal_idx = ($idx == -1 ? $attrib_node->get_idx() : $idx);
-	   $uri          = $attrib_node->full_URI();
+	   $value        = $attrib_node->getdata();
 
-	   if(isset($this->looking_index[$internal_idx][$uri]))
-		   foreach($this->looking_index[$internal_idx][$uri] as $known)
-			   if($known === $attrib_node)
-				   return;
+	   if(!is_string($value))
+		   return;
 
-	   $this->set_new_index($attrib_node, $internal_idx);
+	   $this->index_value_set[$internal_idx][$attrib_node->full_URI()][$value] = true;
+
+	   // eine geaenderte Identitaet muss ebenfalls eingetragen werden
+	   $this->note_identity($attrib_node, $internal_idx);
+   }
+
+   /**
+   *	Traegt einen Knoten unter seiner Identitaet ein, wenn das Attribut als solche gilt.
+   *	Zwei Knoten unter derselben Identitaet sind ein Fehler im Dokument, kein Fall fuer
+   *	eine Liste - der erste bleibt stehen und der zweite wird gemeldet.
+   */
+   public function note_identity(&$attrib_node, int $idx = -1)
+   {
+	   if(!is_object($attrib_node) || ($attrib_node->get_NodeType() != ATTRIBUTE))
+		   return;
+
+	   if(!in_array($attrib_node->full_URI(), $this->identity_attributes, true))
+		   return;
+
+	   $internal_idx = ($idx == -1 ? $attrib_node->get_idx() : $idx);
+	   $value        = $attrib_node->getdata();
+	   $owner        = $attrib_node->getRefprev();
+
+	   if(!is_string($value) || ($value === '') || !is_object($owner))
+		   return;
+
+	   if(isset($this->identity_index[$internal_idx][$value])
+	      && ($this->identity_index[$internal_idx][$value] !== $owner)
+	      && $this->identity_is_current($this->identity_index[$internal_idx][$value], $value))
+	   {
+		   $this->log_seek('identity: "' . $value . '" is claimed twice in tree ' . $internal_idx
+				   . ' - keeping the first');
+		   return;
+	   }
+
+	   $this->identity_index[$internal_idx][$value] = &$owner;
+   }
+
+   /**
+   *	Nennt ein Attribut als Identitaetstraeger. Wirkt auf alles, was danach eingelesen
+   *	wird; Bestehendes wird nicht nachtraeglich erfasst.
+   */
+   public function add_identity_attribute(string $uri)
+   {
+	   if(!in_array($uri, $this->identity_attributes, true))
+		   $this->identity_attributes[] = $uri;
+   }
+
+   /**
+   *	Der Knoten zu einer Identitaet - ein Hashgriff, keine Suche.
+   *	@return	Interface_node|null
+   */
+   public function &node_by_identity(string $value, int $idx = -1)
+   {
+	   $internal_idx = ($idx == -1 ? $this->idx : $idx);
+	   $none         = null;
+
+	   if(!isset($this->identity_index[$internal_idx][$value]))
+		   return $none;
+
+	   /* Wie bei den Attributknoten wird nicht ausgetragen, sondern nachgeprueft: nach
+	   *  einer Aenderung des Identitaetsattributs zeigt der alte Schluessel auf einen
+	   *  Knoten, der diese Identitaet nicht mehr traegt. */
+	   if(!$this->identity_is_current($this->identity_index[$internal_idx][$value], $value))
+		   return $none;
+
+	   return $this->identity_index[$internal_idx][$value];
+   }
+
+   /**
+   *	Traegt dieser Knoten die genannte Identitaet noch?
+   */
+   private function identity_is_current($node, string $value)
+   {
+	   if(!is_object($node))
+		   return false;
+
+	   foreach($this->identity_attributes as $uri)
+		   if($node->get_ns_attribute($uri) === $value)
+			   return true;
+
+	   return false;
+   }
+
+   /**
+   *	Alle bekannten Identitaeten eines Baums - die Besuchsmenge fuer eine Suche ueber
+   *	verlinkte Baeume, und zugleich ein Tuerschild in seiner staerksten Form.
+   */
+   public function identity_set(int $idx = -1)
+   {
+	   $internal_idx = ($idx == -1 ? $this->idx : $idx);
+
+	   $res = array();
+
+	   foreach(($this->identity_index[$internal_idx] ?? array()) as $value => $node)
+		   if($this->identity_is_current($node, $value))
+			   $res[] = $value;
+
+	   return $res;
+   }
+
+   /**
+   *	Die vorkommenden Werte eines Attributnamens - das Tuerschild dieses Baums fuer
+   *	diesen Namen. Wer hier nicht steht, kommt im Baum nicht vor; wer hier steht,
+   *	kommt moeglicherweise vor.
+   *
+   *	@return	array	Werte als Schluessel; leer, wenn der Name unbekannt ist
+   */
+   public function attribute_value_set(string $uri, int $idx = -1)
+   {
+	   $internal_idx = ($idx == -1 ? $this->idx : $idx);
+
+	   return $this->index_value_set[$internal_idx][$uri] ?? array();
+   }
+
+   /**
+   *	Kann dieser Baum ein Attribut $uri mit dem Wert $value ueberhaupt tragen?
+   *	false ist eine sichere Auskunft, true nur eine moegliche.
+   */
+   public function may_have_attribute_value(string $uri, $value, int $idx = -1)
+   {
+	   $internal_idx = ($idx == -1 ? $this->idx : $idx);
+
+	   if(!isset($this->index_value_set[$internal_idx][$uri]))
+		   return false;
+
+	   if(is_null($value))
+		   return true;
+
+	   return isset($this->index_value_set[$internal_idx][$uri][$value]);
    }
    
    /**

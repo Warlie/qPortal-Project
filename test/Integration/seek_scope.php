@@ -53,12 +53,12 @@ function check($name, $got, $want)
 
 $xml = <<<XML
 <?xml version='1.0' encoding="UTF-8"?>
-<indextree xmlns="http://www.trscript.de/tree">
+<indextree xmlns="http://www.trscript.de/tree" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns">
 	<first>
 		<param name="a" id="x">1</param>
 		<element>
-			<param name="b" id="x">2</param>
-			<param name="c" id="y">3</param>
+			<param name="b" id="x" rdf:about="http://example.org/dinge#zwei">2</param>
+			<param name="c" id="y" rdf:about="http://example.org/dinge#drei">3</param>
 		</element>
 	</first>
 	<final>
@@ -194,6 +194,59 @@ $neu = $tree->collect_nodes($T . 'frisch', null, null, null, -1, ATTRIBUTE);
 check('unbekannter Attributname legt Prototyp an', count($neu), 1);
 check('sein Wert ist lesbar', $ziel[0]->get_ns_attribute($T . 'frisch'), 'wert3');
 check('sein Typ ist gesetzt', count($neu) ? $neu[0]->full_URI() : '-', $T . 'frisch');
+
+/* --------------------------------------------- Wertmenge als Tuerschild */
+
+$werte_set = $tree->attribute_value_set($T . 'name');
+$namen = array_keys($werte_set);
+sort($namen);
+check('Wertmenge zu name', implode(',', $namen), 'a,b,c,d');
+
+check('may_have: vorhandener Wert',   $tree->may_have_attribute_value($T . 'name', 'b'), true);
+check('may_have: fehlender Wert',     $tree->may_have_attribute_value($T . 'name', 'zzz'), false);
+check('may_have: unbekannter Name',   $tree->may_have_attribute_value($T . 'gibtsnicht', 'x'), false);
+check('may_have: nur Vorhandensein',  $tree->may_have_attribute_value($T . 'name', null), true);
+
+// frueher Abbruch liefert dasselbe wie der Durchlauf
+check('Suche auf fehlenden Wert',   count($tree->collect_nodes($T . 'param', array($T . 'name' => 'zzz'))), 0);
+check('Suche auf vorhandenen Wert', count($tree->collect_nodes($T . 'param', array($T . 'name' => 'b'))), 1);
+
+// geaenderter Wert wird nachgetragen
+$ps = $tree->collect_nodes($T . 'param', array($T . 'name' => 'a'));
+$attr_obj = $ps[0]->get_ns_attribute_obj($T . 'name');
+$attr_obj->setdata('umbenannt', 0);
+check('neuer Wert in der Menge',   $tree->may_have_attribute_value($T . 'name', 'umbenannt'), true);
+check('neuer Wert ist findbar',    count($tree->collect_nodes($T . 'param', array($T . 'name' => 'umbenannt'))), 1);
+check('alter Wert bleibt Schranke', $tree->may_have_attribute_value($T . 'name', 'a'), true);
+check('alter Wert trifft nicht mehr', count($tree->collect_nodes($T . 'param', array($T . 'name' => 'a'))), 0);
+
+/* ------------------------------------------------------ Identitaetstabelle */
+
+$R = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+
+$ids = $tree->identity_set();
+sort($ids);
+check('Identitaeten erfasst', implode(',', $ids),
+      'http://example.org/dinge#drei,http://example.org/dinge#zwei');
+
+$byid = $tree->node_by_identity('http://example.org/dinge#zwei');
+check('Knoten per Identitaet gefunden', is_object($byid) ? $byid->full_URI() : '-', $T . 'param');
+check('es ist der richtige Knoten', is_object($byid) ? $byid->get_ns_attribute($T . 'name') : '-', 'b');
+
+$fehlt = $tree->node_by_identity('http://example.org/dinge#gibtsnicht');
+check('unbekannte Identitaet gibt null', is_null($fehlt), true);
+
+// geaenderte Identitaet: der neue Schluessel greift, der alte nicht mehr
+$byid->set_ns_attribute($R . 'about', 'http://example.org/dinge#neu');
+check('neue Identitaet greift',
+      is_object($n2 = $tree->node_by_identity('http://example.org/dinge#neu')), true);
+check('alte Identitaet greift nicht mehr',
+      is_null($tree->node_by_identity('http://example.org/dinge#zwei')), true);
+
+$ids2 = $tree->identity_set();
+sort($ids2);
+check('Identitaetsmenge zieht nach', implode(',', $ids2),
+      'http://example.org/dinge#drei,http://example.org/dinge#neu');
 
 echo str_repeat('-', 78) . "\n";
 echo ($pass + $fail) . " gelaufen, $fail fehlgeschlagen\n";

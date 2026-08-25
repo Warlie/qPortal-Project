@@ -641,6 +641,17 @@ function attribute($name,&$value){
 			if($this->attrib_ns[$value->full_URI()]) unset($this->attrib_ns[$value->full_URI()]);
 			$this->attrib_ns[$value->full_URI()] = &$value;
 			$this->attrib[$name] = &$value;
+
+			/* Einzige Stelle, an der ein Attributknoten an einen Traeger kommt. Die
+			*  Lookup-Tabelle wird hier gefuellt und nicht in set_new_index, weil nicht
+			*  jeder Weg dort vorbeikommt (tree_element, std.php, ns_gen, Plugins). Nur
+			*  eine luckenlose Erfassung erlaubt spaeter den fruehen Abbruch ueber die
+			*  Wertmenge, ohne still einen Treffer zu verlieren. */
+			$parser = $this->get_parser();
+
+			if(is_object($parser) && method_exists($parser,'index_attribute'))
+				$parser->index_attribute($value);
+
 			$value->event_initiated();
 			
 		}
@@ -922,6 +933,18 @@ function setdata($data,$pos = null, $add = false, $alter_sensity = true){
 				$this->data[$index] = $tmp;
 		}
 			
+		/* Ein geaenderter Attributwert muss in die Wertmenge nachgetragen werden. Der
+		*  alte Wert bleibt darin stehen - die Menge ist eine obere Schranke, und ein
+		*  Rest davon kostet hoechstens einen Durchlauf, waehrend ein fehlender Wert
+		*  einen Treffer verlieren wuerde. */
+		if($this->get_NodeType() == ATTRIBUTE)
+		{
+			$parser_v = $this->get_parser();
+
+			if(is_object($parser_v) && method_exists($parser_v,'note_attribute_value'))
+				$parser_v->note_attribute_value($this);
+		}
+
 		//causes alterdataevent
 		if($this->alter_sensity && $alter_sensity)$this->event_alterdata(true);
 //echo $index . ":" . $data . "\n";
