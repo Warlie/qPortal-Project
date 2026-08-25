@@ -29,6 +29,28 @@ class SearchingModelObject
 	/** Bleibt fuer den Bestandsaufruf in index.php stehen; die Modelle brauchen ihn nicht. */
 	public static $treeRef;
 
+	/** Abschnitt [search] der Konfiguration, von index.php gesetzt. */
+	private static array $config = [];
+
+	/**
+	*	Nimmt den Abschnitt [search] entgegen. Wird einmal beim Hochfahren gesetzt; ein
+	*	Modell holt sich daraus seinen eigenen Zweig ueber model_config().
+	*/
+	public static function set_config(array $config)
+	{
+		self::$config = $config;
+	}
+
+	/**
+	*	Der Konfigurationszweig eines Modells — search.<modellname>.*
+	*	Ein Modell, das nichts zu konfigurieren hat, bekommt ein leeres Array und
+	*	braucht sich nicht darum zu kuemmern.
+	*/
+	public static function model_config(string $model_name): array
+	{
+		return self::$config[$model_name] ?? array();
+	}
+
 	/**
 	*	Traegt die Modelle ein. Die Klassen nennen ihren Namen selbst
 	*	(Searching_Model::model_name), damit ein neues Modell nur eine Datei ist und
@@ -85,6 +107,11 @@ class SearchingModelObject
 
 		$class = self::$models[$model_name];
 		$model = new $class($data_model);
+
+		/* Konfiguration bekommt nur, wer danach fragt — ein Modell ohne Quellenwahl
+		*  soll nichts davon wissen muessen. */
+		if(method_exists($model, 'set_model_config'))
+			$model->set_model_config(self::model_config($model_name));
 
 		return $model;
 	}

@@ -40,6 +40,7 @@ require_once('classes/xml_multitree.php');
 require_once('classes/xml_multitree_objex.php');
 require_once('classes/xml_multitree_omni_handle.php');
 require_once('classes/xml_multitree_ns.php');
+require_once('classes/class_REST.php');
 require_once('classes/search_model/index_model.php');
 
 $pass = 0; $fail = 0;
@@ -256,7 +257,7 @@ $tree->flash_result();   // frueherer seek_node-Test hat die Ergebnisliste gefue
 $modelle = SearchingModelObject::describe_models();
 $namen = array_keys($modelle);
 sort($namen);
-check('Modelle melden sich selbst', implode(',', $namen), 'internal,xpath');
+check('Modelle melden sich selbst', implode(',', $namen), 'internal,sparql,xpath');
 
 $m = $tree->seek_by_model('internal');
 check('Fassade liefert ein Modell', is_object($m) ? get_class($m) : '-', 'Internal_Searching_Model');
@@ -299,6 +300,49 @@ check('Name ohne Namensraum', $fehler2, 'roher Name abgewiesen');
 $fehler3 = '-';
 try { $tree->query_by_model('xpath', $T . 'param'); } catch (Exception $e) { $fehler3 = 'xpath meldet sich'; }
 check('xpath-Stub wirft statt null zu geben', $fehler3, 'xpath meldet sich');
+
+/* ------------------------------------------- SPARQL-Modell: Quelle aus der Config */
+
+SearchingModelObject::set_config(array());
+$sp = $tree->seek_by_model('sparql');
+check('sparql-Modell da', is_object($sp) ? get_class($sp) : '-', 'SPARQL_Model');
+check('ohne Config keine Quelle', $sp->source(), '');
+
+$f = '-';
+try { $sp->query('SELECT * WHERE { ?s ?p ?o }'); } catch (Exception $e) { $f = 'nennt die Config'; }
+check('unkonfiguriert sagt was fehlt', $f, 'nennt die Config');
+
+// Quelle documents: benannt, nicht gebaut
+SearchingModelObject::set_config(array('sparql' => array('source' => 'documents')));
+$sp2 = $tree->seek_by_model('sparql');
+check('Quelle aus der Config gelesen', $sp2->source(), 'documents');
+$f2 = '-';
+try { $sp2->query('SELECT * WHERE { ?s ?p ?o }'); } catch (Exception $e) { $f2 = 'sagt: nicht gebaut'; }
+check('documents meldet sich ehrlich', $f2, 'sagt: nicht gebaut');
+
+// Quelle fuseki ohne Endpunkt: es wird NICHTS abgeschickt
+SearchingModelObject::set_config(array('sparql' => array('source' => 'fuseki')));
+$sp3 = $tree->seek_by_model('sparql');
+$f3 = '-';
+try { $sp3->query('SELECT * WHERE { ?s ?p ?o }'); } catch (Exception $e) { $f3 = 'kein Endpunkt, kein Versand'; }
+check('fuseki ohne Endpunkt schickt nichts', $f3, 'kein Endpunkt, kein Versand');
+
+// unbekannte Quelle
+SearchingModelObject::set_config(array('sparql' => array('source' => 'quatsch')));
+$f4 = '-';
+try { $tree->seek_by_model('sparql')->query('SELECT * WHERE { ?s ?p ?o }'); }
+catch (Exception $e) { $f4 = 'unbekannte Quelle abgewiesen'; }
+check('unbekannte Quelle', $f4, 'unbekannte Quelle abgewiesen');
+
+check('drei Modelle gemeldet', count(SearchingModelObject::describe_models()), 3);
+
+// die Antwortverarbeitung laesst sich ohne Netz pruefen
+$antwort = '{"head":{"vars":["s","p"]},"results":{"bindings":['
+         . '{"s":{"type":"uri","value":"http://example.org/a"},"p":{"type":"literal","value":"eins"}},'
+         . '{"s":{"type":"uri","value":"http://example.org/b"},"p":{"type":"literal","value":"zwei"}}]}}';
+$knoten = $tree->seek_by_model('sparql')->answer_to_nodes($antwort);
+check('Antwort wird zu Knoten', count($knoten) > 0, true);
+check('leere Antwort gibt leer', count($tree->seek_by_model('sparql')->answer_to_nodes('')), 0);
 
 echo str_repeat('-', 78) . "\n";
 echo ($pass + $fail) . " gelaufen, $fail fehlgeschlagen\n";

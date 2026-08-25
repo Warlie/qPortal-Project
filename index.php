@@ -257,7 +257,7 @@ if(file_exists(CONFIG))
                                 
                                 
 				                 //SearchingModelObject::$treeRef = $content;
-                                 //SearchingModelObject::init_models();
+                                 SearchingModelObject::set_config($ini_array["search"] ?? []);
 				
                                 
                 if($_REQUEST['i'] == '__system')

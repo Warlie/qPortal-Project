@@ -111,9 +111,9 @@ class SPARQL_handle extends Interface_handle
     						$ns_set[] = $namespace_uri;
 						//echo $trible[$var]['value'] . "\n";
 						}
-				var_dump(array_unique($ns_set));
+				//var_dump(array_unique($ns_set));   // Diagnose - schreibt sonst in jede Antwort
 				
-				$this->base_object->showNamespaces();
+				//$this->base_object->showNamespaces();   // var_dump-Diagnose, siehe xml_ns::showNamespaces()
 				
 				
 				if(is_null($json_array))echo json_last_error_msg();
