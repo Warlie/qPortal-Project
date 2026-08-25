@@ -677,6 +677,15 @@ function attribute($name,&$value){
 					$attrib->set_parser($this->parser);
 					$this->attribute($uri,$attrib);
 					$this->attrib[$teile[1]] = &$attrib;
+
+					/* nachtraeglich gesetzte Attribute muessen in die Lookup-Tabelle:
+					*  ein fehlender Eintrag verliert einen Treffer, ohne dass es
+					*  jemand merkt. Ein veralteter Eintrag faellt dagegen bei der
+					*  Pruefung am Knoten durch. */
+					$parser = $this->get_parser();
+
+					if(is_object($parser) && method_exists($parser,'index_attribute'))
+						$parser->index_attribute($attrib);
 	}
 	
 	

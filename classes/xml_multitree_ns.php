@@ -80,6 +80,11 @@ class xml_ns extends xml_omni
 	
 	private $ticketlist = array();
 	private $looking_index = array();
+	/* Anteil der Attributknoten je Schluessel der Lookup-Tabelle. Elemente und Attribute
+	*  liegen unter derselben vollen URI; der Zaehler notiert den Uebergang, ohne dass
+	*  beim Eintragen umsortiert werden muss. 0 oder gleich der Listenlaenge heisst
+	*  "sortenrein" - dann entfaellt die Pruefung je Knoten. */
+	private $index_attrib_count = array();
 	private $result_nodes = array();
 	
 	private $exception_collection;
@@ -158,8 +163,10 @@ class xml_ns extends xml_omni
 	   *				null = ganzer Baum. Ohne Angabe greift only_child_node().
 	   *  @param	int	$depth	Schrittweite bis zum Suchraum: -1 unbegrenzt (descendant-or-self),
 	   *				0 nur der Knoten selbst, 1 direkte Kinder.
+	   *  @param	int	$kind	NODE (Vorgabe), ATTRIBUTE oder -1 fuer beides. Elemente und
+	   *				Attribute liegen unter derselben URI in der Lookup-Tabelle.
 	   */
-   	   public function seek_node( $type = null, ?array $attrib = null, ?array $data = null, $respos = 0, $scope = null, int $depth = -1)
+   	   public function seek_node( $type = null, ?array $attrib = null, ?array $data = null, $respos = 0, $scope = null, int $depth = -1, int $kind = NODE)
 	   {
 		   // adds old results
 		   $toAdd = count($this->result_nodes);
@@ -171,7 +178,7 @@ class xml_ns extends xml_omni
 		      && isset($this->pointer[$this->idx]) && is_object($this->pointer[$this->idx]))
 			   $scope = $this->pointer[$this->idx];
 
-		   $found = $this->collect_nodes($type, $attrib, $data, $scope, $depth);
+		   $found = $this->collect_nodes($type, $attrib, $data, $scope, $depth, $kind);
 
 		   for($i = 0; count($found) > $i; $i++)
 			   $this->result_nodes[] = &$found[$i];
@@ -197,9 +204,10 @@ class xml_ns extends xml_omni
 	   *	@param	array	$data	wie im Bestand noch nicht ausgewertet
 	   *	@param	mixed	$scope	Knoten oder Array von Knoten als Suchraum; null = ganzer Baum
 	   *	@param	int	$depth	Schrittweite bis zum Suchraum, -1 = unbegrenzt
+	   *	@param	int	$kind	NODE (Vorgabe), ATTRIBUTE oder -1 fuer beides
 	   *	@return	array		gefundene Knoten
 	   */
-	   public function collect_nodes( $type = null, ?array $attrib = null, ?array $data = null, $scope = null, int $depth = -1)
+	   public function collect_nodes( $type = null, ?array $attrib = null, ?array $data = null, $scope = null, int $depth = -1, int $kind = NODE)
 	   {
 		   $result = array();
 
@@ -228,6 +236,10 @@ class xml_ns extends xml_omni
 			   if(!isset($this->looking_index[$this->idx][$type]))
 				   return $result;
 
+			   // sortenreiner Schluessel: die geforderte Sorte kommt darin gar nicht vor
+			   if($this->index_is_pure($this->idx, $type, $kind) === false)
+				   return $result;
+
 			   $arg = $this->looking_index[$this->idx][$type];
 		   }
 		   else
@@ -254,6 +266,16 @@ class xml_ns extends xml_omni
 				   continue;
 			   }
 
+			   if($kind > -1 && $arg[$i]->get_NodeType() != $kind)
+				   continue;
+
+			   /* Ein ueberschriebenes Attribut hinterlaesst seinen alten Knoten in der
+			   *  Tabelle - mit dem alten Wert und weiterhin gueltigem prev_el. Der Index
+			   *  ist damit eine obere Schranke; hier wird nachgeprueft, ob der Knoten noch
+			   *  der aktuelle seines Traegers ist. */
+			   if($arg[$i]->get_NodeType() == ATTRIBUTE && !$this->attribute_is_current($arg[$i]))
+				   continue;
+
 			   /* Suchraum zuerst pruefen: er schneidet weg, bevor Attribute gelesen werden */
 			   if(!is_null($scope_set) && !$this->node_in_scope($arg[$i], $scope_set, $depth))
 				   continue;
@@ -265,6 +287,45 @@ class xml_ns extends xml_omni
 		   }
 
 		   return $result;
+	   }
+
+	   /**
+	   *	Prueft, ob ein Attributknoten noch der aktuelle seines Traegers ist. Nach einem
+	   *	set_ns_attribute() auf denselben Namen zeigt der Traeger auf einen neuen Knoten;
+	   *	der alte bleibt in der Tabelle stehen und darf nicht mehr treffen.
+	   */
+	   private function attribute_is_current(&$node)
+	   {
+		   $owner = $node->getRefprev();
+
+		   if(!is_object($owner))
+			   return false;
+
+		   $cur = $owner->get_ns_attribute_obj($node->full_URI());
+
+		   return (is_object($cur) && ($cur === $node));
+	   }
+
+	   /**
+	   *	Sagt, ob ein Schluessel der Lookup-Tabelle die geforderte Sorte ueberhaupt enthaelt.
+	   *	Elemente und Attribute liegen unter derselben URI; statt beim Eintragen umzusortieren
+	   *	wird der Attributanteil gezaehlt. Ist die Liste sortenrein, spart das die Pruefung
+	   *	je Knoten - und der gemessene Normalfall ist sortenrein.
+	   *
+	   *	@return	bool|null	true sortenrein passend, false sortenrein unpassend, null gemischt
+	   */
+	   private function index_is_pure(int $idx, string $uri, int $kind)
+	   {
+		   if($kind < 0)
+			   return true;
+
+		   $total = count($this->looking_index[$idx][$uri]);
+		   $attr  = $this->index_attrib_count[$idx][$uri] ?? 0;
+
+		   if($kind == ATTRIBUTE)
+			   return ($attr == $total) ? true : (($attr == 0) ? false : null);
+
+		   return ($attr == 0) ? true : (($attr == $total) ? false : null);
 	   }
 
 	   /**
@@ -862,11 +923,57 @@ function delete_index($index)
    {
    	   $internal_idx = ($idx == -1?$node->get_idx():$idx);
    	   
-	   	if(!$this->looking_index[$internal_idx][$node->full_URI()])
+	   	if(!isset($this->looking_index[$internal_idx][$node->full_URI()]))
 		$this->looking_index[$internal_idx][$node->full_URI()] = array();
 	
 	
 	$this->looking_index[$internal_idx][$node->full_URI()][] = &$node;
+
+	if($node->get_NodeType() == ATTRIBUTE)
+		$this->index_attrib_count[$internal_idx][$node->full_URI()] =
+			($this->index_attrib_count[$internal_idx][$node->full_URI()] ?? 0) + 1;
+
+	/* Attribute sind selbst Knoten (Interface_ns.php:637: set_NodeType(ATTRIBUTE),
+	*  setrefprev auf den Traeger). Sie kommen bisher nicht durch diese Stelle, weil
+	*  create_node_to_attribute() sie direkt anlegt. Wer sie sucht, findet sie damit
+	*  unter derselben Tabelle - der Weg zurueck zum Element ist getRefprev(). */
+	if($node->get_NodeType() == NODE)
+	{
+		$attribs = $node->get_ns_attribute();
+
+		if(is_array($attribs))
+			foreach($attribs as $uri => $ignored)
+			{
+				$att = &$node->get_ns_attribute_obj($uri);
+
+				if(is_object($att) && ($att instanceof Interface_node))
+					$this->set_new_index($att, $internal_idx);
+
+				unset($att);
+			}
+	}
+   }
+
+   /**
+   *	Traegt ein nachtraeglich gesetztes Attribut in die Lookup-Tabelle nach.
+   *	Eintragen ist Pflicht, Austragen nicht: ein Eintrag unter einem alten Wert bleibt
+   *	als falsch-positiver stehen und faellt bei der Pruefung am Knoten durch. Ein
+   *	fehlender Eintrag dagegen verliert einen Treffer, ohne dass es jemand merkt.
+   */
+   public function index_attribute(&$attrib_node, int $idx = -1)
+   {
+	   if(!is_object($attrib_node) || !($attrib_node instanceof Interface_node))
+		   return;
+
+	   $internal_idx = ($idx == -1 ? $attrib_node->get_idx() : $idx);
+	   $uri          = $attrib_node->full_URI();
+
+	   if(isset($this->looking_index[$internal_idx][$uri]))
+		   foreach($this->looking_index[$internal_idx][$uri] as $known)
+			   if($known === $attrib_node)
+				   return;
+
+	   $this->set_new_index($attrib_node, $internal_idx);
    }
    
    /**
