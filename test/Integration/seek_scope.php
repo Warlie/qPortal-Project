@@ -187,6 +187,14 @@ $ziel[0]->set_ns_attribute($T . 'id', 'wert2');
 $frisch2 = $tree->collect_nodes($T . 'id', null, null, null, -1, ATTRIBUTE);
 check('ueberschriebenes Attribut trifft nicht mehr', count($frisch2), 5);
 
+/* -------------------------------- neuer Attributname ohne vorhandenen Prototyp */
+
+$ziel[0]->set_ns_attribute($T . 'frisch', 'wert3');
+$neu = $tree->collect_nodes($T . 'frisch', null, null, null, -1, ATTRIBUTE);
+check('unbekannter Attributname legt Prototyp an', count($neu), 1);
+check('sein Wert ist lesbar', $ziel[0]->get_ns_attribute($T . 'frisch'), 'wert3');
+check('sein Typ ist gesetzt', count($neu) ? $neu[0]->full_URI() : '-', $T . 'frisch');
+
 echo str_repeat('-', 78) . "\n";
 echo ($pass + $fail) . " gelaufen, $fail fehlgeschlagen\n";
 exit($fail > 0 ? 1 : 0);

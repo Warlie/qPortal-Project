@@ -613,7 +613,7 @@ function delete_index($index)
 					}
 					else
 					{
-						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory($nodename,  $full_ns);
+						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory($attribname,  $full_ns);
 						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
 					}
 
@@ -659,7 +659,7 @@ function delete_index($index)
 					}
 					else
 					{
-						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory($nodename,  $full_ns);
+						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory($attribname,  $full_ns);
 						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
 					}
 
@@ -709,7 +709,7 @@ function delete_index($index)
 							
 							throw new ErrorException('actual namespace for "' .$full_ns . '#' . $attribname . '" for an attribute is not defined for "' . $k . '".', 255, 75);
 						}
-						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory($nodename,  $full_ns);
+						$this->namespace_frameworks[$full_ns]['node'][$attribname] = &My_NameSpace_factory::alt_namespace_factory($attribname,  $full_ns);
 						$attrib = &$this->namespace_frameworks[$full_ns]['node'][$attribname]->new_Instance();
 						
 					}

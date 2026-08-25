@@ -652,6 +652,14 @@ function attribute($name,&$value){
 	public function set_ns_attribute($uri, $value)
 	{
 		$teile = explode("#", $uri);		
+
+		/* Ist der Attributname im Namensraum noch nie vorgekommen, gibt es keinen
+		*  Prototyp. create_node_to_attribute() legt ihn in dem Fall an; hier fehlte
+		*  das, und der Aufruf lief in "new_Instance() on null". */
+		if(!isset($this->parser->namespace_frameworks[$teile[0]]['node'][$teile[1]]))
+			$this->parser->namespace_frameworks[$teile[0]]['node'][$teile[1]] =
+				&My_NameSpace_factory::alt_namespace_factory($teile[1], $teile[0]);
+
 		$attrib = &$this->parser->namespace_frameworks[$teile[0]]['node'][$teile[1]]->new_Instance();
 
 		$ns = $this->showDocumentsNamespaces();
