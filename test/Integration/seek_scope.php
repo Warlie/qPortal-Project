@@ -39,6 +39,7 @@ XML;
 $T = 'http://www.trscript.de/tree#';
 
 $tree = new xml_ns();
+$tree->setNewTree('haupt');          // meldet den Slot an, siehe unten bei "zweiter Baum"
 $tree->load_Stream($xml, 0, "XML");
 
 /* ------------------------------------------------------------------ Bestand */
@@ -326,6 +327,42 @@ $antwort = '{"head":{"vars":["s","p"]},"results":{"bindings":['
 $knoten = $tree->seek_by_model('sparql')->answer_to_nodes($antwort);
 check('Antwort wird zu Knoten', count($knoten) > 0, true);
 check('leere Antwort gibt leer', count($tree->seek_by_model('sparql')->answer_to_nodes('')), 0);
+
+/* ------------------------------------ Identitaet ist global, nicht baumlokal */
+
+// zweiter Baum im selben Parser, mit einer eigenen Identitaet
+$xml2 = <<<XML2
+<?xml version='1.0' encoding="UTF-8"?>
+<indextree xmlns="http://www.trscript.de/tree" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns">
+	<first><param name="z" rdf:about="http://example.org/dinge#vier">9</param></first>
+</indextree>
+XML2;
+
+/* ⚠ Ohne setNewTree() legt load_Stream KEINEN neuen Slot an: setNewTree setzt
+*  max_idx = count(loaded_URI), und loaded_URI wird nur von dort gefuellt. Alle Baeume
+*  landen sonst still in Slot 0 und ueberschreiben sich. STWs eigener TODO steht an
+*  xml_multitree.php:860 ("das gehoert ins load_Stream"). */
+$tree->setNewTree('zweiter');
+$tree->load_Stream($xml2, 0, "XML");
+$zweiter_idx = $tree->idx;
+check('zweiter Baum hat einen eigenen Slot', $zweiter_idx > 0, true);
+
+$aus_zwei = $tree->node_by_identity('http://example.org/dinge#vier');
+check('Identitaet aus dem zweiten Baum', is_object($aus_zwei), true);
+
+// und die des ersten Baums bleibt erreichbar, obwohl der Cursor woanders steht
+$aus_eins = $tree->node_by_identity('http://example.org/dinge#drei');
+check('Identitaet des ersten Baums bleibt global', is_object($aus_eins), true);
+
+$alle = $tree->identity_set();
+check('Identitaetsmenge umfasst beide Baeume', count($alle), 3);
+check('je Baum gefiltert', count($tree->identity_set($zweiter_idx)), 1);
+
+// Entladen raeumt die Tabellen dieses Baums
+$tree->delete_index($zweiter_idx);
+check('nach dem Entladen weg', is_null($tree->node_by_identity('http://example.org/dinge#vier')), true);
+check('die anderen bleiben', is_object($tree->node_by_identity('http://example.org/dinge#drei')), true);
+check('Menge zieht nach', count($tree->identity_set()), 2);
 
 echo str_repeat('-', 78) . "\n";
 echo ($pass + $fail) . " gelaufen, $fail fehlgeschlagen\n";

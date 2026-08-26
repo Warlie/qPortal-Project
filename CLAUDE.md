@@ -41,6 +41,12 @@ Fehlt eins, bricht es mitten im Aufbau ab.
 ⚠ Die Baumschicht schreibt beim Laden viele Notices/Warnings (Bestand). Für Testläufe
 `-d error_reporting=E_ERROR` — **nicht** im Code unterdrücken, sie sind das Korrektheitssignal.
 
+⚠ **Mehrere Bäume brauchen `setNewTree($kennung)` vor jedem `load_Stream`.** `setNewTree`
+setzt `max_idx = count(loaded_URI)` und ist die einzige Stelle, die `loaded_URI` füllt —
+ohne den Aufruf landet *jeder* Baum still in Slot 0 und überschreibt den vorigen. STWs
+eigener TODO steht an `xml_multitree.php:860` („das gehört ins load_Stream"). Der
+Datei-Weg ruft es bereits; `load_Stream` nicht.
+
 ## Wo was liegt
 
 | | |
@@ -94,6 +100,13 @@ collect_nodes($type, $attrib, $data, $scope, $depth, $kind)
 
 ⚠ `seek_node()` gibt `count(result_nodes) > 0` zurück — **nicht**, ob *diese* Suche etwas
 fand. Deshalb steht bei den Aufrufern `flash_result()` davor.
+
+**Struktur ist baumlokal, Bedeutung ist global.** `looking_index`, `index_attrib_count`
+und `index_value_set` sind alle nach `[$idx]` geschlüsselt — gesucht wird im aktuellen Baum.
+`identity_index` dagegen ist **global über alle geladenen Bäume**, wie `namespace_frameworks`
+(das auch kein `$idx` hat): Identität ist eine Aussage der Bedeutung, nicht des Dokuments.
+`identity_of_idx` ist nur das Nebenregister zum Aufräumen; `delete_index()` räumt darüber
+die Tabellen eines entladenen Baums (`drop_index_of()`).
 
 **Regel für alle Indizes hier: eintragen ist Pflicht, austragen nicht, nachgeprüft wird
 beim Lesen.** Falsch-positiv kostet einen Durchlauf, falsch-negativ verliert still einen

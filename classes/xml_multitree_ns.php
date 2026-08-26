@@ -94,11 +94,15 @@ class xml_ns extends xml_omni
 	/* Merkzettel gegen Doppeleintraege - O(1) statt Durchlauf durch die Trefferliste.
 	*  Die Objekt-Id bleibt stabil, solange die Tabelle den Knoten haelt. */
 	private $indexed_attribs = array();
-	/* Identitaetstabelle: [idx][wert] => Knoten. Anders als die Wertmenge ist sie auf
-	*  Eindeutigkeit angelegt - ein Knoten je Schluessel. Sie kostet einen Eintrag je
-	*  Knoten (nicht je Attribut) und ist zugleich die Besuchsmenge, die eine Suche
-	*  ueber verlinkte Baeume braucht, um einen Zykel zu erkennen. */
+	/* Identitaetstabelle: [wert] => Knoten. GLOBAL ueber alle geladenen Baeume, wie
+	*  namespace_frameworks - denn Identitaet ist eine Aussage der Bedeutung, nicht des
+	*  Dokuments. Zwei Baeume, die dieselbe URI nennen, meinen denselben Gegenstand.
+	*  Anders als die Wertmenge ist sie auf Eindeutigkeit angelegt: ein Knoten je
+	*  Schluessel, eine zweite Beanspruchung wird gemeldet. */
 	private $identity_index = array();
+	/* Welche Identitaeten aus welchem Baum kamen. Nur zum Aufraeumen beim Entladen —
+	*  gesucht wird nie darueber, sonst waere die Tabelle wieder baumlokal. */
+	private $identity_of_idx = array();
 	/* Attributnamen, die als Identitaet gelten. rdf:about ist die Vorgabe, weil
 	*  RDF_about relative Formen bereits zur vollen URI aufloest. */
 	private $identity_attributes = array('http://www.w3.org/1999/02/22-rdf-syntax-ns#about');
@@ -479,19 +483,48 @@ class xml_ns extends xml_omni
 	
 function delete_index($index)
    {
+	   // ohne global greift setAssert auf null zu
+	   global $logger_class;
+
 	   //echo ':' . $this->mirror[$index]->name . 'ist hier bei ' . $index; 
 	   unset($this->mirror[$index]);
 	   $this->mirror[$index] = null;
 	   //echo ':' . $this->mirror[$index]->name . 'ist hier bei ' . $index; 
 	   
-	   if($this->cur_pointer[$index])
+	   if(isset($this->cur_pointer[$index]) && is_object($this->cur_pointer[$index]))
 	   $logger_class->setAssert($this->cur_pointer[$index]->name . " will be deleted" ,3);
 	   else
 	   $logger_class->setAssert($index . " is not a valid index" ,3);
 	   
 	   unset($this->cur_pointer[$index]);
 	   $this->cur_pointer[$index] = null;
+
+	   $this->drop_index_of($index);
+
 	   $this->idx = $index;
+   }
+
+   /**
+   *	Raeumt die Suchtabellen eines entladenen Baums.
+   *
+   *	Das ist die eine Stelle, an der ausgetragen wird — sonst gilt hier "eintragen ist
+   *	Pflicht, austragen nicht". Ein entladener Baum ist aber kein veralteter Eintrag,
+   *	sondern gar keiner mehr: seine Knoten wuerden von den Tabellen am Leben gehalten,
+   *	und die Identitaeten blieben belegt.
+   */
+   public function drop_index_of(int $index)
+   {
+	   foreach(array_keys($this->identity_of_idx[$index] ?? array()) as $value)
+		   unset($this->identity_index[$value]);
+
+	   foreach($this->indexed_attribs as $oid => $from_idx)
+		   if($from_idx === $index)
+			   unset($this->indexed_attribs[$oid]);
+
+	   unset($this->identity_of_idx[$index]);
+	   unset($this->looking_index[$index]);
+	   unset($this->index_attrib_count[$index]);
+	   unset($this->index_value_set[$index]);
    }
 	
    /**
@@ -1023,7 +1056,11 @@ function delete_index($index)
 		   return;
 	   }
 
-	   $this->indexed_attribs[$oid] = true;
+	   /* Der Merkzettel haelt den Baum, aus dem der Knoten kam. Ohne das koennte
+	   *  delete_index() seine Eintraege nicht raeumen, und eine wiederverwendete
+	   *  Objekt-Id wuerde einen neuen Attributknoten als "schon indiziert" abweisen —
+	   *  ein falsch-negativer, also genau der Fehler, den es hier nicht geben darf. */
+	   $this->indexed_attribs[$oid] = ($idx == -1 ? $attrib_node->get_idx() : $idx);
 
 	   $this->set_new_index($attrib_node, $idx);
 	   $this->note_attribute_value($attrib_node, $idx);
@@ -1071,16 +1108,20 @@ function delete_index($index)
 	   if(!is_string($value) || ($value === '') || !is_object($owner))
 		   return;
 
-	   if(isset($this->identity_index[$internal_idx][$value])
-	      && ($this->identity_index[$internal_idx][$value] !== $owner)
-	      && $this->identity_is_current($this->identity_index[$internal_idx][$value], $value))
+	   /* Die Pruefung laeuft ueber alle Baeume: dieselbe URI zweimal ist eine
+	   *  Doppelbeanspruchung auch dann, wenn sie aus zwei Dokumenten kommt. Still
+	   *  ueberschreiben waere die Sorte Fehler, die keiner findet. */
+	   if(isset($this->identity_index[$value])
+	      && ($this->identity_index[$value] !== $owner)
+	      && $this->identity_is_current($this->identity_index[$value], $value))
 	   {
-		   $this->log_seek('identity: "' . $value . '" is claimed twice in tree ' . $internal_idx
-				   . ' - keeping the first');
+		   $this->log_seek('identity: "' . $value . '" is claimed again (tree ' . $internal_idx
+				   . ') - keeping the first');
 		   return;
 	   }
 
-	   $this->identity_index[$internal_idx][$value] = &$owner;
+	   $this->identity_index[$value] = &$owner;
+	   $this->identity_of_idx[$internal_idx][$value] = true;
    }
 
    /**
@@ -1097,21 +1138,20 @@ function delete_index($index)
    *	Der Knoten zu einer Identitaet - ein Hashgriff, keine Suche.
    *	@return	Interface_node|null
    */
-   public function &node_by_identity(string $value, int $idx = -1)
+   public function &node_by_identity(string $value)
    {
-	   $internal_idx = ($idx == -1 ? $this->idx : $idx);
-	   $none         = null;
+	   $none = null;
 
-	   if(!isset($this->identity_index[$internal_idx][$value]))
+	   if(!isset($this->identity_index[$value]))
 		   return $none;
 
 	   /* Wie bei den Attributknoten wird nicht ausgetragen, sondern nachgeprueft: nach
 	   *  einer Aenderung des Identitaetsattributs zeigt der alte Schluessel auf einen
 	   *  Knoten, der diese Identitaet nicht mehr traegt. */
-	   if(!$this->identity_is_current($this->identity_index[$internal_idx][$value], $value))
+	   if(!$this->identity_is_current($this->identity_index[$value], $value))
 		   return $none;
 
-	   return $this->identity_index[$internal_idx][$value];
+	   return $this->identity_index[$value];
    }
 
    /**
@@ -1135,12 +1175,17 @@ function delete_index($index)
    */
    public function identity_set(int $idx = -1)
    {
-	   $internal_idx = ($idx == -1 ? $this->idx : $idx);
-
 	   $res = array();
 
-	   foreach(($this->identity_index[$internal_idx] ?? array()) as $value => $node)
-		   if($this->identity_is_current($node, $value))
+	   /* Ohne Angabe alle bekannten Identitaeten; mit idx die aus einem bestimmten Baum
+	   *  (ueber das Nebenregister, nicht ueber eine zweite Tabelle). */
+	   $kandidaten = ($idx == -1)
+	               ? array_keys($this->identity_index)
+	               : array_keys($this->identity_of_idx[$idx] ?? array());
+
+	   foreach($kandidaten as $value)
+		   if(isset($this->identity_index[$value])
+		      && $this->identity_is_current($this->identity_index[$value], $value))
 			   $res[] = $value;
 
 	   return $res;
