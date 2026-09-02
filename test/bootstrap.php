@@ -62,13 +62,26 @@ require_once(__DIR__ . '/../classes/finite_state_machine/class_Acceptor.php');
 require_once(__DIR__ . '/../classes/finite_state_machine/class_Mealy.php');
 require_once(__DIR__ . '/../classes/fs_parser/qp_workflow.php');
 
-/* Die Baumschicht, von unten nach oben:
-*  xml (xml_multitree) -> xml_objex -> xml_omni -> xml_ns -> xml_gen */
+/* Die Baumschicht. Ueber xml_ns gabelt sie sich, sie endet nicht:
+*
+*    xml -> xml_objex -> xml_omni -> xml_ns -+-> xml_gen              (von niemandem geladen)
+*                                            +-> xml_sparqle
+*                                            +-> xml_xPath_sParqle -> xml_semantic
+*
+*  Die Produktion baut die SPITZE: class_Contentgenerator.php:82 macht ein
+*  xml_semantic, PHP_handle ein xml_xPath_sParqle. Wer hier nur bis xml_ns laedt,
+*  misst eine kuerzere Kette als die, die spaeter laeuft - und faellt genau dort um,
+*  wo die oberen Schichten gebraucht werden: <owl:Ontology rdf:about="..."> ruft ueber
+*  rdf_about.php:57 currentOntology(), und das steht erst in xml_semantic.
+*
+*  Darum wie in der Produktion die Spitze anfordern; die Kette laedt sich selbst nach
+*  (xml_multitree_semantic.php:44 -> xPath -> SPARQL -> ns -> omni -> objex -> xml). */
 require_once(__DIR__ . '/../classes/ns/Interface_ns.php');
 require_once(__DIR__ . '/../classes/xml_multitree.php');
 require_once(__DIR__ . '/../classes/xml_multitree_objex.php');
 require_once(__DIR__ . '/../classes/xml_multitree_omni_handle.php');
 require_once(__DIR__ . '/../classes/xml_multitree_ns.php');
+require_once(__DIR__ . '/../classes/xml_multitree_semantic.php');
 
 /* Suchschicht und was sie braucht. */
 require_once(__DIR__ . '/../classes/class_REST.php');
