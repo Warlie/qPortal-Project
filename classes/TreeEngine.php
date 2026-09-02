@@ -121,6 +121,14 @@ public function set_CurRef($new){ $this->obj_cur_ref->setdata($new,0);}
 		//Beschreibungsschicht: Dublin Core fuer title/creator/description, pedl-desc fuer den Rest
 		$namespace['xmlns:dc']   = PHP_Ast_Scan::NS_DC;
 		$namespace['xmlns:desc'] = PHP_Ast_Scan::NS_DESC;
+		/* tree gehoert hierher, obwohl der Bogen keinen tree-Tag schreibt: die Aussagen am
+		*  Ende zeigen per rdf:about auf tree-Knoten. Ein xmlns laesst den Namensraum ueber
+		*  My_NameSpace_factory registrieren (xml_multitree_ns.php:592) - mit den ECHTEN
+		*  Knoten aus classes/ns/tree/class_index.php. Ohne das haenge die Sache an der
+		*  Ladereihenfolge: waere tree hier noch unbekannt, wuerde die erste Aussage den
+		*  Namen selbst belegen und TREE_tree spaeter still verdraengt (der
+		*  Ueberschreibschutz greift dann zugunsten des Falschen). */
+		$namespace['xmlns:tree'] = 'http://www.trscript.de/tree';
 
 		//echo get_Class($this->my_Xml_Object);
 	
@@ -322,7 +330,44 @@ public function set_CurRef($new){ $this->obj_cur_ref->setdata($new,0);}
 			$this->my_Xml_Object->tag_close($this, "rdf:Bag");
 
 		$this->my_Xml_Object->tag_close($this, "Class_Instance");
-		
+
+		/* Die tree-Knoten als Funktionen benennen - Vokabular, kein Verhalten.
+		*
+		*  "Funktion" wird aus pedl:Object_Class GEPRAEGT, genau wie PhpInterface und
+		*  PhpTrait weiter oben: das Praegen hier macht den Namen ueberhaupt erst als Tag
+		*  brauchbar, eine PHP-Klasse je Tag braucht es nicht.
+		*
+		*  Danach drei AUSSAGEN ueber Knoten, die es schon gibt. Entscheidend ist rdf:about
+		*  mit der VOLLEN URI: rdf:ID praegt einen neuen Namen im Bogen
+		*  (@registry_surface_system#...), rdf:about mit '#' nimmt den Namensraum davor
+		*  (rdf_about.php:83) - also den tree-Knoten aus classes/ns/tree/class_index.php.
+		*
+		*  Die Aussage nimmt nichts weg: set_Object_to_Namespace (xml_multitree_ns.php:1571)
+		*  gibt bei belegtem Namen den vorhandenen Eintrag zurueck und ignoriert den neuen.
+		*  TREE_tree bleibt die Klasse, die das Rendern traegt; hier steht nur, WAS sie ist.
+		*
+		*  Warum nicht unter pedl:Object_Funktion: die ist die GEBUNDENE Funktion, sie
+		*  braucht einen Empfaenger (getRefprev()->getobj(), eine PHP-Methode ueber
+		*  Reflection). tree:tree hat keinen - sie wird ueber ihren Namen gerufen, ihre
+		*  Argumente sind die restliche Namensliste der Nachricht. Das ist eine FREIE
+		*  Funktion. Beide sind Funktionen, keine ist die andere.
+		*/
+		$attrib = array('rdf:ID' => 'Funktion');
+		$this->my_Xml_Object->tag_open($this, "pedl:Object_Class", $attrib);
+		$this->my_Xml_Object->tag_close($this, "pedl:Object_Class");
+
+		$attrib = array('rdf:about' => 'http://www.trscript.de/tree#tree');
+		$this->my_Xml_Object->tag_open($this, "Funktion", $attrib);
+		$this->my_Xml_Object->tag_close($this, "Funktion");
+
+		$attrib = array('rdf:about' => 'http://www.trscript.de/tree#first');
+		$this->my_Xml_Object->tag_open($this, "Funktion", $attrib);
+		$this->my_Xml_Object->tag_close($this, "Funktion");
+
+		$attrib = array('rdf:about' => 'http://www.trscript.de/tree#final');
+		$this->my_Xml_Object->tag_open($this, "Funktion", $attrib);
+		$this->my_Xml_Object->tag_close($this, "Funktion");
+
 		$this->my_Xml_Object->use_ns_def_strict(false);
 
 		$this->my_Xml_Object->go_to_stamp($stamp);
