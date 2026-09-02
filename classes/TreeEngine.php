@@ -119,7 +119,7 @@ public function set_CurRef($new){ $this->obj_cur_ref->setdata($new,0);}
 		$namespace['xmlns:xsd'] = 'http://www.w3.org/2000/01/rdf-schema';
 		$namespace['xmlns:pedl'] = 'http://www.w3.org/2006/05/pedl-lib';
 		//Beschreibungsschicht: Dublin Core fuer title/creator/description, pedl-desc fuer den Rest
-		$namespace['xmlns:dc']   = PHP_Ast_Scan::NS_DC;
+		$namespace['xmlns:dcterms'] = PHP_Ast_Scan::NS_DCTERMS;
 		$namespace['xmlns:desc'] = PHP_Ast_Scan::NS_DESC;
 		/* tree gehoert hierher, obwohl der Bogen keinen tree-Tag schreibt: die Aussagen am
 		*  Ende zeigen per rdf:about auf tree-Knoten. Ein xmlns laesst den Namensraum ueber

@@ -24,19 +24,46 @@ class PHP_Ast_Scan
 	*  Domainwechsel eine Zeile kostet und nicht jede Fundstelle.
 	*/
 	const NS_DESC = 'http://www.trscript.de/2026/pedl-desc';
-	const NS_DC   = 'http://purl.org/dc/elements/1.1/';
+	/* DCMI Metadata Terms, nicht das unqualifizierte Set von elements/1.1.
+	*  Der Unterschied ist die Verfeinerung: elements/1.1 kennt nur ein unscharfes
+	*  "date", terms trennt created von modified; statt eines pauschalen "relation"
+	*  gibt es isPartOf, references, replaces. Wer eine Beschreibungsschicht baut,
+	*  will diese Unterschiede - STW: "Dann nehmen wir das Feine."
+	*  Beide Saetze NICHT mischen: dcterms:title und dc:title sind fuer den Baum
+	*  zwei verschiedene Praedikate.
+	*  ⚠ Nicht angefasst: SVG_Overview_handle schreibt weiter elements/1.1. Das ist
+	*    der Inkscape/CreativeCommons-Metadatenblock im SVG (cc:Work, dcmitype), dort
+	*    ist elements/1.1 die Konvention - anderer Kontext, andere Regel.
+	*/
+	const NS_DCTERMS = 'http://purl.org/dc/terms/';
 
 	/* Was ein @schluessel: im Quelltext im Baum wird.
-	*  Dublin Core, wo Dublin Core es meint - title, creator und description sind
-	*  Aussagen ueber ein Dokument. Alles Uebrige sind Aussagen ueber Code, dafuer
-	*  hat Dublin Core kein Vokabular.
+	*  Dublin Core, wo Dublin Core es meint - Aussagen ueber ein Dokument. Alles
+	*  Uebrige sind Aussagen ueber Code, dafuer hat Dublin Core kein Vokabular; das
+	*  traegt desc:.
 	*  Die Schreibvarianten stehen hier, damit im Quelltext nichts korrigiert werden muss.
 	*/
 	const DESC_KEYS = [
-		'title'       => 'dc:title',
-		'description' => 'dc:description',
-		'autor'       => 'dc:creator',
-		'author'      => 'dc:creator',
+		'title'       => 'dcterms:title',
+		'description' => 'dcterms:description',
+		'autor'       => 'dcterms:creator',
+		'author'      => 'dcterms:creator',
+
+		/* Die Verfeinerungen, die den Wechsel ueberhaupt lohnen. */
+		'created'     => 'dcterms:created',
+		'modified'    => 'dcterms:modified',
+		'date'        => 'dcterms:date',       // der unscharfe Fall, wenn keiner passt
+		'license'     => 'dcterms:license',
+		'rights'      => 'dcterms:rights',
+		'subject'     => 'dcterms:subject',
+		'publisher'   => 'dcterms:publisher',
+		'contributor' => 'dcterms:contributor',
+		'language'    => 'dcterms:language',
+		'identifier'  => 'dcterms:identifier',
+		'ispartof'    => 'dcterms:isPartOf',
+		'partof'      => 'dcterms:isPartOf',
+		'references'  => 'dcterms:references',
+		'replaces'    => 'dcterms:replaces',
 
 		'function'    => 'desc:function',
 		'func'        => 'desc:function',
@@ -401,7 +428,7 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 	*      damit ein blosses /*@ mit gewoehnlichem Ende nicht mitgelesen wird.
 	*   2. @schluessel: wert — die Form, die im Bestand schon rund 500 mal steht.
 	*
-	*   @return Liste von ['tag' => 'dc:title', 'text' => '...']
+	*   @return Liste von ['tag' => 'dcterms:title', 'text' => '...']
 	*/
 	public function desc_entries(Node $node) : array
 	{
