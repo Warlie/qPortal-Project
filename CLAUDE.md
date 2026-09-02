@@ -19,8 +19,14 @@ php -S 127.0.0.1:8002 -t . &
 QPORTAL_URL=http://127.0.0.1:8002/index.php php test/Integration/intern_walk.php
 ```
 
+```bash
+# Sonden — sie prüfen nicht, sie ZEIGEN. Ausgabe wird gelesen, kein grün/rot.
+php -d error_reporting=E_ERROR test/proben/probe_registry_vocab.php   # ausser dieser: 32/0
+```
+
 `seek_scope.php` und `sparql_parse.php` müssen vollständig grün sein — jede rote Zeile
-dort ist neu.
+dort ist neu. `probe_registry_vocab.php` bewacht die Naht zwischen Vokabulardokument und
+`build_up()` und steht bei **32 in Ordnung / 0 rot**.
 `intern_walk.php` steht bei **32 gelaufen / 1 rot** — `__get_data` ist ein Bestandsdefekt
 (über den Intern-Kanal ist der Aufrufer der ContentGenerator und damit kein Knoten). Diese
 Zahl ist die Vergleichsmarke: ändert sie sich, hat die letzte Änderung etwas gebrochen.
@@ -55,13 +61,15 @@ Datei-Weg ruft es bereits; `load_Stream` nicht.
 
 | | |
 |---|---|
-| Baumschicht (unten → oben) | `xml` (`classes/xml_multitree.php`) → `xml_objex` → `xml_omni` (`_omni_handle.php`) → `xml_ns` → `xml_gen` (`_ns_gen.php`) |
+| Baumschicht (unten → oben) | `xml` (`classes/xml_multitree.php`) → `xml_objex` → `xml_omni` (`_omni_handle.php`) → `xml_ns`; darüber **gabelt** sie sich: `xml_gen` (`_ns_gen.php`, ⚠ von niemandem geladen und instanziiert), `xml_sparqle` (`_SPARQL.php`), `xml_xPath_sParqle` (`_xPath.php`) → `xml_semantic` (`_semantic.php`). Die Produktion baut die **Spitze**: `class_Contentgenerator.php:82` macht ein `xml_semantic`, `PHP_handle` ein `xml_xPath_sParqle`. Die Kette lädt sich selbst nach — ein `require` auf `_semantic.php` genügt |
+| Vokabular des Bogens | `ontologies/registry_surface.owl`, Pfad in `config/default.ini` `[runtime] REGISTRY_VOCABULARY` |
 | Knoten | `classes/ns/Interface_ns.php` (`Interface_node`) |
 | Namensräume | `classes/ns/<ns>/` je mit `class_index.php`, das die Knotentypen registriert — `tree`, `rdf`, `rdfs`, `owl`, `pedl`, `svg`, `xs`, `xlink`, `mathml`, `ate` |
 | Handles (Ein-/Ausgabeformate) | `classes/handles/` — `XML`, `CSV`, `RAW`, `SPARQL`, `PHP`, dazu `class_index.php` |
 | Suchmodelle | `classes/search_model/<name>/` — `internal`, `xpath` (Stub), `sparql` |
 | Automat | `classes/finite_state_machine/` — `Acceptor`/`Transducer` (regex je Übergang, baut einen Knotenbaum; Beispiel `classes/fs_parser/qp_workflow.php`) und `Mealy_Automat` (`class_Mealy.php`: ein Zeichen je Schritt, sammelt in eine flache Tabelle) |
 | SPARQL-Parser | `classes/search_model/sparql/sparql_parser.php` — Grammatik auf dem Mealy, portiert aus `anttree/funct_parser_lib.js` |
+| Beschreibungsschicht | `dcterms:` (`http://purl.org/dc/terms/`, **nicht** `elements/1.1`) für Aussagen über ein *Dokument*, `desc:` für Aussagen über *Code*. Schlüsseltabelle: `PHP_Ast_Scan::DESC_KEYS`. ⚠ `SVG_Overview_handle` schreibt bewusst weiter `elements/1.1` — Inkscape/CC-Konvention |
 | Registry-Befehle | `behavior/*.php` — per `glob` in `index.php:250` geladen |
 | Plugins | `PlugIn/`, registriert in `config/default.ini` unter `[short]` |
 
@@ -87,12 +95,50 @@ tree-Knoten benennbar machen will, nimmt darum ein URI-**Fragment** (`rdf:about=
 Fragmente dürfen Punkte und Schrägstriche tragen (RFC 3986), und nur damit lässt sich auch
 ein Pfad als Name schreiben.
 
+⚠ **`name` heißt nicht überall dasselbe — es hängt am Trägerelement.** Gemessen über
+`template/**/*.xml`:
+
+| Träger | NCName | Punkt | `#`-Adresse | anderes |
+|---|---|---|---|---|
+| `remote` | 46224 | 0 | 0 | 0 |
+| `param` | 2818 | 0 | **5329** | 9 |
+| `content` | 0 | 0 | **2370** | 0 |
+| `wordfield` | 1818 | 0 | 0 | **27** |
+| `final` | **543** | 0 | 0 | 0 |
+| `tree` | **174** | **43** | 0 | 0 |
+| `subtree` | 0 | 0 | **117** | 0 |
+
+Auf `tree` und `final` ist der Name ein **Bezeichner** und sauber — 717 NCName, 43 führende
+Punkte, keine Adresse, keine Beschriftung (`first` kommt in den Dokumenten nicht vor). Die
+`#`-Form auf `content`/`subtree`/`param` ist ein **Zugriff**, kein Name — STWs Workaround,
+um Inhalte in Dokumenten überhaupt modifizieren zu können. Auf `wordfield` stehen
+**Beschriftungen** (`Bett (2)`, `Mensch in einer Gemeinschaft`).
+
+Wer über `name` etwas aussagen will, grenzt darum **nach Knotentyp** ab, nicht über alle
+Werte. Sonst zählt man 1697 Namen und schließt das Falsche.
+
 ## Prägen im Registrierungsbogen
 
-`TreeEngine::build_up()` schreibt den Bogen `@registry_surface_system` von Hand. Ein Name
-wird dort aus einer pedl-Grundlage **geprägt** und ist danach als Tag brauchbar — eine
-PHP-Klasse je Tag braucht es nicht (`<pedl:Object_Class rdf:ID="PhpClass"/>`, danach
-`<PhpClass rdf:ID="System"/>`). So entstehen `PhpInterface`, `PhpTrait`, `PhpProperty`.
+Das Vokabular steht seit `fb32f2e` in **`ontologies/registry_surface.owl`**, nicht mehr als
+`tag_open()`-Folge in `TreeEngine::build_up()`. Ein Name wird dort aus einer pedl-Grundlage
+**geprägt** und ist danach als Tag brauchbar — eine PHP-Klasse je Tag braucht es nicht
+(`<pedl:Object_Class rdf:ID="PhpClass"/>`, danach `<PhpClass rdf:ID="System"/>`). So
+entstehen `PhpInterface`, `PhpTrait`, `PhpProperty`, `Funktion`.
+
+**Die Naht:** in PHP bleibt nur, was sich nicht aufschreiben lässt — der Bindungsblock
+(`<System>` mit `pedl:ParameterCollection`, wo `cdata_ref()` echte Objekte einhängt und
+`get_Element()` die Griffe für `get_CurRef`/`set_CurRef` abgreift) und die beiden
+`rdf:Bag`-Behälter, die zur Laufzeit gefüllt werden. Ein Verweis auf ein laufendes Objekt
+ist kein Text.
+
+⚠ **Reihenfolge ist Bedingung:** das Dokument wird **nach** `createTree()` geladen (erst das
+legt den Namensraum mit seinem nativen Knoten an — sonst `native namespace is missing`) und
+**vor** dem Bindungsblock (der benutzt Tags, die das Dokument erst prägt).
+
+⚠ **Fehlt die Datei, bricht der Aufbau ab** — mit Absicht, siehe die nächste Warnung. Der
+Bogen benennt sich selbst über `dcterms:identifier` am `owl:Ontology`; das ist eine Aussage
+über das Dokument, **keine** Parserregel (`rdf:ID` löst weiter gegen den Default-Namensraum
+des Baums auf, `rdf_ID.php:57`).
 
 ⚠ **Eine vergessene Prägung schlägt still fehl.** `use_ns_def_strict(true)` **wirft nicht**
 bei einem ungeprägten Tag — es fällt auf einen generischen `Interface_node` zurück. Der Tag
@@ -175,21 +221,34 @@ braucht; `config/config.ini` liegt darüber und ist **nicht im Repo** — dort s
 `db_name`, `stamp_key`, Intern-Tokens und Passwörter. Geheimnisse gehören nie in
 `default.ini`.
 
+Neue ini-Schlüssel gehören in die Tabelle `$list_of_configuration_parameters`
+(`index.php:26`) — `createConfigFromINIFile` (`mod_lib.php:131`) macht daraus die
+Konstante und löst dabei `__ROOT_DIR`/`__PROGRAM_DIR` auf. Die Unterscheidung trägt:
+`__PROGRAM_DIR` sind die Dokumente **dieser Installation**, `__ROOT_DIR` ist, was zum
+**System** gehört (`PLUG_IN_FOLDER`, `REGISTRY_VOCABULARY`).
+
 `parse_ini_file_multi` (`mod_lib.php:4`) macht aus Punkt-Schlüsseln verschachtelte Arrays:
 `sparql.fuseki.endpoint = ""` wird zu `$ini_array['search']['sparql']['fuseki']['endpoint']`.
 
-Das `sparql`-Modell kennt mehrere Quellen **nebeneinander**, nicht eine aktive: jede hat
-ihren Zweig `sparql.<quelle>.*`, und `source` darin ist der Geltungsbereich *innerhalb*
-dieser Quelle (Fuseki: Datensatz/Graph; intern: Baum). `sparql.use` ist die Vorgabe,
-`use_source()` überschreibt sie je Aufruf — gewechselt wird die Quelle, nicht die Frage.
+Das `sparql`-Modell fragt nicht „welche Quelle", sondern **„welche Gegenstelle"**: SPARQL
+ist eine *Sprache*, keine Gegenstelle. Wer sie spricht, steht als **Verbindungsprofil** im
+Abschnitt `[connection]` — vier Felder `type` / `address` / `source` / Zugang. `type` ist
+die Plattform (`qportal`, `fuseki`, `mysql`), `address` leer heißt *diese Instanz*, und
+`source` ist überall dieselbe Ebene, nur anders benannt: bei mysql die Datenbank, bei
+fuseki der benannte Graph, bei qportal der Baum. `sparql.use` nennt das Vorgabeprofil,
+`use_source()` überschreibt es je Aufruf.
 Pfade dürfen `__ROOT_DIR`/`__PROGRAM_DIR` enthalten, Dokumente `%NAME%` (`resolve_path`).
 
 ## Arbeitsweise
 
 - **Committen: nur modifizierte getrackte Dateien.** Nie `git add -A`. Neue Dateien nur,
   wenn STW sie ausdrücklich nennt. Untracked und bewusst draußen: `db130399.sql`
-  (Produktivdump mit IBANs), `img/`, `script/`, `template_/`, `.claude/`,
-  `behavior/stored.php`, `test/Integration/intern_walk.php`.
+  (Produktivdump mit IBANs), `img/`, `images/`, `script/`, `.claude/`, `mcp/`, `overview/`,
+  `server.sh` — und **`template/`**, das laut `.gitignore` „managed separately" ist. Darum
+  liegt das Vokabular in `ontologies/` und nicht bei `template/ontologies/`.
+  ⚠ Erzeugte Artefakte (`*.pedl`, `*_shortcut.php`) sind ebenfalls ignoriert: git holt sie
+  nicht zurück, und eine gelöschte `.pedl` kommt erst beim nächsten **Gebrauch** ihres
+  Plugins wieder, nicht beim nächsten Seitenaufruf.
 - **Kleinschrittig, additiv daneben.** Bestandsverhalten nicht ändern, wo es niemand
   verlangt hat; neue Parameter mit Vorgaben, die alte Aufrufe unberührt lassen.
 - **Kein DOM.** SAX bleibt, flache Arrays statt Objektgraphen — wegen Portierbarkeit bis C
