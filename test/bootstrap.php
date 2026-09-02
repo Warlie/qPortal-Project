@@ -59,6 +59,7 @@ if(!isset($GLOBALS['logger_class']))
 require_once(__DIR__ . '/../classes/finite_state_machine/enums.php');
 require_once(__DIR__ . '/../classes/finite_state_machine/class_Transducer.php');
 require_once(__DIR__ . '/../classes/finite_state_machine/class_Acceptor.php');
+require_once(__DIR__ . '/../classes/finite_state_machine/class_Mealy.php');
 require_once(__DIR__ . '/../classes/fs_parser/qp_workflow.php');
 
 /* Die Baumschicht, von unten nach oben:

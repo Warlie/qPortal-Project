@@ -140,6 +140,7 @@ if(file_exists(CONFIG))
 				require_once('classes/finite_state_machine/enums.php');
 				require_once('classes/finite_state_machine/class_Transducer.php');
 				require_once('classes/finite_state_machine/class_Acceptor.php');
+				require_once('classes/finite_state_machine/class_Mealy.php');
 				require_once('classes/search_model/index_model.php');
 				require_once('classes/NameSpaceBehaviorRegistry.php');
 //$reg = new NameSpaceBehaviorRegistry();
