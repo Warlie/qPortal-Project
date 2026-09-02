@@ -11,12 +11,16 @@ immer wieder sucht.
 # Prüfstand ohne Server (lädt einen Baum selbst)
 php -d error_reporting=E_ERROR test/Integration/seek_scope.php
 
+# Automat und SPARQL-Parser (braucht weder Server noch Baum)
+php -d error_reporting=E_ERROR test/Integration/sparql_parse.php
+
 # Prüfstand über HTTP
 php -S 127.0.0.1:8002 -t . &
 QPORTAL_URL=http://127.0.0.1:8002/index.php php test/Integration/intern_walk.php
 ```
 
-`seek_scope.php` muss vollständig grün sein — jede rote Zeile dort ist neu.
+`seek_scope.php` und `sparql_parse.php` müssen vollständig grün sein — jede rote Zeile
+dort ist neu.
 `intern_walk.php` steht bei **32 gelaufen / 1 rot** — `__get_data` ist ein Bestandsdefekt
 (über den Intern-Kanal ist der Aufrufer der ContentGenerator und damit kein Knoten). Diese
 Zahl ist die Vergleichsmarke: ändert sie sich, hat die letzte Änderung etwas gebrochen.
@@ -56,9 +60,52 @@ Datei-Weg ruft es bereits; `load_Stream` nicht.
 | Namensräume | `classes/ns/<ns>/` je mit `class_index.php`, das die Knotentypen registriert — `tree`, `rdf`, `rdfs`, `owl`, `pedl`, `svg`, `xs`, `xlink`, `mathml`, `ate` |
 | Handles (Ein-/Ausgabeformate) | `classes/handles/` — `XML`, `CSV`, `RAW`, `SPARQL`, `PHP`, dazu `class_index.php` |
 | Suchmodelle | `classes/search_model/<name>/` — `internal`, `xpath` (Stub), `sparql` |
-| Automat | `classes/finite_state_machine/` (Acceptor, Transducer), Beispiel `classes/fs_parser/qp_workflow.php` |
+| Automat | `classes/finite_state_machine/` — `Acceptor`/`Transducer` (regex je Übergang, baut einen Knotenbaum; Beispiel `classes/fs_parser/qp_workflow.php`) und `Mealy_Automat` (`class_Mealy.php`: ein Zeichen je Schritt, sammelt in eine flache Tabelle) |
+| SPARQL-Parser | `classes/search_model/sparql/sparql_parser.php` — Grammatik auf dem Mealy, portiert aus `anttree/funct_parser_lib.js` |
 | Registry-Befehle | `behavior/*.php` — per `glob` in `index.php:250` geladen |
 | Plugins | `PlugIn/`, registriert in `config/default.ini` unter `[short]` |
+
+## tree:name — der führende Punkt heißt „unsichtbar"
+
+Vom Dateisystem entlehnt (STW): ein `tree:name`, der mit `.` **beginnt**, erscheint nicht in
+der Navigation. Ausgewertet in `class_Contentgenerator.php:263`, direkt neben
+`securitylevel` und `sector`:
+
+```php
+if ( !(false === ($hidden = strpos( show_ns_attrib('…tree#name'), '.' ) ) )
+&& intval($hidden) == 0 )   $result = false;
+```
+
+Ein Punkt *innerhalb* des Namens ist harmlos — nur Position 0 zählt. Ebenfalls versteckend:
+ein fehlendes `tree:value` (Zeile darüber). In `template/xml.xml` sind 16 von 56 Namen so
+markiert (`.edit`, `.service_orga`, `.save_doc`, …) — Dienste und Unteraufrufe, keine
+Menüpunkte.
+
+⚠ **Folge für Vokabular-Pläne:** solche Namen sind **keine gültigen `rdf:ID`**. `NCName`
+darf mit Buchstabe oder `_` beginnen, nicht mit `.` (der Punkt ist nur Folgezeichen). Wer
+tree-Knoten benennbar machen will, nimmt darum ein URI-**Fragment** (`rdf:about="#.edit"`) —
+Fragmente dürfen Punkte und Schrägstriche tragen (RFC 3986), und nur damit lässt sich auch
+ein Pfad als Name schreiben.
+
+## Prägen im Registrierungsbogen
+
+`TreeEngine::build_up()` schreibt den Bogen `@registry_surface_system` von Hand. Ein Name
+wird dort aus einer pedl-Grundlage **geprägt** und ist danach als Tag brauchbar — eine
+PHP-Klasse je Tag braucht es nicht (`<pedl:Object_Class rdf:ID="PhpClass"/>`, danach
+`<PhpClass rdf:ID="System"/>`). So entstehen `PhpInterface`, `PhpTrait`, `PhpProperty`.
+
+⚠ **Eine vergessene Prägung schlägt still fehl.** `use_ns_def_strict(true)` **wirft nicht**
+bei einem ungeprägten Tag — es fällt auf einen generischen `Interface_node` zurück. Der Tag
+funktioniert, die Seite rendert, nur `is_Node('…#Object_Class')` sagt dann nein. Die
+Prägung entscheidet nicht über die Annahme, sondern über den Sinn.
+
+`rdf:ID` gegen `rdf:about`: beide lösen am `#` auf (`rdf_ID.php:57`, `rdf_about.php:83`).
+Ohne `#` gilt der Namensraum des Bogens — ein **neuer** Name. Mit `#` der davor — also eine
+**Aussage über einen vorhandenen** Knoten. `set_Object_to_Namespace`
+(`xml_multitree_ns.php:1571`) gibt bei belegtem Namen den vorhandenen Eintrag zurück und
+ignoriert den neuen; verdrängt wird also nichts. ⚠ Das gilt nur, solange der Namensraum
+schon registriert ist — Namensräume kommen **lazy** beim Parsen eines `xmlns`
+(`xml_multitree_ns.php:592`). Deshalb steht `xmlns:tree` im Bogen.
 
 ## Knoten und Attribute
 
@@ -80,6 +127,12 @@ beschreibt, macht die Wertmenge lückenhaft — dann verliert eine Suche still e
 | `get_ns_attribute_obj($uri)` | der Attributknoten selbst |
 
 `full_URI()` = `namespace . '#' . type`. `name` und `type` sind **nicht** dasselbe.
+
+⚠ **`get_ns_attribute($uri)` gibt bei FEHLENDEM Attribut `false` zurück**
+(`Interface_ns.php:737`) — nicht `null` und nicht `''`. Der Unterschied trägt: ein Attribut
+mit **leerem** Wert ist eine Aussage, ein **fehlendes** ist keine. Wer nur auf `''` prüft,
+lässt jeden Knoten durch, der das Attribut gar nicht hat — eine UND-Verknüpfung wird damit
+still wirkungslos.
 
 **Positionsstempel** (`Interface_ns.php:369`): Element `.i.j.k`, Attribut `…@<full_URI>`,
 Daten `…#<QName>`. Der Baum-Stempel (`xml_multitree.php:345`) stellt `0000.<idx>` voran;
