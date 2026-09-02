@@ -141,6 +141,7 @@ if(file_exists(CONFIG))
 				require_once('classes/finite_state_machine/class_Transducer.php');
 				require_once('classes/finite_state_machine/class_Acceptor.php');
 				require_once('classes/finite_state_machine/class_Mealy.php');
+				require_once('classes/connection_profile.php');
 				require_once('classes/search_model/index_model.php');
 				require_once('classes/NameSpaceBehaviorRegistry.php');
 //$reg = new NameSpaceBehaviorRegistry();
@@ -258,6 +259,9 @@ if(file_exists(CONFIG))
                                 
                                 
 				                 //SearchingModelObject::$treeRef = $content;
+                                 /* Die Gegenstellen zuerst: ein Suchmodell nennt nur den
+                                 *  Profilnamen, aufgeloest wird er ueber ConnectionProfile. */
+                                 ConnectionProfile::set_collection($ini_array["connection"] ?? []);
                                  SearchingModelObject::set_config($ini_array["search"] ?? []);
 				
                                 

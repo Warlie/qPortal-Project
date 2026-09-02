@@ -269,54 +269,101 @@ $fehler3 = '-';
 try { $tree->query_by_model('xpath', $T . 'param'); } catch (Exception $e) { $fehler3 = 'xpath meldet sich'; }
 check('xpath-Stub wirft statt null zu geben', $fehler3, 'xpath meldet sich');
 
-/* ------------------------------------------- SPARQL-Modell: Quellen mit Geltungsbereich */
+/* --------------------------------- SPARQL-Modell: Gegenstellen als Verbindungsprofile */
 
 SearchingModelObject::set_config(array());
+ConnectionProfile::set_collection(array());
 $sp = $tree->seek_by_model('sparql');
 check('sparql-Modell da', is_object($sp) ? get_class($sp) : '-', 'SPARQL_Model');
-check('ohne Config keine Quelle', $sp->source(), '');
-check('ohne Config keine Quellenliste', count($sp->configured_sources()), 0);
+check('ohne Config keine Gegenstelle', $sp->source(), '');
+check('ohne Profile keine Liste', count($sp->configured_sources()), 0);
 
 $f = '-';
 try { $sp->query('SELECT * WHERE { ?s ?p ?o }'); } catch (Exception $e) { $f = 'nennt die Config'; }
 check('ohne Wahl sagt es, was fehlt', $f, 'nennt die Config');
 
-/* Beide Quellen nebeneinander, jede mit eigenem Geltungsbereich */
-SearchingModelObject::set_config(array('sparql' => array(
-	'use'    => 'intern',
-	'intern' => array('source' => 'haupt'),
-	'fuseki' => array('source' => 'http://example.org/graph/eins',
-	                  'endpoint' => '', 'user' => '', 'password' => ''))));
+/* Zwei Gegenstellen nebeneinander. Der Unterschied zwischen ihnen ist der TYP, der
+*  Unterschied zwischen lokal und entfernt die ADRESSE — nicht die Sprache. */
+ConnectionProfile::set_collection(array(
+	'hier'  => array('type' => 'qportal', 'address' => '', 'source' => 'haupt'),
+	'fuse'  => array('type' => 'fuseki',
+	                 'address' => 'http://example.org:3030/ds/query',
+	                 'source'  => 'http://example.org/graph/eins')));
+
+SearchingModelObject::set_config(array('sparql' => array('use' => 'hier')));
 
 $sp2 = $tree->seek_by_model('sparql');
-check('Vorgabequelle aus sparql.use', $sp2->source(), 'intern');
+check('Vorgabeprofil aus sparql.use', $sp2->source(), 'hier');
+check('Typ des Profils', $sp2->profile()->type(), 'qportal');
+check('ohne Adresse ist es diese Instanz', $sp2->profile()->is_local(), true);
 check('Geltungsbereich der Vorgabe', $sp2->scope(), 'haupt');
-check('Geltungsbereich der anderen Quelle', $sp2->scope('fuseki'), 'http://example.org/graph/eins');
+check('Geltungsbereich der anderen Gegenstelle', $sp2->scope('fuse'),
+      'http://example.org/graph/eins');
+check('mit Adresse ist es eine fremde', ConnectionProfile::get('fuse')->is_local(), false);
 
 $liste = $sp2->configured_sources();
-check('beide Quellen gemeldet', implode(',', array_keys($liste)), 'intern,fuseki');
-check('mit ihren Bereichen', $liste['intern'] . '|' . $liste['fuseki'],
-      'haupt|http://example.org/graph/eins');
+check('beide Gegenstellen gemeldet', implode(',', array_keys($liste)), 'hier,fuse');
+check('mit Typ und Bereich', $liste['hier']['type'] . '|' . $liste['fuse']['source'],
+      'qportal|http://example.org/graph/eins');
+check('Selbstauskunft ohne Zugangsdaten',
+      array_key_exists('password', $liste['fuse']), false);
 
-/* Der Aufruf darf die Quelle wechseln, ohne den Ausdruck anzufassen */
-$sp2->use_source('fuseki');
-check('use_source wechselt', $sp2->source(), 'fuseki');
+/* Der Aufruf darf die Gegenstelle wechseln, ohne den Ausdruck anzufassen */
+$sp2->use_source('fuse');
+check('use_source wechselt', $sp2->source(), 'fuse');
 check('und der Bereich wandert mit', $sp2->scope(), 'http://example.org/graph/eins');
 $sp2->use_source();
-check('zurueck zur Vorgabe', $sp2->source(), 'intern');
+check('zurueck zur Vorgabe', $sp2->source(), 'hier');
 
 $f2 = '-';
-try { $sp2->use_source('quatsch'); } catch (Exception $e) { $f2 = 'unbekannte Quelle abgewiesen'; }
-check('use_source prueft den Namen', $f2, 'unbekannte Quelle abgewiesen');
+try { $sp2->use_source('quatsch'); } catch (Exception $e) { $f2 = 'unbekanntes Profil abgewiesen'; }
+check('use_source prueft den Namen', $f2, 'unbekanntes Profil abgewiesen');
+check('nach dem Wurf steht die alte Wahl', $sp2->source(), 'hier');
 
+/* qportal wertet inzwischen aus. Was es NICHT traegt, sagt es — eine Variable im
+*  Praedikat faende ueber den Index nichts und saehe aus wie eine leere Antwort. */
 $f3 = '-';
-try { $sp2->query('SELECT * WHERE { ?s ?p ?o }'); } catch (Exception $e) { $f3 = 'sagt: nicht gebaut'; }
-check('intern meldet sich ehrlich', $f3, 'sagt: nicht gebaut');
+try { $sp2->query('SELECT * WHERE { ?s ?p ?o }'); } catch (Exception $e) { $f3 = 'Praedikatvariable abgewiesen'; }
+check('qportal sagt, was es nicht traegt', $f3, 'Praedikatvariable abgewiesen');
 
+/* Ein Profil ohne Adresse ist bei fuseki unvollstaendig — der Datensatz steht darin */
+ConnectionProfile::set_collection(array(
+	'ohne' => array('type' => 'fuseki', 'address' => '', 'source' => '')));
 $f4 = '-';
-try { $sp2->use_source('fuseki')->query('SELECT * WHERE { ?s ?p ?o }'); }
-catch (Exception $e) { $f4 = 'kein Endpunkt, kein Versand'; }
-check('fuseki ohne Endpunkt schickt nichts', $f4, 'kein Endpunkt, kein Versand');
+try { $tree->seek_by_model('sparql')->use_source('ohne')->query('SELECT * WHERE { ?s ?p ?o }'); }
+catch (Exception $e) { $f4 = 'keine Adresse, kein Versand'; }
+check('fuseki ohne Adresse schickt nichts', $f4, 'keine Adresse, kein Versand');
+
+/* Ein Typ, den dieses Modell nicht spricht, faellt auf, statt still zu laufen */
+ConnectionProfile::set_collection(array(
+	'db' => array('type' => 'mysql', 'address' => 'localhost', 'source' => 'real_estate')));
+$f5 = '-';
+try { $tree->seek_by_model('sparql')->use_source('db')->query('SELECT * WHERE { ?s ?p ?o }'); }
+catch (Exception $e) { $f5 = 'fremder Typ abgewiesen'; }
+check('mit mysql redet das sparql-Modell nicht', $f5, 'fremder Typ abgewiesen');
+check('mysql taucht in der Liste nicht auf',
+      count($tree->seek_by_model('sparql')->configured_sources()), 0);
+
+/* Rueckfallweg: der alte Zweig sparql.<name>.* traegt weiter, [connection] liegt darueber */
+ConnectionProfile::set_collection(array());
+SearchingModelObject::set_config(array('sparql' => array(
+	'use' => 'intern', 'intern' => array('source' => 'alt'))));
+$sp3 = $tree->seek_by_model('sparql');
+check('alter Name intern wird zu qportal', $sp3->profile()->type(), 'qportal');
+check('alter Geltungsbereich traegt', $sp3->scope(), 'alt');
+
+SearchingModelObject::set_config(array('sparql' => array(
+	'use' => 'f', 'f' => array('endpoint' => 'http://alt/query'))));
+ConnectionProfile::set_collection(array('f' => array('type' => 'fuseki', 'address' => '')));
+$sp4 = $tree->seek_by_model('sparql');
+check('alter endpoint wird zur address', $sp4->profile()->address(), 'http://alt/query');
+ConnectionProfile::set_collection(array(
+	'f' => array('type' => 'fuseki', 'address' => 'http://neu/query')));
+$sp5 = $tree->seek_by_model('sparql');
+check('gefuelltes [connection]-Feld gewinnt', $sp5->profile()->address(), 'http://neu/query');
+
+ConnectionProfile::set_collection(array());
+SearchingModelObject::set_config(array());
 
 check('drei Modelle gemeldet', count(SearchingModelObject::describe_models()), 3);
 

@@ -72,6 +72,7 @@ require_once(__DIR__ . '/../classes/xml_multitree_ns.php');
 
 /* Suchschicht und was sie braucht. */
 require_once(__DIR__ . '/../classes/class_REST.php');
+require_once(__DIR__ . '/../classes/connection_profile.php');
 require_once(__DIR__ . '/../classes/search_model/index_model.php');
 
 ?>
