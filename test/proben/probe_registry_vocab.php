@@ -48,6 +48,7 @@ $ns = array(
 	'xmlns:rdf'  => 'http://www.w3.org/1999/02/22-rdf-syntax-ns',
 	'xmlns:rdfs' => 'http://www.w3.org/2000/01/rdf-schema',
 	'xmlns:pedl' => 'http://www.w3.org/2006/05/pedl-lib',
+	'xmlns:dcterms' => 'http://purl.org/dc/terms/',
 	'xmlns:tree' => 'http://www.trscript.de/tree',
 );
 $tree = new xml_semantic();
@@ -77,6 +78,28 @@ foreach(array_keys($benutzt) as $tag)
 	if(isset($gepraegt[$tag])) { printf("  [ ok ] %-18s vom Dokument gepraegt\n", $tag); $ok++; }
 	else { printf("  [ROT ] %-18s PHP benutzt ihn, das Dokument praegt ihn NICHT\n", $tag); $rot++; }
 }
+
+/* --- 5. Der Bogen benennt sich selbst --- */
+echo "\n3) Der Bogen traegt seinen eigenen Bezeichner\n" . str_repeat('=', 74) . "\n";
+foreach(array('identifier' => $REG, 'title' => null) as $term => $soll)
+{
+	$tr = $tree->collect_nodes('http://purl.org/dc/terms/#' . $term, null, null, null, -1, -1);
+	if(!count($tr))
+	{
+		printf("  [ROT ] dcterms:%-12s fehlt\n", $term); $rot++; continue;
+	}
+	$wert = trim((string)$tr[0]->getdata(0));
+	if(!is_null($soll) && $wert !== $soll)
+	{
+		printf("  [ROT ] dcterms:%-12s \"%s\" statt \"%s\"\n", $term, $wert, $soll); $rot++; continue;
+	}
+	printf("  [ ok ] dcterms:%-12s %s\n", $term, $wert); $ok++;
+}
+/* ⚠ Bewusst NICHT geprueft: die Klasse dieser Knoten. Es gibt kein
+*  classes/ns/dcterms/, also sind sie Interface_node - sie tragen ihren Wert, aber
+*  is_Node('dcterms#identifier') sagt nein. Fuer Annotationen vertretbar; wer das
+*  aendern will, schreibt einen Namensraum, keine Praegung (dcterms ist fremd, und
+*  gepraegt wird nur im eigenen Namensraum). */
 
 printf("\n  %d in Ordnung, %d rot   (%d Praegungen im Dokument, %d Tags im Bindungsblock)\n",
 	$ok, $rot, count($gepraegt), count($benutzt));

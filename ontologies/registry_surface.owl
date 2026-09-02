@@ -31,9 +31,23 @@
 	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema"
 	xmlns:owl="http://www.w3.org/2002/07/owl"
 	xmlns:pedl="http://www.w3.org/2006/05/pedl-lib"
+	xmlns:dcterms="http://purl.org/dc/terms/"
 	xmlns:tree="http://www.trscript.de/tree">
 
-	<owl:Ontology rdf:about="@registry_surface_system"/>
+	<!-- Der Bogen benennt sich selbst. dcterms:identifier ist der Standardbegriff
+	     dafuer ("an unambiguous reference to the resource within a given context")
+	     und braucht keine Erfindung.
+	     ⚠ Das ist eine AUSSAGE ueber das Dokument, keine Parserregel: rdf:ID loest
+	     weiter gegen den Default-Namensraum des Baums auf (rdf_ID.php:57,
+	     get_NS('', idx)). Der Bezeichner macht die IDs noch nicht eindeutig - er ist
+	     die Basis, gegen die eine spaetere Eindeutigkeit ueberhaupt erst formuliert
+	     werden kann. Erst die Basis, dann die Einmaligkeit darin. -->
+	<owl:Ontology rdf:about="@registry_surface_system">
+		<dcterms:identifier>@registry_surface_system</dcterms:identifier>
+		<dcterms:title xml:lang="de">Registrierungsbogen</dcterms:title>
+		<dcterms:description>Vokabular der Flaeche: die gepraegten Namen, aus denen
+		der Bogen und die PEDL-Ernte ihre Tags nehmen.</dcterms:description>
+	</owl:Ontology>
 
 	<!-- Geprägt aus den pedl-Grundlagen. Interfaces und Traits sind Deklarationen
 	     wie eine Klasse und kommen aus derselben Grundlage; Eigenschaften und
