@@ -592,7 +592,7 @@ $xml = $system->getXMLObj();
 		//echo get_Class($xml);
 	
 		
-		$xml->createTree('http://www.tr-script.de/regsys','rdf:RDF', $namespace);
+		$xml->createTree('http://qportal-project.org/regsys','rdf:RDF', $namespace);
 		
 				$xml->set_first_node();
 		$stamp = $xml->position_stamp();
@@ -648,7 +648,7 @@ $xml = $system->getXMLObj();
 		//echo get_Class($xml);
 	
 		
-		$xml->createTree('http://www.tr-script.de/regsys','rdf:RDF', $namespace);
+		$xml->createTree('http://qportal-project.org/regsys','rdf:RDF', $namespace);
 		
 				$xml->set_first_node();
 		$stamp = $xml->position_stamp();
@@ -786,7 +786,7 @@ else
 		//echo get_Class($xml);
 	
 		
-		$xml->createTree('http://www.tr-script.de/regsys','rdf:RDF', $namespace);
+		$xml->createTree('http://qportal-project.org/regsys','rdf:RDF', $namespace);
 		
 				$xml->set_first_node();
 		$stamp = $xml->position_stamp();
@@ -1516,7 +1516,7 @@ $tbl1->first_ds();
 		$namespace['xmlns:xsd'] = 'http://www.w3.org/2000/01/rdf-schema';
 		$namespace['xmlns:pedl'] = 'http://www.w3.org/2006/05/pedl-lib';
 	
-			$xml->createTree('http://www.tr-script.de/regsys','rdf:RDF', $namespace);
+			$xml->createTree('http://qportal-project.org/regsys','rdf:RDF', $namespace);
 		
 				$xml->set_first_node();
 		$stamp = $xml->position_stamp();

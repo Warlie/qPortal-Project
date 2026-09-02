@@ -61,7 +61,7 @@ private $objectList = array();
 		//echo get_Class($this->my_Xml_Object);
 	
 		
-		$this->my_Xml_Object->createTree('http://www.tr-script.de/regsys','rdf:RDF', $namespace);
+		$this->my_Xml_Object->createTree('http://qportal-project.org/regsys','rdf:RDF', $namespace);
 			
 		$this->my_Xml_Object->set_first_node();
 		$stamp = $this->my_Xml_Object->position_stamp();

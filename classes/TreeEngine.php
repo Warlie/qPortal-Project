@@ -67,7 +67,7 @@ public function set_CurRef($new){ $this->obj_cur_ref->setdata($new,0);}
 		//var_dump($structur, $registry);
 		$this->system = $structur;
 		$this->registry = $registry;
-		$this->my_Xml_Object->get_context_generator()->set_Reg_NS('http://www.tr-script.de/regsys');
+		$this->my_Xml_Object->get_context_generator()->set_Reg_NS('http://qportal-project.org/regsys');
 		$this->my_Xml_Object->load($structur,0);
 		$this->my_Xml_Object->setNewTree($registry);
 		$this->my_Xml_Object->set_definition_context('TYPE','XML');
@@ -133,7 +133,7 @@ public function set_CurRef($new){ $this->obj_cur_ref->setdata($new,0);}
 		//echo get_Class($this->my_Xml_Object);
 	
 		
-		$this->my_Xml_Object->createTree('http://www.tr-script.de/regsys','rdf:RDF', $namespace);
+		$this->my_Xml_Object->createTree('http://qportal-project.org/regsys','rdf:RDF', $namespace);
 			
 		$this->my_Xml_Object->set_first_node();
 		$stamp = $this->my_Xml_Object->position_stamp();
