@@ -32,6 +32,7 @@ $list_of_configuration_parameters = [
 	// resolved before the entries below so they can use __PROGRAM_DIR
 	'PROGRAM_DIR' => ['runtime', 'PROGRAM_DIR'],
 	'PLUG_IN_FOLDER' => ['runtime', 'PLUG_IN_FOLDER'],
+	'REGISTRY_VOCABULARY' => ['runtime', 'REGISTRY_VOCABULARY'],
 	'FRONTEND_INDEX' => ['runtime', 'FRONTEND_INDEX'],
 	'EDIT_INDEX' => ['runtime', 'EDIT_INDEX'],
 	'INTERN' => ['runtime', 'INTERN'],

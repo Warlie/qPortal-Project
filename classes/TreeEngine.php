@@ -142,83 +142,31 @@ public function set_CurRef($new){ $this->obj_cur_ref->setdata($new,0);}
 		
 		$this->my_Xml_Object->use_ns_def_strict(true);
 		
-		$attrib = array('rdf:about' => $this->registry);
-		$this->my_Xml_Object->tag_open($this, "owl:Ontology", $attrib);
-		$this->my_Xml_Object->tag_close($this, "owl:Ontology");
-		
-		$attrib = array('rdf:ID' => 'PhpClass');
-		$this->my_Xml_Object->tag_open($this, "pedl:Object_Class", $attrib);
-		$this->my_Xml_Object->tag_close($this, "pedl:Object_Class");
-		
-		$attrib = array('rdf:ID' => 'PhpMethod');
-		$this->my_Xml_Object->tag_open($this, "pedl:Object_Funktion", $attrib);
-		$this->my_Xml_Object->tag_close($this, "pedl:Object_Funktion");
-		
-		$attrib = array('rdf:ID' => 'PhpConstructor');
-		$this->my_Xml_Object->tag_open($this, "pedl:Object_Constructor", $attrib);
-		$this->my_Xml_Object->tag_close($this, "pedl:Object_Constructor");
-		
-		$attrib = array('rdf:ID' => 'PhpParameter');
-		$this->my_Xml_Object->tag_open($this, "pedl:Object_Parameter", $attrib);
-		$this->my_Xml_Object->tag_close($this, "pedl:Object_Parameter");
+		/* Das Vokabular kommt aus einem Dokument, nicht mehr aus tag_open()-Folgen.
+		*  Es ist reine Deklaration - was hier frueher stand, steht jetzt in
+		*  ontologies/registry_surface.owl; der Pfad in config/default.ini [runtime].
+		*
+		*  Die Reihenfolge ist Bedingung, nicht Geschmack: NACH createTree(), weil erst
+		*  das den Namensraum mit seinem nativen Knoten anlegt (sonst bricht das Laden
+		*  mit "native namespace is missing" ab), und VOR dem Bindungsblock, weil der
+		*  Tags benutzt, die hier erst gepraegt werden.
+		*
+		*  ⚠ Ein fehlendes Dokument bricht ab, und das ist Absicht. Ohne Vokabular
+		*  praegt niemand, und use_ns_def_strict(true) WIRFT NICHT bei einem
+		*  ungepraegten Tag - es faellt auf einen generischen Interface_node zurueck.
+		*  Die Seite wuerde weiter rendern und die Bedeutung waere still weg. */
+		$vokabular = defined('REGISTRY_VOCABULARY')
+		           ? REGISTRY_VOCABULARY
+		           : __DIR__ . '/../ontologies/registry_surface.owl';
 
-		/* Interfaces and traits are declarations like a class, so they are coined from the
-		*  same pedl base and behave like one. Properties and constants are named slots and
-		*  take the parameter base. Coining them here is what makes them usable as tags at
-		*  all - no php class per tag is needed.
-		*/
-		$attrib = array('rdf:ID' => 'PhpInterface');
-		$this->my_Xml_Object->tag_open($this, "pedl:Object_Class", $attrib);
-		$this->my_Xml_Object->tag_close($this, "pedl:Object_Class");
+		if(!is_readable($vokabular))
+			throw new Exception('TreeEngine: Vokabular des Registrierungsbogens nicht '
+			                  . 'lesbar: "' . $vokabular . '" (config/default.ini, '
+			                  . '[runtime] REGISTRY_VOCABULARY).');
 
-		$attrib = array('rdf:ID' => 'PhpTrait');
-		$this->my_Xml_Object->tag_open($this, "pedl:Object_Class", $attrib);
-		$this->my_Xml_Object->tag_close($this, "pedl:Object_Class");
+		$vokabular_xml = file_get_contents($vokabular);
+		$this->my_Xml_Object->load_Stream($vokabular_xml, 0, "XML");
 
-		$attrib = array('rdf:ID' => 'PhpProperty');
-		$this->my_Xml_Object->tag_open($this, "pedl:Object_Parameter", $attrib);
-		$this->my_Xml_Object->tag_close($this, "pedl:Object_Parameter");
-
-		$attrib = array('rdf:ID' => 'PhpConstant');
-		$this->my_Xml_Object->tag_open($this, "pedl:Object_Parameter", $attrib);
-		$this->my_Xml_Object->tag_close($this, "pedl:Object_Parameter");
-		
-		$attrib = array('rdf:ID' => 'System');
-		$this->my_Xml_Object->tag_open($this, "PhpClass", $attrib);
-		$this->my_Xml_Object->tag_close($this, "PhpClass");
-		
-		$attrib = array('rdf:ID' => 'Variable');
-		$this->my_Xml_Object->tag_open($this, "PhpParameter", $attrib);
-		$this->my_Xml_Object->tag_close($this, "PhpParameter");
-		
-		$attrib = array('rdf:ID' => 'System.Parser');
-		$this->my_Xml_Object->tag_open($this, "Variable", $attrib);
-		$this->my_Xml_Object->tag_close($this, "Variable");
-		
-		$attrib = array('rdf:ID' => 'System.Database');
-		$this->my_Xml_Object->tag_open($this, "Variable", $attrib);
-		$this->my_Xml_Object->tag_close($this, "Variable");
-		
-		$attrib = array('rdf:ID' => 'System.FuncTree');
-		$this->my_Xml_Object->tag_open($this, "Variable", $attrib);
-		$this->my_Xml_Object->tag_close($this, "Variable");
-		
-		$attrib = array('rdf:ID' => 'System.Content');
-		$this->my_Xml_Object->tag_open($this, "Variable", $attrib);
-		$this->my_Xml_Object->tag_close($this, "Variable");
-		
-		$attrib = array('rdf:ID' => 'System.CurRef');
-		$this->my_Xml_Object->tag_open($this, "Variable", $attrib);
-		$this->my_Xml_Object->tag_close($this, "Variable");
-
-		$attrib = array('rdf:ID' => 'System.EffBranch');
-		$this->my_Xml_Object->tag_open($this, "Variable", $attrib);
-		$this->my_Xml_Object->tag_close($this, "Variable");
-		
-		$attrib = array('rdf:ID' => 'System.Exception');
-		$this->my_Xml_Object->tag_open($this, "Variable", $attrib);
-		$this->my_Xml_Object->tag_close($this, "Variable");
-		
 		$attrib = null;
 		$this->my_Xml_Object->tag_open($this, "System", $attrib);
 		
@@ -263,59 +211,6 @@ public function set_CurRef($new){ $this->obj_cur_ref->setdata($new,0);}
 				
 		$this->my_Xml_Object->tag_close($this, "PhpParameter");
 		
-		$attrib = array('rdf:ID' => 'Class_Collection');
-		$this->my_Xml_Object->tag_open($this, "owl:Class", $attrib);
-		$this->my_Xml_Object->tag_close($this, "owl:Class");
-		
-		$attrib = array('rdf:ID' => 'Class_Instance');
-		$this->my_Xml_Object->tag_open($this, "owl:Class", $attrib);
-		$this->my_Xml_Object->tag_close($this, "owl:Class");
-		
-		
-		//$this->my_Xml_Object->create_Ns_Node("owl:Class");
-		//$this->my_Xml_Object->set_node_attrib('rdf:ID','Class_Collection');
-		//$this->my_Xml_Object->parent_node();
-		
-		$attrib = array('rdf:about' => '#has_method');
-		$this->my_Xml_Object->tag_open($this, "rdf:Property", $attrib);
-		
-			$attrib = array('rdf:resource' => '#PhpClass');
-			$this->my_Xml_Object->tag_open($this, "rdfs:domain", $attrib);
-			$this->my_Xml_Object->tag_close($this, "rdfs:domain");
-
-			$attrib = array('rdf:resource' => '#PhpMethod');
-			$this->my_Xml_Object->tag_open($this, "rdfs:range", $attrib);
-			$this->my_Xml_Object->tag_close($this, "rdfs:range");
-			
-		$this->my_Xml_Object->tag_close($this, "rdf:Property");
-		
-		$attrib = array('rdf:about' => '#has_constructor');
-		$this->my_Xml_Object->tag_open($this, "rdf:Property", $attrib);
-		
-			$attrib = array('rdf:resource' => '#PhpClass');
-			$this->my_Xml_Object->tag_open($this, "rdfs:domain", $attrib);
-			$this->my_Xml_Object->tag_close($this, "rdfs:domain");
-
-			$attrib = array('rdf:resource' => '#PhpConstructor');
-			$this->my_Xml_Object->tag_open($this, "rdfs:range", $attrib);
-			$this->my_Xml_Object->tag_close($this, "rdfs:range");
-			
-		$this->my_Xml_Object->tag_close($this, "rdf:Property");
-
-		$attrib = array('rdf:about' => '#has_parameter');
-		$this->my_Xml_Object->tag_open($this, "rdf:Property", $attrib);
-		
-			$attrib = array('rdf:resource' => '#PhpMethod');
-			$this->my_Xml_Object->tag_open($this, "rdfs:domain", $attrib);
-			$this->my_Xml_Object->tag_close($this, "rdfs:domain");
-
-			$attrib = array('rdf:resource' => '#PhpParameter');
-			$this->my_Xml_Object->tag_open($this, "rdfs:range", $attrib);
-			$this->my_Xml_Object->tag_close($this, "rdfs:range");
-			
-		$this->my_Xml_Object->tag_close($this, "rdf:Property");
-		
-		
 		$attrib = null;
 		$this->my_Xml_Object->tag_open($this, "Class_Collection", $attrib);
 		
@@ -331,42 +226,6 @@ public function set_CurRef($new){ $this->obj_cur_ref->setdata($new,0);}
 
 		$this->my_Xml_Object->tag_close($this, "Class_Instance");
 
-		/* Die tree-Knoten als Funktionen benennen - Vokabular, kein Verhalten.
-		*
-		*  "Funktion" wird aus pedl:Object_Class GEPRAEGT, genau wie PhpInterface und
-		*  PhpTrait weiter oben: das Praegen hier macht den Namen ueberhaupt erst als Tag
-		*  brauchbar, eine PHP-Klasse je Tag braucht es nicht.
-		*
-		*  Danach drei AUSSAGEN ueber Knoten, die es schon gibt. Entscheidend ist rdf:about
-		*  mit der VOLLEN URI: rdf:ID praegt einen neuen Namen im Bogen
-		*  (@registry_surface_system#...), rdf:about mit '#' nimmt den Namensraum davor
-		*  (rdf_about.php:83) - also den tree-Knoten aus classes/ns/tree/class_index.php.
-		*
-		*  Die Aussage nimmt nichts weg: set_Object_to_Namespace (xml_multitree_ns.php:1571)
-		*  gibt bei belegtem Namen den vorhandenen Eintrag zurueck und ignoriert den neuen.
-		*  TREE_tree bleibt die Klasse, die das Rendern traegt; hier steht nur, WAS sie ist.
-		*
-		*  Warum nicht unter pedl:Object_Funktion: die ist die GEBUNDENE Funktion, sie
-		*  braucht einen Empfaenger (getRefprev()->getobj(), eine PHP-Methode ueber
-		*  Reflection). tree:tree hat keinen - sie wird ueber ihren Namen gerufen, ihre
-		*  Argumente sind die restliche Namensliste der Nachricht. Das ist eine FREIE
-		*  Funktion. Beide sind Funktionen, keine ist die andere.
-		*/
-		$attrib = array('rdf:ID' => 'Funktion');
-		$this->my_Xml_Object->tag_open($this, "pedl:Object_Class", $attrib);
-		$this->my_Xml_Object->tag_close($this, "pedl:Object_Class");
-
-		$attrib = array('rdf:about' => 'http://www.trscript.de/tree#tree');
-		$this->my_Xml_Object->tag_open($this, "Funktion", $attrib);
-		$this->my_Xml_Object->tag_close($this, "Funktion");
-
-		$attrib = array('rdf:about' => 'http://www.trscript.de/tree#first');
-		$this->my_Xml_Object->tag_open($this, "Funktion", $attrib);
-		$this->my_Xml_Object->tag_close($this, "Funktion");
-
-		$attrib = array('rdf:about' => 'http://www.trscript.de/tree#final');
-		$this->my_Xml_Object->tag_open($this, "Funktion", $attrib);
-		$this->my_Xml_Object->tag_close($this, "Funktion");
 
 		$this->my_Xml_Object->use_ns_def_strict(false);
 

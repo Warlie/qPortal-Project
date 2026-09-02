@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Das Vokabular des Registrierungsbogens @registry_surface_system.
+
+	Bis 2026-09 stand das hier als tag_open()-Folge in TreeEngine::build_up().
+	Es ist reine Deklaration: geprägt wird ein Name, damit er als Tag brauchbar
+	ist — eine PHP-Klasse je Tag braucht es nicht. STWs eigener Kommentar an der
+	alten Stelle: "Coining them here is what makes them usable as tags at all."
+
+	NICHT hier, und das ist die Naht: der Bindungsblock. <System> mit seiner
+	pedl:ParameterCollection hängt echte Objekte in den Baum (cdata_ref auf
+	Parser, Datenbank, ContentGenerator) und greift zwei Elemente ab
+	(get_Element für CurRef und EffBranch). Ein Verweis auf ein laufendes Objekt
+	lässt sich nicht aufschreiben — der Block bleibt in PHP. Ebenso die beiden
+	rdf:Bag-Behälter, die zur Laufzeit gefüllt werden.
+
+	Geladen wird diese Datei von TreeEngine::build_up(), NACH createTree() und
+	VOR dem Bindungsblock: createTree legt den Namensraum mit seinem nativen
+	Knoten an (ohne den bricht das Laden mit "native namespace is missing" ab),
+	und der Bindungsblock benutzt Tags, die hier erst geprägt werden.
+	Der Pfad steht in config/default.ini unter [runtime].
+
+	⚠ Wer hier einen Namen ergänzt, prägt ihn — und wer die Prägung vergisst,
+	merkt nichts: use_ns_def_strict(true) WIRFT NICHT bei einem ungeprägten Tag,
+	es fällt auf einen generischen Interface_node zurück. Der Tag funktioniert,
+	die Seite rendert, nur die Bedeutung ist weg.
+-->
+<rdf:RDF
+	xmlns="@registry_surface_system"
+	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns"
+	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema"
+	xmlns:owl="http://www.w3.org/2002/07/owl"
+	xmlns:pedl="http://www.w3.org/2006/05/pedl-lib"
+	xmlns:tree="http://www.trscript.de/tree">
+
+	<owl:Ontology rdf:about="@registry_surface_system"/>
+
+	<!-- Geprägt aus den pedl-Grundlagen. Interfaces und Traits sind Deklarationen
+	     wie eine Klasse und kommen aus derselben Grundlage; Eigenschaften und
+	     Konstanten sind benannte Plätze und nehmen die Parameter-Grundlage. -->
+	<pedl:Object_Class       rdf:ID="PhpClass"/>
+	<pedl:Object_Funktion    rdf:ID="PhpMethod"/>
+	<pedl:Object_Constructor rdf:ID="PhpConstructor"/>
+	<pedl:Object_Parameter   rdf:ID="PhpParameter"/>
+	<pedl:Object_Class       rdf:ID="PhpInterface"/>
+	<pedl:Object_Class       rdf:ID="PhpTrait"/>
+	<pedl:Object_Parameter   rdf:ID="PhpProperty"/>
+	<pedl:Object_Parameter   rdf:ID="PhpConstant"/>
+
+	<!-- Zweite Stufe: aus den geprägten Namen wieder Namen prägen. -->
+	<PhpClass     rdf:ID="System"/>
+	<PhpParameter rdf:ID="Variable"/>
+
+	<Variable rdf:ID="System.Parser"/>
+	<Variable rdf:ID="System.Database"/>
+	<Variable rdf:ID="System.FuncTree"/>
+	<Variable rdf:ID="System.Content"/>
+	<Variable rdf:ID="System.CurRef"/>
+	<Variable rdf:ID="System.EffBranch"/>
+	<Variable rdf:ID="System.Exception"/>
+
+	<owl:Class rdf:ID="Class_Collection"/>
+	<owl:Class rdf:ID="Class_Instance"/>
+
+	<rdf:Property rdf:about="#has_method">
+		<rdfs:domain rdf:resource="#PhpClass"/>
+		<rdfs:range  rdf:resource="#PhpMethod"/>
+	</rdf:Property>
+
+	<rdf:Property rdf:about="#has_constructor">
+		<rdfs:domain rdf:resource="#PhpClass"/>
+		<rdfs:range  rdf:resource="#PhpConstructor"/>
+	</rdf:Property>
+
+	<rdf:Property rdf:about="#has_parameter">
+		<rdfs:domain rdf:resource="#PhpMethod"/>
+		<rdfs:range  rdf:resource="#PhpParameter"/>
+	</rdf:Property>
+
+	<!-- Die tree-Knoten als Funktionen benennen: Vokabular, kein Verhalten.
+	     rdf:about mit VOLLER URI, nicht rdf:ID — beide lösen am '#' auf
+	     (rdf_ID.php:57 / rdf_about.php:83): ohne '#' gilt der Namensraum dieses
+	     Bogens, also ein NEUER Name; mit '#' der davor, also der vorhandene
+	     tree-Knoten aus classes/ns/tree/class_index.php.
+	     tree:tree ist eine FREIE Funktion — sie wird über ihren Namen gerufen,
+	     die Argumente sind die restliche Namensliste der Nachricht. Darum nicht
+	     pedl:Object_Funktion, die braucht einen Empfänger. -->
+	<pedl:Object_Class rdf:ID="Funktion"/>
+	<Funktion rdf:about="http://www.trscript.de/tree#tree"/>
+	<Funktion rdf:about="http://www.trscript.de/tree#first"/>
+	<Funktion rdf:about="http://www.trscript.de/tree#final"/>
+
+</rdf:RDF>
