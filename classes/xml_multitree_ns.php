@@ -720,10 +720,31 @@ function delete_index($index)
 			
 		   }
 		   else
-		    if(!(false === ($tmp = strpos($k,':'))))
+		    /* Ein blankes xmlns="..." ist eine NAMENSRAUM-DEKLARATION, kein Attribut -
+		    *  genau wie xmlns:rdf="...". Es hat nur keinen Doppelpunkt und fiel darum in
+		    *  den else-Zweig unten, wo es als gewoehnliches Attribut im aktuellen
+		    *  Default-Namensraum gesucht wurde - dort steht es nie, und unter
+		    *  use_ns_def_strict(true) war das der Abbruch. Die Deklaration SELBST hat nie
+		    *  gefehlt: add_new_namespace_from_attributes traegt sie ordentlich ein
+		    *  (:642ff, unter dem Baumindex). Es starb erst danach, beim zweiten Blick auf
+		    *  dasselbe Attribut. Der Prefix-Zweig ueberlebte nur, weil er keine
+		    *  strict-Pruefung hat. Hier wird die Asymmetrie geschlossen, nicht mehr:
+		    *  beide Formen gehen denselben Weg.
+		    *  ⚠ Die Mehrdeutigkeit von prefixes[0] (Baumindex 0 gegen die Abbildung
+		    *  'xmlns'->0 zwei Zeilen tiefer) bleibt unberuehrt - das ist der eigene
+		    *  Umbau, den STWs TODOs bei :584 und :611 meinen. */
+		    if(!(false === ($tmp = strpos($k,':'))) || 'xmlns' === strtolower($k))
 		    {
+					if(false === $tmp)
+					{
+						$prefix     = 'xmlns';
+						$attribname = $k;
+					}
+					else
+					{
 					$prefix = substr($k,0,$tmp);
 					$attribname = substr($k,$tmp + 1);
+					}
 					
 					//var_dump($this->prefixes, $prefix, $this->prefixes[$prefix]);
 					if('xmlns' == $prefix)$prefix = 0;
