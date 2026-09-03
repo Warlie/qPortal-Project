@@ -1615,9 +1615,19 @@ echo $this->idx . " gibt es nicht";
         // Wenn die Ressource existiert, geben wir die existierende Instanz zurück
         // und IGNORIEREN das neue $obj, um die Konsistenz zu gewährleisten.
         $existing_obj = &$this->namespace_frameworks[$namespace_uri]['node'][$qname];
-        
-        // Löse hier ggf. ein 'DuplicateURI'-Event aus, falls du es protokollieren willst.
-        
+
+        /* Es kann nur einen geben - stehen zwei da, ist das vermutlich ein Fehler.
+        *  Verdraengt wird trotzdem nichts; der vorhandene Eintrag bleibt und der neue
+        *  Knoten bekommt still keinen Namen. Genau dieses Stille ist das Problem,
+        *  darum wenigstens eine Zeile im Log. Kein echo - das zerschiesst
+        *  JSON_RESPONSE und jede Serialisierung. */
+        global $logger_class;
+
+        if (isset($logger_class) && is_object($logger_class))
+            $logger_class->setAssert(
+                "WARNING duplicate URI '" . $namespace_full . "' - the existing entry stays,"
+                . " the new node keeps no name", 3);
+
         return $existing_obj; 
     }
 
