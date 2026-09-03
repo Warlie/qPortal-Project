@@ -1796,6 +1796,44 @@ echo $this->idx . " gibt es nicht";
 	   if($id < 0)$id = $this->idx;
 	   return $this->prefixes_inv[$namespace][$id];
    }
+
+   /**
+   *	Loest einen Praefix im Namensraum GENAU DIESES Baums auf.
+   *
+   *	get_NS($praefix) schluesselt die Praefixtabelle nach Praefixnamen, nicht nach
+   *	Baumindex, und nimmt den zuletzt registrierten Eintrag - gleich aus welchem
+   *	Dokument er stammt. Zwei geladene Dokumente, die denselben Praefix verschieden
+   *	binden, teilen sich damit still den Namensraum des zuletzt geladenen.
+   *
+   *	Welches Dokument welchen Praefix gebunden hat, steht bereits in prefixes_inv
+   *	(Namensraum -> idx -> Praefix, gefuellt in add_new_namespace_from_attributes).
+   *	Hier wird diese Tabelle nur in der anderen Richtung gelesen.
+   *
+   *	Hat dieser Baum den Praefix nicht selbst gebunden, faellt die Methode auf
+   *	get_NS() zurueck - was heute aufloest, loest weiter auf.
+   */
+   function get_NS_of_Tree($prefix,$id = -1)
+   {
+	   if($id < 0)$id = $this->idx;
+
+	   // TODO Praefixe sind in XML case-sensitiv, add_new_namespace_from_attributes legt sie
+	   // aber klein ab (:625). Hier wird deshalb klein gesucht - richtig waere, sie beim
+	   // Ablegen zu belassen; das trifft dann auch get_NS() und get_Prefix().
+	   $prefix = strtolower($prefix);
+
+	   if($prefix !== '')
+	   {
+		   $found = null;
+
+		   foreach($this->prefixes_inv as $namespace => $per_tree)
+			   if(isset($per_tree[$id]) && $per_tree[$id] === $prefix)
+				   $found = $namespace;
+
+		   if(!is_null($found))return $found;
+	   }
+
+	   return $this->get_NS($prefix,$id);
+   }
    
    public function create_Ns_Node($prefix_Q_name, $stamp = null, ?array $attrib = null,$pos = -1 )
    {

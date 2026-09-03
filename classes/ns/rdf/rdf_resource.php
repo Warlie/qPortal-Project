@@ -74,9 +74,9 @@ return new RDF_resource();
 				}
 				else 
 				{
-				$namespace = substr($data,1,$posinstr);
+				$namespace = substr($data,0,$posinstr);
 				$qname = substr($data,$posinstr + 1);
-				$namespace = $this->get_parser()->get_NS($namespace,$this->get_idx());
+				$namespace = $this->get_parser()->get_NS_of_Tree($namespace,$this->get_idx());
 				}
 				$namespace = $namespace . '#' . $qname;
 			}
@@ -151,9 +151,9 @@ return new RDF_resource();
 				}
 				else 
 				{
-				$namespace = substr($data,1,$posinstr);
+				$namespace = substr($data,0,$posinstr);
 				$qname = substr($data,$posinstr + 1);
-				$namespace = $this->get_parser()->get_NS($namespace,$this->get_idx());
+				$namespace = $this->get_parser()->get_NS_of_Tree($namespace,$this->get_idx());
 				}
 				$namespace = $namespace . '#' . $qname;
 			}
