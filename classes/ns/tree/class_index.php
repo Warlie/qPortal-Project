@@ -12,6 +12,7 @@ require_once('tree_addtree.php');
 require_once('tree_content.php');
 require_once('tree_program.php');
 require_once('tree_first.php');
+require_once('tree_name.php');
 require_once('tree_variable.php');
 require_once('tree_template.php');
 require_once('tree_main.php');
@@ -79,6 +80,13 @@ class TREE_factory
 			$this->node['header'] = new TREE_header('header', $ns);
 			$this->node['result'] = new TREE_result('result', $ns);
 			$this->node['id'] = new Interface_node('id', $ns);
+
+			/* tree:name ist ein Attribut - und Attribute sind Knoten. Der Prototyp
+			*  gehoert darum in $this->node und nicht in $this->attrib: nachgeschlagen
+			*  wird ein Attribut ueber namespace_frameworks[ns]['node'][name]
+			*  (xml_multitree_ns.php:691), genau wie rdf:ID und rdf:about es tun
+			*  (rdf/class_index.php:85). $this->attrib wird von niemandem gelesen. */
+			$this->node['name'] = new TREE_name('name', $ns);
 			
 			$this->nativ->set_is_Class();
 			foreach ($this->node as $value)

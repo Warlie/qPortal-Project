@@ -104,4 +104,18 @@
 	<Funktion rdf:about="http://www.trscript.de/tree#first"/>
 	<Funktion rdf:about="http://www.trscript.de/tree#final"/>
 
+	<!-- tree:name als Bezeichner - aber nur, wo das eine Aussage ist.
+	     subPropertyOf sagt: tree:name tut, was rdf:ID tut. Was es NICHT sagt, und
+	     was der Knoten selbst entscheidet (classes/ns/tree/tree_name.php): es tut
+	     das nur auf tree und final, und nur wenn der Wert selbst einen Namensraum
+	     nennt ("praefix;Name" oder ein voller URI). Ein blanker Name loest gegen
+	     den Default-Namensraum auf, den sich 571 Dokumente teilen - dort ist er
+	     kein Bezeichner, sondern ein Flur zum Durchlaufen.
+	     ⚠ rdfs:subPropertyOf traegt heute kein Verhalten (rdfs_subPropertyOf.php
+	     ist eine leere Knotenklasse, wie subClassOf). Diese Zeile ist die Aussage
+	     darueber, was tree:name IST; getan wird es im Knoten. -->
+	<rdf:Property rdf:about="http://www.trscript.de/tree#name">
+		<rdfs:subPropertyOf rdf:resource="http://www.w3.org/1999/02/22-rdf-syntax-ns#ID"/>
+	</rdf:Property>
+
 </rdf:RDF>
