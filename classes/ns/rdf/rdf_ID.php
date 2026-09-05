@@ -95,6 +95,8 @@ function &get_Instance()
 				//echo $namespace2 . ' ' . $new_obj->full_URI() . "--------------------------------------------- <br>\n";
 				$this->get_parser()->set_Object_to_Namespace($namespace2,$new_obj);
 				$new_obj->set_is_Class();
+				/* Traeger merkt sich die Praegung, siehe Interface_node::has_coined() */
+				$this->getRefprev()->set_has_coined();
 	//echo $this->getRefprev()->ManyInstance();
 	}	
 	

@@ -13,9 +13,17 @@
 *
 *	    require_once(__DIR__ . '/../bootstrap.php');
 *
-*	    $tree = new xml_ns();
+*	    $tree = new xml_semantic();
+*	    $tree->setNewTree($kennung);
 *	    $tree->load_Stream($xml, 0, "XML");
 *	    $treffer = $tree->collect_nodes('http://www.trscript.de/tree#param');
+*
+*	⚠ Die SPITZE der Baumschicht nehmen, nicht xml_ns. Die Produktion baut sie auch
+*	(class_Contentgenerator.php:82). Wer tiefer ansetzt, verliert Methoden, die
+*	Knotenklassen aufrufen — ein Dokument mit <owl:Ontology> stirbt unter xml_ns an
+*	"Call to undefined method xml_ns::currentOntology()" (rdf_about.php:57), weil
+*	currentOntology erst auf xml_semantic existiert. Der Fehler sieht nach einem
+*	kaputten Dokument aus und ist ein zu tief gewaehlter Pruefstandskopf.
 *
 *	Warnungen: die Baumschicht schreibt beim Laden reichlich Notices und Warnings
 *	(Bestand). Wer sie nicht sehen will, ruft mit -d error_reporting=E_ERROR auf.

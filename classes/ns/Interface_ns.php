@@ -51,6 +51,7 @@
 * linkToClass() : get link to class-objekt
 * ManyInstance(): show many Instance-objects
 * is_Class(): selects between classes and instances
+* has_coined(): tells whether a name on this node has entered a namespace
 * is_Node($nodename): checks for its own an its parentnodenames
 * is_Command($nodename,$funcname)
 * parseCommand($command);
@@ -92,6 +93,9 @@ var $cdata = false;
 
 var $index = 0;
 private $is_Class = false;
+/* Hat ein Name an diesem Knoten einen Namensraum betreten? Gesetzt von den drei
+*  Stellen, die praegen — tree:name, rdf:ID, rdf:about. Siehe has_coined(). */
+private $has_coined = false;
 private $secRequest = 0;
 
 //for Namespace
@@ -238,6 +242,29 @@ public function set_is_Instance()
 
 public function is_Class()
 {return $this->is_Class;}
+
+/**
+*	Hat dieser Knoten gepraegt?
+*
+*	Ein Knoten, dessen Name einen Namensraum betreten hat, ist BENANNT: was an ihm
+*	steht, ist eine Aussage ueber etwas, das auch anderswo gemeint werden kann.
+*	Ein Knoten ohne Praegung ist ein Flurstueck — seine Eigenschaften beschreiben
+*	hoechstens, was er tut, und gelten nur hier.
+*
+*	Der Schalter sagt, welcher von beiden es ist. Er beantwortet damit die Frage,
+*	die man dem Knoten sonst nicht ansieht: ein ungepraegter Name liefert trotzdem
+*	ein Objekt (ein generischer Interface_node aus alt_namespace_factory), eine
+*	fehlende Praegung faellt also von selbst nicht auf.
+*
+*	⚠ Er wird NICHT aus dem Dokument gesetzt, sondern von der Praegung selbst
+*	(tree_name.php, rdf_ID.php, rdf_about.php). Ein Attribut, das ihn behaupten
+*	koennte, koennte auch luegen.
+*/
+public function set_has_coined()
+{ $this->has_coined = true ;}
+
+public function has_coined()
+{return $this->has_coined;}
 
 function full_URI()
 {
@@ -1424,6 +1451,26 @@ private function callRegContent(
 
         $entry = $behaviorRegistry->$commandName;
 
+        /* Die Einstufung steht neben der Closure (addSecurity), geprueft wird sie
+        *  hier — an der einen Stelle, durch die jeder Befehl laeuft.
+        *
+        *  ⚠ Die Absage ist ein `false`, genau wie ein unbekannter Befehl eine Zeile
+        *  weiter oben. Damit ist "zu hoch" von "gibt es nicht" nicht zu
+        *  unterscheiden; anders waere die Nichtanzeige umsonst. Was passiert ist,
+        *  steht im Log auf Stufe 0 — innen alles, aussen nichts. */
+        $stufe = $entry["security"] ?? 0;
+
+        if ($stufe > 0 && is_object($cg = $this->get_contentGen()) && $stufe > $cg->clearance())
+        {
+            /* ⚠ Nicht getKey(): das nennt den ZULETZT REGISTRIERTEN Befehl, nicht den
+            *  abgewiesenen. Innen steht der volle Sachverhalt, nach aussen geht nichts. */
+            $logger_class->setAssert(
+                'ABGEWIESEN: ' . $commandName . ' verlangt Stufe ' . $stufe
+                . ', der Aufrufer hat ' . $cg->clearance(), 0);
+
+            return false;
+        }
+
         if ($entry["log"] !== false) {
             $msg = is_string($entry["log"])
                 ? $entry["log"]
@@ -1744,7 +1791,7 @@ public function __debugInfo(){
 		$way_to[$i] = $this->way_in[$i]->full_URI();
 
 	
-	return  ['idx'=>$this->get_idx(), 'type'=>$this->type,'is_Class'=> $this->is_Class(), 'namespace'=>$this->namespace, 'name'=>$this->name, 'attribute_ns'=>$this->attrib_ns , "node_ns"=>['way_out'=>$way_from, 'way_in'=>$way_to]]; /*                              $obj->name =  $this->name;
+	return  ['idx'=>$this->get_idx(), 'type'=>$this->type,'is_Class'=> $this->is_Class(),'has_coined'=> $this->has_coined(), 'namespace'=>$this->namespace, 'name'=>$this->name, 'attribute_ns'=>$this->attrib_ns , "node_ns"=>['way_out'=>$way_from, 'way_in'=>$way_to]]; /*                              $obj->name =  $this->name;
                                 $obj->attrib = $this->attrib;
                                 $obj->data =  $this->data;
                                 $obj->namespace =  $this->namespace;

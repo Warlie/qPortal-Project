@@ -90,6 +90,11 @@ function &get_Instance()
 
 		$this->get_parser()->set_Object_to_Namespace($namespace . '#' . $qname, $new_obj);
 		$new_obj->set_is_Class();
+
+		/* Der Traeger merkt sich, dass er gepraegt hat — siehe
+		*  Interface_node::has_coined(). Erst damit laesst sich ein benanntes Zimmer
+		*  von einem blossen Flurstueck unterscheiden, ohne den Namen nachzuschlagen. */
+		$carrier->set_has_coined();
 	}
 
 }

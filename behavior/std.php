@@ -243,6 +243,61 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 		. ' ist danach der komplette Loginhalt statt des Ausgabedokuments - so werden die Spuren'
 		. ' der inneren Kommandos sichtbar. Keine Attribute.');
 
+    /* __to_owner : die Antwort geht an den Fragenden.
+    *
+    *  Der Befehl kennt den Fragenden NICHT. Er reicht den Wert an den Owner und
+    *  faellt damit auf eine einzige Handlung zusammen — moeglich, seit der
+    *  ContentGenerator selbst ein setdata() hat (2026-09-05, STW) und einen
+    *  Aufrufer von aussen genauso bedient wie ein Knoten den naechsten.
+    *
+    *  Wie die Antwort dann AUSSIEHT, entscheidet der Empfaenger, nicht dieser
+    *  Befehl: ein Knoten legt sie in seinen Textbereich, der ContentGenerator
+    *  sammelt sie und gibt sie aus. Ein Kommando, das MIME-Typen kennt, waere
+    *  an der falschen Stelle klug.
+    */
+    $reg->__to_owner = function($node, $obj, $event)
+		{
+			global $logger_class;
+
+			$structur = $event->get_Result_Array();
+
+			/* Erst erwerben: haengt ein Value dran, wird es gefeuert. */
+			if(isset($structur['Command']['Value']))
+				$node->hold_messages($structur['Command']['Value'], $obj);
+
+			/* Der Wert ist der Knoten, auf dem der Befehl STEHT — dieselbe Quelle,
+			*  aus der __get_data liest.
+			*  ⚠ Nicht $obj->get_node(): dort steht zwar die Ablage von <result>
+			*  (tree_result.php), aber eben auch, was ein vorheriger Befehl liegen
+			*  gelassen hat. Gemessen: nach __find_node auf einen final-Knoten meldete
+			*  get_node() weiterhin den indextree. */
+			$eigner = $obj->get_owner();
+
+			if(!is_object($eigner) || !method_exists($eigner, 'setdata'))
+			{
+				$logger_class->setAssert('__to_owner: der Owner kann nichts aufnehmen ('
+					. (is_object($eigner) ? get_class($eigner) : gettype($eigner))
+					. ') (behavior/std.php:__to_owner)', 0);
+
+				return false;
+			}
+
+			$eigner->setdata($node, 0, false, false);
+
+			$logger_class->setAssert('__to_owner: Wert an "'
+				. (method_exists($eigner, 'full_URI') ? $eigner->full_URI() : get_class($eigner))
+				. '" uebergeben (behavior/std.php:__to_owner)', 5);
+
+			return true;
+		};
+
+	$reg->addDescription(
+		'Reicht ein erworbenes Ergebnis an den Fragenden weiter. Haengt ein Value daran, wird es'
+		. ' zuerst gefeuert. Der Wert ist der Knoten, auf dem der Befehl steht; er geht an den'
+		. ' Owner des Ereignisses - im Baum ein Knoten, von aussen der ContentGenerator, in'
+		. ' beiden Faellen derselbe Aufruf. Wie die Antwort aussieht, entscheidet der Empfaenger.'
+		. ' Keine Attribute.');
+
     /* __info_ns : welche Namensraeume kennt die Befehlsregistry.
     *  Ein Skript laeuft nur auf start - __info_ns und __info sind Aspekte daneben
     *  und antworten selbst, statt ein Dokument zu rendern.

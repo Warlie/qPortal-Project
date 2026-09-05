@@ -63,6 +63,7 @@ private $injectedLine = false;
 private $outputMode = OUTPUT;
 private $responseBuffer = null;
 private $responseMime = 'application/json';
+private $result_for_output = []; // external call could return data by calling __to_owner
 
 private $foundAPage = false;
 
@@ -236,45 +237,143 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 			return '';
 	}
 	
-	function getAccess()
-	{
+	/* Die Grundstufe dieses Laufs — aus dem API-Schluessel gesetzt, sonst aus der
+	*  Sitzung abgeleitet. Nicht zu verwechseln mit dem Stapel darueber. */
+	private $clearance_base = null;
 
+	/* Der Stapel. Ein Nutzer ruft einen Agenten, der einen Agenten ruft, der einen
+	*  Agenten ruft — jede Ebene bekommt ihre eigene Stufe und gibt sie danach
+	*  zurueck (STW). Er wohnt in tree:access: dort wird betreten und verlassen. */
+	private array $clearance_stack = [];
+
+	/**
+	*	Welche Sicherheitsstufe gilt gerade?
+	*
+	*	Oben auf dem Stapel, sonst die Grundstufe, sonst die Klasse aus der Sitzung.
+	*
+	*	⚠ Grundlinie 0, nicht -1: Stufe 0 heisst "starten erlaubt, keine
+	*	Systemabfragen", und genau das darf auch ein Anonymer. Das ist NICHT dieselbe
+	*	Grundlinie wie im Baum-Waechter (mayEnter), die weiterhin -1 ist und noch
+	*	nicht entschieden — bewusst getrennt, statt sie still zu koppeln.
+	*/
+	public function clearance(): int
+	{
+		if(!empty($this->clearance_stack))
+			return end($this->clearance_stack);
+
+		if(!is_null($this->clearance_base))
+			return $this->clearance_base;
+
+		return isset($_SESSION['http://www.auster-gmbh.de/surface#securityclass'])
+			? intval($_SESSION['http://www.auster-gmbh.de/surface#securityclass'])
+			: 0;
+	}
+
+	/**
+	*	Die Grundstufe des Laufs setzen — beim EINTRITT, aus dem API-Schluessel.
+	*
+	*	Das ist die einzige Stelle, an der eine Stufe steigen kann. Sie liegt
+	*	ausserhalb der Dokumente, und das ist der Punkt: was die Grenze definiert,
+	*	darf nicht innerhalb der Grenze stehen.
+	*/
+	public function setClearance(int $stufe)
+	{
+		$this->clearance_base = $stufe;
+	}
+
+	/**
+	*	Eine Ebene betreten.
+	*
+	*	⚠ NIEMALS hoeher als das, was gerade gilt — darum das min(). Ohne die
+	*	Klammer koennte ein Dokument sich mit <access securitylevel="20"> selbst
+	*	zum Eigentuemer erklaeren, und die ganze Einstufung waere Zierde. Senken
+	*	ist erlaubt und nuetzlich: so gibt man einem untergeordneten Agenten
+	*	weniger Recht, als man selbst hat.
+	*/
+	public function pushClearance(int $stufe)
+	{
+		$this->clearance_stack[] = min($stufe, $this->clearance());
+	}
+
+	/** Die Ebene wieder verlassen. */
+	public function popClearance()
+	{
+		array_pop($this->clearance_stack);
+	}
+
+	/** Wie tief steht der Stapel? Fuer Diagnose und Pruefstand. */
+	public function clearance_depth(): int
+	{
+		return count($this->clearance_stack);
+	}
+
+	/**
+	*	Ein Attribut lesen — vom uebergebenen Knoten oder, ohne ihn, von der
+	*	aktuellen Parserposition. Damit koennen Menue (Position) und Baum-Waechter
+	*	(Knoten in der Hand) dieselbe Pruefung benutzen.
+	*/
+	private function attrib_of($node, $uri)
+	{
+		return is_object($node) ? $node->get_ns_attribute($uri)
+		                        : $this->XMLlist->show_ns_attrib($uri);
+	}
+
+	/**
+	*	DARF BETRETEN WERDEN? Sektor und Sicherheitsstufe, sonst nichts.
+	*
+	*	Herausgeloest aus getAccess(), weil das vier verschiedene Fragen beantwortet:
+	*	Sektor und Stufe sind ZUTRITT, `value` und der fuehrende Punkt sind
+	*	SICHTBARKEIT im Menue, `device` ist Darstellung. Fuers Menue faellt das
+	*	zusammen — dort heisst alles "nicht anzeigen". Fuer den Baum-Waechter nicht:
+	*	ein Dienst ohne `value` oder mit fuehrendem Punkt (.view, .save_doc) ist
+	*	unsichtbar und trotzdem aufrufbar. Wer dort die ganze Funktion nimmt, sperrt
+	*	die halbe Instanz aus.
+	*
+	*	Der Sektor ist eine EXISTENZaussage und wird von keiner Stufe ueberstimmt —
+	*	darum die Klammerung, die in den beiden Baumkopien gefehlt hat.
+	*/
+	public function mayEnter($node = null)
+	{
 		$result = true;
 
-		if($tmp = $this->XMLlist->show_ns_attrib('http://www.trscript.de/tree#sector') )	
+		if($tmp = $this->attrib_of($node, 'http://www.trscript.de/tree#sector'))
 			$result = in_array($tmp, explode(';',
 				(is_null($str = $_SESSION['http://www.auster-gmbh.de/surface#sector']) ? "" : trim($str, ';'))
 				));
 
-			//var_dump($tmp, $_SESSION['http://www.auster-gmbh.de/surface#sector'],  $result);
-				
-		if($tmp =  intval($this->XMLlist->show_ns_attrib('http://www.trscript.de/tree#securitylevel')) )
+		if($tmp = intval($this->attrib_of($node, 'http://www.trscript.de/tree#securitylevel')))
 		{
-			
 			if($_SESSION['http://www.auster-gmbh.de/surface#securityclass'])
 				$sec = intval($_SESSION['http://www.auster-gmbh.de/surface#securityclass']);
 			else
 				$sec = -1;
-				
-			
-			$result = $result  &&  ((($tmp == -1) &&  ($sec == -1)) || (($tmp != -1) &&  ($sec >= $tmp))) ; 
-		}	
-			//var_dump($this->XMLlist->show_ns_attrib('http://www.trscript.de/tree#name'));
-		$result = $result && ( false !== $this->XMLlist->show_ns_attrib('http://www.trscript.de/tree#value'));
-			
-		if ( !(false === ($hidden = strpos( $this->XMLlist->show_ns_attrib('http://www.trscript.de/tree#name'), '.' ) ) )
-		&& intval($hidden) == 0 )$result =false;
-		
+
+			/* -1 ist die Marke "nur fuer Nichtangemeldete": nach der Anmeldung
+			*  verschwindet der Knoten wieder. */
+			$result = $result && ((($tmp == -1) && ($sec == -1)) || (($tmp != -1) && ($sec >= $tmp)));
+		}
+
+		return $result;
+	}
+
+	/**
+	*	DARF IM MENUE ERSCHEINEN? Zutritt plus Sichtbarkeit plus Geraet.
+	*	Verhalten unveraendert; der Zutrittsteil steht jetzt in mayEnter().
+	*/
+	function getAccess($node = null)
+	{
+		$result = $this->mayEnter($node);
+
+		$result = $result && (false !== $this->attrib_of($node, 'http://www.trscript.de/tree#value'));
+
+		if(!(false === ($hidden = strpos((string) $this->attrib_of($node, 'http://www.trscript.de/tree#name'), '.')))
+		&& intval($hidden) == 0) $result = false;
+
 		// Abfrage client
-		if($tmp = $this->XMLlist->show_ns_attrib('http://www.trscript.de/tree#device') )		
-			$result = $result && ((strtoupper($tmp) == 'MOBILE') xor  !$this->isMobileDevice() ) ;
-		
+		if($tmp = $this->attrib_of($node, 'http://www.trscript.de/tree#device'))
+			$result = $result && ((strtoupper($tmp) == 'MOBILE') xor !$this->isMobileDevice());
 
-		//var_dump($result);
-
-		//if($result)echo $this->XMLlist->show_ns_attrib('http://www.trscript.de/tree#device');
-		//echo $this->isMobileDevice();
-	return $result;
+		return $result;
 	}
 	
 	private function isMobileDevice(){
@@ -531,7 +630,7 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		
 		if($this->injectedLine)
 		{
-			$cur_obj->hold_messages($this->injectedLine,new EventObject('',$this,$booh));
+			$cur_obj->hold_messages($this->injectedLine,$this->start_event($booh));
 			if($this->id_output_template)
 				$this->doc_out_template = $this->heap['template'][$this->id_output_template];
 			return true;
@@ -539,7 +638,7 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 
 		$cur_obj->hold_messages(
 				["Identifire"=>"http://www.trscript.de/tree#indextree", "Command"=> ["Name"=> "start" ], "Attribute"=>$path]
-				,new EventObject('',$this,$booh));
+				,$this->start_event($booh));
 
 		
 		/* Kein Knoten hat gerendert -> Route nicht aufgeloest.
@@ -553,6 +652,90 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		}
 }
 	
+
+	/**
+	*	Das Ereignis, mit dem ein Lauf beginnt.
+	*
+	*	Requester und Owner sind hier dasselbe Objekt und trotzdem zwei Dinge: der
+	*	Requester ist, WER fragt (und bleibt es ueber den ganzen Lauf, tree_tree.php:218
+	*	greift darauf durch), der Owner ist, WEM die Antwort gehoert. Auf dem Weg von
+	*	aussen — Intern-Kanal wie Seitenaufruf — ist beides diese Instanz. Ein Knoten,
+	*	der selbst etwas erfragt, setzt den Owner auf sich und bekommt die Antwort
+	*	statt ihrer. Zugestellt wird ueber __to_owner (behavior/std.php).
+	*/
+	private function start_event(&$context)
+	{
+		$ereignis = new EventObject('', $this, $context);
+		//$eigner   = $this;
+
+		//$ereignis->set_owner($eigner);
+
+		return $ereignis;
+	}
+	
+	/**
+	*	Der ContentGenerator nimmt Daten entgegen wie ein Knoten.
+	*
+	*	Dieselbe Signatur wie Interface_node::setdata, damit __to_owner (und
+	*	__get_data) einen Aufrufer von aussen genauso bedienen wie einen Knoten den
+	*	naechsten — ein Aufruf, keine Fallunterscheidung im Befehl.
+	*
+	*	Hier wird nur GESAMMELT. Ob die Antwort das Dokument ersetzt, entscheidet
+	*	getoutput() an einer Stelle — sobald mindestens ein Eintrag vorliegt. Damit
+	*	haengt die Umschaltung am Inhalt und nicht an einem Seiteneffekt im Setter,
+	*	und sie steht an derselben Stelle wie die des Logs.
+	*
+	*	⚠ Kein var_dump hier. Er landet vor der Antwort und macht sie unbrauchbar —
+	*	genau die Regel aus CLAUDE.md. Zum Mitlesen dient das Log.
+	*/
+	function setdata($data,$pos = null, $add = false, $alter_sensity = true)
+	{
+		global $logger_class;
+
+		$this->result_for_output[] = $data;
+
+		if($logger_class)
+			$logger_class->setAssert('ContentGenerator nimmt einen Wert entgegen ('
+				. (is_object($data) ? get_class($data) : gettype($data)) . '), '
+				. count($this->result_for_output) . ' insgesamt', 5);
+
+	}
+
+	/**
+	*	Was von einem Wert nach aussen geht.
+	*
+	*	⚠ Ein Knoten ist ein ZUSAMMENGESETZTER Wert, und qPortal kennt das
+	*	Serialisieren noch nicht. Darum geht heute nur, was sich benennen laesst —
+	*	und das Feld "serialised" sagt es an. Eine halbe Antwort, die sich als ganze
+	*	ausgibt, waere schlimmer als die benannte Luecke.
+	*/
+	private function answer_shape($wert)
+	{
+		if(!is_object($wert))
+			return ['value' => $wert, 'serialised' => true];
+
+		$form = ['class' => get_class($wert), 'serialised' => false];
+
+		if(method_exists($wert, 'full_URI'))       $form['uri']   = $wert->full_URI();
+		if(method_exists($wert, 'position_stamp')) $form['stamp'] = $wert->position_stamp();
+		if(method_exists($wert, 'getdata'))
+		{
+			$daten = $wert->getdata();
+			if(!is_object($daten)) $form['value'] = $daten;
+		}
+
+		/* NICHT-KNOTEN: hat keine der Knotenmethoden etwas geliefert, ist die
+		*  Selbstdarstellung das Einzige, was der Wert ueber sich sagen kann — die
+		*  wird dann zurueckgegeben (STW).
+		*  ⚠ serialised bleibt false: eine Zeichenkette ueber ein Objekt ist eine
+		*  Darstellung, nicht das Objekt. Bei einem Knoten greift der Zweig gar
+		*  nicht erst — dessen __toString ist "My name is: <uri> with", eine
+		*  Debug-Zeile, die als Antwortwert wie ein Datum aussaehe. */
+		if(count($form) == 2 && method_exists($wert, '__toString'))
+			$form['value'] = trim((string) $wert);
+
+		return $form;
+	}
 
 	function found_relevant_page()
 	{
@@ -582,6 +765,20 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 			if($set_header && !headers_sent())
 				header('Content-Type: ' . $this->responseMime . '; charset=' . $type);
 			return $this->responseBuffer;
+		}
+
+		/* Hat jemand dem Fragenden etwas gegeben (__to_owner / __get_data ueber
+		*  setdata), dann IST das die Antwort — das Dokument wird gar nicht erst
+		*  serialisiert. Die Umschaltung haengt am Inhalt: mindestens ein Eintrag.
+		*  Dieselbe Stelle und dieselbe Form wie beim Log eine Zeile weiter. */
+		if(count($this->result_for_output) > 0)
+		{
+			if($set_header && !headers_sent())
+				header('Content-Type: application/json; charset=' . $type);
+
+			return json_encode(
+				array_map([$this, 'answer_shape'], $this->result_for_output),
+				JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 		}
 
 		if($this->outputMode == LOG)

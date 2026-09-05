@@ -105,6 +105,8 @@ return new RDF_about();
 				
 				$this->get_parser()->set_Object_to_Namespace($namespace2,$new_obj);
 				$new_obj->set_is_Class();
+				/* Traeger merkt sich die Praegung, siehe Interface_node::has_coined() */
+				$this->getRefprev()->set_has_coined();
 				
 		}
 	}	

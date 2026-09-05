@@ -385,7 +385,13 @@ function send_header()
 {
 	                        if (
 	                        	(array_key_exists("HTTP_ACCEPT", $_SERVER) && stristr($_SERVER["HTTP_ACCEPT"],"application/xhtml+xml")) ||
-					(array_key_exists("HTTP_ACCEPT", $_SERVER) && stristr($_SERVER["HTTP_USER_AGENT"],"W3C_Validator"))) {
+					/* Geprueft wurde HTTP_ACCEPT, gelesen HTTP_USER_AGENT — ein Verschreiber,
+					*  der jahrelang unerreichbar war, weil jeder Browser beides schickt.
+					*  Sichtbar wird er erst bei einem Aufrufer MIT Accept und OHNE
+					*  User-Agent: dann ist der Wert null, stristr meldet eine Deprecation,
+					*  und die steht VOR dem XML — die Antwort ist nicht mehr wohlgeformt.
+					*  Genau der Fall, wenn eine qPortal-Instanz die andere ruft. */
+					(array_key_exists("HTTP_USER_AGENT", $_SERVER) && stristr($_SERVER["HTTP_USER_AGENT"],"W3C_Validator"))) {
 					header("Content-type: application/xhtml+xml");
 					header('Cache-Control: no-cache, no-store, must-revalidate');
 					header('Pragma: no-cache');

@@ -83,7 +83,8 @@ class NameSpaceBehaviorRegistry
             throw new Exception($name . " is already in use");
         }
     	$this->commandName = $name;
-        $this->behaviors[$this->currentNSName][$this->currentLocalName][$name] = ["command" => $value, "log" => false, "level" => 5];
+        $this->behaviors[$this->currentNSName][$this->currentLocalName][$name] =
+        	["command" => $value, "log" => false, "level" => 5, "security" => 0];
     }
 
 	public function __get(string $name)
@@ -108,6 +109,27 @@ class NameSpaceBehaviorRegistry
 	{
 		$this->behaviors[$this->currentNSName][$this->currentLocalName][$this->commandName]["log"] = $func;
 		$this->behaviors[$this->currentNSName][$this->currentLocalName][$this->commandName]["level"] = $lvl;
+	}
+
+	/* Sicherheitsstufe des zuletzt registrierten Befehls. Wie addLog und
+	*  addDescription direkt nach der Registrierung aufrufen - sie haengt am selben
+	*  commandName.
+	*
+	*  ⚠ NICHT zu verwechseln mit "level": das ist die LOGstufe aus addLog (0 = immer
+	*  sichtbar, 6 = Debug). Die beiden sind komplett verschieden, darum ein eigener
+	*  Schluessel.
+	*
+	*  Die Einstufung steht NEBEN der Closure, nicht in ihr: ein Befehl soll sein
+	*  Recht nicht selbst pruefen muessen, und eine Verwaltung, die in 20 Lambdas
+	*  verteilt ist, ist keine. Geprueft wird an genau einer Stelle -
+	*  Interface_node::callRegContent.
+	*
+	*  Vorgabe 0 = die unterste Stufe: starten erlaubt, keine Systemabfragen. Alle
+	*  bestehenden Befehle behalten sie, bis jemand sie hochsetzt.
+	*/
+	public function addSecurity(int $stufe)
+	{
+		$this->behaviors[$this->currentNSName][$this->currentLocalName][$this->commandName]["security"] = $stufe;
 	}
 
 	/* Beschreibung des zuletzt registrierten Befehls. Wie addLog direkt nach der
@@ -172,7 +194,11 @@ class NameSpaceBehaviorRegistry
 	*  Befehle ohne addDescription erscheinen mit description=null - eine fehlende
 	*  Beschreibung soll sichtbar sein, nicht verschwiegen.
 	*/
-	public function describeNamespace(string $ns, ?string $localName = null): array
+	/* @param $clearance : wird eine Stufe uebergeben, erscheinen nur Befehle bis
+	*  dorthin - "zeigt halt nur an, was sie anzeigen darf" (STW). Ohne Angabe
+	*  bleibt die Auskunft vollstaendig, damit bestehende Aufrufer unberuehrt sind.
+	*/
+	public function describeNamespace(string $ns, ?string $localName = null, ?int $clearance = null): array
 	{
 		if (!array_key_exists($ns, $this->behaviors))
 			throw new RegistryNotFoundException($ns . " is unknown");
@@ -183,6 +209,11 @@ class NameSpaceBehaviorRegistry
 			if (!is_null($localName) && $ln !== $localName) continue;
 
 			foreach ($commands as $name => $slot)
+			{
+				$stufe = $slot["security"] ?? 0;
+
+				if(!is_null($clearance) && $stufe > $clearance) continue;
+
 				$out[] = [
 					"name"        => $name,
 					"namespace"   => $ns,
@@ -190,8 +221,10 @@ class NameSpaceBehaviorRegistry
 					"description" => $slot["info"]["description"] ?? null,
 					"attribute"   => $slot["info"]["attribute"]   ?? [],
 					"logged"      => false !== $slot["log"],
-					"level"       => $slot["level"]
+					"level"       => $slot["level"],
+					"security"    => $stufe
 				];
+			}
 		}
 
 		if (!is_null($localName) && empty($out) && !array_key_exists($localName, $this->behaviors[$ns]))

@@ -101,27 +101,14 @@ $obj->set_node($this);
 		global $_SESSION;
 		$json = '{"name":"http://www.trscript.de/tree#final"}';
 
-				$result = true;
+				/* Zutritt: EINE Pruefung fuer Menue und Waechter — ContentGenerator::mayEnter.
+		*  Vorher stand die Logik hier als Kopie und war in der Klammerung kaputt
+		*  (eine hohe Stufe hob den Sektor aus). Ohne ContentGenerator — etwa in
+		*  einem Pruefstand, der nur parst — bleibt es wie bisher offen. */
+		$cg = $this->get_parser()->get_context_generator();
 
-		if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#sector') )		
-			$result = in_array($tmp, explode(';', trim_with_null($_SESSION['http://www.auster-gmbh.de/surface#sector'], ';')));
-
-				
-		if($tmp =  intval($this->get_ns_attribute('http://www.trscript.de/tree#securitylevel')) )
-		{
-			
-			if($_SESSION['http://www.auster-gmbh.de/surface#securityclass'])
-				$sec = intval($_SESSION['http://www.auster-gmbh.de/surface#securityclass']);
-			else
-				$sec = -1;
-				
-			
-			$result = $result  &&  ($tmp == -1) || ((($tmp != -1) &&  ($sec >= $tmp))) ; 
-		}	
-			
-
-		//useless Exception
-		if(!$result) throw new NoPermissionException('not Allowed');
+		if(is_object($cg) && !$cg->mayEnter($this))
+			throw new NoPermissionException('not Allowed');
 
 		
 		// consider the aspect for the next branch (tree)
@@ -147,10 +134,30 @@ $obj->set_node($this);
 	{
 		
 		$tmp = resolve_path($tmp);
-				 
-		if(is_file($tmp))
+
+		/* Ein src ist entweder eine Datei dieser Installation oder die Adresse einer
+		*  ENTFERNTEN qPortal-Instanz. resolve_path laesst eine URL unangetastet, es
+		*  ersetzt nur %ROOT_DIR% und Geschwister — der Schalter ist darum das Schema.
+		*  Ohne diesen Zweig fiel eine Adresse still durch das is_file() und der Knoten
+		*  gab false zurueck, ohne dass irgendwo etwas stand. */
+		$remote = !is_file($tmp) && preg_match('#^https?://#i', $tmp);
+
+		if(is_file($tmp) || $remote)
 		{
-			$this->get_parser()->load($tmp,0);
+			if($remote)
+			{
+				$this->get_parser()->load($tmp, 0, $this->remote_doctype(), $this->request_parameter());
+
+				/* ⚠ Der URL-Zweig von xml::load() kehrt direkt nach load_Stream zurueck
+				*  (xml_multitree.php:867) und laesst den Zeiger stehen, wo er war — der
+				*  Datei-Zweig laeuft weiter und setzt ihn. Ohne das hier ist
+				*  show_xmlelement() null und die naechste Zeile stirbt an
+				*  "hold_messages() on null". TREE_add ruft an derselben Stelle
+				*  dasselbe (tree_add.php, nach dem load). */
+				$this->get_parser()->set_first_node();
+			}
+			else
+				$this->get_parser()->load($tmp,0);
 			
 		//$this->get_parser()->ALL_URI();
 
@@ -217,6 +224,80 @@ $obj->set_node($this);
 	*/
 	//echo spl_object_id($this) . "<---\n";
 	}
+
+	/**
+	*	Der Kopf einer Anfrage an eine entfernte Instanz.
+	*
+	*	Gebaut wie in TREE_add::event_message_in — dieselben Schluessel, weil dahinter
+	*	dieselbe Tuer liegt: xml::load($ref,$case,$typ,$com_parameter).
+	*
+	*	⚠ <header> traegt keine eigene Bedeutung, es MARKIERT nur, was darin steht (STW).
+	*	Das ist noetig, weil <param> an vielen Stellen etwas anderes heisst — als Angabe
+	*	an einen Unteraufruf, als Spaltenname, als Feld einer Anfrage. Erst die Huelle
+	*	sagt, dass diese Paare Kopfzeilen sind. Deshalb ist TREE_header eine leere Klasse
+	*	und die Auswertung steht hier.
+	*
+	*	<param> DIREKT am tree-Knoten sind dagegen Anfrageparameter, nicht Kopfzeilen —
+	*	genau die Trennung, die <add> auch macht.
+	*
+	*	Die Rechte kommen spaeter und haengen am API-Schluessel; er ist eine Kopfzeile
+	*	wie jede andere und braucht hier nichts Eigenes.
+	*/
+	private function request_parameter()
+	{
+		$com_parameter = ["Method" => REST_Connection::GET];
+
+		if($method = $this->get_ns_attribute('http://www.trscript.de/tree#method'))
+			$com_parameter["Method"] = $method;
+
+		$head = $this->findListByName('http://www.trscript.de/tree#header', $this);
+
+		if(count($head) > 0)
+		{
+			$com_parameter["RequestHeaders"] = [];
+			$kopfzeilen = $this->findListByName('http://www.trscript.de/tree#param', $head[0]);
+
+			for($i = 0; $i < count($kopfzeilen); $i++)
+				$com_parameter["RequestHeaders"][] = $kopfzeilen[$i]->get_attribute('name') . ": "
+				                                   . trim($kopfzeilen[$i]->getdata());
+		}
+
+		$felder = $this->findListByName('http://www.trscript.de/tree#param', $this);
+
+		if(count($felder) > 0)
+		{
+			$com_parameter["Parameters"] = [];
+
+			for($i = 0; $i < count($felder); $i++)
+				$com_parameter["Parameters"][$felder[$i]->get_attribute('name')] = trim($felder[$i]->getdata());
+		}
+
+		return $com_parameter;
+	}
+
+	/** Was die Gegenstelle liefert. Eine qPortal-Instanz antwortet XML; das bleibt die Vorgabe. */
+	private function remote_doctype()
+	{
+		if($typ = $this->get_ns_attribute('http://www.trscript.de/tree#doctype'))
+			return $typ;
+
+		return 'XML';
+	}
+
+	/* Kinder eines Knotens nach ihrer vollen URI. Gleichlautend in TREE_add — dort
+	*  privat und in Gebrauch; nicht zusammengelegt, weil das den <add>-Weg anfassen
+	*  wuerde, den niemand angefragt hat. */
+	private function findListByName($name, $node)
+	{
+		$res = [];
+
+		for($i = 0; $i < $node->index_max(); $i++)
+			if($node->getRefnext($i)->full_URI() == $name)
+				$res[] = $node->getRefnext($i);
+
+		return $res;
+	}
+
 }
 
 ?>

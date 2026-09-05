@@ -133,14 +133,19 @@ ueberschrift('Und was das fuer den Bestand heisst');
 
 echo <<<TEXT
 
-    Gemessen ueber template/**/*.xml, Kommentare entfernt:
+    Aufgeschriebene Messung vom 2026-09-04, VOR dem ersten Ressourcendokument
+    (template/**/*.xml, Kommentare entfernt) — sie laeuft hier nicht mit:
 
         716 Namen auf tree/final/first
         676 blank  ·  40 mit fuehrendem Punkt  ·  0 Raute  ·  0 Praefix  ·  0 URI
 
-    Kein einziger davon nennt einen Namensraum. Nach dem Einbau traegt sich also
-    nichts ein, kein Register waechst, keine Duplikat-Warnung faellt an. Der
-    Bezeichner erscheint erst dort, wo jemand ihn hinschreibt.
+    Kein einziger davon nannte einen Namensraum. Der Einbau war damit byte-genau
+    folgenlos: nichts trug sich ein, kein Register wuchs, keine Duplikat-Warnung.
+
+    Seither gibt es template/fridge/fridge.xml — das erste Dokument, das die
+    Praefixform wirklich benutzt. Wer die Zahlen neu braucht, misst neu; wer
+    sehen will, WELCHE Knoten gepraegt haben, fragt sie selbst:
+    Interface_node::has_coined(), vorgefuehrt in probe_fridge.php.
 
 
 TEXT;

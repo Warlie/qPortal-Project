@@ -39,10 +39,17 @@ Zahl ist die Vergleichsmarke: ändert sie sich, hat die letzte Änderung etwas g
 `require_once(__DIR__ . '/../bootstrap.php');` — siehe `test/bootstrap.php`. Danach:
 
 ```php
-$tree = new xml_ns();
+$tree = new xml_semantic();     // die SPITZE der Schicht, nicht xml_ns
+$tree->setNewTree($kennung);
 $tree->load_Stream($xml, 0, "XML");
 $treffer = $tree->collect_nodes('http://www.trscript.de/tree#param');
 ```
+
+⚠ **Prüfstände bauen `xml_semantic`, nicht `xml_ns`** — dieselbe Spitze wie die
+Produktion (`class_Contentgenerator.php:82`). Wer tiefer ansetzt, verliert Methoden,
+die Knotenklassen aufrufen: ein Dokument mit `<owl:Ontology>` stirbt unter `xml_ns` an
+`Call to undefined method xml_ns::currentOntology()` (`rdf_about.php:57`). Das sieht nach
+einem kaputten Dokument aus und ist ein zu tief gewählter Prüfstandskopf.
 
 Nicht von Hand zusammensuchen: die Konstanten (`XML_CASE_FOLDING_DEFAULT`, `ROOT_DIR`, …)
 werden beim *Parsen* gelesen, und `Interface_ns.php` braucht `qp_workflow` vorher geladen.
@@ -73,11 +80,33 @@ Datei-Weg ruft es bereits; `load_Stream` nicht.
 | Registry-Befehle | `behavior/*.php` — per `glob` in `index.php:250` geladen |
 | Plugins | `PlugIn/`, registriert in `config/default.ini` unter `[short]` |
 
-## tree:name — der führende Punkt heißt „unsichtbar"
+## tree:name — Pfadsegment, und nur mit Namensraum ein Bezeichner
 
-Vom Dateisystem entlehnt (STW): ein `tree:name`, der mit `.` **beginnt**, erscheint nicht in
-der Navigation. Ausgewertet in `class_Contentgenerator.php:263`, direkt neben
-`securitylevel` und `sector`:
+**Zum Navigieren ist der Name ein Pfadsegment.** `TREE_tree::event_message_in`
+(`tree_tree.php:88`) vergleicht den rohen Attributwert gegen den **Kopf** der Namensliste
+und macht dann `array_shift`. Aufgelöst wird also beim Abstieg unter **Geschwistern** —
+dort und nur dort muss ein Name eindeutig sein. Die 520 × `home` sind deshalb keine
+Kollision, sondern 520 Pfadanfänge (je ein `<final>` pro Dokument, Zeile 3).
+
+**Zum Bezeichnen braucht er einen Namensraum.** Seit `591341a` ist `tree:name` eine
+`subPropertyOf` von `rdf:ID` (so gesagt im Registrierungsbogen) und trägt in den
+Namensraum ein — aber nur, wenn **beides** stimmt (`classes/ns/tree/tree_name.php`):
+
+1. **Träger ist `tree` oder `final`.** Überall sonst tut der Knoten nichts.
+2. **Der Wert nennt selbst einen Namensraum** — `praefix;Name` oder voller URI, dieselben
+   Formen wie bei `rdf:ID` (`rdf_ID.php:57ff`), nur ohne dessen dritten Zweig. Ein blanker
+   Name und die Form `#name` fallen auf den Default-Namensraum, und den teilen sich 571
+   Dokumente; das ist keine Aussage. STW: *„Es bedeutet, dass jemand den Flur mit Zimmern
+   möchte, aber diese nur zum Durchlaufen will."*
+
+Gemessen: von 716 Namen auf `tree`/`final` trägt **heute keiner** einen Namensraum (676
+blank, 40 mit führendem Punkt). Der Einbau ist damit byte-genau folgenlos — der Bezeichner
+erscheint erst, wo jemand ihn hinschreibt. `first` ist bewusst draußen: es wird immer ohne
+Namensliste gerufen (`behavior/tree.php:31`), sein Name würde nie verglichen.
+
+**Der führende Punkt heißt „unsichtbar".** Vom Dateisystem entlehnt (STW): ein `tree:name`,
+der mit `.` **beginnt**, erscheint nicht in der Navigation. Ausgewertet in
+`class_Contentgenerator.php:263`, direkt neben `securitylevel` und `sector`:
 
 ```php
 if ( !(false === ($hidden = strpos( show_ns_attrib('…tree#name'), '.' ) ) )
@@ -87,13 +116,8 @@ if ( !(false === ($hidden = strpos( show_ns_attrib('…tree#name'), '.' ) ) )
 Ein Punkt *innerhalb* des Namens ist harmlos — nur Position 0 zählt. Ebenfalls versteckend:
 ein fehlendes `tree:value` (Zeile darüber). In `template/xml.xml` sind 16 von 56 Namen so
 markiert (`.edit`, `.service_orga`, `.save_doc`, …) — Dienste und Unteraufrufe, keine
-Menüpunkte.
-
-⚠ **Folge für Vokabular-Pläne:** solche Namen sind **keine gültigen `rdf:ID`**. `NCName`
-darf mit Buchstabe oder `_` beginnen, nicht mit `.` (der Punkt ist nur Folgezeichen). Wer
-tree-Knoten benennbar machen will, nimmt darum ein URI-**Fragment** (`rdf:about="#.edit"`) —
-Fragmente dürfen Punkte und Schrägstriche tragen (RFC 3986), und nur damit lässt sich auch
-ein Pfad als Name schreiben.
+Menüpunkte. ⚠ **Die `NCName`-Frage ist damit weg:** ein blanker Name wird gar nicht erst
+als Bezeichner gelesen, muss also kein `NCName` sein. Der Punkt behält „unsichtbar".
 
 ⚠ **`name` heißt nicht überall dasselbe — es hängt am Trägerelement.** Gemessen über
 `template/**/*.xml`:
@@ -108,11 +132,15 @@ ein Pfad als Name schreiben.
 | `tree` | **174** | **43** | 0 | 0 |
 | `subtree` | 0 | 0 | **117** | 0 |
 
-Auf `tree` und `final` ist der Name ein **Bezeichner** und sauber — 717 NCName, 43 führende
-Punkte, keine Adresse, keine Beschriftung (`first` kommt in den Dokumenten nicht vor). Die
-`#`-Form auf `content`/`subtree`/`param` ist ein **Zugriff**, kein Name — STWs Workaround,
-um Inhalte in Dokumenten überhaupt modifizieren zu können. Auf `wordfield` stehen
-**Beschriftungen** (`Bett (2)`, `Mensch in einer Gemeinschaft`).
+Auf `tree` und `final` ist der Name ein **Bezeichner**, die `#`-Form auf
+`content`/`subtree`/`param` ein **Zugriff** (STWs Workaround, um Inhalte in Dokumenten
+überhaupt modifizieren zu können), auf `wordfield` stehen **Beschriftungen** (`Bett (2)`,
+`Mensch in einer Gemeinschaft`).
+
+⚠ Zwei Vorbehalte zu dieser Tabelle: sie zählt auskommentiertes XML mit und lässt Träger
+aus (`name` sitzt auch auf `object` 2743, `article` 303, `input`, `access`). Und sie zählt
+**Vorkommen, nicht Identitäten** — die 716 auf `tree`/`final` sind **114 verschiedene**
+Namen, davon `home` allein 520.
 
 Wer über `name` etwas aussagen will, grenzt darum **nach Knotentyp** ab, nicht über alle
 Werte. Sonst zählt man 1697 Namen und schließt das Falsche.
@@ -152,6 +180,34 @@ Ohne `#` gilt der Namensraum des Bogens — ein **neuer** Name. Mit `#` der davo
 ignoriert den neuen; verdrängt wird also nichts. ⚠ Das gilt nur, solange der Namensraum
 schon registriert ist — Namensräume kommen **lazy** beim Parsen eines `xmlns`
 (`xml_multitree_ns.php:592`). Deshalb steht `xmlns:tree` im Bogen.
+
+## Ein Namensraum wird erklärt, nicht benutzt
+
+Ein `xmlns:x="…"` in der Wurzel **erklärt** keinen Namensraum, es bindet nur einen Präfix.
+`add_new_namespace_from_attributes` (`xml_multitree_ns.php:574`) füllt
+`namespace_frameworks[$ns]` nur, wenn `My_NameSpace_factory::namespace_factory()` für die
+URI etwas kennt — für einen eigenen Namensraum also nie. Der entsteht dann **beiläufig**
+beim Parsen über `alt_namespace_factory`, je benutztem Namen einer.
+
+Der erklärte Weg ist ein **`owl:Ontology`-Knoten**. `OWL_Ontology::event_initiated`
+(`classes/ns/owl/owl_Ontology.php`) liest `rdf:about`, nimmt die **rdfs-Fabrik** als
+Vorlage und legt `nativ` plus leere `node`/`attrib`-Tabellen an. Gemessen am selben
+Dokument:
+
+| | ohne `owl:Ontology` | mit |
+|---|---|---|
+| `nativ` | `Interface_node` (generisch) | `RDF_RDF` (aus der rdfs-Fabrik) |
+| `attrib` | `NULL` | leere Tabelle |
+| `node` | die beim Parsen benutzten Namen | die geprägten Namen |
+
+⚠ `set_Namespace()` (`:1751`) wird zusätzlich von `rdf:about` auf einem `owl:Ontology`
+gerufen (`rdf_about.php:54`). Von seinen zwei Hälften wirkt heute nur eine: `cur_ns` wird
+gesetzt und **nirgends gelesen**.
+
+⚠ Ein fehlender nativer Knoten ist die Ursache von `native namespace is missing` — siehe
+die Reihenfolge-Bedingung beim Registrierungsbogen. Ein eigener Namensraum gehört darum
+mit `<owl:Ontology rdf:about="…">` erklärt, **bevor** Namen hineingeprägt werden.
+Beispiel: `template/fridge/fridge.xml`.
 
 ## Knoten und Attribute
 

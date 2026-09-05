@@ -93,32 +93,14 @@ function event_message_in($type,&$obj)
 		//--------------------------------------- check access -------------------------------------------------
 		$param_arr = [];
 		
-				$result = true;
+			/* Zutritt: EINE Pruefung fuer Menue und Waechter — ContentGenerator::mayEnter.
+		*  Vorher stand die Logik hier als Kopie und war in der Klammerung kaputt
+		*  (eine hohe Stufe hob den Sektor aus). Ohne ContentGenerator — etwa in
+		*  einem Pruefstand, der nur parst — bleibt es wie bisher offen. */
+		$cg = $this->get_parser()->get_context_generator();
 
-		if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#sector') )		
-			$result = in_array($tmp, explode(';', trim_with_null($_SESSION['http://www.auster-gmbh.de/surface#sector'], ';')));
-
-			//var_dump($tmp, $result);
-			//$this->giveOutOverview();
-
-		if($tmp = $this->get_ns_attribute('http://www.trscript.de/tree#method') )		
-			if($_SERVER['REQUEST_METHOD'] !== strtoupper($tmp))return;
-			
-		if($tmp =  intval($this->get_ns_attribute('http://www.trscript.de/tree#securitylevel')) )
-		{
-			
-			if($_SESSION['http://www.auster-gmbh.de/surface#securityclass'])
-				$sec = intval($_SESSION['http://www.auster-gmbh.de/surface#securityclass']);
-			else
-				$sec = -1;
-				
-			
-			$result = $result  &&  ($tmp == -1) || ((($tmp != -1) &&  ($sec >= $tmp))) ; 
-		}	
-			
-
-		
-		if(!$result) throw new NoPermissionException('not Allowed');
+		if(is_object($cg) && !$cg->mayEnter($this))
+			throw new NoPermissionException('not Allowed');
 
 	/* ------------------------------------------------------ Variable section ------------------------------------------------------------*/
 		$this->contentGenerator->createScope($uri_src = $this->get_ns_attribute('http://www.trscript.de/tree#src'));

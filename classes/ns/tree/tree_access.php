@@ -65,14 +65,67 @@ function event_initiated()
 	}
 }
 
+/**
+*	Der Zugang: was hier steht, wird als Befehlskette gefeuert.
+*
+*	Hier wohnt die Sicherheitsstufe des Aufrufs. Ein Nutzer ruft einen Agenten, der
+*	einen Agenten ruft — jede Ebene betritt den Stapel des ContentGenerators und
+*	verlaesst ihn danach wieder:
+*
+*	    <access>
+*	        <param name="security" >4</param>
+*	        … Befehlskette …
+*	    </access>
+*
+*	Das Recht steht IM Zugang, nicht an ihm: ein <param> ist Inhalt des Dokuments
+*	und liegt auf derselben Ebene wie das, was es erlaubt. Die uebrigen Slots des
+*	Zugangs sind ebenso benannt (commandline, request).
+*
+*	⚠ Die Stufe kann nur SENKEN, nie heben — pushClearance klammert auf das, was
+*	gerade gilt. Ein Dokument, das sich selbst hochstufen koennte, haette die ganze
+*	Einstufung ausgehebelt. Gehoben wird nur beim Eintritt, aus dem API-Schluessel.
+*
+*	⚠ Das Verlassen steht in finally: eine Ausnahme aus der Kette darf den Stapel
+*	nicht stehen lassen, sonst gilt die fremde Stufe weiter.
+*/
+	/**
+	*	Der Wert eines benannten <param>-Kindes, oder null.
+	*
+	*	Nur DIREKTE Kinder, und nur tree:param — damit ein "security", das tiefer in
+	*	der Befehlskette steht, nichts umstellt.
+	*/
+	private function param_named($name)
+	{
+		for($i = 0; $i < $this->index_max(); $i++)
+		{
+			$kind = $this->getRefnext($i);
+
+			if(!is_object($kind) || $kind->full_URI() != 'http://www.trscript.de/tree#param')
+				continue;
+
+			if($kind->get_ns_attribute('http://www.trscript.de/tree#name') === $name)
+				return trim((string) $kind->getdata());
+		}
+
+		return null;
+	}
+
 function event_message_in($type,&$obj)
 	{
-
 		$show = $this->getdata();
-		$this->hold_messages($show,$obj);
-	
-	//$obj->get_requester()->;
-	
+
+		$cg    = $this->get_parser()->get_context_generator();
+		$stufe = $this->param_named('security');
+		$eigen = is_object($cg) && !is_null($stufe);
+
+		try
+		{
+			$this->hold_messages($show,$obj);
+		}
+		finally
+		{
+			if($eigen) $cg->popClearance();
+		}
 	}
 
 
