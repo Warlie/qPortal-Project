@@ -59,6 +59,8 @@ $list_of_configuration_parameters = [
 
 	'INTERN_KEYS' => ['intern', 'key'],
 
+	'INTERN_ANONYMOUS' => ['intern', 'anonymous'],
+
 	'QUERY_PARAM' => ['runtime', 'QUERY_PARAM'],
 
 	'PEDL_FORCE_REBUILD' => ['runtime', 'PEDL_FORCE_REBUILD']
@@ -392,9 +394,25 @@ if(file_exists(CONFIG))
                 $_intern_token = null;
 				$_auth_header  = $_SERVER['HTTP_AUTHORIZATION'] ?? apache_request_headers()['Authorization'] ?? '';
 				if (preg_match('/^Bearer\s+(.+)$/i', $_auth_header, $_m)) $_intern_token = $_m[1];
-				$_intern_keys  = array_filter(INTERN_KEYS, fn($k) => $k !== '');
+				$_intern_keys  = intern_key_list(INTERN_KEYS);
 				$_has_session  = isset($_SESSION['@_mod']) && $_SESSION['@_mod'] === 'intern';
-				$_token_valid  = !empty($_intern_keys) && in_array($_intern_token, $_intern_keys, true);
+
+				/* Der passende Schluessel, nicht nur "irgendeiner stimmt": an ihm
+				*  haengen Stufe und Sektoren. hash_equals, damit die Laufzeit des
+				*  Vergleichs nichts ueber den Treffer verraet. */
+				$_intern_entry = null;
+
+				foreach($_intern_keys as $_k)
+					if(!empty($_intern_token) && hash_equals($_k['token'], $_intern_token))
+						{ $_intern_entry = $_k; break; }
+
+				$_token_valid  = !is_null($_intern_entry);
+
+				/* Ohne Schluessel ist der Endpunkt offen (Stufe 0). Steht einer, ist
+				*  nichts mehr anonym - es sei denn, anonymous = 1 laesst den Weg
+				*  ausdruecklich offen, fuer Dienste und Sensoren ohne Schluesselbund. */
+				$_intern_anon  = empty($_intern_keys)
+				              || (defined('INTERN_ANONYMOUS') && 1 === intval(INTERN_ANONYMOUS));
 
                 if (!empty($_intern_token) && !$_token_valid) {
                     http_response_code(401);
@@ -403,8 +421,18 @@ if(file_exists(CONFIG))
                     exit;
                 }
 
-                if ($_has_session || $_token_valid)
+                if ($_token_valid || ($_has_session && $_intern_anon))
                 {
+				/* Die Stufe kommt vom Schluessel. Ohne Schluessel bleibt es bei der
+				*  Vorgabe des ContentGenerators - der Sitzungsklasse, sonst 0. */
+				if($_token_valid)
+				{
+					$content->setClearance($_intern_entry['level']);
+
+					if('' !== $_intern_entry['sector'])
+						$content->setSectors($_intern_entry['sector']);
+				}
+
 				$content->setXMLstructur(INTERN);
 				// {"Identifire":"*","Command":{"Name":"__find_node","Attribute":{"json":"{\"name\":\"http:\/\/www.trscript.de\/tree#final\"}"},"Value":{"Identifire":"*","Command":{"Name":"start"},"Attribute":{"i":""}}}}
 				$content->commandLineInjection(file_get_contents('php://input'));

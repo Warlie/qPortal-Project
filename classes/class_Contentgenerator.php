@@ -246,6 +246,32 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	*  zurueck (STW). Er wohnt in tree:access: dort wird betreten und verlassen. */
 	private array $clearance_stack = [];
 
+	/* Die Sektoren dieses Laufs, wenn sie nicht aus der Sitzung kommen. */
+	private $sector_override = null;
+
+	/**
+	*	Die Sektoren setzen — fuer einen Schluessel, der welche mitbringt.
+	*
+	*	Semikolongetrennt, dieselbe Form wie in der Sitzung (mod_lib.php:1440 schreibt
+	*	";alpha;beta;"). Absichtlich NICHT in $_SESSION geschrieben: das wuerde ueber
+	*	den Request hinaus stehenbleiben und beim naechsten Cookie-Aufruf weitergelten.
+	*/
+	public function setSectors(string $sektoren)
+	{
+		$this->sector_override = $sektoren;
+	}
+
+	/** Die geltenden Sektoren — Schluessel vor Sitzung. */
+	public function sectors(): string
+	{
+		if(!is_null($this->sector_override))
+			return $this->sector_override;
+
+		$str = $_SESSION['http://www.auster-gmbh.de/surface#sector'] ?? null;
+
+		return is_null($str) ? '' : $str;
+	}
+
 	/**
 	*	Welche Sicherheitsstufe gilt gerade?
 	*
@@ -337,9 +363,7 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		$result = true;
 
 		if($tmp = $this->attrib_of($node, 'http://www.trscript.de/tree#sector'))
-			$result = in_array($tmp, explode(';',
-				(is_null($str = $_SESSION['http://www.auster-gmbh.de/surface#sector']) ? "" : trim($str, ';'))
-				));
+			$result = in_array($tmp, explode(';', trim($this->sectors(), '; ')));
 
 		if($tmp = intval($this->attrib_of($node, 'http://www.trscript.de/tree#securitylevel')))
 		{

@@ -128,6 +128,68 @@ function getSystemArgument($name, $list, $data)
 * @param URL : spezific URL to load
 */
 
+/**
+* Die Intern-Schluessel in eine einheitliche Liste bringen.
+*
+* Zwei Schreibweisen leben nebeneinander, und beide muessen tragen:
+*   key[] = <hex>                       die alte, flache Form - Name unbekannt, Stufe 0
+*   key.<name>.token/.level/.sector     die benannte Form
+*
+* Ein Schluessel OHNE level bekommt 0. Rechte werden hingeschrieben, nicht
+* stillschweigend geerbt - sonst waere ein vergessenes level ein Vollzugang.
+*
+* @return array je Eintrag ['name','token','level','sector']
+*/
+function intern_key_list($roh)
+{
+	$res = [];
+
+	if(!is_array($roh)) $roh = [$roh];
+
+	foreach($roh as $name => $eintrag)
+	{
+		if(is_array($eintrag))
+		{
+			$token = trim((string) ($eintrag['token'] ?? ''));
+
+			if('' === $token) continue;
+
+			$res[] = ['name'   => (string) $name,
+			          'token'  => $token,
+			          'level'  => intval($eintrag['level'] ?? 0),
+			          'sector' => trim((string) ($eintrag['sector'] ?? ''), '; ')];
+
+			continue;
+		}
+
+		$token = trim((string) $eintrag);
+
+		if('' === $token) continue;
+
+		$res[] = ['name' => is_string($name) ? $name : 'unbenannt',
+		          'token' => $token, 'level' => 0, 'sector' => ''];
+	}
+
+	return $res;
+}
+
+/**
+* str_replace ueber beliebig tief verschachtelte Werte. Nicht-Zeichenketten
+* bleiben unangetastet.
+*/
+function replace_deep($from, $to, $subject)
+{
+	if(is_array($subject))
+	{
+		foreach($subject as $k => $v)
+			$subject[$k] = replace_deep($from, $to, $v);
+
+		return $subject;
+	}
+
+	return is_string($subject) ? str_replace($from, $to, $subject) : $subject;
+}
+
 function createConfigFromINIFile($ini, $list, &$pre, $project = false)
 {
 	$failed = [];
@@ -155,7 +217,13 @@ function createConfigFromINIFile($ini, $list, &$pre, $project = false)
 			//throw new Exception( $value[0] .  ' does not exist');
 			}
 		
-			$ini_value = str_replace($pre['from'], $pre['to'], $ini[$value[0]][$value[1]]);
+			/* ⚠ str_replace geht nur EINE Ebene tief: bei einem verschachtelten Wert
+			*  wird das innere Array zur Zeichenkette 'Array' — mit einer Warnung, sonst
+			*  still. parse_ini_file_multi baut die Verschachtelung (key.name.feld) also
+			*  auf, und hier wurde sie wieder plattgemacht. Heute traf es nichts, weil
+			*  kein verschachtelter Wert in der Konstantentabelle stand; ab dem ersten
+			*  waere er lautlos weg gewesen. */
+			$ini_value = replace_deep($pre['from'], $pre['to'], $ini[$value[0]][$value[1]]);
 			define($key, $ini_value);
 			if(!is_array($ini_value)) { array_push($pre['from'], '__' . $key); array_push($pre['to'], $ini_value); }
 

@@ -27,14 +27,15 @@ php -d error_reporting=E_ERROR test/proben/probe_registry_vocab.php   # ausser d
 `seek_scope.php` und `sparql_parse.php` müssen vollständig grün sein — jede rote Zeile
 dort ist neu. `probe_registry_vocab.php` bewacht die Naht zwischen Vokabulardokument und
 `build_up()` und steht bei **32 in Ordnung / 0 rot**.
-`intern_walk.php` steht bei **30 gelaufen / 1 rot / 2 übersprungen**. Die rote Zeile ist
-`__get_data` (über den Intern-Kanal ist der Aufrufer der ContentGenerator und damit kein
-Knoten; STW hat entschieden, das nicht umzubauen). Übersprungen sind die beiden
-`__save_back`-Fälle: seit `addSecurity(10)` braucht Schreiben Stufe 10, und der Prüflauf
-öffnet eine Intern-Sitzung ohne Anmeldung, steht also auf 0. ⚠ Nicht die Einstufung
-zurückdrehen, um das grün zu bekommen — der Schreibweg wird wieder prüfbar, sobald eine
-Stufe von außen kommt. Diese Zahlen sind die Vergleichsmarke: ändern sie sich, hat die
-letzte Änderung etwas gebrochen.
+`intern_walk.php` steht bei **32 gelaufen / 1 rot** — `__get_data` ist ein Bestandsdefekt
+(über den Intern-Kanal ist der Aufrufer der ContentGenerator und damit kein Knoten; STW hat
+entschieden, das nicht umzubauen). Diese Zahl ist die Vergleichsmarke: ändert sie sich, hat
+die letzte Änderung etwas gebrochen.
+
+⚠ Der Prüflauf **liest den Schlüssel aus `config/config.ini`** und schickt ihn als Bearer.
+Ohne ihn käme er seit `[intern] anonymous = 0` gar nicht mehr herein, und er stünde auf
+Stufe 0 — `__save_back` verlangt 10. Auf einer Installation ohne Schlüssel fällt er auf den
+Sitzungsweg zurück.
 
 `./server.sh` startet `symfony server:start` auf **https**; die Prüfstände sprechen dann
 `https://localhost:8002`. Mit `php -S` geht nur http — dann `QPORTAL_URL` setzen.
@@ -294,6 +295,32 @@ Treffer. `attribute_is_current()` / `identity_is_current()` sind diese Nachprüf
 
 Über die Modelle: `$tree->seek_by_model('internal')` bzw. `query_by_model($m, $ausdruck)`.
 Jede Suche hält ihr eigenes Modell — der Baum wird je Anfrage durchgereicht.
+
+## Zugang zum Intern-Endpunkt
+
+```ini
+[intern]
+anonymous = 0                    ; 1 laesst den schluessellosen Weg offen
+key.pfleger.token  = <hex>       ; bin2hex(random_bytes(32)), NUR in config.ini
+key.pfleger.level  = 10
+key.pfleger.sector = alpha;beta  ; Semikolon wie in der Sitzung
+```
+
+**Die Regel:** ohne Schlüssel ist der Endpunkt offen und arbeitet auf **Stufe 0**. Sobald
+**ein** Schlüssel steht, ist nichts mehr anonym — es sei denn, `anonymous = 1` lässt den
+schlüssellosen Weg ausdrücklich offen, für Dienste und Sensoren, die abgefragt werden sollen,
+ohne einen Schlüsselbund zu führen; sie bleiben dabei auf 0.
+
+Ein Schlüssel **ohne `level` bekommt 0** — Rechte werden hingeschrieben, nicht stillschweigend
+geerbt. Die alte flache Form `key[] = <hex>` trägt weiter und landet ebenfalls auf 0.
+Der Name (`pfleger`) ist kein Geheimnis: er steht bei einer Abweisung im Log.
+
+Ausgewertet in `index.php` (`intern_key_list()` in `mod_lib.php` bringt beide Schreibweisen
+auf eine Form); ein Treffer setzt `ContentGenerator::setClearance()` und, wenn angegeben,
+`setSectors()`. ⚠ Die Sektoren gehen **nicht** in `$_SESSION` — das bliebe über den Request
+hinaus stehen; `mayEnter()` liest sie über `sectors()`, Schlüssel vor Sitzung.
+
+⚠ Der Vergleich läuft über `hash_equals`, nicht `in_array`.
 
 ## Konfiguration
 

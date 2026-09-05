@@ -28,6 +28,26 @@ const NODE   = 'http://www.trscript.de/tree#final';
 const NS_ATT = 'http://www.trscript.de/tree#name';
 
 $base   = getenv('QPORTAL_URL') ?: 'https://localhost:8002/index.php';
+
+/* Der Schluessel aus der lokalen Config - er steht NICHT hier, sondern wird gelesen.
+*  Seit ein Schluessel existiert, laesst der Endpunkt die schluessellose Sitzung nicht
+*  mehr herein (config.ini [intern] anonymous = 0), und an ihm haengt die Stufe: ohne
+*  ihn stuende der Prueflauf auf 0 und duerfte nicht schreiben.
+*  Ist keiner gesetzt, bleibt es beim Sitzungsweg - eine Installation ohne Schluessel
+*  ist weiterhin offen. */
+$token = '';
+
+if (is_file(__DIR__ . '/../../mod_lib.php') && is_file(__DIR__ . '/../../config/config.ini'))
+{
+	require_once(__DIR__ . '/../../mod_lib.php');
+
+	$cfg  = parse_ini_file_multi(__DIR__ . '/../../config/config.ini', true);
+	$liste = intern_key_list($cfg['intern']['key'] ?? []);
+
+	usort($liste, fn($a, $b) => $b['level'] <=> $a['level']);
+
+	if ($liste) $token = $liste[0]['token'];
+}
 $jar    = tempnam(sys_get_temp_dir(), 'qp_walk_');
 $outdir = sys_get_temp_dir() . '/qp_walk_' . getmypid();
 @mkdir($outdir, 0700, true);
@@ -42,7 +62,8 @@ function http_post($payload)
 	curl_setopt_array($ch, [
 		CURLOPT_POST           => true,
 		CURLOPT_POSTFIELDS     => json_encode($payload, JSON_UNESCAPED_SLASHES),
-		CURLOPT_HTTPHEADER     => ['Content-Type: application/json'],
+		CURLOPT_HTTPHEADER     => array_filter(['Content-Type: application/json',
+		                                         $GLOBALS['token'] !== '' ? 'Authorization: Bearer ' . $GLOBALS['token'] : null]),
 		CURLOPT_RETURNTRANSFER => true,
 		CURLOPT_HEADER         => true,
 		CURLOPT_COOKIEJAR      => $jar,
@@ -351,17 +372,30 @@ check('__add_in_object', with_log(on_node(cmd('__add_in_object'))),
 
 /* --- Sichern: die einzige Wirkung, die den Prozess verlaesst --- */
 
-/* ⚠ SEIT 2026-09-05 UEBERSPRUNGEN. __save_back traegt addSecurity(10) - Schreiben ist
-*  die magische Stufe (STW). Dieser Prueflauf oeffnet eine Intern-SITZUNG ohne
-*  Anmeldung und steht damit auf Stufe 0; der Befehl wird abgewiesen, und das ist
-*  richtig so. Wieder pruefbar wird der Schreibweg, sobald eine Stufe von aussen
-*  kommt - entweder ueber einen API-Schluessel mit Stufe (setClearance, noch ohne
-*  Aufrufer) oder ueber einen angemeldeten Nutzer mit securityclass >= 10.
-*  NICHT einfach die Einstufung zurueckdrehen, um die Marke gruen zu bekommen. */
-$results[] = ['cmd' => '__save_back', 'state' => 'uebersprungen',
-              'note' => 'braucht Stufe 10; diese Sitzung hat 0'];
-$results[] = ['cmd' => '__save_back (neuer Pfad)', 'state' => 'uebersprungen',
-              'note' => 'braucht Stufe 10; diese Sitzung hat 0'];
+/* Zwei Faelle: das Ziel vorbereitet und das Ziel neu. Beides braucht Stufe 10 -
+*  Schreiben ist die magische Stufe -, und die kommt vom Schluessel oben. */
+$target = $outdir . '/saveback.xml';
+touch($target);
+
+check('__save_back',
+      with_log(on_node(cmd('__save_back', ['format' => '', 'file' => $target]))),
+      function($log) use ($target) {
+	clearstatcache();
+	if (!is_file($target))
+		return [false, 'keine Datei unter ' . $target];
+	return [filesize($target) > 0,
+	        filesize($target) > 0 ? 'geschrieben: ' . filesize($target) . ' Bytes' : 'Datei blieb leer'];
+});
+
+$neu = $outdir . '/saveback_neu.xml';
+check('__save_back (neuer Pfad)',
+      with_log(on_node(cmd('__save_back', ['format' => '', 'file' => $neu]))),
+      function($log) use ($neu) {
+	clearstatcache();
+	if (!is_file($neu))
+		return [false, 'keine Datei unter ' . $neu];
+	return [filesize($neu) > 0, 'neue Datei angelegt: ' . filesize($neu) . ' Bytes'];
+});
 
 /* --- Der einzige Befehl ausserhalb des Standards --- */
 
