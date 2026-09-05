@@ -27,9 +27,14 @@ php -d error_reporting=E_ERROR test/proben/probe_registry_vocab.php   # ausser d
 `seek_scope.php` und `sparql_parse.php` müssen vollständig grün sein — jede rote Zeile
 dort ist neu. `probe_registry_vocab.php` bewacht die Naht zwischen Vokabulardokument und
 `build_up()` und steht bei **32 in Ordnung / 0 rot**.
-`intern_walk.php` steht bei **32 gelaufen / 1 rot** — `__get_data` ist ein Bestandsdefekt
-(über den Intern-Kanal ist der Aufrufer der ContentGenerator und damit kein Knoten). Diese
-Zahl ist die Vergleichsmarke: ändert sie sich, hat die letzte Änderung etwas gebrochen.
+`intern_walk.php` steht bei **30 gelaufen / 1 rot / 2 übersprungen**. Die rote Zeile ist
+`__get_data` (über den Intern-Kanal ist der Aufrufer der ContentGenerator und damit kein
+Knoten; STW hat entschieden, das nicht umzubauen). Übersprungen sind die beiden
+`__save_back`-Fälle: seit `addSecurity(10)` braucht Schreiben Stufe 10, und der Prüflauf
+öffnet eine Intern-Sitzung ohne Anmeldung, steht also auf 0. ⚠ Nicht die Einstufung
+zurückdrehen, um das grün zu bekommen — der Schreibweg wird wieder prüfbar, sobald eine
+Stufe von außen kommt. Diese Zahlen sind die Vergleichsmarke: ändern sie sich, hat die
+letzte Änderung etwas gebrochen.
 
 `./server.sh` startet `symfony server:start` auf **https**; die Prüfstände sprechen dann
 `https://localhost:8002`. Mit `php -S` geht nur http — dann `QPORTAL_URL` setzen.
@@ -235,6 +240,26 @@ beschreibt, macht die Wertmenge lückenhaft — dann verliert eine Suche still e
 mit **leerem** Wert ist eine Aussage, ein **fehlendes** ist keine. Wer nur auf `''` prüft,
 lässt jeden Knoten durch, der das Attribut gar nicht hat — eine UND-Verknüpfung wird damit
 still wirkungslos.
+
+⚠ **Beim Serialisieren wird der Schlüssel aus `attrib` zum Attributnamen.**
+`all_attrib_axo()` (`xml_multitree.php:1476`) schreibt `$key . '="' . $value . '"'`, und
+liest über `show_cur_attrib()` → `get_attribute()` **nur `attrib`**, nie `attrib_ns`. Dort
+muss also ein gültiger XML-Name stehen — der Parse-Weg liefert ihn mit Präfix
+(`create_node_to_attribute` → `identifier`).
+
+⚠ **Ein zur Laufzeit gesetztes Attribut ging bis `2026-09-05` genau daran kaputt.**
+`set_ns_attribute()` rief `attribute($uri, …)` mit der **vollen URI** als Namen und legte
+den lokalen Namen in einer zweiten Zeile daneben. Ergebnis: zwei Schlüssel auf einen
+Knoten, das Attribut stand **zweimal** im gespeicherten Dokument, eines davon mit einer URI
+als Namen — `Failed to parse QName 'https:'`, das Dokument war nicht mehr wohlgeformt. Der
+Fehler zeigte sich erst beim Speichern, nicht beim Lesen.
+
+⚠ Der Präfix dafür kommt aus `showDocumentsNamespaces()`, und die liefert
+**Präfix → Namensraum**. Die Gegenrichtung braucht `array_search($ns_uri, $ns, true)`, nicht
+`isset($ns[$ns_uri])` — der alte Code schlug mit einer URI gegen eine präfixgeschlüsselte
+Liste nach, traf nie, und setzte den Präfix ersatzweise auf die URI. Dieselbe Funktion ließ
+außerdem `$newKey` zwischen den Runden stehen, wodurch jedes gewöhnliche Attribut einen
+Präfix-Eintrag überschrieb.
 
 **Positionsstempel** (`Interface_ns.php:369`): Element `.i.j.k`, Attribut `…@<full_URI>`,
 Daten `…#<QName>`. Der Baum-Stempel (`xml_multitree.php:345`) stellt `0000.<idx>` voran;

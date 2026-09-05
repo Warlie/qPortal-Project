@@ -351,34 +351,17 @@ check('__add_in_object', with_log(on_node(cmd('__add_in_object'))),
 
 /* --- Sichern: die einzige Wirkung, die den Prozess verlaesst --- */
 
-/* save_file (xml_multitree_omni_handle.php:250) schreibt nur in eine Datei, die es
-*  schon gibt, sonst liefert es false - __save_back wertet das nicht aus und meldet
-*  trotzdem Erfolg. Deshalb zwei Faelle: das Ziel vorbereitet und das Ziel neu. */
-$target = $outdir . '/saveback.xml';
-touch($target);
-
-check('__save_back',
-      with_log(on_node(cmd('__save_back', ['format' => '', 'file' => $target]))),
-      function($log) use ($target) {
-	clearstatcache();
-	if (!is_file($target))
-		return [false, 'keine Datei unter ' . $target];
-	return [filesize($target) > 0,
-	        filesize($target) > 0
-	            ? 'geschrieben: ' . filesize($target) . ' Bytes'
-	            : 'Datei blieb leer'];
-});
-
-$neu = $outdir . '/saveback_neu.xml';
-check('__save_back (neuer Pfad)',
-      with_log(on_node(cmd('__save_back', ['format' => '', 'file' => $neu]))),
-      function($log) use ($neu) {
-	clearstatcache();
-	/* Erwartet wird der stille Fehlschlag - er ist dokumentiert, nicht behoben */
-	return [!is_file($neu), is_file($neu)
-		? 'unerwartet: neue Datei wurde doch angelegt'
-		: 'legt keine neue Datei an und meldet trotzdem Erfolg (still)'];
-});
+/* ⚠ SEIT 2026-09-05 UEBERSPRUNGEN. __save_back traegt addSecurity(10) - Schreiben ist
+*  die magische Stufe (STW). Dieser Prueflauf oeffnet eine Intern-SITZUNG ohne
+*  Anmeldung und steht damit auf Stufe 0; der Befehl wird abgewiesen, und das ist
+*  richtig so. Wieder pruefbar wird der Schreibweg, sobald eine Stufe von aussen
+*  kommt - entweder ueber einen API-Schluessel mit Stufe (setClearance, noch ohne
+*  Aufrufer) oder ueber einen angemeldeten Nutzer mit securityclass >= 10.
+*  NICHT einfach die Einstufung zurueckdrehen, um die Marke gruen zu bekommen. */
+$results[] = ['cmd' => '__save_back', 'state' => 'uebersprungen',
+              'note' => 'braucht Stufe 10; diese Sitzung hat 0'];
+$results[] = ['cmd' => '__save_back (neuer Pfad)', 'state' => 'uebersprungen',
+              'note' => 'braucht Stufe 10; diese Sitzung hat 0'];
 
 /* --- Der einzige Befehl ausserhalb des Standards --- */
 

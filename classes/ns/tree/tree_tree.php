@@ -69,6 +69,24 @@ function &new_Instance()
 
 
 	
+/**
+*	Der Lauf in diesen Zweig — mit der Stufe, die der Knoten verlangt.
+*
+*	Der Waechter hat oben schon geprueft, ob der Aufrufer hier hinein darf. Traegt der
+*	Knoten eine securitylevel, ist das zugleich die Stufe, auf der ALLES arbeitet, was
+*	hinter ihm laeuft (STW): "das war ohnehin erlaubt, nur das Veraendern war verboten,
+*	wenn das Level nicht stimmt".
+*
+*	⚠ Nur schieben, wenn der Knoten wirklich eine Stufe traegt. "Keine Angabe" heisst
+*	KEINE AUSSAGE, nicht "Stufe 0" — sonst zieht die Klammer in pushClearance einen
+*	Zehner beim Betreten eines unmarkierten Zweiges auf 0 herunter, und er duerfte
+*	dahinter weniger als davor. -1 ist ebenfalls draussen: das ist die Marke "nur fuer
+*	Nichtangemeldete", keine Faehigkeitsstufe.
+*
+*	⚠ Das Herausnehmen steht in finally — der Zweig hat mehrere Ausgaenge, und eine
+*	Ausnahme darf die fremde Stufe nicht stehen lassen. Dass ein einzelner Stapel
+*	genuegt, haengt daran, dass sich kein zweiter Prozess dazwischenschiebt (STW).
+*/
 function event_message_in($type,&$obj)
 	{
 //echo "Das Ding hier " . " [" . $this->full_URI() . "]" . spl_object_id($this) . " wurde aufgerufen von \n"; // . spl_object_id($obj->get_node()) .  "\n";
@@ -109,6 +127,47 @@ $obj->set_node($this);
 
 		if(is_object($cg) && !$cg->mayEnter($this))
 			throw new NoPermissionException('not Allowed');
+
+		/* Ab hier laeuft der Zweig — und zwar auf der Stufe, die DIESER Knoten
+		*  verlangt (STW): "das war ohnehin erlaubt, nur das Veraendern war verboten,
+		*  wenn das Level nicht stimmt". Der Waechter eine Zeile darueber hat gerade
+		*  geprueft, dass der Aufrufer sie mitbringt.
+		*
+		*  ⚠ Nur schieben, wenn der Knoten wirklich eine Stufe traegt. "Keine Angabe"
+		*  heisst KEINE AUSSAGE, nicht "Stufe 0" — sonst zieht die Klammer in
+		*  pushClearance einen Zehner beim Betreten eines unmarkierten Zweiges auf 0
+		*  herunter, und er duerfte dahinter weniger als davor. -1 ist ebenfalls
+		*  draussen: die Marke "nur fuer Nichtangemeldete" ist keine Faehigkeitsstufe.
+		*
+		*  ⚠ Und erst HIER, nicht vor dem Namensvergleich: sonst schoebe jeder
+		*  Geschwisterknoten, den die Nachricht nur streift, seine Stufe auf den
+		*  Stapel. Dass ein einzelner Stapel genuegt, haengt daran, dass sich kein
+		*  zweiter Prozess dazwischenschiebt (STW). */
+		$stufe = $this->get_ns_attribute('http://www.trscript.de/tree#securitylevel');
+
+		$eigene_stufe = is_object($cg)
+		             && false !== $stufe
+		             && '' !== trim((string) $stufe)
+		             && intval($stufe) >= 0;
+
+		if(!$eigene_stufe)
+			return $this->run_branch($type, $obj, $listTreeNames);
+
+		$cg->pushClearance(intval($stufe));
+
+		try
+		{
+			return $this->run_branch($type, $obj, $listTreeNames);
+		}
+		finally
+		{
+			$cg->popClearance();
+		}
+	}
+
+	/** Der eigentliche Lauf, aufgeteilt nur, damit die Stufe eine Klammer bekommt. */
+	private function run_branch($type,&$obj,$listTreeNames)
+	{
 
 		
 		// consider the aspect for the next branch (tree)

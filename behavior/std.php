@@ -381,6 +381,9 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			return true;
 		};
 	$reg->addLog(fn($node, $obj, $event) => '__save_back: ' . $node->get_parser()->loaded_URI[$node->get_parser()->idx], 3);
+	/* Schreiben ist die magische Stufe: ab da raeumt man sich Stufen selbst weg.
+	*  STW: "muss einfach eine 10 sein und beliebig schreiben koennen." */
+	$reg->addSecurity(10);
 
 	$reg->addDescription(
 		'Schreibt das Dokument des aktuellen Parsers zurueck auf die Platte. Schreibender Befehl.',

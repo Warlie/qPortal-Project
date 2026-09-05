@@ -700,17 +700,17 @@ function attribute($name,&$value){
 
 		$attrib = &$this->parser->namespace_frameworks[$teile[0]]['node'][$teile[1]]->new_Instance();
 
-		$ns = $this->showDocumentsNamespaces();
-		$prefix = "";
-		//var_dump($ns);
-		if(!isset($ns[$teile[0]]))
+		/* showDocumentsNamespaces() liefert PRAEFIX => NAMENSRAUM. Gesucht wird hier
+		*  die Gegenrichtung, darum array_search und nicht isset($ns[...]) — das
+		*  schlug mit einer URI gegen eine praefixgeschluesselte Liste nach und traf
+		*  nie, weshalb $prefix die URI wurde. */
+		$ns     = $this->showDocumentsNamespaces();
+		$prefix = array_search($teile[0], $ns, true);
+
+		if($prefix === false)
 		{
 			trigger_error("NODE set_ns_attribute: there is no namespace to " . $teile[1], E_USER_WARNING);
-			$prefix = $teile[0];
-		}
-		else
-		{
-			$prefix = $ns[$teile[0]];
+			$prefix = "";
 		}
 			//var_dump($prefix);
 			//throw new \RuntimeException("NODE set_ns_attribute: there is no namespace to " . $teile[1]);
@@ -721,8 +721,16 @@ function attribute($name,&$value){
 					$attrib->set_idx($this->idx); 
 					$attrib->namespace = $teile[0];
 					$attrib->set_parser($this->parser);
-					$this->attribute($uri,$attrib);
-					$this->attrib[$teile[1]] = &$attrib;
+					/* ⚠ attribute() legt den Knoten unter DIESEM Namen in $this->attrib ab,
+					*  und genau dieser Schluessel wird beim Serialisieren zum Attributnamen
+					*  (xml_multitree.php all_attrib_axo: $key . '="' . $value . '"').
+					*  Hier stand die volle URI — und daneben eine zweite Zeile mit dem
+					*  lokalen Namen. Ergebnis: JEDES nachtraeglich gesetzte Attribut stand
+					*  zweimal im gespeicherten Dokument, einmal davon mit einer URI als
+					*  Attributnamen, was XML nicht erlaubt. Der Parse-Weg macht es richtig
+					*  vor: er uebergibt den Namen MIT Praefix
+					*  (create_node_to_attribute -> 'identifier'). */
+					$this->attribute('' === $prefix ? $teile[1] : $prefix . ':' . $teile[1], $attrib);
 
 					/* nachtraeglich gesetzte Attribute muessen in die Lookup-Tabelle:
 					*  ein fehlender Eintrag verliert einen Treffer, ohne dass es
@@ -1275,6 +1283,25 @@ function hold_messages($type,&$obj)
 		return;
 	}
 
+	/* Dieselbe Liste, nur noch als TEXT. Sie kommt so aus <access> (getdata()) und
+	*  aus dem Intern-Kanal (commandLineInjection legt die Rohzeichenkette ab). Ohne
+	*  diesen Zweig lief sie am Listenfall vorbei in Command_Object, wo json_decode
+	*  zwar die Liste liefert, die Klasse aber nur EINE Struktur kennt: 'Identifire'
+	*  und ['Command']['Name'] sind dann null - es knallt nicht, es passiert nichts.
+	*  Das Glossar versprach die Liste bereits ("wrap individual commands in a JSON
+	*  array for sequential execution"). */
+	if(is_string($type) && '[' === substr(ltrim($type), 0, 1))
+	{
+		$liste = json_decode($type, true);
+
+		if(is_array($liste) && array_is_list($liste))
+		{
+			foreach($liste as $cmd)
+				$this->hold_messages($cmd, $obj);
+			return;
+		}
+	}
+
 	
 	$com = $this->parseCommand($type);
 	$this->event_message_check($com,$obj);
@@ -1652,10 +1679,15 @@ function showDocumentsNamespaces()
 
 		foreach ($this->get_attribute() as $key => $value) {
 
+    	/* ⚠ $newKey MUSS je Runde neu gesetzt werden. Vorher stand er nur in den
+    	*  beiden Zweigen; jedes gewoehnliche Attribut (name, id, value) lief mit dem
+    	*  Praefix der VORRUNDE weiter und ueberschrieb dessen Namensraum. */
     	if ($key === 'xmlns')
     		$newKey = '';
     	elseif (strpos($key, 'xmlns:') === 0)
     		$newKey = substr($key, 6);
+    	else
+    		continue;
 
     	$cleanArray[$newKey] = $value;
     

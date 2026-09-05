@@ -158,7 +158,26 @@ class CSV_handle extends Interface_handle
 		if(!(false === strpos($line, ';')))$delimiter = ';';
 		if(!(false === strpos($line, '|')))$delimiter = '|';
 		//if(!(false === strpos($line, '	')))$delimiter = '	';
-		//echo $delimiter;
+
+		/* ⚠ Kopfzeile ohne Trenner: eine einspaltige Datei, eine leere erste Zeile
+		*  oder ein anderer Trenner als die drei oben. Vorher blieb $delimiter leer
+		*  und explode('') war unter PHP 5 noch ein leeres Ergebnis, seit PHP 8 ein
+		*  ValueError - der Endpunkt starb an der Kopfzeile. Eine Datei mit genau
+		*  einer Spalte ist aber gueltiges CSV: dann ist die ganze Zeile die eine
+		*  Spalte, und der Trenner bleibt leer, weil es nichts zu trennen gibt. */
+		if('' === $delimiter)
+		{
+			global $logger_class;
+
+			if($logger_class)
+				$logger_class->setAssert('CSV parse_Head: kein Trenner in der Kopfzeile,'
+					. ' die Zeile gilt als EINE Spalte (CSV_handle:parse_Head)', 3);
+
+			$this->heads = ['' === trim($line) ? '' : $line];
+
+			return $delimiter;
+		}
+
 		$this->heads = explode($delimiter,$line);
 		return $delimiter;
 	}
@@ -168,7 +187,11 @@ class CSV_handle extends Interface_handle
 				if(trim($line)<>'')
 				{
 				$this->base_object->tag_open($this, 'ROW',array('NUM'=>$i) );
-				$cur_row = explode($delimiter,$line);
+
+				/* ⚠ Derselbe Fall wie in parse_Head: ohne Trenner ist die Zeile EINE
+				*  Spalte. explode('') waere seit PHP 8 ein ValueError, und der traefe
+				*  hier jede Datenzeile, nicht nur den Kopf. */
+				$cur_row = ('' === $delimiter) ? [$line] : explode($delimiter,$line);
 				
 							for($j = 0;$j<count($cur_row);$j++)
 							{

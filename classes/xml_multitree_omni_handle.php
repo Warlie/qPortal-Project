@@ -246,16 +246,27 @@ function save_file($format = '',$send_header=false, $filename = false)
 		$file = $this->PARAMETER[$this->idx]['URI'];
 	
 
-	$stream = null;
-	if ( file_exists($file))
+	/* ⚠ Bis 2026-09-05 stand hier ein file_exists()-Tor: eine NEUE Datei wurde nie
+	*  angelegt, und der Aufrufer bekam ein false, das __save_back nicht auswertet —
+	*  ein stiller Fehlschlag. Als Schutz taugte das nichts (eine vorhandene Datei
+	*  wurde ja anstandslos ueberschrieben), es verhinderte nur den erlaubten Fall.
+	*  STW: "muss einfach eine 10 sein und beliebig schreiben koennen" — das Recht
+	*  haengt an der Einstufung des Befehls, nicht an der Existenz der Zieldatei. */
+	$stream = @fopen($file, 'w');
+
+	if($stream === false)
 	{
-        touch ($file);
-	$stream = fopen($file, 'w');
+		global $logger_class;
+
+		if($logger_class)
+			$logger_class->setAssert('save_file: "' . $file . '" ist nicht schreibbar', 0);
+
+		return false;
+	}
+
 	$success = $this->save_file_stream($stream,$format,$send_header);
 	fclose($stream);
 	return $success;
-	}
-	return false;
 	
 	
 	//echo $this->PARAMETER[$this->idx]['URI'];
