@@ -306,6 +306,24 @@ Treffer. `attribute_is_current()` / `identity_is_current()` sind diese Nachprüf
 Über die Modelle: `$tree->seek_by_model('internal')` bzw. `query_by_model($m, $ausdruck)`.
 Jede Suche hält ihr eigenes Modell — der Baum wird je Anfrage durchgereicht.
 
+**Geplant (STW, 2026-09-11): `__query` mit `statement` und `model` — eine Abfrage für alles.**
+Später bekommen einzelne Modelle eigene Befehle, die `model` festlegen und eigene Attribute tragen.
+Heute gibt es **keinen** Intern-Befehl für die Suchmodelle; `seek_by_model`/`query_by_model` stehen
+fertig, haben aber keinen Aufrufer. Was beim Bau zu beachten ist:
+
+- Modelle: `internal`, `sparql`; `xpath` ist ein Stub.
+- `sparql.use` ist leer → `profile()` wirft; wie `__where_am_i` `use_source('qportal')` setzen oder
+  die Gegenstelle als Attribut wählen lassen.
+- Rückgabe: `query()` gibt nur die Knoten der ersten Spalte, `solutions()` die Zeilen. Nach außen die
+  Zeilen, Knoten darin als `uri`/`name`/`stamp` (`answer_shape` serialisiert keinen Knoten) — über das
+  Ereignis als Zwischenspeicher, dann `__to_owner`.
+- `collect_nodes` ist baumlokal: über alles, was `__echo` geladen hat, mit derselben Baumschleife und
+  demselben Zurückstellen des Parsers wie `__where_am_i scope=global`. Nur im selben Request.
+- Stufe: `__query` sieht auch die Umsetzung der Prozesse → `addSecurity` auf eine höhere Stufe (der
+  „andere Befehl“ für alles, was nicht `tree`/`final` ist).
+- Für die **Türschilder** ist es schon da: `__where_am_i scope=global` nach `__echo` fragt jeden
+  geladenen Baum per SPARQL ab und listet alle `tree`/`final` mit Schild, Baum und Stempel.
+
 ## start ist ein Muss
 
 **Der Pfad für `start` steht im ÄUSSEREN `Attribute`** — neben `Command`, nicht darin — als
