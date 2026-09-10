@@ -839,7 +839,7 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 		]);
 
 	/* __where_am_i - das Tuerschild des Knotens, auf dem der Befehl steht, als Array
-	*  (STW, 2026-09-10). Ohne Parameter.
+	*  (STW, 2026-09-10). Parameter scope (local/tree/global) und show (Begriffsliste).
 	*
 	*  - Gefragt wird ueber den NAMEN, per SPARQL: ein Weg, derselbe, den spaeter jede
 	*    Abfrage nimmt. Je Schildbegriff eine kleine Abfrage - die Maschine kennt weder
@@ -858,55 +858,127 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 	*    Praefix mit #. */
 	$reg->__where_am_i = function($node, $obj, $event)
 		{
+			$T        = 'http://www.trscript.de/tree#';
 			$structur = $event->get_Result_Array();
 			$value    = $structur['Command']['Value'] ?? null;
+			$attr     = $structur['Command']['Attribute'] ?? [];
+			if(!is_array($attr)) $attr = [];
 
-			$name   = $node->get_ns_attribute('http://www.trscript.de/tree#name');
-			$schild = ['uri' => $node->full_URI(), 'name' => ($name === false ? null : $name)];
+			$scope = trim((string) ($attr['scope'] ?? ''));
+			if($scope === '') $scope = 'local';
+			$show  = trim((string) ($attr['show'] ?? ''));
+
 			$parser = $node->get_parser();
+			$cg     = $node->get_contentGen();
+			$notes  = [];
 
-			if(!is_string($name) || $name === '')
-				$schild['note'] = 'kein tree:name - ueber den Namen gibt es nichts zu fragen';
-			elseif(strpos($name, '"') !== false)
-				$schild['note'] = 'der Name enthaelt ein Anfuehrungszeichen, das die Abfrage nicht traegt';
-			elseif(!is_object($parser))
-				$schild['note'] = 'der Knoten hat keinen Parser (zur Laufzeit angelegt?)';
+			if(!class_exists('PHP_Ast_Scan'))
+				require_once(__DIR__ . '/../classes/handles/PHP_ast_scan.php');
+
+			/* Die Begriffe. show nimmt Kurznamen (die Schluessel aus DESC_KEYS, dazu value,
+			*  delivers, columns, effect) oder die Praefixform. Der Name wird in die Abfrage
+			*  eingesetzt - darum nur, was dem Muster praefix:name folgt. */
+			$kurz = PHP_Ast_Scan::DESC_KEYS + ['value'    => 'tree:value',
+			                                   'delivers' => 'desc:delivers',
+			                                   'columns'  => 'desc:columns',
+			                                   'effect'   => 'desc:effect'];
+			$begriffe = [];
+
+			if($show === '')
+				$begriffe = array_values(array_unique(array_merge(['tree:value'],
+					array_values(PHP_Ast_Scan::DESC_KEYS), ['desc:delivers', 'desc:columns', 'desc:effect'])));
 			else
+				foreach(array_map('trim', explode(',', $show)) as $w)
+				{
+					if($w === '' || $w === 'uri' || $w === 'name') continue;
+					if(isset($kurz[strtolower($w)]))                                         $b = $kurz[strtolower($w)];
+					elseif(preg_match('/^(tree|desc|dcterms):[A-Za-z_][A-Za-z0-9_]*$/', $w)) $b = $w;
+					else { $notes[] = 'unbekannt in show: ' . $w; continue; }
+					if(!in_array($b, $begriffe, true)) $begriffe[] = $b;
+				}
+
+			/* Schilder tragen nur tree und final (STW). Was sonst im Baum steht, ist die
+			*  Umsetzung des Prozesses und geht den Besucher nichts an - dafuer gibt es einen
+			*  anderen Befehl, der eine hoehere Stufe tragen kann. Und was mayEnter
+			*  verweigert, taucht auch in keiner Liste auf. */
+			$sorten = [$T . 'final' => 'tree:final', $T . 'tree' => 'tree:tree'];
+			$darf   = fn($n) => !is_object($cg) || $cg->mayEnter($n);
+			$baeume = [];
+
+			if(!is_object($parser))
+				$notes[] = 'der Knoten hat keinen Parser (zur Laufzeit angelegt?)';
+			elseif($scope === 'local')
 			{
-				if(!class_exists('PHP_Ast_Scan'))
-					require_once(__DIR__ . '/../classes/handles/PHP_ast_scan.php');
+				if(!isset($sorten[$node->full_URI()]))
+					$notes[] = 'kein tree- oder final-Knoten - Schilder tragen nur diese; der Rest laeuft ueber einen anderen Befehl';
+				elseif(!$darf($node))
+					$notes[] = 'kein Zutritt';
+				else
+					$baeume = [$node->get_idx()];
+			}
+			elseif($scope === 'tree')
+				$baeume = [$node->get_idx()];
+			elseif($scope === 'global')
+				$baeume = range(0, $parser->max_idx());
+			else
+				$notes[] = 'unbekannter scope: ' . $scope . ' (local, tree, global)';
 
-				$begriffe = array_values(array_unique(array_merge(
-					['tree:value'],
-					array_values(PHP_Ast_Scan::DESC_KEYS),
-					['desc:delivers', 'desc:columns', 'desc:effect'])));
+			$treffer = [];
 
+			if($baeume)
+			{
 				$praefix = "PREFIX tree: <http://www.trscript.de/tree#>\n"
+				         . "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n"
 				         . "PREFIX desc: <" . PHP_Ast_Scan::NS_DESC . "#>\n"
 				         . "PREFIX dcterms: <" . PHP_Ast_Scan::NS_DCTERMS . "#>\n";
-
 				$zurueck = $parser->cur_idx();
 
 				try
 				{
-					$parser->change_idx($node->get_idx());
-
 					$m = $parser->seek_by_model('sparql');
 					if($m->source() === '')
 						$m->use_source('qportal');
 
-					foreach($begriffe as $b)
+					foreach($baeume as $i)
 					{
-						$m->query($praefix . 'SELECT ?s ?wert WHERE { ?s tree:name "' . $name . '" . ?s ' . $b . ' ?wert }');
+						/* Gefragt wird im jeweiligen Baum - nach einem __echo liegen mehrere
+						*  im Parser; danach steht er wieder, wo er war. */
+						$parser->change_idx($i);
 
-						foreach($m->solutions() as $zeile)
-							if(($zeile['?s'] ?? null) === $node)
-								$schild[$b] = $zeile['?wert'];
+						foreach($sorten as $sorte)
+						{
+							/* Erst die Knoten, dann die Begriffe - sonst fiele einer ohne
+							*  jeden Schildbegriff still heraus. */
+							$m->query($praefix . 'SELECT ?s WHERE { ?s rdf:type ' . $sorte . ' }');
+							foreach($m->solutions() as $z)
+							{
+								$k = $z['?s'] ?? null;
+								if(!is_object($k) || ($scope === 'local' && $k !== $node) || !$darf($k))
+									continue;
+
+								if(!isset($treffer[spl_object_id($k)]))
+								{
+									$n = $k->get_ns_attribute($T . 'name');
+									$eintrag = ['uri' => $k->full_URI(), 'name' => ($n === false ? null : $n)];
+									if($scope === 'global') $eintrag['tree']  = $parser->indexToUri($i);
+									if($scope !== 'local')  $eintrag['stamp'] = $k->position_stamp();
+									$treffer[spl_object_id($k)] = ['i' => $i, 'e' => $eintrag];
+								}
+							}
+
+							foreach($begriffe as $b)
+							{
+								$m->query($praefix . 'SELECT ?s ?wert WHERE { ?s rdf:type ' . $sorte . ' . ?s ' . $b . ' ?wert }');
+								foreach($m->solutions() as $z)
+									if(is_object($z['?s'] ?? null) && isset($treffer[spl_object_id($z['?s'])]))
+										$treffer[spl_object_id($z['?s'])]['e'][$b] = $z['?wert'];
+							}
+						}
 					}
 				}
-				catch(Throwable $e)
+				catch(Throwable $ex)
 				{
-					$schild['error'] = $e->getMessage();
+					$notes[] = 'Fehler: ' . $ex->getMessage();
 				}
 				finally
 				{
@@ -914,7 +986,24 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 				}
 			}
 
-			$obj->set_context($schild);
+			/* Dokumentreihenfolge: nach Baum, dann nach Stempel */
+			usort($treffer, fn($x, $y) => ($x['i'] <=> $y['i']) ?: strnatcmp($x['e']['stamp'] ?? '', $y['e']['stamp'] ?? ''));
+			$hits = array_map(fn($t) => $t['e'], $treffer);
+
+			if($scope === 'local')
+			{
+				$n = $node->get_ns_attribute($T . 'name');
+				$ergebnis = $hits[0] ?? ['uri' => $node->full_URI(), 'name' => ($n === false ? null : $n)];
+			}
+			elseif($scope === 'tree' && is_object($parser))
+				$ergebnis = ['scope' => 'tree', 'tree' => $parser->indexToUri($node->get_idx()), 'hits' => $hits];
+			else
+				$ergebnis = ['scope' => $scope, 'hits' => $hits];
+
+			if($notes)
+				$ergebnis['note'] = implode('; ', $notes);
+
+			$obj->set_context($ergebnis);
 
 			if(!empty($value))
 				$node->hold_messages($value, $obj);
@@ -922,14 +1011,29 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			return true;
 		};
 
-	$reg->addLog(function($node, $obj, $event){return '__where_am_i auf ' . $node->full_URI();}, 5);
+	$reg->addLog(function($node, $obj, $event){
+			$a = $event->get_Result_Array()['Command']['Attribute'] ?? [];
+			return '__where_am_i auf ' . $node->full_URI() . ' (scope ' . var_export($a['scope'] ?? 'local', true) . ')';
+		}, 5);
 
 	$reg->addDescription(
-		'Das Tuerschild des Knotens, auf dem der Befehl steht, als Array: uri, name und was'
-		. ' das Schild sagt - tree:value, dcterms:*, desc:function, desc:parameter (Eingaben),'
-		. ' desc:delivers und desc:columns (Ausgaben), desc:effect, desc:tricky. Gefragt wird'
-		. ' per SPARQL ueber den Namen, im Baum des Knotens. Das Array liegt danach im Ereignis;'
-		. ' mit Value (etwa __to_owner) geht es weiter. Keine Attribute.');
+		'Tuerschilder als Array. Ein Schild haben nur tree- und final-Knoten: uri, name und was'
+		. ' es sagt - tree:value, dcterms:*, desc:function, desc:parameter (Eingaben),'
+		. ' desc:delivers und desc:columns (Ausgaben), desc:effect, desc:tricky. Gefragt wird per'
+		. ' SPARQL; was mayEnter verweigert, erscheint nicht. Das Ergebnis liegt danach im'
+		. ' Ereignis; mit Value (etwa __to_owner) geht es weiter.',
+		[
+			'scope' => ['description' => 'local (Vorgabe): das Schild DIESES Knotens. tree: die'
+			                           . ' Schilder aller tree/final im Dokument des Knotens, als'
+			                           . ' {scope, tree, hits:[...]}. global: dasselbe ueber alle'
+			                           . ' geladenen Baeume, je Treffer mit Baum und Stempel.',
+			            'required'    => false],
+			'show'  => ['description' => 'Kommagetrennte Liste der Begriffe: Kurznamen (function,'
+			                           . ' parameter, delivers, columns, effect, value, title, ...)'
+			                           . ' oder Praefixform (desc:effect). Leer = alle. uri und name'
+			                           . ' stehen immer drin; Unbekanntes landet in note.',
+			            'required'    => false]
+		]);
 
 } catch (Exception $e) {
     echo "Fehler: " . $e->getMessage();

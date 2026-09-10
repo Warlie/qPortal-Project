@@ -23,7 +23,7 @@ QPORTAL_URL=http://127.0.0.1:8002/index.php php test/Integration/intern_walk.php
 # Das komplette qPortal mit eigenem INTERN-Baum (Server muss laufen)
 php -d error_reporting=E_ERROR test/Integration/tree_passthrough.php   # 7/0
 php -d error_reporting=E_ERROR test/Integration/tree_echo.php          # 21/0
-php -d error_reporting=E_ERROR test/Integration/tree_where.php         # 15/0
+php -d error_reporting=E_ERROR test/Integration/tree_where.php         # 31/0
 ```
 
 ```bash
@@ -351,16 +351,30 @@ nach außen (Zeichenkette, Zahl, Array → `{"value":…,"serialised":true}`), s
 Knoten, auf dem es steht. Ein Objekt im Kontext zählt nicht — `tree_tree` legt dort im Baumlauf
 seinen Knoten ab; oben im Intern-Aufruf ist der Kontext `null`.
 
-**`__where_am_i`** (ohne Parameter) — das Türschild des Knotens als Array: `uri`, `name` und je
-Schildbegriff ein Eintrag. Gefragt wird **per SPARQL über den Namen**, im Baum **des Knotens**
-(`change_idx` hin und zurück), je Begriff eine kleine Abfrage (kein `OPTIONAL`, keine
-Prädikatvariable); nur Zeilen mit `?s` === diesem Knoten zählen, gleichnamige Knoten vermischen
-sich nicht. Begriffe: `tree:value`, die Zielwerte aus `PHP_Ast_Scan::DESC_KEYS`, dazu
-`desc:delivers`/`desc:columns`/`desc:effect` (die Ausgaben stehen **nicht** in `DESC_KEYS`).
+**`__where_am_i`** — Türschilder als Array. **Ein Schild haben nur `tree` und `final`**: was sonst
+im Baum steht, ist die Umsetzung des Prozesses und geht den Besucher nichts an (STW) — dafür kommt
+ein eigener Befehl mit höherer Stufe. Was `mayEnter` verweigert, erscheint in keiner Liste.
+
+| `scope` | liefert |
+|---|---|
+| `local` (Vorgabe) | das Schild **dieses** Knotens: `uri`, `name`, je Begriff ein Eintrag. Auf einem anderen Knoten nur `note` |
+| `tree` | alle `tree`/`final` im Dokument des Knotens: `{scope, tree, hits:[…]}`, je Treffer mit `stamp` |
+| `global` | dasselbe über **alle geladenen Bäume** (nach `__echo` mehr), je Treffer mit `tree` und `stamp` |
+
+`show=function,delivers,…` begrenzt die Begriffe — Kurznamen (Schlüssel aus
+`PHP_Ast_Scan::DESC_KEYS`, dazu `value`, `delivers`, `columns`, `effect`) oder Präfixform
+(`desc:effect`); `uri`/`name` stehen immer drin, Unbekanntes landet in `note`. Weil der Name in die
+Abfrage eingesetzt wird, gilt nur `präfix:name`.
+
+Gefragt wird **per SPARQL** (`?s rdf:type tree:tree|tree:final`, dann je Begriff eine kleine
+Abfrage — kein `OPTIONAL`, keine Prädikatvariable), im jeweiligen Baum (`change_idx` hin und
+zurück). Begriffe ohne `show`: `tree:value`, die Zielwerte aus `DESC_KEYS` und
+`desc:delivers`/`desc:columns`/`desc:effect` — die Ausgaben stehen **nicht** in `DESC_KEYS`.
 `sparql.use` ist leer → `use_source('qportal')`. Nach außen:
 
 ```json
 {"Identifire":"*","Command":{"Name":"__where_am_i","Value":{"Identifire":"*","Command":{"Name":"__to_owner"}}}}
+{"Identifire":"*","Command":{"Name":"__where_am_i","Attribute":{"scope":"tree","show":"function,delivers"},"Value":{"Identifire":"*","Command":{"Name":"__to_owner"}}}}
 ```
 
 ⚠ **`dcterms` heißt als volle URI `http://purl.org/dc/terms/#title`** — `full_URI()` hängt `#` an

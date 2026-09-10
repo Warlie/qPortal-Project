@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer __where_am_i scope=global: ein zweites "messen" in einem anderen Dokument. -->
+<indextree xmlns="http://www.trscript.de/tree"
+           xmlns:desc="http://www.trscript.de/2026/pedl-desc">
+<final name="home" value="Anderswo">
+	<tree name="messen" value="Messen dort" desc:function="Misst anderswo." />
+</final>
+</indextree>

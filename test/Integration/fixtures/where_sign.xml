@@ -5,6 +5,8 @@
   messen    ein volles Schild: Beschriftung, Titel, Funktion, Ein- und Ausgaben, Wirkung
   doppelt   zweimal derselbe Name - jeder muss sein EIGENES Schild bekommen
   stumm     ein Name, sonst nichts
+  gesperrt  ein Sektor, den kein Pruefschluessel hat - erscheint in keiner Liste
+  anderswo  src auf where_other.xml - dort steht noch ein "messen" (scope=global nach __echo)
 -->
 <indextree xmlns="http://www.trscript.de/tree"
            xmlns:desc="http://www.trscript.de/2026/pedl-desc"
@@ -20,5 +22,7 @@
 	<tree name="doppelt" value="Erster"  desc:function="Der erste gleichnamige." />
 	<tree name="doppelt" value="Zweiter" desc:function="Der zweite gleichnamige." />
 	<tree name="stumm" />
+	<tree name="gesperrt" value="Gesperrt" sector="niemand" desc:function="Hinter dem Sektor." />
+	<tree name="anderswo" value="Anderswo" src="test/Integration/fixtures/where_other.xml" />
 </final>
 </indextree>

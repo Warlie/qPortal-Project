@@ -98,6 +98,62 @@ result('get_attribute -> to_owner', ($j6[0]['value'] ?? null) === 'Messen', json
 [, , $j7] = post(tree_named('messen', cmd('__where_am_i')));
 result('ohne Value: nichts nach aussen', ($j7['answered'] ?? null) === false, 'answered:false');
 
+/* 8. show: nur die genannten Begriffe, Kurzname und Praefixform */
+[, , $j8] = post(tree_named('messen', cmd('__where_am_i', ['show' => 'function,delivers'], cmd('__to_owner'))));
+result('show: Kurznamen',           array_keys($j8[0]['value'] ?? []) === ['uri', 'name', 'desc:function', 'desc:delivers'],
+       json_encode(array_keys($j8[0]['value'] ?? [])));
+[, , $j9] = post(tree_named('messen', cmd('__where_am_i', ['show' => 'desc:effect, value'], cmd('__to_owner'))));
+result('show: Praefixform',         ($j9[0]['value']['desc:effect'] ?? null) === 'keiner, liest nur'
+                                    && ($j9[0]['value']['tree:value'] ?? null) === 'Messen' && count($j9[0]['value'] ?? []) === 4,
+       json_encode(array_keys($j9[0]['value'] ?? [])));
+[, , $j10] = post(tree_named('messen', cmd('__where_am_i', ['show' => 'function,gibtsnicht'], cmd('__to_owner'))));
+result('show: Unbekanntes in note', strpos($j10[0]['value']['note'] ?? '', 'gibtsnicht') !== false && isset($j10[0]['value']['desc:function']),
+       $j10[0]['value']['note'] ?? '-');
+
+/* 9. scope=local ausdruecklich = Vorgabe */
+[, , $j11] = post(tree_named('messen', cmd('__where_am_i', ['scope' => 'local'], cmd('__to_owner'))));
+result('scope local = Vorgabe',     ($j11[0]['value'] ?? null) === $v, 'dasselbe Schild');
+
+/* 10. scope=tree: alle tree/final im Dokument des Knotens, nichts hinter dem Sektor */
+$namen = fn($hits) => array_map(fn($h) => $h['name'] ?? null, $hits);
+[, , $j12] = post(tree_named('messen', cmd('__where_am_i', ['scope' => 'tree'], cmd('__to_owner'))));
+$h12 = $j12[0]['value']['hits'] ?? [];
+result('tree: das ganze Dokument',   $namen($h12) === ['home', 'messen', 'doppelt', 'doppelt', 'stumm', 'anderswo'],
+       json_encode($namen($h12)));
+result('tree: Dokument genannt',     str_ends_with($j12[0]['value']['tree'] ?? '', 'where_sign.xml'), basename($j12[0]['value']['tree'] ?? '-'));
+result('tree: Schild im Treffer',    ($h12[1]['desc:function'] ?? null) === 'Misst etwas.' && isset($h12[1]['stamp']), 'messen mit Funktion und Stempel');
+result('tree: Sektor haelt',         !in_array('gesperrt', $namen($h12), true), 'gesperrt fehlt');
+
+/* 11. global: alles, was geladen ist - ohne und nach __echo */
+$aus = fn($hits, $doc) => array_values(array_filter($hits, fn($h) => str_ends_with($h['tree'] ?? '', $doc)));
+[, , $j13] = post(tree_named('messen', cmd('__where_am_i', ['scope' => 'global'], cmd('__to_owner'))));
+$h13 = $j13[0]['value']['hits'] ?? [];
+result('global ohne echo',           count($aus($h13, 'where_sign.xml')) === 6 && count($aus($h13, 'where_other.xml')) === 0,
+       count($h13) . ' Treffer, davon where_sign ' . count($aus($h13, 'where_sign.xml')));
+$echo = cmd('__echo');
+[, , $j14] = post([$echo, tree_named('messen', cmd('__where_am_i', ['scope' => 'global'], cmd('__to_owner')))]);
+$h14 = $aus($j14[0]['value']['hits'] ?? [], 'where_other.xml');
+result('global nach echo',           $namen($h14) === ['home', 'messen'] && ($h14[1]['desc:function'] ?? null) === 'Misst anderswo.',
+       json_encode($namen($h14)) . ' aus where_other');
+result('global: Baum und Stempel',   isset($h14[0]['tree'], $h14[0]['stamp']), 'je Treffer');
+$uris = array_unique(array_map(fn($h) => $h['uri'] ?? '', $j14[0]['value']['hits'] ?? []));
+result('nur tree und final',         array_diff($uris, [T . 'tree', T . 'final']) === [], json_encode(array_values($uris)));
+
+/* 12. local nur auf tree/final, und nur mit Zutritt */
+[, , $j15] = post(cmd('__find_node', ['json' => json_encode(['name' => T . 'indextree'])], cmd('__where_am_i', null, cmd('__to_owner'))));
+result('local auf indextree',        strpos($j15[0]['value']['note'] ?? '', 'kein tree- oder final-Knoten') !== false
+                                     && !isset($j15[0]['value']['name']) || ($j15[0]['value']['name'] ?? null) === null, $j15[0]['value']['note'] ?? '-');
+[, , $j16] = post(tree_named('gesperrt', cmd('__where_am_i', null, cmd('__to_owner'))));
+result('local hinter dem Sektor',    strpos($j16[0]['value']['note'] ?? '', 'kein Zutritt') !== false && !isset($j16[0]['value']['desc:function']),
+       $j16[0]['value']['note'] ?? '-');
+
+/* 13. unbekannter scope, und show zusammen mit tree */
+[, , $j17] = post(tree_named('messen', cmd('__where_am_i', ['scope' => 'irgendwas'], cmd('__to_owner'))));
+result('scope unbekannt',            strpos($j17[0]['value']['note'] ?? '', 'unbekannter scope') !== false, $j17[0]['value']['note'] ?? '-');
+[, , $j18] = post(tree_named('messen', cmd('__where_am_i', ['scope' => 'tree', 'show' => 'function'], cmd('__to_owner'))));
+$keys = array_unique(array_merge(...array_map('array_keys', $j18[0]['value']['hits'] ?? [[]])));
+result('show wirkt auf die Liste',   array_diff($keys, ['uri', 'name', 'stamp', 'desc:function']) === [], json_encode(array_values($keys)));
+
 $ok = 0; $fail = 0;
 foreach ($results as [$name, $good, $note])
 {
