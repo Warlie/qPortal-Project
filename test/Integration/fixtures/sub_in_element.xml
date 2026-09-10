@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand: <sub> IN einem <element>, mit Text davor und danach. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="sub in element">
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one">test/Integration/fixtures/out_blank.xml</main>
+	</template>
+	<content name="http://www.w3.org/1999/xhtml#html">
+		<element type="xhtml">vor-<sub src="test/Integration/fixtures/call_sub_trace.xml" />-nach</element>
+	</content>
+</final>
+</indextree>

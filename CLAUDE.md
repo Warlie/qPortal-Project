@@ -25,6 +25,7 @@ php -d error_reporting=E_ERROR test/Integration/tree_passthrough.php   # 7/0
 php -d error_reporting=E_ERROR test/Integration/tree_echo.php          # 21/0
 php -d error_reporting=E_ERROR test/Integration/tree_where.php         # 31/0
 php -d error_reporting=E_ERROR test/Integration/logger_listen.php      # 18/0 (Teil 1 ohne Server)
+php -d error_reporting=E_ERROR test/Integration/tree_call.php          # 12/0
 ```
 
 ```bash
@@ -386,6 +387,45 @@ einen Namensraum, der schon auf `/` endet. Mit dem üblichen Präfix findet SPAR
 und bindet danach das unveränderte `index.php` ein — `createConfigFromINIFile` überspringt
 definierte Konstanten. `?doc=<name>` wählt ein Dokument aus `test/Integration/fixtures/`
 (nur Namen, keine Pfade). Nur über den Server (Befehl kommt aus `php://input`), nur von localhost.
+
+## Unteraufrufe und Rückgabe
+
+**Die Scope-Rückgabe:** `tree_sub` öffnet `createScope(<src>)`, startet `first`/`final` des
+Unterdokuments und sammelt, was dessen `<result>` per `addResultToScope` ablegt. Ein `<result>`
+hört nur unter `content`, `element` oder `program` und legt eine **frische Instanz** in den Scope.
+Zurückgegeben wird nur, wenn das `<sub>` selbst unter `content` oder `element` steht — dann an
+`$received_node`, den Knoten, der beim Eintritt im Ereignis stand (dort: der Ausgabeknoten).
+
+- **Kinder** der Instanz (etwa ein Element) werden dorthin geklont.
+- **Ein einfacher Wert** (`<result>2</result>`) kam bis 2026-09-11 nie an: die Instanz hatte ihn
+  nicht (`getdata()` greift nicht auf `link_to_class` zurück). Jetzt gibt `TREE_result` ihn der
+  Instanz mit, `tree_sub` hängt ihn an den empfangenden Knoten und merkt ihn sich in
+  `$rueckgabe`.
+- **`<sub>` in einem `<element>`** lief schon immer, aber das Element setzt danach seinen Text neu
+  (`setdata($string, $point)` **ersetzt**) und tilgte die Rückgabe — `vor--nach`. Beide
+  Zusammensetzungsschleifen (`process_exist_xhtml`, `process_new_xhtml`) haben jetzt einen Zweig für
+  `tree#sub`, der dessen `$rueckgabe` an **seiner** Stelle einsetzt.
+
+⚠ Fallen im Bestand, gemessen oder gelesen, nicht behoben:
+- `leaveScope()` nimmt nur vom Stapel, löscht `$scopes[$name]` nicht — derselbe `src` zweimal in
+  einem Request würde bei `createScope` „existiert bereits“ werfen (gelesen).
+- `getParam()` hat keinen Aufrufer; die Parameter laufen real über `$param_arr` in `<variable>` und
+  `<object variable=…>` des Unterdokuments.
+- Eine **Element**-Rückgabe (`<result><element>…</element></result>`) über `<sub>` unter
+  `<content>` bleibt leer — auch vor den Änderungen (per `git stash` gegengeprüft).
+- Alle echten `<result>` im Bestand geben ein Objekt zurück und stehen unter `<program>`, wo der
+  Rückgabezweig nicht greift.
+
+**`__call`** — führt den Knoten, auf dem es steht, aus wie ein `<sub>`: `mayEnter`, ein **eigener**
+Scope mit eindeutigem Namen (so geht derselbe `src` zweimal), mit `src` das Dokument (`first`,
+`final`), sonst die eigenen Kinder außer `template`/`tree`. Ergebnis `{uri, name, results:[…]}`
+ins Ereignis, dann `Value`; Parser und Scope-Stapel stehen danach wieder, wo sie waren. Objekte
+erscheinen nur benannt. Argumente folgen.
+
+```json
+{"Identifire":"*","Command":{"Name":"__find_node","Attribute":{"json":"{\"name\":\"http://www.trscript.de/tree#tree\",\"attribute\":{\"http://www.trscript.de/tree#name\":\"fridge;power_consumption\"}}"},
+ "Value":{"Identifire":"*","Command":{"Name":"__call","Value":{"Identifire":"*","Command":{"Name":"__to_owner"}}}}}
+```
 
 ## Zugang zum Intern-Endpunkt
 

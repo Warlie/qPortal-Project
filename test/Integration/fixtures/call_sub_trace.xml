@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand: ein Unterdokument mit Spur - meldet einen Logger-Zuhoerer an, sichtbar in __give_log,
+     auch wenn seine Ausgabe spaeter ueberschrieben wird. Gibt SPUR zurueck. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Unterdokument mit Spur">
+	<program>
+		<object id="spur" name="Logger" src="PlugIn/plugin_log.php">
+			<remote name="Logger.listen.name">sub_lief</remote>
+			<remote name="Logger.listen.level">1</remote>
+			<remote name="Logger.listen" />
+		</object>
+		<result>SPUR</result>
+	</program>
+</final>
+</indextree>

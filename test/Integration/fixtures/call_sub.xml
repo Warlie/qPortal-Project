@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer __call: ein Unterdokument, dessen final eine Rueckgabe hat. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Unterdokument">
+	<program>
+		<result>aus dem Unterdokument</result>
+	</program>
+</final>
+</indextree>

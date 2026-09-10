@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!--
+  Pruefstand fuer __call (tree_call.php): ein Knoten wird ausgefuehrt wie ein <sub>,
+  seine <result>-Rueckgabe eingesammelt.
+
+  einfach   <program><result>2</result></program> - die einfache Rueckgabe (wie fridge;power_consumption)
+  zwei      zwei Ergebnisse
+  leer      nichts auszufuehren
+  gesperrt  ein Sektor, den kein Pruefschluessel hat
+  unter     src auf call_sub.xml - dessen final liefert
+-->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Aufruf">
+	<tree name="einfach" value="Einfach">
+		<program>
+			<result>2</result>
+		</program>
+	</tree>
+	<tree name="zwei" value="Zwei">
+		<program>
+			<result>a</result>
+			<result>b</result>
+		</program>
+	</tree>
+	<tree name="leer" value="Leer" />
+	<tree name="gesperrt" value="Gesperrt" sector="niemand">
+		<program>
+			<result>geheim</result>
+		</program>
+	</tree>
+	<tree name="unter" value="Unter" src="test/Integration/fixtures/call_sub.xml" />
+</final>
+</indextree>

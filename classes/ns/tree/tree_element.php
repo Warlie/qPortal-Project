@@ -373,6 +373,15 @@ function process_new_xhtml(&$obj,$name,$attrib)
 						
 						$string = '';
 					}
+					elseif($this->getRefnext($i,false)->full_URI() == 'http://www.trscript.de/tree#sub')
+					{
+						/* Ein <sub> ist gelaufen (send_messages oben) und hat seine Rueckgabe an
+						*  diesen Ausgabeknoten gehaengt - der Datenteil wird hier aber neu gesetzt.
+						*  Darum kommt sie an SEINER Stelle in den Text (gemessen 2026-09-11:
+						*  vorher stand "vor--nach"). */
+						$string .= $this->getdata($i);
+						$string .= (string) ($this->getRefnext($i)->rueckgabe ?? '');
+					}
 					elseif($this->getRefnext($i,false)->full_URI() == 'http://www.trscript.de/tree#object')
 					{
 						$string .= $this->getdata($i);
@@ -512,6 +521,15 @@ function process_exist_xhtml(&$obj,$attrib)
 						$cur_element->setdata($string,$point++);
 						
 						$string = '';
+					}
+					elseif($this->getRefnext($i,false)->full_URI() == 'http://www.trscript.de/tree#sub')
+					{
+						/* Ein <sub> ist gelaufen (send_messages oben) und hat seine Rueckgabe an
+						*  diesen Ausgabeknoten gehaengt - der Datenteil wird hier aber neu gesetzt.
+						*  Darum kommt sie an SEINER Stelle in den Text (gemessen 2026-09-11:
+						*  vorher stand "vor--nach"). */
+						$string .= $this->getdata($i);
+						$string .= (string) ($this->getRefnext($i)->rueckgabe ?? '');
 					}
 					elseif($this->getRefnext($i,false)->full_URI() == 'http://www.trscript.de/tree#object')
 					{ //if($name == "http://www.w3.org/1999/xhtml#unqueID" )die();

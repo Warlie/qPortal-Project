@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer die Rueckgabe eines <sub> (tree_call.php): <sub> direkt unter <content>; das
+     Unterdokument call_sub_out.xml schreibt "SUB LIEF" und gibt <result>WERT</result> zurueck. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="sub unter content">
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one">test/Integration/fixtures/out_blank.xml</main>
+	</template>
+	<content name="http://www.w3.org/1999/xhtml#html">
+		<sub src="test/Integration/fixtures/call_sub_out.xml" />
+	</content>
+</final>
+</indextree>

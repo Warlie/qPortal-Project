@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer die Rueckgabe eines <sub> (sub_value_render.xml): schreibt selbst "SUB LIEF" und gibt WERT zurueck. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Unterdokument, das schreibt">
+	<program>
+		<result>WERT</result>
+	</program>
+	<content name="http://www.w3.org/1999/xhtml#html">
+		<element type="xhtml">SUB LIEF</element>
+	</content>
+</final>
+</indextree>

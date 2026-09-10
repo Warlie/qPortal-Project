@@ -1061,6 +1061,130 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			            'required'    => false]
 		]);
 
+	/* __call - den Knoten, auf dem der Befehl steht, ausfuehren wie ein <sub> und seine
+	*  <result>-Rueckgabe einsammeln (STW, 2026-09-11). Derselbe Aufbau wie tree_sub.php;
+	*  die Argumente (param) werden nachgeruestet.
+	*
+	*  - Zutritt ueber mayEnter, wie ueberall.
+	*  - Ein EIGENER Scope mit eindeutigem Namen. tree_sub nimmt den src als Namen, und
+	*    leaveScope loescht den Eintrag nicht - derselbe src zweimal in einem Request
+	*    wuerde dort "existiert bereits" werfen.
+	*  - Mit src: das Dokument laden, first und final starten (wie tree_sub). Ohne src:
+	*    die eigenen Kinder starten, ausser template und tree. Adressen ruft __call nicht.
+	*  - Die Rueckgabe: TREE_result legt eine frische INSTANZ in den Scope, deren
+	*    Datenteil leer ist - der Wert steht am urspruenglichen Knoten (link_to_class).
+	*    getdata() greift darauf nicht zurueck; darum hier ausdruecklich.
+	*  - Ergebnis {uri, name, results:[...]} ins Ereignis, dann Value auf demselben
+	*    Ereignis (etwa __to_owner). Danach stehen Parser und Scope-Stapel wieder, wo sie
+	*    waren. */
+	$reg->__call = function($node, $obj, $event)
+		{
+			$T        = 'http://www.trscript.de/tree#';
+			$structur = $event->get_Result_Array();
+			$value    = $structur['Command']['Value'] ?? null;
+			$cg       = $node->get_contentGen();
+			$parser   = $node->get_parser();
+
+			$n       = $node->get_ns_attribute($T . 'name');
+			$antwort = ['uri' => $node->full_URI(), 'name' => ($n === false ? null : $n), 'results' => []];
+
+			/* Was ein Ergebnis traegt: Kinder der Instanz, sonst der Datenteil - der
+			*  eigene oder der des urspruenglichen Knotens. Ein Objekt wird benannt,
+			*  nicht ausgegeben (dasselbe wie answer_shape im ContentGenerator). */
+			$wert = function($d)
+			{
+				return is_object($d) ? ['class' => get_class($d), 'serialised' => false] : $d;
+			};
+			$auszug = function($r) use ($wert)
+			{
+				if(!($r instanceof Interface_node))
+					return $wert($r);
+
+				$kinder = $r->getRefnext() ?? [];
+				if($kinder)
+					return array_map(fn($k) => $wert($k->getdata()), $kinder);
+
+				$d = $r->getdata();
+				if(($d === '' || is_null($d)) && is_object($r->link_to_class))
+					$d = $r->link_to_class->getdata();
+
+				return $wert($d);
+			};
+
+			if(!is_object($cg) || !is_object($parser))
+				$antwort['note'] = 'kein ContentGenerator oder Parser am Knoten';
+			elseif(!$cg->mayEnter($node))
+				$antwort['note'] = 'kein Zutritt';
+			else
+			{
+				$cg->createScope();
+				$zurueck = $parser->cur_idx();
+
+				try
+				{
+					$src = $node->get_ns_attribute($T . 'src');
+
+					if(false !== $src && '' !== trim((string) $src))
+					{
+						$pfad = resolve_path($src);
+
+						if(!is_file($pfad))
+							$antwort['note'] = 'src ist keine Datei, Adressen ruft __call nicht: ' . $pfad;
+						else
+						{
+							$parser->load($pfad, 0);
+
+							$parser->flash_result();
+							$parser->seek_node($T . 'first');
+							$liste = $parser->get_result();
+							$first = array_pop($liste);
+							$parser->flash_result();
+							$parser->seek_node($T . 'final');
+							$liste = $parser->get_result();
+							$final = array_pop($liste);
+							$parser->flash_result();
+
+							$obj->set_node($node);
+							if($first) $first->hold_messages('', $obj);
+							if($final) $final->hold_messages('', $obj);
+							$parser->flash_result();
+						}
+					}
+					else
+						foreach(($node->getRefnext() ?? []) as $kind)
+							if(!in_array($kind->full_URI(), [$T . 'template', $T . 'tree'], true))
+								$kind->hold_messages('', $obj);
+
+					foreach(($cg->getResult() ?? []) as $r)
+						$antwort['results'][] = $auszug($r);
+				}
+				catch(Throwable $e)
+				{
+					$antwort['note'] = 'Fehler: ' . $e->getMessage();
+				}
+				finally
+				{
+					$cg->leaveScope();
+					$parser->change_idx($zurueck);
+				}
+			}
+
+			$obj->set_context($antwort);
+
+			if(!empty($value))
+				$node->hold_messages($value, $obj);
+
+			return true;
+		};
+
+	$reg->addLog(function($node, $obj, $event){return '__call auf ' . $node->full_URI();}, 5);
+
+	$reg->addDescription(
+		'Fuehrt den Knoten, auf dem der Befehl steht, aus wie ein <sub> und sammelt seine'
+		. ' <result>-Rueckgabe ein: mit src das Dokument (first, final), sonst die eigenen'
+		. ' Kinder ausser template und tree. Ergebnis {uri, name, results:[...]} im Ereignis;'
+		. ' mit Value (etwa __to_owner) geht es weiter. Argumente folgen. Keine Attribute.');
+
 } catch (Exception $e) {
     echo "Fehler: " . $e->getMessage();
 }

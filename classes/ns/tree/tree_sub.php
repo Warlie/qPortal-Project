@@ -43,6 +43,10 @@ class TREE_sub extends Interface_node
 var $name = 'empty';
 var $type = 'none';
 private $contentGenerator = null;
+/* Die einfache Rueckgabe des letzten Laufs. Ein <element> fragt sie ab, wenn es seinen Text
+*  zusammensetzt - es ERSETZT den Datenteil seines Ausgabeknotens und tilgte sonst, was hier
+*  angehaengt wurde. Eine Eigenschaft, kein Datenteil: __save_back soll sie nicht schreiben. */
+public $rueckgabe = '';
 var $namespace = 'none';
 	
 function __construct()
@@ -88,6 +92,7 @@ function event_message_in($type,&$obj)
 
 		//back up node
 		$received_node = $obj->get_node();
+		$this->rueckgabe = '';
 		
 		
 		//--------------------------------------- check access -------------------------------------------------
@@ -223,6 +228,19 @@ function event_message_in($type,&$obj)
 
 				for($i = 0 ; $i < count($result);$i++)
 				{
+
+				/* Ein einfacher Wert hat keine Kinder, die sich klonen liessen - er steht im
+				*  Datenteil der Instanz (TREE_result gibt ihn mit). Er geht an dieselbe Stelle
+				*  wie sonst die Kinder: an den empfangenden Knoten, angehaengt. */
+				if($received_node && $result[$i] instanceof TREE_result && $result[$i]->index_max() == 0)
+				{
+					$wert = $result[$i]->getdata();
+					if(!is_object($wert) && '' !== (string) $wert)
+					{
+						$received_node->setdata($wert, null, true);
+						$this->rueckgabe .= $wert;
+					}
+				}
 
 				if( $result[$i] instanceof TREE_result)
 					for($j = 0 ; $j < $result[$i]->index_max();$j++)

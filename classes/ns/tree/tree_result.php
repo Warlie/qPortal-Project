@@ -67,6 +67,16 @@ function event_initiated()
 function event_message_in($type,&$obj)
 	{
 		$res = $this->new_Instance();
+
+		/* Ein einfacher Wert (<result>2</result>) steht im Datenteil DIESES Knotens. Die
+		*  frische Instanz haette ihn nicht - getdata() greift nicht auf link_to_class
+		*  zurueck -, und dann kaeme er beim Aufrufer nie an (gemessen 2026-09-11: ein <sub>
+		*  unter <content> lief, seine Rueckgabe fehlte). Darum geht er ausdruecklich mit.
+		*  Leerraum um Objekte (<result> <object .../> </result>) ist kein Wert. */
+		$wert = $this->getdata();
+		if(!is_object($wert) && '' !== trim((string) $wert))
+			$res->setdata(trim((string) $wert), 0);
+
 		$obj->set_node($res);
 		$this->send_messages('*',$obj);
 		$this->get_parser()->get_context_generator()->addResultToScope($res);
