@@ -26,6 +26,7 @@ php -d error_reporting=E_ERROR test/Integration/tree_echo.php          # 21/0
 php -d error_reporting=E_ERROR test/Integration/tree_where.php         # 31/0
 php -d error_reporting=E_ERROR test/Integration/logger_listen.php      # 18/0 (Teil 1 ohne Server)
 php -d error_reporting=E_ERROR test/Integration/tree_call.php          # 12/0
+php -d error_reporting=E_ERROR test/Integration/schema_check.php       # 14/0 (Bestand: 512 gueltig / 60 nicht)
 ```
 
 ```bash
@@ -411,8 +412,9 @@ Zurückgegeben wird nur, wenn das `<sub>` selbst unter `content` oder `element` 
   einem Request würde bei `createScope` „existiert bereits“ werfen (gelesen).
 - `getParam()` hat keinen Aufrufer; die Parameter laufen real über `$param_arr` in `<variable>` und
   `<object variable=…>` des Unterdokuments.
-- Eine **Element**-Rückgabe (`<result><element>…</element></result>`) über `<sub>` unter
-  `<content>` bleibt leer — auch vor den Änderungen (per `git stash` gegengeprüft).
+- Eine **Element**-Rückgabe (`<result><element>…</element></result>`) über `<sub>` bleibt leer —
+  **kein Mangel, sondern kein Einsatzzweck** (STW): `<element>` baut Bäume innerhalb von
+  `<content>`; zum Klonen von Bäumen oder Inhalten gibt es `<subtree>`.
 - Alle echten `<result>` im Bestand geben ein Objekt zurück und stehen unter `<program>`, wo der
   Rückgabezweig nicht greift.
 
@@ -426,6 +428,29 @@ erscheinen nur benannt. Argumente folgen.
 {"Identifire":"*","Command":{"Name":"__find_node","Attribute":{"json":"{\"name\":\"http://www.trscript.de/tree#tree\",\"attribute\":{\"http://www.trscript.de/tree#name\":\"fridge;power_consumption\"}}"},
  "Value":{"Identifire":"*","Command":{"Name":"__call","Value":{"Identifire":"*","Command":{"Name":"__to_owner"}}}}}
 ```
+
+## Das tree-Schema
+
+**`xml-schema/tree-schema.xsd`** ist das Verifikationsdokument für den Namensraum
+`http://www.trscript.de/tree` — das, worauf 27 Dokumente per `xsi:schemaLocation` zeigen
+(`https://service-wsf-gmbh.de/xml-schema/tree-schema.xsd`). Die Kopien unter
+`template/validation/` und `template_/validation/` sind älter und ungetrackt. Gefasst 2026-09-11
+nach dem, was im Bestand wirklich steht (vorher bestanden 103 von 573 Dokumenten), mit einer
+Anmerkung je Typ: was der Knoten tut, wo er hört, wohin seine Rückgabe geht. **Zum Nachschlagen
+dort zuerst.**
+
+- Kinder in **beliebiger Reihenfolge**; Text nur, wo er Bedeutung hat (`element`, `param`, `remote`,
+  `object`, `result`, `main`, `add`, `access`, `variable`).
+- Attribute aus fremden Namensräumen überall (`desc:`, `dcterms:`, `xsi:`); unter `element/html`
+  beliebiger Inhalt — dort steht HTML ohne eigenen Namensraum, also im tree-Namensraum.
+- **Nur registrierte Namen** (`classes/ns/tree/class_index.php`).
+
+Befunde im Bestand (`schema_check.php`, Teil 2 — nur ausgewertet, `template/` wird getrennt verwaltet):
+`programm` (14 Dateien) und `add2` (13) sind **nicht registriert** — der Parser macht daraus
+generische Knoten, die nichts tun; `element` außerhalb von `content` (16); Streutext direkt in
+`final`/`template`/`content`/`program` (30); ein `select` unter `final`; ein `content` ohne `name`.
+Registriert, aber im Bestand unbenutzt: `bag`, `description`, `document`, `rest`, `sparql`,
+`statement`, `subject`, `workspace`, `xpath` — nicht im Schema.
 
 ## Zugang zum Intern-Endpunkt
 

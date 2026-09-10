@@ -1,159 +1,343 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://www.trscript.de/tree" xmlns:tree="http://www.trscript.de/tree" elementFormDefault="qualified">
+<!--
+  Das Verifikationsdokument fuer qPortal-Dokumente im Namensraum http://www.trscript.de/tree.
+
+  Gefasst am 2026-09-11 nach dem, was im Bestand wirklich steht (gemessen ueber template/ und
+  test/Integration/fixtures), und nach dem, was die Knotenklassen unter classes/ns/tree/ tun.
+  Pruefen:  php -d error_reporting=E_ERROR test/Integration/schema_check.php
+            oder xmllint mit den Schaltern noout und schema auf ein Dokument
+
+  Grundsaetze:
+  - Kinder in BELIEBIGER Reihenfolge (choice, unbeschraenkt) - die Dokumente mischen frei.
+  - Text nur dort, wo er eine Bedeutung hat (element, param, remote, object, result, main, add,
+    access, variable).
+  - Attribute aus fremden Namensraeumen sind ueberall erlaubt: desc: und dcterms: (Tuerschilder),
+    xsi:schemaLocation. Unpraefigierte Attribute gehoeren dem Element (tree#name usw.).
+  - Nur Namen, die classes/ns/tree/class_index.php registriert. "programm" und "add2" stehen im
+    Bestand, sind aber nicht registriert - der Parser macht daraus generische Knoten, die nichts
+    tun. Sie fallen hier absichtlich auf.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://www.trscript.de/tree"
+           xmlns:tree="http://www.trscript.de/tree"
+           elementFormDefault="qualified">
+
+	<!-- ================================================================== Wurzel -->
 
 	<xs:element name="indextree">
+		<xs:annotation><xs:documentation>
+			Die Wurzel jedes Dokuments. Hier kommt start an: ohne Pfad laufen first, dann final;
+			mit Pfad (im AEUSSEREN Attribute der Nachricht, als Liste von tree-Namen) wird der
+			passende tree gesucht. Ein owl:Ontology erklaert den Namensraum des Dokuments.
+		</xs:documentation></xs:annotation>
 		<xs:complexType>
-			<xs:sequence>
-				<xs:choice maxOccurs="unbounded">
-					<xs:element name="final" type="tree:finalType"/>
-					<xs:element name="tree" type="tree:treeType"/>
-				</xs:choice>
-			</xs:sequence>
+			<xs:choice minOccurs="0" maxOccurs="unbounded">
+				<xs:element name="first" type="tree:finalType"/>
+				<xs:element name="final" type="tree:finalType"/>
+				<xs:element name="tree" type="tree:treeType"/>
+				<xs:any namespace="##other" processContents="skip"/>
+			</xs:choice>
+			<xs:anyAttribute namespace="##other" processContents="skip"/>
 		</xs:complexType>
 	</xs:element>
 
+	<!-- ================================================= Ausfuehrungsbereiche -->
+
 	<xs:complexType name="finalType">
-		<xs:complexContent>
-			<xs:extension base="tree:baseNodeType">
-				<xs:sequence>
-					<xs:element name="template" type="tree:templateType" minOccurs="0"/>
-					<xs:element name="program" type="tree:programType" minOccurs="0" maxOccurs="unbounded"/>
-					<xs:element name="content" type="tree:contentType" minOccurs="0" maxOccurs="unbounded"/>
-					<xs:element name="sub" type="tree:subType" minOccurs="0" maxOccurs="unbounded"/>
-					<xs:element name="tree" type="tree:treeType" minOccurs="0" maxOccurs="unbounded"/>
-				</xs:sequence>
-			</xs:extension>
-		</xs:complexContent>
+		<xs:annotation><xs:documentation>
+			first und final: die beiden Ausfuehrungsbereiche, first zuerst. tree:name ist ein
+			Pfadsegment (eindeutig nur unter Geschwistern) und nur mit Namensraum ein Bezeichner
+			(praefix;Name oder voller URI). Ein Name, der mit "." beginnt, ist unsichtbar in der
+			Navigation; ein fehlendes value ebenso.
+		</xs:documentation></xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="template" type="tree:templateType"/>
+			<xs:element name="program" type="tree:programType"/>
+			<xs:element name="content" type="tree:contentType"/>
+			<xs:element name="sub" type="tree:subType"/>
+			<xs:element name="tree" type="tree:treeType"/>
+			<xs:element name="access" type="tree:accessType"/>
+		</xs:choice>
+		<xs:attributeGroup ref="tree:nodeAttributes"/>
+		<xs:attribute name="name" type="xs:string"/>
 	</xs:complexType>
 
 	<xs:complexType name="treeType">
-		<xs:complexContent>
-			<xs:extension base="tree:baseNodeType">
-				<xs:sequence>
-					<xs:choice maxOccurs="unbounded">
-						<xs:element name="tree" type="tree:treeType" minOccurs="0"/>
-						<xs:element name="program" type="tree:programType" minOccurs="0"/>
-						<xs:element name="template" type="tree:templateType" minOccurs="0"/>
-						<xs:element name="content" type="tree:contentType" minOccurs="0"/>
-						<xs:element name="sub" type="tree:subType" minOccurs="0"/>
-					</xs:choice>
-				</xs:sequence>
-			</xs:extension>
-		</xs:complexContent>
+		<xs:annotation><xs:documentation>
+			Ein Unterbaum - ein Prozess, mal mit, mal ohne Rueckgabe. Nur start ist ein Lauf; jeden
+			anderen Befehl nimmt ein tree an und laesst ihn stehen (keine Kaskade). tree-Knoten
+			haengen als Zuhoerer flach am indextree: ein Pfadsegment ist eine Dokumentebene, tiefer
+			geht es nur ueber src. An tree und final stehen die Tuerschilder (desc:function,
+			desc:parameter, desc:delivers, desc:columns, desc:effect, desc:tricky), die
+			__where_am_i liest; __call fuehrt ihn aus und sammelt seine result ein.
+		</xs:documentation></xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="tree" type="tree:treeType"/>
+			<xs:element name="program" type="tree:programType"/>
+			<xs:element name="template" type="tree:templateType"/>
+			<xs:element name="content" type="tree:contentType"/>
+			<xs:element name="sub" type="tree:subType"/>
+		</xs:choice>
+		<xs:attributeGroup ref="tree:nodeAttributes"/>
+		<xs:attribute name="name" type="xs:string" use="required"/>
+		<xs:attribute name="consider_aspect" type="xs:string"/>
 	</xs:complexType>
 
-	<xs:complexType name="baseNodeType">
-		<xs:attribute name="name" type="xs:string" use="required"/>
-		<xs:attribute name="value" type="xs:string" use="optional"/>
-		<xs:attribute name="src" type="xs:string" use="optional"/>
-		<xs:attribute name="securitylevel" type="xs:integer" use="optional"/>
-		<xs:attribute name="sector" type="xs:string" use="optional"/>
-		<xs:attribute name="device" type="xs:string" use="optional"/>
-	</xs:complexType>
+	<xs:attributeGroup name="nodeAttributes">
+		<xs:annotation><xs:documentation>
+			value ist das Tuerschild (und das LLM-Menue); src ist eine Datei dieser Installation
+			oder die Adresse einer entfernten Instanz. securitylevel und sector entscheidet
+			ContentGenerator::mayEnter - der Sektor ist eine Existenzaussage, die keine Stufe
+			ueberstimmt; -1 heisst "nur fuer Nichtangemeldete".
+		</xs:documentation></xs:annotation>
+		<xs:attribute name="value" type="xs:string"/>
+		<xs:attribute name="src" type="xs:string"/>
+		<xs:attribute name="securitylevel" type="xs:integer"/>
+		<xs:attribute name="sector" type="xs:string"/>
+		<xs:attribute name="device" type="xs:string"/>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
+	</xs:attributeGroup>
 
 	<xs:complexType name="programType">
-		<xs:sequence>
-			<xs:choice minOccurs="0" maxOccurs="unbounded">
-				<xs:element name="program" type="tree:programType"/>
-				<xs:element name="content" type="tree:contentType"/>
-				<xs:element name="sub" type="tree:subType"/>
-				<xs:element name="param" type="tree:paramType"/>
-			</xs:choice>
-		</xs:sequence>
-		<xs:attribute name="securitylevel" type="xs:integer" use="optional"/>
-		<xs:attribute name="sector" type="xs:string" use="optional"/>
+		<xs:annotation><xs:documentation>
+			Der Programmteil: Objekte (Plugins), Parameter, Unteraufrufe und result. Reicht start an
+			seine Zuhoerer weiter; ein result darunter legt seine Rueckgabe in den Scope des
+			umgebenden sub bzw. __call.
+		</xs:documentation></xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="program" type="tree:programType"/>
+			<xs:element name="content" type="tree:contentType"/>
+			<xs:element name="sub" type="tree:subType"/>
+			<xs:element name="param" type="tree:paramType"/>
+			<xs:element name="object" type="tree:objectType"/>
+			<xs:element name="result" type="tree:resultType"/>
+			<xs:element name="access" type="tree:accessType"/>
+		</xs:choice>
+		<xs:attribute name="securitylevel" type="xs:integer"/>
+		<xs:attribute name="sector" type="xs:string"/>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
 	</xs:complexType>
 
+	<!-- ==================================================== Ausgabe (content) -->
+
 	<xs:complexType name="contentType">
-		<xs:sequence>
-			<xs:element name="param" type="tree:paramType" minOccurs="0" maxOccurs="unbounded"/>
-			<xs:element name="element" type="tree:elementType" minOccurs="0" maxOccurs="unbounded"/>
-			<xs:element name="subtree" type="tree:subtreeType" minOccurs="0" maxOccurs="unbounded"/>
-			<xs:element name="object" type="tree:objectType" minOccurs="0" maxOccurs="unbounded"/>
-		</xs:sequence>
+		<xs:annotation><xs:documentation>
+			Schreibt in das Ausgabedokument an die Stelle name (volle URI, z.B.
+			http://www.w3.org/1999/xhtml#html). Setzt den Ausgabeknoten als Knoten ins Ereignis und
+			startet alle Zuhoerer - darum laeuft ein sub darunter, und seine Rueckgabe landet dort.
+			id waehlt ein anderes Ausgabedokument (@me = dieses).
+		</xs:documentation></xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="param" type="tree:paramType"/>
+			<xs:element name="element" type="tree:elementType"/>
+			<xs:element name="subtree" type="tree:subtreeType"/>
+			<xs:element name="object" type="tree:objectType"/>
+			<xs:element name="sub" type="tree:subType"/>
+		</xs:choice>
 		<xs:attribute name="name" type="xs:string" use="required"/>
-		<xs:attribute name="id" type="xs:string" use="optional"/>
-		<xs:attribute name="method" type="xs:string" use="optional"/>
-		<xs:attribute name="securitylevel" type="xs:integer" use="optional"/>
-		<xs:attribute name="sector" type="xs:string" use="optional"/>
+		<xs:attribute name="id" type="xs:string"/>
+		<xs:attribute name="method" type="xs:string"/>
+		<xs:attribute name="securitylevel" type="xs:integer"/>
+		<xs:attribute name="securityclass" type="xs:string"/>
+		<xs:attribute name="sector" type="xs:string"/>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
 	</xs:complexType>
 
 	<xs:complexType name="elementType" mixed="true">
+		<xs:annotation><xs:documentation>
+			Baut innerhalb von content einen Baum im Ausgabedokument (STW: nur fuer content gedacht,
+			nicht als Rueckgabe - zum Klonen von Baeumen und Inhalten gibt es subtree). type="xhtml"
+			mit value legt ein neues Element an, ohne value schreibt es in das vorhandene. Der Text
+			wird aus den eigenen Textstuecken, den Kindern element und object und der Rueckgabe
+			eines sub (an dessen Stelle) zusammengesetzt und ERSETZT den Datenteil des
+			Ausgabeknotens. mode="CDATA" schaltet CDATA um. Ein html-Kind nimmt einen ganzen
+			HTML-Baum auf.
+		</xs:documentation></xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="param" type="tree:paramType"/>
+			<xs:element name="element" type="tree:elementType"/>
+			<xs:element name="subtree" type="tree:subtreeType"/>
+			<xs:element name="object" type="tree:objectType"/>
+			<xs:element name="sub" type="tree:subType"/>
+			<xs:element name="variable" type="tree:variableType"/>
+			<xs:element name="html" type="tree:anyContent"/>
+		</xs:choice>
+		<xs:attribute name="type" type="xs:string"/>
+		<xs:attribute name="value" type="xs:string"/>
+		<xs:attribute name="mode" type="xs:string"/>
+		<xs:attribute name="name" type="xs:string"/>
+		<xs:attribute name="securitylevel" type="xs:integer"/>
+		<xs:attribute name="sector" type="xs:string"/>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
+	</xs:complexType>
+
+	<xs:complexType name="anyContent" mixed="true">
+		<xs:annotation><xs:documentation>
+			Beliebiger Inhalt - HTML, das im Dokument ohne eigenen Namensraum steht und darum im
+			tree-Namensraum landet (div, button, label, ...).
+		</xs:documentation></xs:annotation>
 		<xs:sequence>
-			<xs:element name="param" type="tree:paramType" minOccurs="0" maxOccurs="unbounded"/>
-			<xs:element name="element" type="tree:elementType" minOccurs="0" maxOccurs="unbounded"/>
-			<xs:element name="subtree" type="tree:subtreeType" minOccurs="0" maxOccurs="unbounded"/>
+			<xs:any namespace="##any" processContents="skip" minOccurs="0" maxOccurs="unbounded"/>
 		</xs:sequence>
-		<xs:attribute name="type" type="xs:string" use="required"/>
-		<xs:attribute name="value" type="xs:string" use="optional"/>
+		<xs:anyAttribute namespace="##any" processContents="skip"/>
 	</xs:complexType>
 
 	<xs:complexType name="subtreeType" mixed="true">
-		<xs:sequence>
-			<xs:element name="param" type="tree:paramType" minOccurs="0" maxOccurs="unbounded"/>
-		</xs:sequence>
-		<xs:attribute name="name" type="xs:string" use="required"/>
-		<xs:attribute name="id" type="xs:string" use="optional"/>
+		<xs:annotation><xs:documentation>
+			Klont einen Baum oder Inhalt an diese Stelle (STW). id nennt die Quelle (ein Dokument
+			oder eine Ablage wie response); name in der #-Form ist ein ZUGRIFF (STWs Weg, Inhalte in
+			Dokumenten zu modifizieren), kein Bezeichner.
+		</xs:documentation></xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="param" type="tree:paramType"/>
+		</xs:choice>
+		<xs:attribute name="id" type="xs:string"/>
+		<xs:attribute name="name" type="xs:string"/>
+		<xs:attribute name="transform_output" type="xs:string"/>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
 	</xs:complexType>
+
+	<!-- ============================================ Werte, Objekte, Unteraufrufe -->
 
 	<xs:complexType name="paramType" mixed="true">
-
-		<xs:sequence>
-			<xs:element name="object" type="tree:objectType" minOccurs="0" maxOccurs="unbounded"/>
-		</xs:sequence>
+		<xs:annotation><xs:documentation>
+			Ein benannter Wert - Text, oder ein object, dessen letzter remote den Wert liefert. Unter
+			sub gehen die Werte an variable und object variable=... des Unterdokuments.
+		</xs:documentation></xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="object" type="tree:objectType"/>
+			<xs:element name="variable" type="tree:variableType"/>
+		</xs:choice>
 		<xs:attribute name="name" type="xs:string" use="required"/>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
 	</xs:complexType>
 
-	<xs:complexType name="objectType">
-
-		<xs:sequence>
-			<xs:element name="remote" type="tree:remoteType" maxOccurs="unbounded"/>
-		</xs:sequence>
-		<xs:attribute name="name" type="xs:string" use="optional"/>
-		<xs:attribute name="id" type="xs:string" use="optional"/>
-
-		<xs:attribute name="src" type="xs:string" use="optional"/>
+	<xs:complexType name="objectType" mixed="true">
+		<xs:annotation><xs:documentation>
+			Ein Plugin-Objekt: src laedt die PHP-Datei, name waehlt die Klasse (Eintrag in [short]),
+			id benennt die Instanz, damit andere Stellen sie per object id=... ansprechen.
+			variable=... uebernimmt einen param aus einem sub. Aufgerufen wird ueber remote.
+		</xs:documentation></xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="remote" type="tree:remoteType"/>
+		</xs:choice>
+		<xs:attribute name="id" type="xs:string"/>
+		<xs:attribute name="name" type="xs:string"/>
+		<xs:attribute name="src" type="xs:string"/>
+		<xs:attribute name="variable" type="xs:string"/>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
 	</xs:complexType>
 
-
-	<xs:complexType name="remoteType">
-		<xs:sequence>
-			<xs:element name="object" type="tree:objectType" minOccurs="0" maxOccurs="unbounded"/>
-		</xs:sequence>
+	<xs:complexType name="remoteType" mixed="true">
+		<xs:annotation><xs:documentation>
+			Ein Methodenaufruf am Objekt: name="Klasse.methode.parameter" setzt einen Parameter
+			(Text oder ein object), name="Klasse.methode" ruft auf - die Parameternamen sind die der
+			PHP-Signatur (PEDL aus dem Syntaxbaum). name="iter" gibt das Objekt selbst weiter.
+		</xs:documentation></xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="object" type="tree:objectType"/>
+			<xs:element name="variable" type="tree:variableType"/>
+		</xs:choice>
 		<xs:attribute name="name" type="xs:string" use="required"/>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
+	</xs:complexType>
+
+	<xs:complexType name="variableType" mixed="true">
+		<xs:annotation><xs:documentation>
+			Ein Platzhalter, den ein sub mit dem gleichnamigen param fuellt.
+		</xs:documentation></xs:annotation>
+		<xs:attribute name="name" type="xs:string" use="required"/>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
 	</xs:complexType>
 
 	<xs:complexType name="subType">
-
-		<xs:sequence>
-			<xs:element name="param" type="tree:paramType" minOccurs="0" maxOccurs="unbounded"/>
-		</xs:sequence>
+		<xs:annotation><xs:documentation>
+			Unteraufruf: laedt src, fuellt dessen variable/object mit den param, startet first und
+			final. Steht es unter content oder element, kommt die Rueckgabe seiner result an: Kinder
+			werden an den Ausgabeknoten geklont, ein einfacher Wert angehaengt (in element an seiner
+			Stelle im Text). Scope-Name ist der src - derselbe src zweimal in einem Request scheitert
+			(leaveScope raeumt nicht ab); __call nimmt eigene Scopes.
+		</xs:documentation></xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="param" type="tree:paramType"/>
+		</xs:choice>
 		<xs:attribute name="src" type="xs:string" use="required"/>
-		<xs:attribute name="method" type="xs:string" use="optional"/>
+		<xs:attribute name="method" type="xs:string"/>
+		<xs:attribute name="name" type="xs:string"/>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
 	</xs:complexType>
 
+	<xs:complexType name="resultType" mixed="true">
+		<xs:annotation><xs:documentation>
+			Die Rueckgabe eines Prozesses. Hoert nur unter content, element und program. Ein einfacher
+			Wert (Text) oder Kinder - im Bestand meist object id="dbo" mit remote name="iter", der
+			Iterator. Landet im Scope des umgebenden sub bzw. __call.
+		</xs:documentation></xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="object" type="tree:objectType"/>
+			<xs:element name="subtree" type="tree:subtreeType"/>
+		</xs:choice>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
+	</xs:complexType>
+
+	<xs:complexType name="accessType" mixed="true">
+		<xs:annotation><xs:documentation>
+			Ein Aufruf, kein Tag: fuehrt seinen Inhalt als Befehlsliste aus (hold_messages). type,
+			name und value stehen im Bestand an jeder Stelle.
+		</xs:documentation></xs:annotation>
+		<xs:attribute name="name" type="xs:string"/>
+		<xs:attribute name="value" type="xs:string"/>
+		<xs:attribute name="type" type="xs:string"/>
+		<xs:attribute name="security" type="xs:integer"/>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
+	</xs:complexType>
+
+	<!-- ============================================================= Vorlagen -->
+
 	<xs:complexType name="templateType">
-		<xs:sequence>
-			<xs:element name="main" type="tree:mainType" minOccurs="0" maxOccurs="unbounded"/>
-			<xs:element name="add" type="tree:addType" minOccurs="0" maxOccurs="unbounded"/>
-		</xs:sequence>
+		<xs:annotation><xs:documentation>
+			Die Dokumente des Laufs: main ist das Ausgabedokument (output_doc="output:one"), add
+			weitere, unter ihrer id ansprechbar. Pfade duerfen __ROOT_DIR/__PROGRAM_DIR bzw.
+			%ROOT_DIR% enthalten.
+		</xs:documentation></xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="main" type="tree:mainType"/>
+			<xs:element name="add" type="tree:addType"/>
+		</xs:choice>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
 	</xs:complexType>
 
 	<xs:complexType name="mainType" mixed="true">
-		<xs:attribute name="case_folding" type="xs:integer" use="optional"/>
-		<xs:attribute name="doctype" type="xs:string" use="optional"/>
-		<xs:attribute name="doctype_out" type="xs:string" use="optional"/>
-		<xs:attribute name="output_doc" type="xs:string" use="optional"/>
-		<xs:attribute name="method" type="xs:string" use="optional"/>
+		<xs:attribute name="case_folding" type="xs:integer"/>
+		<xs:attribute name="doctype" type="xs:string"/>
+		<xs:attribute name="doctype_out" type="xs:string"/>
+		<xs:attribute name="output_doc" type="xs:string"/>
+		<xs:attribute name="method" type="xs:string"/>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
 	</xs:complexType>
 
 	<xs:complexType name="addType" mixed="true">
-		<xs:attribute name="case_folding" type="xs:integer" use="optional"/>
-		<xs:attribute name="doctype" type="xs:string" use="optional"/>
-		<xs:attribute name="doctype_out" type="xs:string" use="optional"/>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="header" type="tree:headerType"/>
+		</xs:choice>
 		<xs:attribute name="id" type="xs:string" use="required"/>
-		<xs:attribute name="output_doc" type="xs:string" use="optional"/>
-		<xs:attribute name="method" type="xs:string" use="optional"/>
+		<xs:attribute name="case_folding" type="xs:integer"/>
+		<xs:attribute name="doctype" type="xs:string"/>
+		<xs:attribute name="doctype_out" type="xs:string"/>
+		<xs:attribute name="output_doc" type="xs:string"/>
+		<xs:attribute name="method" type="xs:string"/>
+		<xs:attribute name="body" type="xs:string"/>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
+	</xs:complexType>
+
+	<xs:complexType name="headerType">
+		<xs:annotation><xs:documentation>
+			Kopfzeilen fuer ein entferntes add (REST): jede als param.
+		</xs:documentation></xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="param" type="tree:paramType"/>
+		</xs:choice>
+		<xs:anyAttribute namespace="##other" processContents="skip"/>
 	</xs:complexType>
 
 </xs:schema>
