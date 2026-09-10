@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!--
+  Pruefstand fuer __where_am_i (tree_where.php).
+
+  messen    ein volles Schild: Beschriftung, Titel, Funktion, Ein- und Ausgaben, Wirkung
+  doppelt   zweimal derselbe Name - jeder muss sein EIGENES Schild bekommen
+  stumm     ein Name, sonst nichts
+-->
+<indextree xmlns="http://www.trscript.de/tree"
+           xmlns:desc="http://www.trscript.de/2026/pedl-desc"
+           xmlns:dcterms="http://purl.org/dc/terms/">
+<final name="home" value="Schilder" desc:function="Der Flur des Pruefstands.">
+	<tree name="messen" value="Messen"
+	      dcterms:title="Messung"
+	      desc:function="Misst etwas."
+	      desc:parameter="wo"
+	      desc:delivers="rst"
+	      desc:columns="wert, zeit"
+	      desc:effect="keiner, liest nur" />
+	<tree name="doppelt" value="Erster"  desc:function="Der erste gleichnamige." />
+	<tree name="doppelt" value="Zweiter" desc:function="Der zweite gleichnamige." />
+	<tree name="stumm" />
+</final>
+</indextree>

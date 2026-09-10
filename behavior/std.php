@@ -282,7 +282,17 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 				return false;
 			}
 
-			$eigner->setdata($node, 0, false, false);
+			/* Der Wert: liegt im Ereignis ein gewoehnliches Datum (Zeichenkette, Zahl,
+			*  Array), dann DAS. Das Ereignis ist der Zwischenspeicher zwischen zwei
+			*  Befehlen (STW) - __set_data liest daraus, __get_attribute mit Value und
+			*  __where_am_i legen hinein. Sonst wie bisher der Knoten, auf dem der Befehl
+			*  steht. Ein OBJEKT im Kontext zaehlt nicht: im Baumlauf setzt tree_tree dort
+			*  den tree-Knoten ab (set_context), und der ist keine Antwort. Oben im
+			*  Intern-Aufruf ist der Kontext null. */
+			$kontext = $obj->get_context();
+			$wert    = (!is_null($kontext) && !is_object($kontext)) ? $kontext : $node;
+
+			$eigner->setdata($wert, 0, false, false);
 
 			$logger_class->setAssert('__to_owner: Wert an "'
 				. (method_exists($eigner, 'full_URI') ? $eigner->full_URI() : get_class($eigner))
@@ -293,7 +303,7 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 
 	$reg->addDescription(
 		'Reicht ein erworbenes Ergebnis an den Fragenden weiter. Haengt ein Value daran, wird es'
-		. ' zuerst gefeuert. Der Wert ist der Knoten, auf dem der Befehl steht; er geht an den'
+		. ' zuerst gefeuert. Der Wert ist, was im Ereignis liegt, wenn es ein gewoehnliches Datum ist (so legen es __get_attribute und __where_am_i ab), sonst der Knoten, auf dem der Befehl steht; er geht an den'
 		. ' Owner des Ereignisses - im Baum ein Knoten, von aussen der ContentGenerator, in'
 		. ' beiden Faellen derselbe Aufruf. Wie die Antwort aussieht, entscheidet der Empfaenger.'
 		. ' Keine Attribute.');
@@ -827,6 +837,99 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			                           . ' Zugleich die Grenze gegen Kreise zwischen Dokumenten.',
 			            'required'    => false]
 		]);
+
+	/* __where_am_i - das Tuerschild des Knotens, auf dem der Befehl steht, als Array
+	*  (STW, 2026-09-10). Ohne Parameter.
+	*
+	*  - Gefragt wird ueber den NAMEN, per SPARQL: ein Weg, derselbe, den spaeter jede
+	*    Abfrage nimmt. Je Schildbegriff eine kleine Abfrage - die Maschine kennt weder
+	*    OPTIONAL noch eine Variable im Praedikat.
+	*  - Die Begriffe: tree:value, die Zielbegriffe aus PHP_Ast_Scan::DESC_KEYS (dieselben
+	*    Worte wie an einer PHP-Methode) und die drei, die der Kuehlschrank dazu gepraegt
+	*    hat (delivers, columns, effect) - die Ausgaben stehen nicht in DESC_KEYS.
+	*  - ?s wird mit abgefragt, und nur die Zeilen mit GENAU diesem Knoten zaehlen: ein
+	*    blanker Name ist ein Pfadsegment, er darf anderswo im Dokument wieder stehen.
+	*  - Gefragt wird im Baum des Knotens, nicht im aktuellen (nach einem __echo liegen
+	*    mehrere Baeume im Parser); danach steht der Parser wieder, wo er war.
+	*  - Ergebnis ins EREIGNIS (set_context) - der Zwischenspeicher. Mit Value geht es
+	*    auf demselben Ereignis weiter, __to_owner gibt es dann nach aussen. Ohne Value
+	*    liegt es dort fuer den naechsten Befehl einer Liste.
+	*  ⚠ dcterms heisst als volle URI .../terms/#title (full_URI haengt # an), darum der
+	*    Praefix mit #. */
+	$reg->__where_am_i = function($node, $obj, $event)
+		{
+			$structur = $event->get_Result_Array();
+			$value    = $structur['Command']['Value'] ?? null;
+
+			$name   = $node->get_ns_attribute('http://www.trscript.de/tree#name');
+			$schild = ['uri' => $node->full_URI(), 'name' => ($name === false ? null : $name)];
+			$parser = $node->get_parser();
+
+			if(!is_string($name) || $name === '')
+				$schild['note'] = 'kein tree:name - ueber den Namen gibt es nichts zu fragen';
+			elseif(strpos($name, '"') !== false)
+				$schild['note'] = 'der Name enthaelt ein Anfuehrungszeichen, das die Abfrage nicht traegt';
+			elseif(!is_object($parser))
+				$schild['note'] = 'der Knoten hat keinen Parser (zur Laufzeit angelegt?)';
+			else
+			{
+				if(!class_exists('PHP_Ast_Scan'))
+					require_once(__DIR__ . '/../classes/handles/PHP_ast_scan.php');
+
+				$begriffe = array_values(array_unique(array_merge(
+					['tree:value'],
+					array_values(PHP_Ast_Scan::DESC_KEYS),
+					['desc:delivers', 'desc:columns', 'desc:effect'])));
+
+				$praefix = "PREFIX tree: <http://www.trscript.de/tree#>\n"
+				         . "PREFIX desc: <" . PHP_Ast_Scan::NS_DESC . "#>\n"
+				         . "PREFIX dcterms: <" . PHP_Ast_Scan::NS_DCTERMS . "#>\n";
+
+				$zurueck = $parser->cur_idx();
+
+				try
+				{
+					$parser->change_idx($node->get_idx());
+
+					$m = $parser->seek_by_model('sparql');
+					if($m->source() === '')
+						$m->use_source('qportal');
+
+					foreach($begriffe as $b)
+					{
+						$m->query($praefix . 'SELECT ?s ?wert WHERE { ?s tree:name "' . $name . '" . ?s ' . $b . ' ?wert }');
+
+						foreach($m->solutions() as $zeile)
+							if(($zeile['?s'] ?? null) === $node)
+								$schild[$b] = $zeile['?wert'];
+					}
+				}
+				catch(Throwable $e)
+				{
+					$schild['error'] = $e->getMessage();
+				}
+				finally
+				{
+					$parser->change_idx($zurueck);
+				}
+			}
+
+			$obj->set_context($schild);
+
+			if(!empty($value))
+				$node->hold_messages($value, $obj);
+
+			return true;
+		};
+
+	$reg->addLog(function($node, $obj, $event){return '__where_am_i auf ' . $node->full_URI();}, 5);
+
+	$reg->addDescription(
+		'Das Tuerschild des Knotens, auf dem der Befehl steht, als Array: uri, name und was'
+		. ' das Schild sagt - tree:value, dcterms:*, desc:function, desc:parameter (Eingaben),'
+		. ' desc:delivers und desc:columns (Ausgaben), desc:effect, desc:tricky. Gefragt wird'
+		. ' per SPARQL ueber den Namen, im Baum des Knotens. Das Array liegt danach im Ereignis;'
+		. ' mit Value (etwa __to_owner) geht es weiter. Keine Attribute.');
 
 } catch (Exception $e) {
     echo "Fehler: " . $e->getMessage();

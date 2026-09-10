@@ -23,6 +23,7 @@ QPORTAL_URL=http://127.0.0.1:8002/index.php php test/Integration/intern_walk.php
 # Das komplette qPortal mit eigenem INTERN-Baum (Server muss laufen)
 php -d error_reporting=E_ERROR test/Integration/tree_passthrough.php   # 7/0
 php -d error_reporting=E_ERROR test/Integration/tree_echo.php          # 21/0
+php -d error_reporting=E_ERROR test/Integration/tree_where.php         # 15/0
 ```
 
 ```bash
@@ -342,6 +343,29 @@ zwischen Dokumenten. Nur `tree#src`, nur Dateien (Adresse → Logzeile), kein La
 gemessen: depth 5 über einen Kreis = 5 Ladevorgänge, 2 Bäume). Log Stufe 5 nur für
 `src`-Ereignisse. ⚠ Danach liegen die Bäume im Parser — **SPARQL fragt aber nur den aktuellen
 Baum** (`collect_nodes` ist baumlokal, kein `FROM`); das ist der nächste Schritt.
+
+**Das Ereignis ist der Zwischenspeicher.** Ein Befehl legt ein Ergebnis per `set_context` ins
+`EventObject`, der nächste liest es mit `get_context()` (so schon `__set_data`, und
+`__get_attribute` mit `Value`). **`__to_owner`** gibt ein **gewöhnliches Datum** aus dem Kontext
+nach außen (Zeichenkette, Zahl, Array → `{"value":…,"serialised":true}`), sonst wie bisher den
+Knoten, auf dem es steht. Ein Objekt im Kontext zählt nicht — `tree_tree` legt dort im Baumlauf
+seinen Knoten ab; oben im Intern-Aufruf ist der Kontext `null`.
+
+**`__where_am_i`** (ohne Parameter) — das Türschild des Knotens als Array: `uri`, `name` und je
+Schildbegriff ein Eintrag. Gefragt wird **per SPARQL über den Namen**, im Baum **des Knotens**
+(`change_idx` hin und zurück), je Begriff eine kleine Abfrage (kein `OPTIONAL`, keine
+Prädikatvariable); nur Zeilen mit `?s` === diesem Knoten zählen, gleichnamige Knoten vermischen
+sich nicht. Begriffe: `tree:value`, die Zielwerte aus `PHP_Ast_Scan::DESC_KEYS`, dazu
+`desc:delivers`/`desc:columns`/`desc:effect` (die Ausgaben stehen **nicht** in `DESC_KEYS`).
+`sparql.use` ist leer → `use_source('qportal')`. Nach außen:
+
+```json
+{"Identifire":"*","Command":{"Name":"__where_am_i","Value":{"Identifire":"*","Command":{"Name":"__to_owner"}}}}
+```
+
+⚠ **`dcterms` heißt als volle URI `http://purl.org/dc/terms/#title`** — `full_URI()` hängt `#` an
+einen Namensraum, der schon auf `/` endet. Mit dem üblichen Präfix findet SPARQL nichts, nur mit
+`<http://purl.org/dc/terms/#>`.
 
 **Prüfstand mit eigenem Baum:** `test/Integration/fixture_entry.php` setzt `INTERN` per `define`
 und bindet danach das unveränderte `index.php` ein — `createConfigFromINIFile` überspringt
