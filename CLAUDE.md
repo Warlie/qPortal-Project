@@ -22,6 +22,7 @@ QPORTAL_URL=http://127.0.0.1:8002/index.php php test/Integration/intern_walk.php
 ```bash
 # Das komplette qPortal mit eigenem INTERN-Baum (Server muss laufen)
 php -d error_reporting=E_ERROR test/Integration/tree_passthrough.php   # 7/0
+php -d error_reporting=E_ERROR test/Integration/tree_echo.php          # 21/0
 ```
 
 ```bash
@@ -332,9 +333,20 @@ Baum hat keine Zykel — über `src` hinweg aber schon, dort braucht es eine Tie
 dran, wenn die **allgemeine den Befehl nicht kennt** — nicht mehr bei jedem `false`
 (`Interface_ns::event_message_check`).
 
+**`__echo` — Unterbäume laden, nicht starten** (`behavior/std.php`). Läuft über `getRefnext()`,
+jeder Knoten bekommt den Befehl selbst; nach unten **ohne** `Value`, der Eingangsknoten feuert
+`Value` am Ende **genau einmal** (sonst liefe es 0- oder n-mal). `depth` zählt **nur an einem
+`src`** herunter: leer = 1, 0 = durchlaufen ohne zu laden — zugleich die Grenze gegen Kreise
+zwischen Dokumenten. Nur `tree#src`, nur Dateien (Adresse → Logzeile), kein Laden hinter
+`mayEnter` = nein. Doppelt geladen wird nicht (`xml::load()` gibt den vorhandenen Baum zurück;
+gemessen: depth 5 über einen Kreis = 5 Ladevorgänge, 2 Bäume). Log Stufe 5 nur für
+`src`-Ereignisse. ⚠ Danach liegen die Bäume im Parser — **SPARQL fragt aber nur den aktuellen
+Baum** (`collect_nodes` ist baumlokal, kein `FROM`); das ist der nächste Schritt.
+
 **Prüfstand mit eigenem Baum:** `test/Integration/fixture_entry.php` setzt `INTERN` per `define`
 und bindet danach das unveränderte `index.php` ein — `createConfigFromINIFile` überspringt
-definierte Konstanten. Nur über den Server (Befehl kommt aus `php://input`), nur von localhost.
+definierte Konstanten. `?doc=<name>` wählt ein Dokument aus `test/Integration/fixtures/`
+(nur Namen, keine Pfade). Nur über den Server (Befehl kommt aus `php://input`), nur von localhost.
 
 ## Zugang zum Intern-Endpunkt
 

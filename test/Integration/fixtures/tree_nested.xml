@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!--
+  Pruefstand fuer das Durchreichen (tree_passthrough.php). Wird ueber
+  fixture_entry.php als INTERN-Baum geladen, sonst von niemandem.
+
+  aussen -> innen -> ganz_innen      drei Ebenen, die durchgereicht werden muessen
+  aussen -> gesperrt -> dahinter     gesperrt traegt einen Sektor, den kein
+                                     Pruefschluessel hat: dort endet es
+-->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Pruefstand">
+	<tree name="aussen" value="Aussen">
+		<tree name="innen" value="Innen">
+			<tree name="ganz_innen" value="Ganz innen" />
+		</tree>
+		<tree name="gesperrt" value="Gesperrt" sector="niemand">
+			<tree name="dahinter" value="Dahinter" />
+		</tree>
+	</tree>
+</final>
+</indextree>

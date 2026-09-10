@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer __echo (tree_echo.php): der Eingang. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Echo">
+	<tree name="blatt"    value="Blatt"    src="test/Integration/fixtures/echo_leaf.xml" />
+	<tree name="gesperrt" value="Gesperrt" sector="niemand" src="test/Integration/fixtures/echo_locked.xml" />
+	<tree name="fern"     value="Fern"     src="https://example.invalid/index.php" />
+</final>
+</indextree>

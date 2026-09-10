@@ -713,6 +713,121 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 		. ' Werkzeug zur Fehlersuche; die Ausgabe wird nur zusammen mit __give_log sichtbar.'
 		. ' Keine Attribute.');
 
+	/* __echo - den Baum durchlaufen und die Unterbaeume LADEN, nicht starten (STW,
+	*  2026-09-10). Zweck: was unter einem Dokument haengt, liegt danach als Baum im
+	*  Parser und laesst sich abfragen, ohne dass ein Prozess gelaufen ist.
+	*
+	*  - Der Lauf geht als Befehl ueber die Struktur (getRefnext()), nicht ueber die
+	*    Zuhoererlisten: tree-Knoten haengen per event_initiated flach am indextree.
+	*    Jeder Knoten bekommt __echo selbst - die Knoten sind die aktiven Objekte.
+	*  - Nach unten immer OHNE Value. Der Eingangsknoten fuehrt Value am Ende genau
+	*    einmal aus; sonst liefe es 0- oder n-mal (n = alle Unterknoten).
+	*  - depth zaehlt nur an einem src herunter. Ohne Angabe gilt 1: die erste
+	*    src-Ebene wird geladen, dort steht es auf 0. Bei 0 wird durchlaufen, aber
+	*    nichts geladen. Die Tiefe ist zugleich die Grenze gegen Kreise ueber src
+	*    hinweg - ein Baum hat keine, zwei Dokumente, die sich gegenseitig nennen, schon.
+	*  - Doppelt geladen wird nicht: xml::load() gibt einen schon geladenen Baum zurueck.
+	*  - Nur tree#src und nur Dateien. Eine Adresse wuerde eine fremde Instanz abrufen -
+	*    das tut __echo nicht nebenbei, es sagt es im Log.
+	*  - Wo mayEnter nein sagt, endet der Lauf: kein Laden, kein Abstieg. */
+	$reg->__echo = function($node, $obj, $event)
+		{
+			global $logger_class;
+
+			$structur = $event->get_Result_Array();
+			$attr     = $structur['Command']['Attribute'] ?? [];
+			$depth    = (is_array($attr) && isset($attr['depth']) && '' !== trim((string) $attr['depth']))
+			          ? max(0, intval($attr['depth']))
+			          : 1;
+			$value    = $structur['Command']['Value'] ?? null;
+
+			$weiter = fn(int $d) => ['Identifire' => '*',
+			                         'Command'    => ['Name' => '__echo', 'Attribute' => ['depth' => $d]]];
+
+			$ist_tree = $node->full_URI() === 'http://www.trscript.de/tree#tree';
+			$name     = $ist_tree ? $node->get_ns_attribute('http://www.trscript.de/tree#name') : '';
+			$cg       = $node->get_contentGen();
+
+			if($ist_tree && is_object($cg) && !$cg->mayEnter($node))
+			{
+				$logger_class->setAssert('__echo: tree "' . $name . '": kein Zutritt, nicht geladen, kein Abstieg', 5);
+			}
+			else
+			{
+				foreach(($node->getRefnext() ?? []) as $kind)
+					$kind->hold_messages($weiter($depth), $obj);
+
+				$src = $ist_tree ? $node->get_ns_attribute('http://www.trscript.de/tree#src') : false;
+
+				if(false !== $src && '' !== trim((string) $src))
+				{
+					$pfad = resolve_path($src);
+
+					if(!is_file($pfad) && preg_match('#^https?://#i', $pfad))
+						$logger_class->setAssert('__echo: tree "' . $name . '": Adresse, nicht geladen (' . $pfad . ')', 5);
+					elseif(!is_file($pfad))
+						$logger_class->setAssert('__echo: tree "' . $name . '": src nicht gefunden (' . $pfad . ')', 5);
+					elseif($depth < 1)
+						$logger_class->setAssert('__echo: tree "' . $name . '": Tiefe erschoepft, nicht geladen (' . $pfad . ')', 5);
+					else
+					{
+						/* load() setzt den Parser auf den neuen Baum - danach muss er
+						*  zurueck, sonst arbeitet der Rest des Aufrufs im falschen Baum.
+						*  War der Baum schon geladen, steht sein Zeiger womoeglich
+						*  mitten drin; der wird ebenfalls zurueckgestellt. */
+						$parser  = $node->get_parser();
+						$zurueck = $parser->cur_idx();
+
+						try
+						{
+							$idx   = $parser->load($pfad, 0);
+							$vorher = &$parser->show_xmlelement();
+							$parser->set_first_node();
+							$wurzel = $parser->show_xmlelement();
+
+							$logger_class->setAssert('__echo: tree "' . $name . '": ' . $pfad
+								. ' geladen (Baum ' . $idx . ', Tiefe ' . $depth . ' -> ' . ($depth - 1) . ')', 5);
+
+							if(is_object($wurzel))
+								$wurzel->hold_messages($weiter($depth - 1), $obj);
+
+							$parser->change_idx($idx);
+							if(is_object($vorher)) $parser->set_xmlelement($vorher);
+						}
+						finally
+						{
+							$parser->change_idx($zurueck);
+						}
+					}
+				}
+			}
+
+			if(!empty($value))
+				$node->hold_messages($value, $obj);
+
+			return true;
+		};
+
+	$reg->addLog(function($node, $obj, $event)
+		{
+			$a = $event->get_Result_Array()['Command']['Attribute'] ?? [];
+			return '__echo auf ' . $node->full_URI() . ' (depth ' . var_export($a['depth'] ?? null, true) . ')';
+		}, 6);
+
+	$reg->addDescription(
+		'Durchlaeuft den Baum ab dem Knoten, auf dem der Befehl steht, und LAEDT dabei die'
+		. ' Dokumente, die tree-Knoten per src nennen - ohne sie zu starten. Danach liegen sie als'
+		. ' Baeume im Parser und lassen sich abfragen. Nach unten laeuft der Befehl ohne Value;'
+		. ' Value wird am Ende genau einmal auf dem Eingangsknoten gefeuert. Nur Dateien, keine'
+		. ' Adressen; wo der Zutritt fehlt, endet der Lauf. Ein schon geladenes Dokument wird'
+		. ' nicht neu geladen.',
+		[
+			'depth' => ['description' => 'Wie viele src-Ebenen geladen werden. Zaehlt nur an einem'
+			                           . ' src herunter. Leer = 1, 0 = durchlaufen ohne zu laden.'
+			                           . ' Zugleich die Grenze gegen Kreise zwischen Dokumenten.',
+			            'required'    => false]
+		]);
+
 } catch (Exception $e) {
     echo "Fehler: " . $e->getMessage();
 }

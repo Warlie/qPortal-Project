@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer __echo: zweite Ebene, und ein Kreis zurueck auf echo_leaf. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Tief">
+	<tree name="kreis" value="Kreis" src="test/Integration/fixtures/echo_leaf.xml" />
+</final>
+</indextree>

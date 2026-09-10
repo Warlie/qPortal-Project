@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer __echo: erste src-Ebene. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Blatt">
+	<tree name="tiefer" value="Tiefer" src="test/Integration/fixtures/echo_deep.xml" />
+</final>
+</indextree>
