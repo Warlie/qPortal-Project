@@ -48,16 +48,15 @@ try {
     $reg->addLog(function($node, $obj, $event){return "start in " . $node->full_URI();}, 4);
 
     $reg->addDescription(
-		'Startet die Ausfuehrung des Dokuments. Ohne Attribute laufen first und dann final; mit'
-		. ' Attributen wird stattdessen der passende tree-Knoten gesucht und dort weitergestartet.'
-		. ' Ein Skript wird ausschliesslich durch start aktiv - ohne start liegt es still und ist'
-		. ' ueber die Intern-Befehle editierbar.',
-		[
-			'i' => ['description' => 'Erste Achse der Navigation (QUERY_PARAM). Weitere Achsen'
-			                       . ' heissen j, k, ... je nach Config. Der Wert waehlt den'
-			                       . ' tree-Knoten. Ueber den Intern-Kanal wird i="" mitgeschickt.',
-			        'required'    => false]
-		]);
+		'Startet die Ausfuehrung des Dokuments. Der Pfad steht im AEUSSEREN Attribute der'
+		. ' Nachricht (neben Command, nicht darin) als Liste von tree-Namen. Leer laufen first'
+		. ' und dann final; sonst wird der passende tree-Knoten gesucht, der seinen Namen vom'
+		. ' Kopf der Liste nimmt und mit dem Rest weiterstartet. Ein Skript wird'
+		. ' ausschliesslich durch start aktiv - ohne start liegt es still und ist ueber die'
+		. ' Intern-Befehle editierbar. Jeden anderen Befehl reicht ein tree-Knoten unveraendert'
+		. ' durch. Beispiel: {"Identifire":"http://www.trscript.de/tree#indextree",'
+		. '"Command":{"Name":"start"},"Attribute":["fridge"]}',
+		[]);
 
 } catch (Exception $e) {
     echo "Fehler: " . $e->getMessage();

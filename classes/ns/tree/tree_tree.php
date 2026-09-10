@@ -89,6 +89,39 @@ function &new_Instance()
 */
 function event_message_in($type,&$obj)
 	{
+		/* Nur start ist ein Lauf. Alles andere ist irgendetwas anderes - und bleibt
+		*  hier stehen: kein Pfad verbraucht, kein Name verglichen, kein src geladen,
+		*  nichts gestartet, und NICHT an way_out weitergegeben. Die tree-Aufrufe sind
+		*  getrennt zu halten, es darf keine Kaskade losgehen (STW). Gemessen: in
+		*  way_out eines tree stehen gar keine tree-Kinder (die haengen per
+		*  event_initiated am indextree), sondern die uebrigen Knoten - und die
+		*  unterstellen alle einen start. Wer den Baum durchlaufen will, tut das als
+		*  Befehl ueber die Struktur (getRefnext()), nicht ueber die Zuhoerer.
+		*  Der leere Befehl ist bereits in Command_Object zu start geworden.
+		*
+		*  ⚠ Die Zeile im Log gibt es nur, wo der Aufrufer hinein darf. */
+		$com = ($type instanceof Command_Object) ? $type : $this->parseCommand($type);
+
+		if(!$com->matchesCommand('start'))
+		{
+			global $logger_class;
+
+			/* get_contentGen, nicht get_parser()->get_context_generator(): ein Knoten,
+			*  der zur Laufzeit per __add_node entsteht, hat keinen Parser, wohl aber
+			*  den ContentGenerator (gemessen). */
+			$cg = $this->get_contentGen();
+
+			if(is_object($cg) && !$cg->mayEnter($this))
+				return false;
+
+			$logger_class->setAssert('tree "' . $this->get_ns_attribute('http://www.trscript.de/tree#name')
+				. '": ' . var_export($com->get_Command(), true) . ' ist kein start - nicht gestartet, nicht weitergereicht', 5);
+
+			return true;
+		}
+
+		$type = $com;
+
 //echo "Das Ding hier " . " [" . $this->full_URI() . "]" . spl_object_id($this) . " wurde aufgerufen von \n"; // . spl_object_id($obj->get_node()) .  "\n";
 //	echo spl_object_id($this) . "--->\n";
 

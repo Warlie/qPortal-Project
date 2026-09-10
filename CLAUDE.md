@@ -20,6 +20,11 @@ QPORTAL_URL=http://127.0.0.1:8002/index.php php test/Integration/intern_walk.php
 ```
 
 ```bash
+# Das komplette qPortal mit eigenem INTERN-Baum (Server muss laufen)
+php -d error_reporting=E_ERROR test/Integration/tree_passthrough.php   # 7/0
+```
+
+```bash
 # Sonden — sie prüfen nicht, sie ZEIGEN. Ausgabe wird gelesen, kein grün/rot.
 php -d error_reporting=E_ERROR test/proben/probe_registry_vocab.php   # ausser dieser: 32/0
 ```
@@ -27,7 +32,7 @@ php -d error_reporting=E_ERROR test/proben/probe_registry_vocab.php   # ausser d
 `seek_scope.php` und `sparql_parse.php` müssen vollständig grün sein — jede rote Zeile
 dort ist neu. `probe_registry_vocab.php` bewacht die Naht zwischen Vokabulardokument und
 `build_up()` und steht bei **32 in Ordnung / 0 rot**.
-`intern_walk.php` steht bei **32 gelaufen / 1 rot** — `__get_data` ist ein Bestandsdefekt
+`intern_walk.php` steht bei **35 gelaufen / 1 rot** — `__get_data` ist ein Bestandsdefekt
 (über den Intern-Kanal ist der Aufrufer der ContentGenerator und damit kein Knoten; STW hat
 entschieden, das nicht umzubauen). Diese Zahl ist die Vergleichsmarke: ändert sie sich, hat
 die letzte Änderung etwas gebrochen.
@@ -295,6 +300,41 @@ Treffer. `attribute_is_current()` / `identity_is_current()` sind diese Nachprüf
 
 Über die Modelle: `$tree->seek_by_model('internal')` bzw. `query_by_model($m, $ausdruck)`.
 Jede Suche hält ihr eigenes Modell — der Baum wird je Anfrage durchgereicht.
+
+## start ist ein Muss
+
+**Der Pfad für `start` steht im ÄUSSEREN `Attribute`** — neben `Command`, nicht darin — als
+Liste von `tree`-Namen:
+
+```json
+{"Identifire":"http://www.trscript.de/tree#indextree","Command":{"Name":"start"},"Attribute":["fridge"]}
+```
+
+Leer laufen `first` und `final`. `?i=` in der URL wird am Intern-Rand verworfen
+(`class_Contentgenerator.php`, Zweig `injectedLine`); über Intern wählt man den Weg im Befehl.
+Der leere Befehl (`''`, `'*'`, `'*?start'`) wird zentral in `Command_Object` zu `start`.
+
+**Nur `start` ist ein Lauf.** Einen anderen Befehl nimmt ein `tree` an, schreibt
+`ist kein start` ins Log und lässt ihn stehen — kein Pfad verbraucht, kein `src` geladen,
+**nichts weitergereicht**. Die tree-Aufrufe bleiben getrennt, eine Kaskade darf nicht losgehen.
+
+⚠ **`tree`-Knoten hängen flach am `indextree`**, nicht am Eltern-`tree`
+(`TREE_tree::event_initiated` → `to_listener('…#indextree')`). Innerhalb eines Dokuments
+sind alle `tree` Geschwister; **ein Pfadsegment = eine Dokumentebene**, tiefer geht es nur über
+`src`. In `way_out` eines `tree` stehen die übrigen Knoten — und die unterstellen alle einen
+`start`. Gemessen: `?i=API&j=glossary` ist 404.
+
+**Wer den Baum durchlaufen will, tut das als Befehl über die Struktur:** `getRefnext()` ohne
+Index liefert die ganze `next_el`-Liste (nur Elemente, bei einem Blatt ggf. `null`). Ein
+Baum hat keine Zykel — über `src` hinweg aber schon, dort braucht es eine Tiefe.
+
+⚠ **Registry-Rückfall:** die Registry des Knotentyps (und darüber `event_message_in`) kommt nur
+dran, wenn die **allgemeine den Befehl nicht kennt** — nicht mehr bei jedem `false`
+(`Interface_ns::event_message_check`).
+
+**Prüfstand mit eigenem Baum:** `test/Integration/fixture_entry.php` setzt `INTERN` per `define`
+und bindet danach das unveränderte `index.php` ein — `createConfigFromINIFile` überspringt
+definierte Konstanten. Nur über den Server (Befehl kommt aus `php://input`), nur von localhost.
 
 ## Zugang zum Intern-Endpunkt
 

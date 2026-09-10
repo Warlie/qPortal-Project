@@ -511,8 +511,13 @@ function exhaustion_()
 }
 
 //orginal
-function &getRefnext($index,$bool_set=false)
-{if(!$bool_set)$this->position = $index;return $this->next_el[$index];}
+function &getRefnext($index = false,$bool_set=false)
+{
+	if($index === false)
+		return $this->next_el;
+	else
+		if(!$bool_set)$this->position = $index;return $this->next_el[$index];
+}
 //orginal
 function &getRefprev(){return $this->prev_el;}
 //orginal
@@ -1418,8 +1423,19 @@ global $logger_class;
 		//var_dump($com_elemnet->get_Command(), $behaviorRegistry);
         try {
         	//echo $this->get_NS() . " " . $this->get_QName() . "\n"; 
-		return $this->callRegContent($behaviorRegistry->_useGeneral(), $com_element, $obj)
-			|| $this->callRegContent($behaviorRegistry->_useNS($this->get_NS())->_useLN($this->get_QName()), $com_element, $obj);
+		/* Die allgemeine Registry zuerst - der Knotentyp kommt aber nur dran, wenn sie
+		*  den Befehl NICHT KENNT. Vorher stand hier ein ||: jedes false der allgemeinen
+		*  Ebene (Ausnahme, Abweisung ueber die Stufe, __to_owner ohne Empfaenger) fiel
+		*  weiter bis in event_message_in des Knotens, und dort unterstellen die
+		*  tree-Klassen einen start. Ein abgewiesenes __save_back auf einem tree haette
+		*  so den Unterbaum ausgefuehrt. */
+		$general = $behaviorRegistry->_useGeneral();
+		$name    = $com_element->get_Command();
+
+		if(is_string($name) && isset($general->$name))
+			return $this->callRegContent($general, $com_element, $obj);
+
+		return $this->callRegContent($behaviorRegistry->_useNS($this->get_NS())->_useLN($this->get_QName()), $com_element, $obj);
 			
         } catch (RegistryNotFoundException $e) {
         	$logger_class->setAssert("INFO " . $this->full_URI() . " has no registry and calls the instance's method", 6);

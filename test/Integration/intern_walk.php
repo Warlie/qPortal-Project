@@ -127,6 +127,15 @@ function with_log($inner)
 	return cmd('__give_log', null, $inner);
 }
 
+/* Der Pfad fuer start steht im AEUSSEREN Attribute, neben Command, als Liste von
+*  tree-Namen - nicht in Command.Attribute. Dort lag er hier bis 2026-09-10 und kam
+*  nie an; der Fall lief trotzdem gruen, weil start ohne Pfad ebenfalls "start in"
+*  schreibt. */
+function start_msg(array $pfad, $identifire = '*')
+{
+	return ['Identifire' => $identifire, 'Command' => ['Name' => 'start'], 'Attribute' => $pfad];
+}
+
 /* ------------------------------------------------------------------ Auswertung */
 
 $results = [];
@@ -400,8 +409,32 @@ check('__save_back (neuer Pfad)',
 /* --- Der einzige Befehl ausserhalb des Standards --- */
 
 check('start (tree#indextree)',
-      with_log(on_node(cmd('start', ['i' => '']), 'http://www.trscript.de/tree#indextree')),
+      with_log(on_node(start_msg([]), 'http://www.trscript.de/tree#indextree')),
       '/start in /', 'Startbefehl am Wurzelknoten');
+
+check('start (leerer Pfad)', start_msg([], 'http://www.trscript.de/tree#indextree'),
+      function($body, $res) {
+	$j = json_decode($body, true);
+	if (is_array($j) && ($j['answered'] ?? null) === false)
+		return [false, 'answered:false - der leere Pfad hat keine Seite gerendert'];
+	return [strlen($body) > 0, 'Seite gerendert (' . $res['ctype'] . ')'];
+});
+
+check('start (Pfad ins Leere)', start_msg(['qp_walk_gibtsnicht'], 'http://www.trscript.de/tree#indextree'),
+      function($body, $res) {
+	if (strpos($res['ctype'], 'application/json') === false)
+		return [false, 'Content-Type ist "' . $res['ctype'] . '" statt der eigenen Intern-Antwort'];
+	$j = json_decode($body, true);
+	return [($j['answered'] ?? null) === false, 'kein tree dieses Namens, nichts gestartet'];
+});
+
+/* Nur start ist ein Lauf. Ein unbekannter Befehl auf einem tree bleibt dort stehen -
+*  auf einem Laufzeitknoten, damit hier nie ein echter Unterbaum startet, falls das
+*  einmal bricht. Die verschachtelte Weitergabe misst tree_passthrough.php. */
+check('kein start, keine Kaskade',
+      with_log(on_node(cmd('__add_node', ['json' => json_encode(['name' => 'http://www.trscript.de/tree#tree'])],
+                           ['Identifire' => '*', 'Command' => ['Name' => 'qp_walk_unbekannt']]))),
+      '/ist kein start - nicht gestartet, nicht weitergereicht/', 'unbekannter Befehl auf einem tree');
 
 /* --- Eigene Befehlsketten: anlegen, aufrufen, lesen, loeschen -----------------
 *  Jeder check() ist ein eigener Request, und die Registry wird zu Beginn jedes
