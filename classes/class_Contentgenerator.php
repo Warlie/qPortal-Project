@@ -808,10 +808,35 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		if($this->outputMode == LOG)
 			if (file_exists(LOG_PATH)) {
 				$inhalt = file_get_contents(LOG_PATH);
+				/* Das Log ist Text. Ohne Kopf schickte PHP text/html, und das liest
+				*  sich wie eine gerenderte Seite statt einer Antwort. */
+				if($set_header && !headers_sent())
+					header('Content-Type: text/plain; charset=' . $type);
 				return $inhalt;
 			} else {
 				return "File wasn't found";
 			}
+
+	/* Ein Intern-Aufruf bekommt eine eigene Antwort. Hat kein Befehl geantwortet
+	*  und kein start ein Ausgabedokument bestimmt (tree_main setzt out_template,
+	*  output_doc zusaetzlich doc_out_template), waere der Rueckfall der
+	*  serialisierte INTERN-Baum - eine Seite, die wie eine Antwort aussieht und
+	*  keine ist. Stattdessen wird gesagt, dass nichts kam. Ein start, der eine
+	*  Seite rendert, laeuft weiter unten durch: dann IST das Dokument die Antwort. */
+	if($this->injectedLine && !$this->doc_out_template && !$this->out_template)
+	{
+		if($set_header && !headers_sent())
+			header('Content-Type: application/json; charset=' . $type);
+
+		$aufruf = json_decode($this->injectedLine, true);
+
+		return json_encode([
+			'answered' => false,
+			'command'  => $aufruf['Command']['Name'] ?? null,
+			'note'     => 'Der Befehl lief, aber nichts wurde zurueckgegeben. Ein Ergebnis'
+			            . ' geht mit __to_owner nach aussen, das Protokoll mit __give_log.'
+			], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+	}
 
 	if($this->doc_out_template)$this->out_template = $this->doc_out_template;
 	//echo $this->out_template . " " . $this->XMLlist->ALL_URI();//

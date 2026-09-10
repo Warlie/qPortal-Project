@@ -391,6 +391,7 @@ if(file_exists(CONFIG))
 				/* Achsenfolge kommt jetzt aus QUERY_PARAM, gefuellt in generate() */
                                 
                                 //$content->setXMLTemplate('template/text1.htm');
+                $_intern_call  = false;
                 $_intern_token = null;
 				$_auth_header  = $_SERVER['HTTP_AUTHORIZATION'] ?? apache_request_headers()['Authorization'] ?? '';
 				if (preg_match('/^Bearer\s+(.+)$/i', $_auth_header, $_m)) $_intern_token = $_m[1];
@@ -433,6 +434,7 @@ if(file_exists(CONFIG))
 						$content->setSectors($_intern_entry['sector']);
 				}
 
+				$_intern_call = true;
 				$content->setXMLstructur(INTERN);
 				// {"Identifire":"*","Command":{"Name":"__find_node","Attribute":{"json":"{\"name\":\"http:\/\/www.trscript.de\/tree#final\"}"},"Value":{"Identifire":"*","Command":{"Name":"start"},"Attribute":{"i":""}}}}
 				$content->commandLineInjection(file_get_contents('php://input'));
@@ -485,6 +487,17 @@ if(file_exists(CONFIG))
 
 				             
 						} catch (NoPermissionException $e) {
+
+						/* Ein Intern-Aufruf wird nicht umgeleitet: er bekommt die
+						*  Abweisung als Antwort, in derselben Form wie das 401 oben. */
+						if($_intern_call)
+						{
+							http_response_code(403);
+							header('Content-Type: application/json');
+							echo json_encode(['error' => 'Forbidden', 'note' => $e->getMessage()]);
+							return false;
+						}
+
 							
 
 						header('Cache-Control: no-cache, no-store, must-revalidate');
