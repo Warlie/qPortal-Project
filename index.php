@@ -168,6 +168,16 @@ if(file_exists(CONFIG))
 
                 Logger::$active = $ini_array["log"]["active"];
                 Logger::$logPath = $ini_array["log"]["path"]; //"template/log.txt";
+                /* Obergrenze fuer das Level eines Zuhoerers - leer heisst: wie level. */
+                $_listen_max = trim((string) ($ini_array["log"]["listen_max"] ?? ''));
+                Logger::$listenMax = intval($_listen_max !== '' ? $_listen_max : ($ini_array["log"]["level"] ?? 5));
+                /* Log nur, wenn es jemand will (STW): steht __give_log VORN im Rumpf, wird
+                *  ab hier gesammelt - vor der Kopfzeile, damit auch die fruehen Zeilen
+                *  ankommen. Sonst, bei [log] active aus, entsteht gar kein Eintrag.
+                *  php://input ist mehrfach lesbar; der Intern-Zweig liest es unten wieder. */
+                $_rumpf = json_decode((string) file_get_contents('php://input'), true);
+                if(is_array($_rumpf) && array_is_list($_rumpf)) $_rumpf = $_rumpf[0] ?? null;
+                Logger::$collect = is_array($_rumpf) && (($_rumpf['Command']['Name'] ?? null) === '__give_log');
                 
 				$logger_class->setImportance(REPORT, false, MEMORY_USAGE, TRACE);
 

@@ -228,20 +228,46 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
     $reg->__give_log= function($node, $obj, $event)
 		{
 			$structur = $event->get_Result_Array();
+
+			/* Wer ein Log will, bekommt eins - auch wenn __give_log nicht vorn stand;
+			*  dann fehlen nur die Zeilen davor (index.php schaut nur vorn nach). */
+			Logger::$collect = true;
+
+			/* Mit level: ein eigener Zuhoerer fuer die Dauer des Value, unabhaengig vom
+			*  globalen Level, gekappt auf [log] listen_max. Ausgegeben wird dann SEIN
+			*  Array statt des globalen Logs. */
+			$level = $structur['Command']['Attribute']['level'] ?? null;
+			$eigen = !is_null($level) && '' !== trim((string) $level);
+			if($eigen)
+			{
+				Logger::register('__give_log', $level);
+				Logger::$giveLogName = '__give_log';
+			}
+
 			$node->get_contentGen()->switchOutput();
 
 			$value = $structur['Command']['Value'];
 
 			$node->hold_messages($value,$obj) ;
 
+			if($eigen)
+				Logger::silence('__give_log');
+
 			return true;
 
 		};
 
 	$reg->addDescription(
-		'Schaltet die Ausgabe auf die Logdatei um und feuert dann Value. Die Antwort des Aufrufs'
-		. ' ist danach der komplette Loginhalt statt des Ausgabedokuments - so werden die Spuren'
-		. ' der inneren Kommandos sichtbar. Keine Attribute.');
+		'Schaltet die Ausgabe auf das Log um und feuert dann Value. Die Antwort des Aufrufs ist'
+		. ' danach der Loginhalt (aus dem Speicher) statt des Ausgabedokuments - so werden die'
+		. ' Spuren der inneren Kommandos sichtbar. Vorn im Rumpf gestellt, erfasst es auch die'
+		. ' Zeilen vor den Befehlen; sonst nur, was nach ihm kommt.',
+		[
+			'level' => ['description' => 'Eigenes Level fuer die Dauer des Value, unabhaengig vom'
+			                           . ' globalen. Ausgegeben wird dann nur, was dabei entsteht.'
+			                           . ' Gekappt auf [log] listen_max.',
+			            'required'    => false]
+		]);
 
     /* __to_owner : die Antwort geht an den Fragenden.
     *

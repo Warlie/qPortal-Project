@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer den Logger als Plugin (logger_listen.php): ein Zuhoerer, angemeldet
+     per Plugin-Aufruf mit Name und Level. Level 9 liegt ueber listen_max und wird gekappt. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Logger">
+	<program>
+		<object id="lausch" name="Logger" src="PlugIn/plugin_log.php">
+			<remote name="Logger.listen.name">pruef</remote>
+			<remote name="Logger.listen.level">9</remote>
+			<remote name="Logger.listen" />
+		</object>
+	</program>
+</final>
+</indextree>

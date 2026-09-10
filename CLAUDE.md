@@ -24,6 +24,7 @@ QPORTAL_URL=http://127.0.0.1:8002/index.php php test/Integration/intern_walk.php
 php -d error_reporting=E_ERROR test/Integration/tree_passthrough.php   # 7/0
 php -d error_reporting=E_ERROR test/Integration/tree_echo.php          # 21/0
 php -d error_reporting=E_ERROR test/Integration/tree_where.php         # 31/0
+php -d error_reporting=E_ERROR test/Integration/logger_listen.php      # 18/0 (Teil 1 ohne Server)
 ```
 
 ```bash
@@ -411,6 +412,39 @@ auf eine Form); ein Treffer setzt `ContentGenerator::setClearance()` und, wenn a
 hinaus stehen; `mayEnter()` liest sie über `sectors()`, Schlüssel vor Sitzung.
 
 ⚠ Der Vergleich läuft über `hash_equals`, nicht `in_array`.
+
+## Das Log
+
+**Gelesen wird aus dem Speicher, nicht aus der Datei.** `__give_log` (LOG-Zweig in `getoutput()`)
+gibt `Logger::giveLogText()` aus. `[log] active` schreibt nur noch zusätzlich die Datei unter
+`path` — die Absturzkopie; fällt das ganze System, gibt es ohnehin nur eine 500.
+
+**Geloggt wird nur, wenn es jemand will** (`Logger::$collect`). `index.php` schaut **vor**
+`setstart` in `php://input`: ist der äußerste Befehl `__give_log`, wird gesammelt, Kopfzeile
+eingeschlossen. Steht `__give_log` weiter innen, schaltet es das Sammeln bei seiner Ausführung
+ein — dann fehlen die Zeilen davor. Ohne `active`, ohne `collect` und ohne Zuhörer wird **kein**
+Eintrag gebaut (der Positionsaufruf `debug_backtrace()` kostet).
+
+**Zuhörer — per Plugin-Aufruf, mit Name und Level** (`plugin[Logger]` in `[short]`):
+
+```xml
+<object id="lausch" name="Logger" src="PlugIn/plugin_log.php">
+  <remote name="Logger.listen.name">mein_log</remote>
+  <remote name="Logger.listen.level">6</remote>
+  <remote name="Logger.listen" />
+</object>
+```
+
+Jeder Zuhörer hat sein **eigenes Array** und sein **eigenes Level, unabhängig vom globalen** —
+nach oben gekappt auf `[log] listen_max` (leer = wie `level`), weil die Zeilen Einblick in Pfade,
+Daten und Abfragen geben. Ein schon angemeldeter Name fängt **leer** an: vermutlich läuft ein
+Skript erneut, und den Neuen interessieren die Folgen seines Handelns. Gelesen wird wie eine
+Ergebnismenge — `if(moveFirst()) do { col('msg'|'level'|'index') } while(next());` —, mit eigenem
+Zeiger je Zuhörer. ⚠ `next()` rückt nur vor, wo ein Eintrag steht; so sieht ein Zuhörer auch, was
+nach seinem letzten Lesen dazukam.
+
+`__give_log` mit Attribut `level`: ein eigener Zuhörer für die Dauer seines `Value`, ausgegeben
+wird dann nur, was dabei entsteht — ebenfalls gekappt auf `listen_max`.
 
 ## Konfiguration
 

@@ -805,17 +805,18 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 				JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
 		}
 
+		/* Das Log kommt aus dem SPEICHER (STW, 2026-09-10), nicht mehr aus der Datei.
+		*  Die Datei ist nur noch die Absturzkopie ([log] active) - faellt das ganze System,
+		*  gibt es ohnehin keine Antwort, sondern eine 500. __give_log mit level gibt das
+		*  Array seines eigenen Zuhoerers aus. */
 		if($this->outputMode == LOG)
-			if (file_exists(LOG_PATH)) {
-				$inhalt = file_get_contents(LOG_PATH);
-				/* Das Log ist Text. Ohne Kopf schickte PHP text/html, und das liest
-				*  sich wie eine gerenderte Seite statt einer Antwort. */
-				if($set_header && !headers_sent())
-					header('Content-Type: text/plain; charset=' . $type);
-				return $inhalt;
-			} else {
-				return "File wasn't found";
-			}
+		{
+			/* Das Log ist Text. Ohne Kopf schickte PHP text/html, und das liest
+			*  sich wie eine gerenderte Seite statt einer Antwort. */
+			if($set_header && !headers_sent())
+				header('Content-Type: text/plain; charset=' . $type);
+			return Logger::giveLogText(Logger::$giveLogName);
+		}
 
 	/* Ein Intern-Aufruf bekommt eine eigene Antwort. Hat kein Befehl geantwortet
 	*  und kein start ein Ausgabedokument bestimmt (tree_main setzt out_template,
