@@ -115,6 +115,29 @@ result('<sub> im <element>: lief',    strpos($spur, 'Zuhoerer "sub_lief" angemel
 result('<sub> im <element>: an seiner Stelle', strpos($seite2, 'vor-SPUR-nach') !== false,
        preg_match('/<html[^>]*>([^<]*)</', $seite2, $m) ? 'Seite: ' . $m[1] : 'keine Seite');
 
+/* __call fuehrt auch OHNE src das first DIESES Dokuments mit aus (STW, 2026-09-11). Vorher
+*  rief der Zweig ohne src nur die eigenen Kinder des Knotens - damit war __call der einzige
+*  Weg in ein Dokument, der dessen Voraussetzungen uebersprang (angelegte Tabellen etwa).
+*  fixtures/call_first.xml legt in first "FIRST LIEF" ab, der Knoten "2". */
+$vorher = $base;
+$base   = (getenv('QPORTAL_FIXTURE_URL') ?: 'https://localhost:8002/test/Integration/fixture_entry.php') . '?doc=call_first';
+[, $jf] = post(cmd('__find_node', ['json' => json_encode(['name' => T . 'tree', 'attribute' => [T . 'name' => 'ohne_src']])], $call()));
+$base   = $vorher;
+result('__call fuehrt first mit aus', ($jf[0]['value']['results'] ?? null) === ['FIRST LIEF', '2'],
+       json_encode($jf[0]['value']['results'] ?? null));
+
+/* ... und zwar nur EINMAL je Request. first meldet sich nach seinem ersten start von der
+*  Kante am indextree ab (TREE_first); darum geht auch __call ueber den indextree und nicht
+*  direkt auf den Knoten - sonst waere das die zweite Tuer. Zweiter Aufruf: nur noch "2". */
+$vorher = $base;
+$base   = (getenv('QPORTAL_FIXTURE_URL') ?: 'https://localhost:8002/test/Integration/fixture_entry.php') . '?doc=call_first';
+$ruf    = cmd('__find_node', ['json' => json_encode(['name' => T . 'tree', 'attribute' => [T . 'name' => 'ohne_src']])], $call());
+[, $jz] = post([$ruf, $ruf]);
+$base   = $vorher;
+result('first laeuft nur einmal je Request',
+       ($jz[0]['value']['results'] ?? null) === ['FIRST LIEF', '2'] && ($jz[1]['value']['results'] ?? null) === ['2'],
+       json_encode([$jz[0]['value']['results'] ?? null, $jz[1]['value']['results'] ?? null]));
+
 /* Derselbe src zweimal in EINEM Request. leaveScope nahm den Namen nur vom Stapel und liess
 *  ihn in $scopes stehen - der zweite <sub> starb an "existiert bereits", still: der
 *  ExceptionManager faengt es, die Seite rendert weiter. Darum das Log, nicht die Seite. */

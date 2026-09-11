@@ -12,6 +12,7 @@ require_once('tree_addtree.php');
 require_once('tree_content.php');
 require_once('tree_program.php');
 require_once('tree_first.php');
+require_once('tree_once.php');
 require_once('tree_name.php');
 require_once('tree_variable.php');
 require_once('tree_template.php');
@@ -59,7 +60,8 @@ class TREE_factory
 			$this->node['indextree'] = new TREE_INDEXTREE('indextree', $ns);
 			$this->node['final'] = new TREE_tree('final', $ns);
 			$this->node['tree'] = new TREE_tree('tree', $ns);
-			$this->node['first'] = new TREE_tree('first', $ns);
+			$this->node['first'] = new TREE_first('first', $ns);
+			$this->node['once'] = new TREE_once('once', $ns);
 			$this->node['sub'] = new TREE_sub('sub', $ns);
 			$this->node['subtree'] = new TREE_subtree('subtree', $ns);
 			$this->node['template'] = new TREE_template('template', $ns);

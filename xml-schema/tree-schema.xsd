@@ -32,6 +32,7 @@
 		</xs:documentation></xs:annotation>
 		<xs:complexType>
 			<xs:choice minOccurs="0" maxOccurs="unbounded">
+				<xs:element name="once" type="tree:onceType"/>
 				<xs:element name="first" type="tree:finalType"/>
 				<xs:element name="final" type="tree:finalType"/>
 				<xs:element name="tree" type="tree:treeType"/>
@@ -43,9 +44,37 @@
 
 	<!-- ================================================= Ausfuehrungsbereiche -->
 
+	<xs:complexType name="onceType">
+		<xs:annotation><xs:documentation>
+			once: der Ausfuehrungsbereich, der im Leben der INSTALLATION hoechstens einmal laeuft.
+			Steht VOR first - once ist die Einrichtung, first sind die Voraussetzungen jedes Laufs.
+			Die Marke haelt in der Tabelle qp_once unter sha256(Dokument + '#' + name); darum ist
+			name hier PFLICHT, ein once ohne Namen laeuft nicht und sagt es im Log. Die Zeile wird
+			VOR dem Lauf mit done=0 geschrieben und danach auf 1 gesetzt: keine Zeile / done=0
+			(angefangen, nicht fertig) / done=1 sind drei verschiedene Aussagen.
+
+			NICHT fuer CREATE TABLE - auf MariaDB sind CREATE ... IF NOT EXISTS und ALTER ... ADD
+			COLUMN IF NOT EXISTS selbst idempotent, und ein Register daneben waere eine zweite
+			Wahrheit. Gedacht fuer Wirkungen AUSSERHALB der Datenbank (eine Datei anlegen, eine
+			Gegenstelle rufen) und fuer Datenumformungen, die kein zweites Mal vertragen.
+
+			Kein template und kein content: beides sind Aussagen ueber die AUSGABE, und was nur
+			beim allerersten Request geschieht, darf die Seite nicht anders aussehen lassen als
+			bei jedem spaeteren. Kein tree: ein tree haengt sich per event_initiated flach an den
+			indextree, laege hier also nur scheinbar darin.
+		</xs:documentation></xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="program" type="tree:programType"/>
+			<xs:element name="sub" type="tree:subType"/>
+			<xs:element name="access" type="tree:accessType"/>
+		</xs:choice>
+		<xs:attributeGroup ref="tree:nodeAttributes"/>
+		<xs:attribute name="name" type="xs:string" use="required"/>
+	</xs:complexType>
+
 	<xs:complexType name="finalType">
 		<xs:annotation><xs:documentation>
-			first und final: die beiden Ausfuehrungsbereiche, first zuerst. tree:name ist ein
+			first und final: die Ausfuehrungsbereiche jedes Laufs, first zuerst (und vor beiden once). tree:name ist ein
 			Pfadsegment (eindeutig nur unter Geschwistern) und nur mit Namensraum ein Bezeichner
 			(praefix;Name oder voller URI). Ein Name, der mit "." beginnt, ist unsichtbar in der
 			Navigation; ein fehlendes value ebenso.

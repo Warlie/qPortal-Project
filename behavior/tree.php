@@ -28,6 +28,15 @@ try {
     		 $structur = $event->get_Result_Array();
     		 $listTreeNames = $structur["Attribute"];
     		 
+    		 /* once VOR first (STW, 2026-09-11). Die Reihenfolge ist die Aussage: once ist die
+    		 *  EINRICHTUNG und laeuft im Leben der Installation hoechstens einmal, first sind
+    		 *  die VORAUSSETZUNGEN jedes Laufs. Was einmal eingerichtet wurde, steht, wenn
+    		 *  first sich darauf stuetzt. Beide ohne Namensliste - sie werden nie ueber einen
+    		 *  Pfad gewaehlt. */
+    		 $node->send_messages(
+    		 	["Identifire"=>"http://www.trscript.de/tree#once", "Command"=> ["Name"=> "start" ], "Attribute"=>[]]
+				, $obj);
+
     		 $node->send_messages(
     		 	["Identifire"=>"http://www.trscript.de/tree#first", "Command"=> ["Name"=> "start" ], "Attribute"=>[]]
 				, $obj);

@@ -76,7 +76,8 @@ function event_initiated()
 	$uri = $this->getRefprev()->full_URI();
 	if( $uri == 'http://www.trscript.de/tree#program' || $uri == 'http://www.trscript.de/tree#content'
 		||  $uri == 'http://www.trscript.de/tree#tree' ||  $uri == 'http://www.trscript.de/tree#final'
-		|| $uri == 'http://www.trscript.de/tree#first')
+		|| $uri == 'http://www.trscript.de/tree#first'
+		|| $uri == 'http://www.trscript.de/tree#once')
 	{
 
 	$this->to_listener();

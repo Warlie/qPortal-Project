@@ -58,6 +58,7 @@ function event_initiated()
 	if($uri == 'http://www.trscript.de/tree#tree' 
 		|| $uri == 'http://www.trscript.de/tree#final'
 		|| $uri == 'http://www.trscript.de/tree#first'
+		|| $uri == 'http://www.trscript.de/tree#once'
 		|| $uri == 'http://www.trscript.de/tree#program')
 	{
 		$this->to_listener();

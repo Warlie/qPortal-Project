@@ -1151,9 +1151,38 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 						}
 					}
 					else
+					{
+						/* Auch ohne src laeuft ZUERST das first DIESES Dokuments (STW): was ein
+						*  Prozess voraussetzt - angelegte Tabellen zum Beispiel - steht dort, und
+						*  der Zweig mit src fuehrt es ohnehin schon aus. Ohne diese Zeilen haette
+						*  __call auf einen Knoten im eigenen Dokument als einziger Weg ins
+						*  Dokument gefuehrt, der die Voraussetzungen ueberspringt.
+						*
+						*  ⚠ Ueber den indextree, nicht direkt auf den Knoten. first meldet sich
+						*  nach seinem ersten start von der Kante ab (TREE_first), und das wirkt nur
+						*  fuer den, der ueber die Kante kommt. Ein direktes hold_messages auf dem
+						*  Knoten waere die zweite Tuer und liesse first bei jedem __call erneut
+						*  laufen - gemessen, bevor das hier so stand. Es gibt genau eine Tuer, und
+						*  es ist dieselbe, die behavior/tree.php benutzt. */
+						$parser->flash_result();
+						$parser->seek_node($T . 'indextree');
+						$liste  = $parser->get_result();
+						$wurzel = array_pop($liste);
+						$parser->flash_result();
+
+						/* once vor first — dieselbe Reihenfolge wie in behavior/tree.php. Wer ueber
+						*  __call in ein Dokument geht, bekommt dieselben Voraussetzungen wie ueber
+						*  start; sonst waere __call der Weg, der die Einrichtung ueberspringt. */
+						if($wurzel)
+							foreach([$T . 'once', $T . 'first'] as $bereich)
+								$wurzel->send_messages(
+									['Identifire' => $bereich, 'Command' => ['Name' => 'start'], 'Attribute' => []],
+									$obj);
+
 						foreach(($node->getRefnext() ?? []) as $kind)
 							if(!in_array($kind->full_URI(), [$T . 'template', $T . 'tree'], true))
 								$kind->hold_messages('', $obj);
+					}
 
 					foreach(($cg->getResult() ?? []) as $r)
 						$antwort['results'][] = $auszug($r);

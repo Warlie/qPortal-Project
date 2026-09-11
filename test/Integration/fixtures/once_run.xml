@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer <once> (tree_once.php): laeuft im Leben der Installation hoechstens einmal.
+
+     once steht VOR first und legt "ONCE LIEF" in den Scope, first "FIRST LIEF", der Knoten "2".
+     Beim ERSTEN __call erwarten wir alle drei in dieser Reihenfolge, danach nie wieder ONCE -
+     auch nicht in einem neuen Request, denn die Marke steht in qp_once.
+
+     Der Name traegt den Schluessel: sha256(Dokument + '#' + name). Ohne Namen laeuft es nicht. -->
+<indextree xmlns="http://www.trscript.de/tree">
+
+<once name="pruefstand;once_run_v1">
+	<program>
+		<result>ONCE LIEF</result>
+	</program>
+</once>
+
+<first>
+	<program>
+		<result>FIRST LIEF</result>
+	</program>
+</first>
+
+<final name="home" value="once und first">
+	<tree name="ohne_src" value="Ohne src">
+		<program>
+			<result>2</result>
+		</program>
+	</tree>
+</final>
+</indextree>

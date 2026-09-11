@@ -1266,12 +1266,23 @@ function send_messages($type,&$obj)
 
 	$com = $this->parseCommand($type);
 
-	for($i = 0;count($this->way_out) > $i;$i++)
+	/* ⚠ Ueber eine ABSCHRIFT laufen, nicht ueber way_out selbst. Ein Zuhoerer darf
+	*  sich waehrend seiner eigenen Zustellung abmelden (TREE_first tut genau das) —
+	*  und remove_from_out reindiziert mit array_values(). Die alte Zaehlschleife las
+	*  count() jede Runde neu und griff mit $i zu: nach einer Entfernung rueckt alles
+	*  auf, und der naechste Zuhoerer wird UEBERSPRUNGEN. Gemessen: beim start faellt
+	*  way_out des indextree von 3 auf 2, mitten in dieser Schleife.
+	*
+	*  ⚠ Der Unterschied zur Zaehlschleife: ein Zuhoerer, der sich waehrend der
+	*  Zustellung NEU eintraegt, bekommt die laufende Nachricht nicht mehr. Gemessen
+	*  ueber alle Pruefstaende und die Startseite: way_out waechst waehrend keiner
+	*  Zustellung, nur das Abmelden von first veraendert es ueberhaupt. */
+	foreach($this->way_out as $listener)
 	{
 
 
-		if($com->is_Node($this->way_out[$i]))
-		$this->way_out[$i]->event_message_check($com,$obj);
+		if($com->is_Node($listener))
+		$listener->event_message_check($com,$obj);
 
 	}
 
@@ -1570,6 +1581,37 @@ protected function set_to_out(Interface_node &$listener): void
     $listener->set_to_in($this);
 }
 
+protected function remove_from_out(Interface_node $listener): void
+{
+    $countBefore = count($this->way_out);
+
+    $this->way_out = array_values(array_filter(
+        $this->way_out,
+        fn($existing) => $existing !== $listener
+    ));
+
+    // Nur Gegenseite benachrichtigen, wenn tatsächlich etwas entfernt wurde
+    if (count($this->way_out) < $countBefore) {
+        $listener->remove_from_in($this);
+    }
+}
+
+protected function remove_from_in(Interface_node &$source): void
+{
+    $key = array_search($source, $this->way_in, true);
+
+    if ($key === false) {
+        return; // War nicht registriert – bricht auch den Zirkelaufruf ab
+    }
+
+    // Zuerst lokal austragen
+    unset($this->way_in[$key]);
+    $this->way_in = array_values($this->way_in);
+
+    // Gegenseite informieren, falls das Lösen hier gestartet wurde
+    $source->remove_from_out($this);
+}
+
 public function &get_out_ref()
 {
 	return $this->way_out;
@@ -1633,6 +1675,47 @@ public function to_listener(?string $uri = null): void
     }
 }
 
+/**
+*	Das Gegenstueck zu to_listener() — und es muss DIESELBE Stelle treffen.
+*
+*	⚠ to_listener($uri) traegt nicht bei prev_el ein, sondern STEIGT die Kette hoch,
+*	bis full_URI() passt. Wer hier nur bei prev_el austraegt, trifft ueberall dort
+*	daneben, wo der Zuhoerer kein direktes Kind ist — und zwar still: remove_from_out
+*	filtert und meldet nichts, wenn nichts drin war. Darum dieselbe Aufwaertssuche
+*	und dieselbe Signatur.
+*/
+function remove_listener(?string $uri = null): void
+{
+    if (is_string($uri)) {
+        $condition = $this->prev_el;
+
+        while (is_object($condition)) {
+            if ($uri === $condition->full_URI()) {
+                $condition->remove_from_out($this);
+                // Target found, stop searching up the chain
+                return;
+            }
+            // Move to the next parent element
+            $condition = $condition->prev_el;
+        }
+
+        /* Kein Traeger mit dieser URI ueber uns: dann war auch nie einer eingetragen.
+        *  Das ist kein Fehler — to_listener() bricht im selben Fall ebenso stumm ab. */
+        return;
+    }
+
+	if (is_object($this->prev_el)) {
+        $this->prev_el->remove_from_out($this);
+    } else {
+        // Throw exception if the structure is broken (missing parent)
+        throw new \RuntimeException(
+            sprintf(
+                "Structure Error: Node [%s] could not be removed because prev_el is missing.",
+                $this->full_URI()
+            )
+        );
+    }
+}
 
 function event_check($type,$bool,&$obj)
 {

@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer __call (tree_call.php): laeuft das first DIESES Dokuments mit?
+
+     Der Zweig MIT src fuehrt first und final des Unterdokuments schon immer aus. Der Zweig
+     OHNE src rief nur die eigenen Kinder des Knotens - damit war __call der einzige Weg in
+     ein Dokument, der dessen Voraussetzungen uebersprang (angelegte Tabellen zum Beispiel).
+
+     first legt "FIRST LIEF" in den Scope, der Knoten "2". Erwartet: beides, first zuerst. -->
+<indextree xmlns="http://www.trscript.de/tree">
+
+<first>
+	<program>
+		<result>FIRST LIEF</result>
+	</program>
+</first>
+
+<final name="home" value="Aufruf ohne src">
+	<tree name="ohne_src" value="Ohne src">
+		<program>
+			<result>2</result>
+		</program>
+	</tree>
+</final>
+</indextree>

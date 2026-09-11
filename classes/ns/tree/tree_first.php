@@ -36,36 +36,56 @@
 * &new_Instance() //advanced instance with connection to classobject and could be a subtree
 * &cloning(&$prev_obj) : add node with all branches to the prev node 
 */
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!! Not used !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-class TREE_first extends Interface_node
+/**
+*	first — der Ausfuehrungsbereich der VORAUSSETZUNGEN, und er laeuft je Baum nur EINMAL.
+*
+*	Ein first haelt, was ein Dokument braucht, bevor irgendetwas darin arbeitet: angelegte
+*	Tabellen, geladene Vorlagen, gesetzte Werte. behavior/tree.php schickt bei JEDEM start
+*	zuerst an #first, und seit 2026-09-11 fuehrt __call es ebenfalls mit aus — ohne Bremse
+*	liefe es also mehrfach je Request.
+*
+*	Die Bremse ist das ABMELDEN, nicht eine Sperre im Inneren (STW): „das kommt mir
+*	sympathischer vor, als eine Methode zu sperren." In einem Nachrichtensystem ist das
+*	Loesen der Kante die strukturelle Form von „ich bin fertig" — danach gibt es den
+*	Zuhoerer nicht mehr, statt dass er dasteht und nichts tut.
+*
+*	⚠ Abgemeldet wird NUR nach einem echten start. TREE_tree::event_message_in hat drei
+*	Ausgaenge, die den Zweig gar nicht laufen lassen — kein start (nur geloggt), mayEnter
+*	verweigert, Name passt nicht. Wer bedingungslos abmeldet, traegt first wegen einer
+*	Nachricht aus, die nur vorbeikam, und der spaetere echte start findet es nicht mehr.
+*	Die Rueckgabe des Elternteils taugt dafuer nicht: true heisst dort BEIDES.
+*
+*	⚠ Mit der URI abmelden, nicht ohne. to_listener($uri) in TREE_tree::event_initiated
+*	steigt die prev_el-Kette hoch bis zum indextree; das Gegenstueck muss dieselbe Stelle
+*	treffen. Ohne Argument traefe es prev_el — hier zufaellig derselbe Knoten, an jedem
+*	anderen Traeger der falsche, und zwar still.
+*/
+class TREE_first extends TREE_tree
 {
-
-function event_initiated()
-{
-	$this->to_listener('http://www.trscript.de/tree#indextree');
-}
 
 function &get_Instance()
 {
 //return new TREE_first();
-return new TREE_tree();
+return new TREE_first();
 }
 
 
 
-/*
+
 function event_message_in($type,&$obj)
 	{
-	
-		if($obj instanceof EventObject )
-		{
-			$obj->set_context($this);
-			$this->send_messages($type,$obj);
-				
-		}//end of if obj == EventObject
-	
+		$com = ($type instanceof Command_Object) ? $type : $this->parseCommand($type);
+
+		$ergebnis = parent::event_message_in($type, $obj);
+
+		/* Erst jetzt — ein start, der an mayEnter scheitert, wirft in run_branch und
+		*  kommt hier nie an; das ist richtig so, dann bleibt die Kante stehen. */
+		if($com->matchesCommand('start'))
+			$this->remove_listener('http://www.trscript.de/tree#indextree');
+
+		return $ergebnis;
 	}
-*/	
+
 	
 }
 
