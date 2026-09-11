@@ -115,6 +115,25 @@ result('<sub> im <element>: lief',    strpos($spur, 'Zuhoerer "sub_lief" angemel
 result('<sub> im <element>: an seiner Stelle', strpos($seite2, 'vor-SPUR-nach') !== false,
        preg_match('/<html[^>]*>([^<]*)</', $seite2, $m) ? 'Seite: ' . $m[1] : 'keine Seite');
 
+/* Derselbe src zweimal in EINEM Request. leaveScope nahm den Namen nur vom Stapel und liess
+*  ihn in $scopes stehen - der zweite <sub> starb an "existiert bereits", still: der
+*  ExceptionManager faengt es, die Seite rendert weiter. Darum das Log, nicht die Seite. */
+$zw    = (getenv('QPORTAL_FIXTURE_URL') ?: 'https://localhost:8002/test/Integration/fixture_entry.php') . '?doc=sub_twice';
+$hole2 = function($payload) use ($zw, $token)
+{
+	$ch = curl_init($zw);
+	curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => json_encode($payload),
+		CURLOPT_HTTPHEADER => array_filter(['Content-Type: application/json', $token !== '' ? 'Authorization: Bearer ' . $token : null]),
+		CURLOPT_RETURNTRANSFER => true, CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => false, CURLOPT_TIMEOUT => 30]);
+	$b = (string) curl_exec($ch);
+	curl_close($ch);
+	return $b;
+};
+$spur2 = $hole2(['Identifire' => '*', 'Command' => ['Name' => '__give_log', 'Value' => $start]]);
+result('derselbe src zweimal: kein Scope-Fehler', strpos($spur2, 'existiert bereits') === false,
+       strpos($spur2, 'existiert bereits') === false ? 'kein "existiert bereits" im Log' : 'Scope-Name wurde nicht frei');
+result('derselbe src zweimal: Seite steht',       strpos($hole2($start), 'SUB LIEFWERT') !== false, 'die Rueckgabe steht');
+
 $ok = 0; $fail = 0;
 foreach ($results as [$name, $good, $note])
 {

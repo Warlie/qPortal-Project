@@ -175,7 +175,11 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
     public function leaveScope(): bool
     {
         if (count($this->scopeStack) > 0) {
-            array_pop($this->scopeStack);
+            /* Den Namen MIT vom Stapel nehmen: createScope prueft ihn auf Eindeutigkeit,
+            *  also muss er beim Verlassen wieder frei werden. Sonst wirft derselbe
+            *  <sub src="..."> ein zweites Mal im selben Request "existiert bereits".
+            *  Solange der Scope offen ist, schuetzt die Pruefung weiter vor Kreisen. */
+            unset($this->scopes[array_pop($this->scopeStack)]);
             return true;
         }
         return false; // Kein Scope mehr auf dem Stack

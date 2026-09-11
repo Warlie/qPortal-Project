@@ -87,6 +87,46 @@ function event_initiated()
 *
 *	⚠ Das Verlassen steht in finally: eine Ausnahme aus der Kette darf den Stapel
 *	nicht stehen lassen, sonst gilt die fremde Stufe weiter.
+*
+*	⚠⚠ MARKIERT, ZUSAMMEN ANZUSEHEN (STW, 2026-09-11) — hier ist noch nichts entschieden.
+*
+*	Der Zugang ist kaum in Verwendung (im ganzen Bestand steht KEIN einziges
+*	<param name="security">), spielt aber fuer mehrere Vorhaben eine tragende Rolle.
+*	STW: „So kann eine KI innerhalb des Baums aktiv werden, vorgespeicherte Aktionen
+*	aktiviert oder bridges fuer Sektoren gebaut werden."
+*
+*	ENTSCHIEDEN ist nur die Form der Klammer. STW: „Durch die Linearitaet von PHP kann
+*	Clearance in access starten und enden." Genau so steht es jetzt: pushClearance vor
+*	der Kette, popClearance im finally — dieselbe Klammer wie in TREE_tree.
+*	(Bis 2026-09-11 fehlte das Schieben; der finally-Zweig nahm eine Ebene vom Stapel,
+*	die niemand daraufgelegt hatte, naemlich die des umgebenden <tree>. Ein <access>
+*	mit security haette damit nicht gesenkt, sondern die Klammer des Elternzweiges
+*	aufgerissen.)
+*
+*	OFFEN — nicht im Vorbeigehen festlegen:
+*
+*	1. DIE WOERTER. „security" fuer die Stufe ist gesetzt, nicht gewaehlt — es stand hier,
+*	   als der Wachter gebaut wurde. Fuer den Sektor gibt es noch gar keines. Beide
+*	   Namen bestimmen wir zusammen; sie sind danach Bestandteil des Dokumentformats
+*	   und nicht mehr billig zu aendern.
+*
+*	2. DER SEKTOR HAT KEINE KLAMMER. Fuer die Stufe gibt es clearance_base plus
+*	   clearance_stack; fuer den Sektor gibt es nur sector_override — EINEN Wert, den
+*	   setSectors() setzt und sectors() liest, ohne Stapel. Eine „Bruecke fuer Sektoren"
+*	   braucht dieselbe Linearitaet wie die Stufe, also erst ein pushSectors/popSectors.
+*	   ⚠ Und die Richtung ist zu klaeren: bei der Stufe klammert min() auf das, was
+*	   gerade gilt (nur senken). Eine Bruecke will das Gegenteil — einen Sektor
+*	   HINZUnehmen. Das ist keine Kopie der Stufenlogik, sondern eine eigene Regel.
+*
+*	3. WER LIEST DAS ÜBERHAUPT? clearance() hat heute genau EINEN Leser:
+*	   Interface_ns.php:1506, das Stufentor der Registry-Befehle (addSecurity).
+*	   ⚠ mayEnter() gehoert NICHT dazu — es vergleicht gegen
+*	   $_SESSION[…#securityclass]. Der Stapel regelt also Befehle, nicht den Zutritt
+*	   zu Knoten. Ob das so bleiben soll, ist Teil derselben Frage.
+*
+*	4. UNBELEGT. Der Fix ist nicht gegengetestet — es gibt nichts im Bestand, was
+*	   hier durchlaeuft, also kann auch nichts rot werden. Ein Pruefstand kommt,
+*	   wenn die Woerter stehen.
 */
 	/**
 	*	Der Wert eines benannten <param>-Kindes, oder null.
@@ -116,7 +156,22 @@ function event_message_in($type,&$obj)
 
 		$cg    = $this->get_parser()->get_context_generator();
 		$stufe = $this->param_named('security');
-		$eigen = is_object($cg) && !is_null($stufe);
+
+		/* ⚠ Dieselbe Bedingung wie in TREE_tree: "keine Angabe" heisst KEINE AUSSAGE,
+		*  nicht "Stufe 0" — sonst zoege die Klammer in pushClearance einen Zehner beim
+		*  Betreten eines unmarkierten Zugangs auf 0 herunter, und er duerfte dahinter
+		*  weniger als davor. -1 ist ebenfalls draussen: die Marke "nur fuer
+		*  Nichtangemeldete" ist keine Faehigkeitsstufe. */
+		$eigen = is_object($cg)
+		      && !is_null($stufe)
+		      && '' !== $stufe
+		      && intval($stufe) >= 0;
+
+		/* ⚠ Das Schieben fehlte: der finally-Zweig nahm eine Ebene vom Stapel, die
+		*  nie jemand daraufgelegt hatte — also die des umgebenden <tree>. Ein <access>
+		*  mit security haette damit nicht gesenkt, sondern die Klammer des Elternzweiges
+		*  aufgerissen. Gehoben wird hier nichts, dafuer sorgt das min() in pushClearance. */
+		if($eigen) $cg->pushClearance(intval($stufe));
 
 		try
 		{

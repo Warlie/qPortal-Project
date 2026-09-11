@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer den Scope-Namen (tree_call.php): DERSELBE src zweimal in EINEM Request.
+
+     createScope prueft den Namen auf Eindeutigkeit, leaveScope nahm ihn aber nur vom Stapel
+     und liess ihn in $scopes stehen. Der zweite <sub> starb darum an "existiert bereits" -
+     und zwar STILL: der ExceptionManager faengt es, die Seite rendert weiter, nur die Zeile
+     "ERROR Exception: Scope '...' existiert bereits." steht im Log.
+
+     Gemessen wird deshalb das Log (__give_log um den start), nicht die Seite: beide <sub>
+     schreiben denselben Text an dieselbe Stelle, die Seite sieht so oder so gleich aus. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="derselbe sub zweimal">
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one">test/Integration/fixtures/out_blank.xml</main>
+	</template>
+	<content name="http://www.w3.org/1999/xhtml#html">
+		<sub src="test/Integration/fixtures/call_sub_out.xml" />
+		<sub src="test/Integration/fixtures/call_sub_out.xml" />
+	</content>
+</final>
+</indextree>
