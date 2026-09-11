@@ -1,245 +1,175 @@
--- phpMyAdmin SQL Dump
--- version 2.11.7
--- http://www.phpmyadmin.net
+-- surface.sql — das Schema, das qPortal FUER SICH SELBST braucht.
 --
--- Host: localhost
--- Erstellungszeit: 30. Dezember 2008 um 02:08
--- Server Version: 5.0.51
--- PHP-Version: 5.2.6
-
-SET SQL_MODE="NO_AUTO_VALUE_ON_ZERO";
-
+-- Gelesen vom Install-Aspekt in index.php (Zweig '@_mod' == 'install', Zeile ~346):
+--     $load = implode('', file('surface.sql'));  $content->injectSQL($load);
+-- Erreichbar ueber ?i=__install, aber nur solange define('INSTALL', ...) auf true steht
+-- (index.php:127). Der Aspekt setzt es nach getaner Arbeit selbst wieder auf false.
 --
--- Datenbank: `surface`
+-- ⚠ Die Datei fehlte. Genau daran starb das Install: file() auf eine fehlende Datei gibt
+-- false, und implode('', false) ist unter PHP 8 ein TypeError.
 --
-
--- --------------------------------------------------------
-
+-- ⚠ FORMAT — injectSQL trennt auf genau ";\n", also Semikolon UND Zeilenumbruch:
+--     * jede Anweisung endet mit ; am Zeilenende
+--     * kein ; mitten in einer Zeile, kein ; am Dateiende ohne folgende Anweisung
+--     * Kommentare stehen VOR ihrer Anweisung (sie reisen im selben Stueck mit).
+--       Ein Kommentarblock NACH der letzten Anweisung waere ein eigenes Stueck und
+--       ginge als Anweisung an die Datenbank.
 --
--- Tabellenstruktur f�r Tabelle `attrib_collection`
+-- ⚠ Kein ENGINE, kein CHARSET — wie qp_cmd_ensure_table in behavior/stored.php: die
+-- Vorgabe der Datenbank soll gelten. Der Bestand hier ist historisch MyISAM/latin1;
+-- eine frische Installation bekommt, was der Server heute vorgibt.
 --
-
-CREATE TABLE IF NOT EXISTS `attrib_collection` (
-  `autoid` int(11) NOT NULL auto_increment,
-  `id` varchar(20) NOT NULL default '',
-  `name` varchar(20) NOT NULL default '',
-  `value` varchar(100) NOT NULL default '',
-  PRIMARY KEY  (`autoid`),
-  KEY `id` (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
-
+-- ⚠ IF NOT EXISTS ueberall: das Install muss ein zweites Mal laufen duerfen, ohne etwas
+-- kaputtzumachen. Es legt NUR an. Eine bestehende Tabelle bleibt, wie sie ist — auch
+-- wenn sie anders aussieht als hier (siehe die Anmerkung zu den Primaerschluesseln).
 --
--- Daten f�r Tabelle `attrib_collection`
+-- ⚠ PRIMAERSCHLUESSEL: im Bestand hat KEINE der sieben tbl_-Tabellen unten auch nur
+-- einen Index (gemessen 2026-09-11). Das ist kein Schoenheitsfehler — ohne
+-- Primaerschluessel liefert get_rst() einen READONLY-rst, und ein Schreibversuch
+-- scheitert still im Log. Eine frische Installation bekommt sie deshalb richtig.
+-- Fuer eine BESTEHENDE Installation aendert diese Datei nichts; dort gehoert je Tabelle
+-- ein eigenes ALTER TABLE ... ADD PRIMARY KEY (ID), und das ist eine Entscheidung an
+-- lebenden Daten, keine Nebenwirkung eines Install-Laufs.
 --
+-- Was hier NICHT drinsteht und warum:
+--   * die vier *_collection (tag_collection, tag_content, attrib_collection,
+--     connect_collection) — das Konzept "Dokument/Baum vollstaendig in der Datenbank".
+--     STW 2026-09-11: wird voraussichtlich nicht mehr gebraucht, die Funktionalitaet ist
+--     raus. Die Tabellen BLEIBEN in bestehenden Datenbanken stehen (ausdruecklich so
+--     entschieden), eine frische Installation bekommt sie nicht mehr. Gefuellt waren sie
+--     nie; der einzige Code dazu war classes/sql.sql, eine Leseabfrage ohne Aufrufer, die
+--     ausserdem nicht mehr zur Tabelle passte (sie las tag_collection.content, die Spalte
+--     heisst content_ref). Entfernt am 2026-09-11, zurueckzuholen mit
+--     `git show HEAD:classes/sql.sql`. Die Spaltenbedeutungen sind ausserdem in
+--     template/edit/surface_basicinfo_page_structur.xml als Hilfeseite beschrieben.
+--   * precache — TYPO3-Erbe, qPortal rendert so nicht mehr (STW 2026-09-11). Altlast.
+--   * tbl_Item, tbl_qportal_doc_overview, tbl_qportal_doc_ref aus qportal.sql (2008):
+--     existieren in keiner laufenden Installation mehr.
+--   * alle tbl_* der Instanz (real_estate) und die qry_*-VIEWs — das sind Geschaeftsdaten
+--     bzw. Sicht darauf, nicht qPortal.
 
-INSERT INTO `attrib_collection` (`autoid`, `id`, `name`, `value`) VALUES
-(1, 'left30', 'style', 'position:relativ;color:blue;');
-
--- --------------------------------------------------------
-
+-- ==========================================================================
+-- 1. qPortal-System
 --
--- Tabellenstruktur f�r Tabelle `connect_collection`
+-- ⚠ Diese zwei legen sich auch SELBST an, beim ersten Gebrauch:
+--     qp_stored_command  behavior/stored.php        qp_cmd_ensure_table()
+--     qp_once            classes/ns/tree/tree_once.php  TREE_once::tabelle_sichern()
+-- Sie stehen hier, damit die Datei zeigt, was qPortal besitzt. Beide Seiten benutzen
+-- IF NOT EXISTS, wer zuerst laeuft gewinnt, die andere ist ein Leerlauf. ⚠ Damit gibt es
+-- die Definition aber ZWEIMAL: wer eine Spalte aendert, muss beide Stellen anfassen.
+-- ==========================================================================
+
+-- Eigene, benannte Befehlsketten. Der Name (ns+ln+name) ist der Schluessel, nicht der
+-- Inhalt; der Block liegt verbatim als Text und wird erst beim Aufruf gefeuert.
+CREATE TABLE IF NOT EXISTS qp_stored_command (
+  ns VARCHAR(190) NOT NULL DEFAULT '',
+  ln VARCHAR(60) NOT NULL DEFAULT '',
+  name VARCHAR(120) NOT NULL,
+  description TEXT,
+  param_json TEXT,
+  body_json MEDIUMTEXT,
+  PRIMARY KEY (ns, ln, name)
+);
+
+-- Das Register fuer <once>: was im Leben der Installation hoechstens einmal laufen soll.
+-- hash = sha256(Dokument + '#' + tree:name). done=0 heisst ANGEFANGEN und nicht fertig,
+-- nicht "erledigt" — die Zeile wird vor dem Lauf geschrieben und danach abgehakt.
+CREATE TABLE IF NOT EXISTS qp_once (
+  hash CHAR(64) NOT NULL,
+  path VARCHAR(190) NOT NULL DEFAULT '',
+  name VARCHAR(190) NOT NULL DEFAULT '',
+  done TINYINT(1) NOT NULL DEFAULT 0,
+  stamp DATETIME NULL,
+  PRIMARY KEY (hash)
+);
+
+-- ==========================================================================
+-- 2. Benutzer und Rechte
 --
+-- Gelesen von mod_lib.php. securityclass ist die Stufe des angemeldeten Nutzers, die
+-- ContentGenerator::mayEnter gegen tree:securitylevel haelt; sector am
+-- tbl_group_management ist die Existenzaussage, die keine Stufe ueberstimmt.
+-- ==========================================================================
 
-CREATE TABLE IF NOT EXISTS `connect_collection` (
-  `autoid` int(11) NOT NULL auto_increment,
-  `tagid` varchar(20) NOT NULL default '',
-  `attribid` varchar(20) NOT NULL default '',
-  PRIMARY KEY  (`autoid`),
-  KEY `tagid` (`tagid`),
-  KEY `attribid` (`attribid`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
+-- Ein Konto. Key ist das Passwort-Geheimnis; securityclass die Stufe (0 = keine
+-- Systemabfragen, 6 = schreiben, 10 = "das System gehoert dir").
+CREATE TABLE IF NOT EXISTS tbl_user_management (
+  ID INT NOT NULL AUTO_INCREMENT,
+  User CHAR(120) NOT NULL,
+  `Key` CHAR(120) NOT NULL,
+  forename CHAR(60) NOT NULL DEFAULT 'Mr.',
+  surname CHAR(60) NOT NULL DEFAULT 'Anderson',
+  securityclass INT NOT NULL DEFAULT 0,
+  PRIMARY KEY (ID)
+);
 
+-- Eine Gruppe. sector ist semikolongetrennt, dieselbe Form wie [intern] key.*.sector.
+CREATE TABLE IF NOT EXISTS tbl_group_management (
+  ID INT NOT NULL AUTO_INCREMENT,
+  groupname CHAR(60) NOT NULL,
+  groupdescription CHAR(255) NOT NULL,
+  sector CHAR(255) NOT NULL,
+  PRIMARY KEY (ID)
+);
+
+-- Wer in welcher Gruppe ist.
+CREATE TABLE IF NOT EXISTS tbl_user_to_group (
+  ID INT NOT NULL AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  group_id INT NOT NULL,
+  PRIMARY KEY (ID)
+);
+
+-- Rechte VORBEREITEN: ein Code traegt Gruppen und eine Stufe und wird spaeter von einer
+-- Person eingeloest (mod_lib.php:399 legt an, :469 loest ein). Das Dokument dazu ist
+-- template/xml.xml, Knoten givecode2 — und der steht auf securitylevel 10, der Stufe
+-- "Zugang vergeben".
+CREATE TABLE IF NOT EXISTS tbl_marked_for_group (
+  ID INT NOT NULL AUTO_INCREMENT,
+  code VARCHAR(20) NOT NULL,
+  `groups` VARCHAR(200) NOT NULL,
+  seclevel INT NOT NULL DEFAULT 0,
+  to_person INT DEFAULT NULL,
+  PRIMARY KEY (ID),
+  KEY code (code)
+);
+
+-- ==========================================================================
+-- 3. Ontologien
 --
--- Daten f�r Tabelle `connect_collection`
---
+-- Ein Tripelspeicher: tbl_semantic_property ist antecessor —node— successor, also
+-- Subjekt–Praedikat–Objekt, beide Enden als Verweis auf tbl_semantic_node, alles unter
+-- einer ns_id. tbl_document_sem haengt ein Dokument an seine Aussagen.
+-- Im Bestand alle drei leer — der Entwurf steht, gefuellt wurde er nie.
+-- ==========================================================================
 
-INSERT INTO `connect_collection` (`autoid`, `tagid`, `attribid`) VALUES
-(1, 'shiftleft', 'left30');
+-- Ein benannter Knoten in einem Namensraum.
+CREATE TABLE IF NOT EXISTS tbl_semantic_node (
+  ID INT NOT NULL AUTO_INCREMENT,
+  ns_id INT NOT NULL,
+  name VARCHAR(150) NOT NULL,
+  PRIMARY KEY (ID),
+  KEY ns_name (ns_id, name)
+);
 
--- --------------------------------------------------------
+-- Eine Aussage. node ist das Praedikat, antecessor und successor zeigen auf
+-- tbl_semantic_node.ID.
+CREATE TABLE IF NOT EXISTS tbl_semantic_property (
+  ID INT NOT NULL AUTO_INCREMENT,
+  ns_id INT NOT NULL,
+  node VARCHAR(150) NOT NULL,
+  antecessor INT NOT NULL,
+  successor INT NOT NULL,
+  PRIMARY KEY (ID),
+  KEY antecessor (antecessor),
+  KEY successor (successor)
+);
 
---
--- Tabellenstruktur f�r Tabelle `precache`
---
-
-CREATE TABLE IF NOT EXISTS `precache` (
-  `name` varchar(255) character set latin1 collate latin1_bin NOT NULL,
-  `best_before` timestamp NULL default NULL,
-  `value` text character set latin1 collate latin1_bin NOT NULL,
-  PRIMARY KEY  (`name`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
---
--- Daten f�r Tabelle `precache`
---
-
-INSERT INTO `precache` (`name`, `best_before`, `value`) VALUES
-('none', '2008-10-25 22:35:18', 0x6669727374);
-
--- --------------------------------------------------------
-
---
--- Tabellenstruktur f�r Tabelle `tag_collection`
---
-
-CREATE TABLE IF NOT EXISTS `tag_collection` (
-  `id` varchar(20) NOT NULL default '',
-  `attrib` varchar(20) NOT NULL default '',
-  `content_ref` int(11) default NULL,
-  `type` varchar(20) NOT NULL default '',
-  `order` int(11) NOT NULL default '0',
-  `group` varchar(20) NOT NULL default '',
-  `ref` varchar(20) NOT NULL default '',
-  PRIMARY KEY  (`id`),
-  KEY `group` (`group`),
-  KEY `lang` (`content_ref`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
---
--- Daten f�r Tabelle `tag_collection`
---
-
-INSERT INTO `tag_collection` (`id`, `attrib`, `content_ref`, `type`, `order`, `group`, `ref`) VALUES
-('dbo', 'shiftleft', 1, 'pre', 0, 'dbo', ''),
-('xmldo', 'shiftleft', 2, 'pre', 0, 'xmldo', ''),
-('gk3', 'shiftleft', 3, 'pre', 0, 'gk3', ''),
-('dbo2', 'shiftleft', 4, 'pre', 0, 'dbo2', ''),
-('Request', 'shiftleft', 5, 'pre', 0, 'Request', ''),
-('dbo3', 'shiftleft', 6, 'pre', 0, 'dbo3', '');
-
--- --------------------------------------------------------
-
---
--- Tabellenstruktur f�r Tabelle `tag_content`
---
-
-CREATE TABLE IF NOT EXISTS `tag_content` (
-  `id` int(11) NOT NULL auto_increment,
-  `lang` varchar(4) NOT NULL default '',
-  `content` text NOT NULL,
-  PRIMARY KEY  (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=7 ;
-
---
--- Daten f�r Tabelle `tag_content`
---
-
-INSERT INTO `tag_content` (`id`, `lang`, `content`) VALUES
-(1, '', '				<object id="xml" name="XMLDO"  >\r\n					<param name="XMLTEMPLATE" >out</param>\r\n					<param name="LIST" ><object id="GK3" ><param name="ITER"/></object></param>\r\n					<param name="tag_in" >x</param ><param name="xpath" >GK3_X</param><param name="data" /><param name="content" >GK3_x</param><param name="tag_out" >id</param >\r\n					<param name="tag_in" >y</param ><param name="xpath" >GK3_Y</param><param name="data" /><param name="content" >GK3_y</param><param name="tag_out" >id</param >\r\n					<param name="tag_in" >z</param ><param name="xpath" >GK3_Z</param><param name="data" /><param name="content" >GK3_z</param><param name="tag_out" >posx</param >\r\n				</object>'),
-(2, '', '				<object id="param" name="XMLDO" src="plugin_xmldo.php" >\r\n					<param name="XMLTEMPLATE" >in</param>\r\n					<param name="collection" >GK3_in</param>\r\n					<param name="tag_in" >strasse</param ><param name="xpath" >STRASSE</param><param name="value" ><object name="Request" ><param name="out" >strasse</param></object></param><param name="tag_out" >id</param >\r\n					<param name="tag_in" >hausnummer</param ><param name="xpath" >HAUSNUMMER</param><param name="value" ><object name="Request" ><param name="out" >hausnummer</param></object></param><param name="tag_out" >posx</param >\r\n					<param name="tag_in" >zusatz</param ><param name="xpath" >ZUSATZ</param><param name="value" ><object name="Request" ><param name="out" >zusatz</param></object></param><param name="tag_out" >posy</param >\r\n					<param name="tag_in" >ort</param ><param name="xpath" >ORT</param><param name="value" ><object name="Request" ><param name="out" >ort</param></object></param><param name="tag_out" >posy</param >\r\n					<param name="tag_in" >PLZ</param ><param name="xpath" >PLZ</param><param name="value" ><object name="Request" ><param name="out" >plz</param></object></param><param name="tag_out" >posy</param >\r\n				</object>'),
-(3, '', '				<object id="GK3" name="GK3" src="plugin_GK3.php" >\r\n				<param name="LIST" ><object id="param" ><param name="ITER"/></object></param>\r\n					<param name="require" >strasse</param >\r\n					<param name="require" >hausnummer</param >\r\n					<param name="require" >zusatz</param >\r\n					<param name="require" >PLZ</param >\r\n					<param name="require" >ort</param >\r\n					<param name="content" >GK3_x</param>\r\n					<param name="content" >GK3_y</param>\r\n					<param name="content" >GK3_z</param>\r\n				</object>'),
-(4, '', '		<object id="send" name="DBO" src="plugin_dbo.php" >\r\n		<param name="SQL" >SELECT tbl_drawings.id, tbl_drawings.type, tbl_drawings.x, tbl_drawings.y, tbl_drawings.parameter FROM tbl_drawings WHERE type&gt;0 AND tbl_drawings.id&gt;<object id="pointer" ><param name="SESSIONOUT" >pointer</param></object> \r\n			AND id_joiner != <object id="trans" ><param name="SESSIONOUT" >id</param></object> AND tbl_drawings.id_channel = <object id="trans" ><param name="SESSIONOUT" >channelid</param></object> ORDER BY tbl_drawings.id LIMIT 0 , 1000 ;</param>\r\n		</object>'),
-(5, '', '	<content name="div"  >\r\n		<param name="id" >foot</param>\r\n		<element type="xhtml" >\r\n			<param name="style" >position:absolute;top:<object name="Request" id="eval" ><param name="eval" >return <object id="filescan" ><param name="many" /></object> * 33 + 560 ;</param></object>px;left:0px;width:100%;height:100px;background-color:#663333;</param>\r\n		</element>\r\n	</content>'),
-(6, '', '		<object  id="xml"  >\r\n		<param name="collection" >create</param>\r\n		<param name="tag_in" >joiner</param ><param name="xpath" >nick</param><param name="data" /><param name="tag_out" />\r\n		<param name="tag_in" >pwst</param ><param name="xpath" >pass</param><param name="data" /><param name="tag_out" />\r\n		</object>\r\n		\r\n		\r\n		<object id="reciepe" name="DBO" src="plugin_dbo.php" >\r\n		<param name="SQL" >SELECT * FROM tbl_joiners;</param>\r\n		<param name="LIST" ><object id="xml" ><param name="ITER"/></object></param>\r\n		<param name="tag_in" >name</param ><param name="content" >joiner</param><param name="field" >tbl_joiners.name</param><param name="tag_out" />\r\n		<param name="tag_in" >pwst</param ><param name="content" >pwst</param><param name="field" >tbl_joiners.pwst</param><param name="tag_out" />\r\n		</object>');
-CREATE TABLE IF NOT EXISTS `tbl_desc` (
-  `ID` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `desc` char(100) CHARACTER SET latin1 COLLATE latin1_german1_ci NOT NULL,
-  `symbol_url` char(100) CHARACTER SET latin1 COLLATE latin1_german1_ci NOT NULL,
-  PRIMARY KEY (`ID`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=4 ;
-
-INSERT INTO `tbl_desc` (`ID`, `desc`, `symbol_url`) VALUES
-(1, 'Kontakt', 'img/kontakt.png'),
-(2, 'Objekt', 'img/object.png'),
-(3, 'Kommentar', 'img/comment.png');
-
---
--- Tabellenstruktur f�r Tabelle `tbl_group_management`
---
-
-CREATE TABLE IF NOT EXISTS `tbl_group_management` (
-  `ID` int(11) NOT NULL AUTO_INCREMENT,
-  `groupname` char(60) NOT NULL,
-  `groupdescription` char(255) NOT NULL,
-  `sector` char(255) NOT NULL,
-  PRIMARY KEY (`ID`),
-  UNIQUE KEY `groupname` (`groupname`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
-
---
--- Daten f�r Tabelle `tbl_group_management`
---
-
-INSERT INTO `tbl_group_management` (`ID`, `groupname`, `groupdescription`, `sector`) VALUES
-(1, 'stdUser', 'Standard', 'standard'),
-(2, 'admin', 'rules over the world', 'technical_support');
-
---
--- Tabellenstruktur f�r Tabelle `tbl_Item`
---
-
-CREATE TABLE IF NOT EXISTS `tbl_Item` (
-  `ID` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `typeID` int(10) unsigned NOT NULL,
-  `refname` char(50) CHARACTER SET latin1 COLLATE latin1_german1_ci NOT NULL,
-  `data` text CHARACTER SET latin1 COLLATE latin1_german1_ci NOT NULL,
-  PRIMARY KEY (`ID`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 ;
-
---
--- Tabellenstruktur f�r Tabelle `tbl_qportal_doc_overview`
---
-
-CREATE TABLE IF NOT EXISTS `tbl_qportal_doc_overview` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `txt_doc_name` char(255) CHARACTER SET latin1 COLLATE latin1_german1_ci NOT NULL,
-  `txt_doc_URL` char(255) CHARACTER SET latin1 COLLATE latin1_german1_ci NOT NULL,
-  `txt_doc_URI` char(255) NOT NULL,
-  `txt_doc_label` char(255) NOT NULL,
-  `txt_doc_comment` text NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `txt_doc_name` (`txt_doc_name`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=0 ;
-
---
--- Tabellenstruktur f�r Tabelle `tbl_qportal_doc_ref`
---
-
-CREATE TABLE IF NOT EXISTS `tbl_qportal_doc_ref` (
-  `id` int(11) NOT NULL AUTO_INCREMENT,
-  `int_doc_id` int(11) NOT NULL,
-  `int_import_id` int(11) NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=0 ;
-
---
--- Tabellenstruktur f�r Tabelle `tbl_user_management`
---
-
-CREATE TABLE IF NOT EXISTS `tbl_user_management` (
-  `ID` int(11) NOT NULL AUTO_INCREMENT,
-  `User` char(120) NOT NULL,
-  `Key` char(120) NOT NULL,
-  `forename` char(60) NOT NULL DEFAULT 'Mr.',
-  `surname` char(60) NOT NULL DEFAULT 'Anderson',
-  `securityclass` int(11) NOT NULL DEFAULT '0',
-  PRIMARY KEY (`ID`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;
-
---
--- Daten f�r Tabelle `tbl_user_management`
---
-
-INSERT INTO `tbl_user_management` (`ID`, `User`, `Key`, `forename`, `surname`, `securityclass`) VALUES
-(1, 'Admin', 'fcdd354fa9f1afca57ad7a956a05922a', 'Super', 'Grossmeister', 10);
-
---
--- Tabellenstruktur f�r Tabelle `tbl_user_to_group`
---
-
-CREATE TABLE IF NOT EXISTS `tbl_user_to_group` (
-  `ID` int(11) NOT NULL AUTO_INCREMENT,
-  `user_id` int(11) NOT NULL,
-  `group_id` int(11) NOT NULL,
-  PRIMARY KEY (`ID`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1 AUTO_INCREMENT=6 ;
-
---
--- Daten f�r Tabelle `tbl_user_to_group`
---
-
-INSERT INTO `tbl_user_to_group` (`ID`, `user_id`, `group_id`) VALUES
-(1, 1, 2);
-
-
+-- Welches Dokument traegt welche Aussage.
+CREATE TABLE IF NOT EXISTS tbl_document_sem (
+  ID INT NOT NULL AUTO_INCREMENT,
+  source_id INT NOT NULL,
+  sem_id INT NOT NULL,
+  PRIMARY KEY (ID),
+  KEY source_id (source_id)
+);

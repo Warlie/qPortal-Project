@@ -344,7 +344,10 @@ if(file_exists(CONFIG))
 					*	Hell no
 					* TODO center config into a specific file  and find a more nicer solution for the db
 					*/
-						$load = implode('', file ('surface.sql'));
+						/* qportal.sql, nicht surface.sql: surface ist lange abgeloest (Anttree), und die
+						*  Datei gab es nicht mehr - file() lieferte false, implode('', false) ist unter
+						*  PHP 8 ein TypeError, und genau daran starb das Install. */
+						$load = implode('', file ('qportal.sql'));
 					$content->injectSQL($load);
 					
 						
