@@ -47,6 +47,25 @@
 		<dcterms:title xml:lang="de">Registrierungsbogen</dcterms:title>
 		<dcterms:description>Vokabular der Flaeche: die gepraegten Namen, aus denen
 		der Bogen und die PEDL-Ernte ihre Tags nehmen.</dcterms:description>
+
+		<!-- Die Version des SYSTEMS, nicht dieses Dokuments - und sie steht hier, weil der
+		     Bogen die Stelle ist, an der qPortal ueber sich selbst spricht: committet statt
+		     installationsabhaengig, beim Aufbau ohnehin geladen, und damit in der
+		     Selbstauskunft sichtbar. owl:versionInfo ist der Standardbegriff dafuer und
+		     wird hier zum ersten Mal benutzt.
+
+		     STWs Zaehlung (2026-09-12):
+		       1.0  lauffaehig, ein Monolith
+		       2.0  das Verhalten aus dem Monoliten gemeisselt - die Namensraum-Sammlung.
+		            Im Archivstand vom Oktober 2012 steht sie bereits.
+		       3.0  die Semantik. Sie war lange unterwegs und ist mit __query fertig
+		            geworden: ein System, das sagen kann was es ist, aber nicht danach
+		            gefragt werden kann, hat die Stufe nicht ganz.
+		       4.0  wenn der PHP-Quelltext einmalig aus den Dokumenten heraus ersetzt wird.
+		            Dann ein neues Repository - der Bruch ist zu brutal fuer dieselbe
+		            Historie, und danach gibt es eher einen laufenden Strom als Versionen.
+		-->
+		<owl:versionInfo>3.0</owl:versionInfo>
 	</owl:Ontology>
 
 	<!-- Geprägt aus den pedl-Grundlagen. Interfaces und Traits sind Deklarationen
