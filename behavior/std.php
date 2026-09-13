@@ -1382,6 +1382,215 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 		. ' vollstaendig von aussen kommt und bei einer fremden Gegenstelle landen kann.'
 		. ' xpath ist noch nicht gebaut und meldet das als note.');
 
+	/* __argument - STUB (STW, 2026-09-13). Er legt die STELLE fest, nicht die Semantik.
+	*
+	* Das Ereignis hat genau EINEN mycontext, und jeder Schritt ueberschreibt den vorigen.
+	* Damit laesst sich ein Datum weitergeben, aber keine Argumentliste sammeln - STW:
+	* "Klar gehen mehrere, aber wenn ich Daten fuer Argumente sammel, dann muessen diese
+	* strukturiert (zugewiesen mit Argumentnamen) uebergeben werden. Meine Befehlsketten
+	* werden ansonsten eher kurz sein. Ich will aber Befehlsketten, die praktisch
+	* Sammlungen von Lamda-Kalkuelen sind."
+	*
+	* __argument schreibt in myarguments am EventObject - einen Rahmen name => Wert.
+	* Zwei Formen, unterschieden daran, OB ein value dasteht:
+	*
+	*   {"Name":"__argument","Attribute":{"name":"label"}}
+	*       nimmt, was im Kontext liegt - also was der Schritt DAVOR erzeugt hat -
+	*       und legt es unter dem Namen ab. Das ist die Zeile, die aus einer Kette von
+	*       Einzelwerten einen benannten Rahmen macht:
+	*           __get_attribute(...) -> __argument(name=label) -> ... -> __to_owner
+	*
+	*   {"Name":"__argument","Attribute":{"name":"x","value":"5"}}
+	*       bindet eine Konstante. Der Wert kommt von innen statt von aussen.
+	*
+	* Dazu action (STW, 2026-09-13) - was mit dem gesammelten Rahmen geschehen soll:
+	*
+	*   apply   schreibt ALLE Argumente in die Attribute des naechsten Befehls
+	*   reset   loescht sie
+	*   flush   schreibt und loescht
+	*
+	* ⚠ apply ist nur deshalb gefahrlos, weil ein Befehl seine Attribute NAMENTLICH liest
+	* und Unbekanntes stillschweigend liegen laesst (gemessen: __query mit vier fremden
+	* Attributen liefert dasselbe). Zu viel ist egal, zu wenig nicht. Wer den ganzen
+	* Rahmen hineinkippt, gibt dem naechsten Befehl die Auswahl.
+	*
+	* ⚠ DER BEFEHL GEWINNT. Ein Attribut, das am naechsten Befehl schon steht, bleibt -
+	* der Rahmen fuellt nur, was dort fehlt. STW (2026-09-13): "Grund ist, dass sich
+	* bewusst dafuer entschieden wird, dem Befehl die Argumente zu geben. Es ist ja keine
+	* Ueberraschung, dass Befehle kollidieren und die Liste in __argument ist schwerer zu
+	* managen. Also sperrt man lieber das Attribut im Befehl."
+	*
+	* Ein hingeschriebenes Attribut ist also eine SPERRE, keine Vorgabe: wer es an den
+	* Befehl schreibt, hat entschieden. Der Rahmen ist die wandernde Menge und von weiter
+	* weg schwerer zu ueberblicken - darum gewinnt die feinere Stelle.
+	* Zum Umdrehen genuegt es, die beiden Operanden des + zu tauschen.
+	*
+	* ⚠ NICHT ZU VERWECHSELN mit dem Ueberschreiben IM Rahmen. Derselbe Name zweimal
+	* gesetzt ersetzt den vorigen Stand - so laesst sich ein Argument ueber eine KETTE
+	* aufbauen (STW):
+	*
+	*     __argument(name=attrib1, value=wert1, action=apply)
+	*       -> __call(ns1:min)
+	*         -> __argument(name=attrib1)     <- nimmt, was __call erzeugt hat; wert1 ist weg
+	*
+	* Der Rahmen ist damit kein Satz von Vorgaben, sondern ein ARBEITSREGISTER, das die
+	* Kette fortschreibt. Die beiden Regeln stoeren sich nicht: innen wird fortgeschrieben,
+	* nach aussen wird nicht ueberstimmt.
+	*
+	* ⚠ Nach apply steht das Register WEITER - attrib1 geht an den Befehl und bleibt
+	* danach liegen, bis es ueberschrieben wird. Wer es loswerden will, nimmt flush.
+	*
+	* ⚠ Ist Value eine LISTE von Befehlen, trifft apply den ERSTEN. "Der naechste Befehl"
+	* ist einer, nicht alle - sonst waere nicht zu sehen, wohin ein Wert geht.
+	*
+	* ⚠ Die Werte im Rahmen sind nicht zwingend Zeichenketten: was __where_am_i erzeugt,
+	* ist ein Array. Nach apply steht es genauso im Attribut. Das ist der Zweck (STW:
+	* "strukturiert, zugewiesen mit Argumentnamen"), aber es heisst, dass ein Befehl bei
+	* einem Attribut nicht blind (string) rechnen darf.
+	*
+	* ⚠ DREI DINGE SIND NICHT ENTSCHIEDEN, und deshalb ist das ein Stub:
+	*
+	*   1. DIE LEBENSDAUER. Der Rahmen lebt heute so lange wie das Ereignis. Ob er
+	*      geklammert gehoert wie clearance (push/pop je Kette), entscheidet sich daran,
+	*      ob verschachtelte Ketten sich gegenseitig ueberschreiben duerfen. Ein Lambda
+	*      braucht einen Gueltigkeitsbereich; <sub> hat createScope, das Ereignis nicht.
+	*   2. DAS VERHAELTNIS ZU %name%. Gespeicherte Ketten haben schon Abstraktion und
+	*      Anwendung (param als Vorgaben, %name% als Einsetzung) - aber TEXTUELL:
+	*      qp_cmd_fill laeuft mit str_replace ueber jedes String-Blatt. Ein Knoten oder
+	*      ein rst passt da nicht durch, durch diesen Rahmen schon. Soll %name% daraus
+	*      gespeist werden, oder bleiben es zwei Wege?
+	*   3. WER IHN LIEST. Heute niemand. __to_owner gibt weiter den Kontext heraus, nicht
+	*      den Rahmen; im remote sollen die Werte spaeter in die PEDL-Elemente gehen.
+	*      Bis das entschieden ist, sammelt __argument sichtbar und folgenlos.
+	*
+	* Deshalb aendert dieser Stub an nichts etwas: wer ihn nicht ruft, merkt nichts, und
+	* wer ihn ruft, bekommt seinen Rahmen im Ereignis und - zur Anschauung - eine Abschrift
+	* in den Kontext. Die Abschrift ist NICHT die Zusage; sie faellt weg, sobald 3
+	* entschieden ist. */
+	$reg->__argument = function($node, $obj, $event)
+		{
+			global $logger_class;
+
+			$structur = $event->get_Result_Array();
+			$attr     = $structur['Command']['Attribute'] ?? [];
+			$value    = $structur['Command']['Value']     ?? null;
+
+			$name   = trim((string) ($attr['name']   ?? ''));
+			$action = strtolower(trim((string) ($attr['action'] ?? '')));
+
+			if('' !== $action && !in_array($action, ['apply', 'reset', 'flush'], true))
+			{
+				if($logger_class)
+					$logger_class->setAssert('__argument: unbekannte action "' . $action
+						. '" (apply, reset, flush) - nichts getan', 0);
+
+				$action = '';
+			}
+
+			if(!($obj instanceof EventObject))
+			{
+				if($logger_class)
+					$logger_class->setAssert('__argument: kein EventObject, nichts getan', 0);
+			}
+			elseif('' === $name && '' === $action)
+			{
+				/* Ohne Namen UND ohne action gibt es nichts zu tun. Mit action allein
+				*  schon - dann ist es ein reiner Rahmenbefehl. */
+				if($logger_class)
+					$logger_class->setAssert('__argument ohne name und ohne action - ein'
+						. ' Argument ohne Namen ist kein Argument, nichts abgelegt', 0);
+			}
+			else
+			{
+				if('' !== $name)
+				{
+				/* Mit value eine Konstante, ohne value das, was der Schritt davor erzeugt
+				*  hat. array_key_exists, nicht isset: ein ausdrueckliches null ist eine
+				*  Bindung, kein fehlendes Attribut. */
+				$wert = array_key_exists('value', $attr) ? $attr['value'] : $obj->get_context();
+
+				$obj->set_argument($name, $wert);
+
+				if($logger_class)
+					$logger_class->setAssert('__argument "' . $name . '" = '
+						. (is_object($wert) ? get_class($wert)
+						   : substr(var_export($wert, true), 0, 60))
+						. (array_key_exists('value', $attr) ? ' (Konstante)' : ' (aus dem Kontext)'), 5);
+				}
+
+				/* apply und flush schreiben den Rahmen in den naechsten Befehl - vor dem
+				*  Loeschen, sonst schriebe flush nichts. */
+				if(in_array($action, ['apply', 'flush'], true) && !empty($value))
+				{
+					$rahmen = $obj->get_arguments();
+
+					/* Bei einer Liste trifft es den ersten. */
+					$zeiger = &$value;
+
+					if(is_array($value) && array_is_list($value) && isset($value[0]))
+						$zeiger = &$value[0];
+
+					if(is_array($zeiger) && isset($zeiger['Command']))
+					{
+						if(!isset($zeiger['Command']['Attribute'])
+						   || !is_array($zeiger['Command']['Attribute']))
+							$zeiger['Command']['Attribute'] = array();
+
+						/* Der BEFEHL gewinnt: was dort steht, ist eine Sperre. + nimmt bei
+						*  gleichem Schluessel den LINKEN - also das Hingeschriebene. */
+						$zeiger['Command']['Attribute'] = $zeiger['Command']['Attribute'] + $rahmen;
+
+						if($logger_class)
+							$logger_class->setAssert('__argument ' . $action . ': '
+								. count($rahmen) . ' Argumente an "'
+								. ($zeiger['Command']['Name'] ?? '?') . '" gegeben', 5);
+					}
+					elseif($logger_class)
+						$logger_class->setAssert('__argument ' . $action . ': der Value ist'
+							. ' kein Befehl - nichts gegeben', 0);
+
+					unset($zeiger);
+				}
+
+				if(in_array($action, ['reset', 'flush'], true))
+				{
+					$leer = array();
+					$obj->set_arguments($leer);
+
+					if($logger_class)
+						$logger_class->setAssert('__argument ' . $action . ': Rahmen geleert', 5);
+				}
+			}
+
+			/* ⚠ Abschrift, nicht Zusage - siehe Punkt 3 oben. Solange niemand den Rahmen
+			*  liest, waere er sonst von aussen unsichtbar und der Stub nicht pruefbar. */
+			$abschrift = $obj instanceof EventObject ? $obj->get_arguments() : array();
+			$obj->set_context($abschrift);
+
+			if(!empty($value))
+				$node->hold_messages($value, $obj);
+
+			return true;
+		};
+
+	$reg->addLog(function($node, $obj, $event)
+		{
+			$a = $event->get_Result_Array()['Command']['Attribute'] ?? [];
+			return '__argument auf ' . $node->full_URI() . ': ' . ($a['name'] ?? '(ohne Namen)');
+		}, 5);
+
+	$reg->addDescription(
+		'STUB. Legt einen Wert unter einem NAMEN im Ereignis ab, damit eine Befehlskette'
+		. ' mehr als ein Datum weiterreichen kann. Attribute: name (Pflicht) und value -'
+		. ' mit value wird eine Konstante gebunden, ohne value das, was der Schritt davor'
+		. ' in den Kontext gelegt hat. Dazu action: apply schreibt alle Argumente in die'
+		. ' Attribute des naechsten Befehls, reset loescht sie, flush schreibt und loescht.'
+		. ' Ein Attribut, das dort schon steht, bleibt - es ist eine Sperre, der Rahmen'
+		. ' fuellt nur Luecken. Bei einer Liste trifft es den'
+		. ' ersten. Was zurueckkommt, ist eine Abschrift zur Anschauung. Offen sind die'
+		. ' Lebensdauer des Rahmens, das Verhaeltnis zu %name% in gespeicherten Ketten,'
+		. ' und wer ihn ausserhalb von apply liest.');
+
 } catch (Exception $e) {
     echo "Fehler: " . $e->getMessage();
 }
