@@ -389,12 +389,40 @@ function service_createCode(&$system, $groups, $slevel, $url)
 $db = $system->getSQLObj();
 $xml = $system->getXMLObj();
 
+    /* ⚠ Hier standen drei Fehler beieinander, und der dritte hielt die Tuer zu:
+    *
+    *   1. "=" statt ".=" - die Schleife lief 20-mal und ueberschrieb sich selbst, uebrig
+    *      blieb EIN Zeichen. Dass $randstring vorher auf '' steht, sagt, dass angehaengt
+    *      werden sollte; gewollt waren 20. Das Einloeseformular
+    *      (controlfiles/surface_create_code_for_groups.xml) hat am CODE-Feld seit jeher
+    *      maxlength="20", und varchar(20) passt genau. Es waren immer 20.
+    *   2. rand(0, strlen(...)) greift EINEN Schritt uebers Ende - $characters[62] auf
+    *      62 Zeichen ist unter PHP 8 eine Warnung und eine leere Zeichenkette.
+    *   3. Alles ging OHNE Anfuehrungszeichen ins INSERT. Gemessen: "Unknown column 'o'
+    *      in 'VALUES'" - die Anweisung schlug IMMER fehl. Genau das hat verhindert, dass
+    *      dieser ungeschuetzte Endpunkt je funktioniert hat. Das Tor davor
+    *      (index.php, modus CREATE_NEW_CODE, Stufe 10) ist die Bedingung dafuer, dass man
+    *      das hier ueberhaupt reparieren darf.
+    *
+    * random_int statt rand: das hier ist ein Zugangscode, der Gruppen vergibt. */
     $characters = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
     $randstring = '';
     for ($i = 0; $i < 20; $i++) {
-        $randstring = $characters[rand(0, strlen($characters))];
+        $randstring .= $characters[random_int(0, strlen($characters) - 1)];
     }
 
+	/* ⚠ Die vergebene Stufe reicht hoechstens bis zur EIGENEN - dieselbe Klammer wie
+	*  pushClearance: wer 6 hat, vergibt hoechstens 6. Sonst waere ein Code der Weg, sich
+	*  selbst hochzustufen.
+	*
+	*  ⚠ seclevel wird geschrieben, aber von NIEMANDEM gelesen: service_applyCode holt
+	*  nur groups und to_person, und die Stufe kommt allein aus tbl_user_management
+	*  beim Anmelden (mod_lib.php:1505). Die Spalte steht im ganzen Code genau einmal -
+	*  hier. STW 2026-09-13: "Frueher konnte man anderen Zugriff unter seiner eigenen
+	*  Stufe geben" - die Absicht steht im Schema, die lesende Haelfte wurde nie gebaut.
+	*  Der Wert bleibt trotzdem korrekt, damit die Absicht sichtbar bleibt. */
+	$meine_stufe = is_object($system) ? $system->clearance() : 0;
+	$stufe       = max(0, min(intval($slevel), $meine_stufe));
 
 	$entry = "INSERT INTO `tbl_marked_for_group` (
 `code` ,
@@ -402,7 +430,7 @@ $xml = $system->getXMLObj();
 `seclevel`
 )
 VALUES (
- $randstring, $groups , $slevel
+ '" . $db->escape($randstring) . "', '" . $db->escape($groups) . "' , " . $stufe . "
 );";
 
 $_SESSION['http://www.auster-gmbh.de/surface#groupcode'] = $randstring;

@@ -331,11 +331,31 @@ if(file_exists(CONFIG))
 						htmlspecialchars((is_null($_REQUEST['URL'])? '': $_REQUEST['URL'])));
 
 					
+					/* ⚠ CREATE_NEW_CODE vergibt ZUGANG - Gruppen (und ueber die Gruppe den
+					*  Sektor) an jeden, der den Code danach einloest. Es ist der einzige
+					*  modus hier, der Rechte erzeugt, und es hing bis 2026-09-13 an gar
+					*  keiner Pruefung: ?i=__system trifft keine. Dass nie etwas passierte,
+					*  lag allein daran, dass das INSERT wegen fehlender Anfuehrungszeichen
+					*  immer fehlschlug (gemessen: "Unknown column 'o' in 'VALUES'").
+					*
+					*  Stufe 10 wie am Dokument givecode2 in template/xml.xml - STWs Modell:
+					*  10 ist "Zugang vergeben".
+					*
+					*  ⚠ Abgewiesen wird STILL: keine Meldung nach aussen, nur eine Zeile im
+					*  Log. Eine Absage ist identisch zu "gibt es nicht" (STW). */
 					if($_REQUEST['modus'] == 'CREATE_NEW_CODE')
-					service_createCode($content, 
-						htmlspecialchars($_REQUEST['GROUPS']), 
-						htmlspecialchars($_REQUEST['SECLEVEL']), 
-						htmlspecialchars($_REQUEST['URI']));
+					{
+						$stufe_hier = is_object($content) ? $content->clearance() : 0;
+
+						if($stufe_hier < 10)
+							$logger_class->setAssert('CREATE_NEW_CODE abgewiesen: Stufe '
+								. $stufe_hier . ', verlangt 10', 0);
+						else
+							service_createCode($content, 
+								htmlspecialchars($_REQUEST['GROUPS']), 
+								htmlspecialchars($_REQUEST['SECLEVEL']), 
+								htmlspecialchars($_REQUEST['URI']));
+					}
 					
 				}
                 else if(isset($_SESSION['@_mod']) && $_SESSION['@_mod']=='install')

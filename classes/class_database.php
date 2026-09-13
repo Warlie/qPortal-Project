@@ -225,6 +225,42 @@ function __construct($Server = "", $User = "", $pwt = "", $db_name = false, $cod
 		return $this->db->real_escape_string($value);
 	}
 
+	/**
+	*	Eine fehlgeschlagene Anweisung ins Log, nicht in die Antwort.
+	*
+	*	⚠ Vorher standen hier vier echo. Sie landeten mitten in der Antwort und
+	*	zerstoerten JSON_RESPONSE und jede Serialisierung - gemessen an
+	*	?i=__system&modus=CREATE_NEW_CODE, wo Fehlercode, Meldung UND die ganze
+	*	Anweisung in der Seite standen.
+	*
+	*	Die Teilung der Stufen ist Absicht:
+	*
+	*	  0  DASS es fehlschlug, mit Nummer und Meldung. Stufe 0 ist im Bestand schon
+	*	     die Stufe fuer "es sollte etwas geschehen und ist nicht geschehen" -
+	*	     daneben stehen 'save_file: nicht schreibbar' und 'ONTOLOGY file not found'.
+	*	     Auf 3 oder 5 waere ein verlorener Datensatz weniger sichtbar als eine
+	*	     nicht schreibbare Datei, und bei REPORT=3 fiele er ganz aus dem Log.
+	*	  6  die ANWEISUNG selbst. Dort steht die Nutzlast - ein INSERT traegt IBANs,
+	*	     Hashes, was gerade geschrieben wird. Dieselbe Ueberlegung wie bei
+	*	     [log] listen_max: die Zeilen geben Einblick in Pfade, Daten und Abfragen.
+	*	     Wer den Fehler sehen will, braucht sie nicht; wer ihn jagt, schaltet auf 6.
+	*
+	*	Setzt ausserdem error_no, damit ein Aufrufer ueberhaupt merken KANN, dass es
+	*	schiefging - SQL() gab das bisher nicht nach aussen (die beiden vorhandenen
+	*	Zuweisungen stehen in einem auskommentierten Block, errno() war immer 0).
+	*/
+	private function log_sql_fehler($nummer, $meldung, $SQLString)
+	{
+		global $logger_class;
+
+		$this->error_no = intval($nummer);
+
+		if(!is_object($logger_class)) return;
+
+		$logger_class->setAssert('SQL fehlgeschlagen (' . $nummer . '): ' . $meldung, 0);
+		$logger_class->setAssert('SQL fehlgeschlagen, Anweisung: ' . $SQLString, 6);
+	}
+
 	function SQL($SQLString){
 
                         if(is_object($this->table_db)) $this->table_db->free_result();
@@ -235,16 +271,15 @@ function __construct($Server = "", $User = "", $pwt = "", $db_name = false, $cod
                             try {
         $this->table_db = mysqli_query($this->db, $escapedSQLString);
     } catch (mysqli_sql_exception $e) {
-        // Fehler fangen und detaillierte Informationen ausgeben
-        echo "Fehler bei der Ausführung der SQL-Abfrage: \n<br>";
-        echo "Fehlercode: " . $e->getCode() . "\n<br>";
-        echo "Fehlermeldung: " . $e->getMessage() . "\n<br>";
-        echo "SQL-Abfrage: " . $SQLString . "\n<br>"; // Nur in der Entwicklung anzeigen!
+        $this->log_sql_fehler($e->getCode(), $e->getMessage(), $SQLString);
         return ["Effected_rows" => 0, "Last_ID" => 0]; 
     }
 
                   //      $this->table_db = mysqli_query($this->db, $escapedSQLString);
-                        if(mysqli_errno($this->db)<>0)echo "Fehler ist aufgetreten \n<br>" . '(' . $SQLString . ")\n<br>" . mysqli_error($this->db);                        
+                        if(mysqli_errno($this->db)<>0)
+                        	$this->log_sql_fehler(mysqli_errno($this->db), mysqli_error($this->db), $SQLString);
+                        else
+                        	$this->error_no = 0;
 
                         return ["Effected_rows" => mysqli_affected_rows($this->db), "Last_ID" => mysqli_insert_id($this->db)];
                                                 }

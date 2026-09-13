@@ -345,13 +345,35 @@ public function moveLast()
 		
 		/**
 		*@function: FREESQL = Free SQL Statement without result
+		*@return: Effected_rows und Last_ID, oder false wenn die Anweisung fehlschlug
+		*
+		*	⚠ Die Rueckgabe wurde bisher weggeworfen. System.Database::SQL() liefert
+		*	["Effected_rows", "Last_ID"] - die Last_ID ist bei einem INSERT das Einzige,
+		*	woran der Aufrufer haengt, und ein Fehlschlag war von hier aus gar nicht zu
+		*	bemerken. Seit die Klasse error_no setzt, geht das.
+		*
+		*	Der Fehler steht schon auf Stufe 0 im Log (mit Nummer und Meldung), die
+		*	Anweisung auf 6. Hier kommt nur dazu, ueber WELCHEN Weg sie kam - eine
+		*	Fehlermeldung ohne Absender laesst einen suchen. ⚠ Das Plugin kennt seinen
+		*	eigenen Objektnamen nicht (plugin_interface hat keinen Griff dafuer), also
+		*	steht hier nur die Methode.
 		*/
 public function freeSQL($sql_statement)
 		{
-			
-			$this->dbclazz->SQL($sql_statement);
-			
-			
+			$ergebnis = $this->dbclazz->SQL($sql_statement);
+
+			if(0 <> $this->dbclazz->errno())
+			{
+				global $logger_class;
+
+				if(is_object($logger_class))
+					$logger_class->setAssert('DBO.freeSQL: die Anweisung ist fehlgeschlagen,'
+						. ' Nummer und Meldung stehen in der Zeile darueber', 0);
+
+				return false;
+			}
+
+			return $ergebnis;
 		}
 		
 		public function set_list(&$value)
