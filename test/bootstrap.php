@@ -84,6 +84,19 @@ require_once(__DIR__ . '/../classes/fs_parser/qp_workflow.php');
 *
 *  Darum wie in der Produktion die Spitze anfordern; die Kette laedt sich selbst nach
 *  (xml_multitree_semantic.php:44 -> xPath -> SPARQL -> ns -> omni -> objex -> xml). */
+/* Die Ausnahmen, die die Baumschicht wirft. Sie stehen sonst NUR in index.php
+*  (Zeile 156ff.) - ohne sie stirbt ein Pruefstand an "Class not found" statt eine
+*  fangbare Ausnahme zu sehen. Gemessen an SourceNotFoundException, die
+*  xml_multitree.php:909 wirft und die exception_collection.php nicht mitbringt.
+*  ⚠ Einzeln aufgezaehlt, nicht per glob: in classes/exceptions/ liegen ZWEI Dateien
+*  mit derselben Klasse ProgramBlockException (program_ und programm_). */
+require_once(__DIR__ . '/../classes/exceptions/not_a_fieldname_exception.php');
+require_once(__DIR__ . '/../classes/exceptions/not_existing_branch_exception.php');
+require_once(__DIR__ . '/../classes/exceptions/empty_tree_exception.php');
+require_once(__DIR__ . '/../classes/exceptions/source_not_found_exception.php');
+require_once(__DIR__ . '/../classes/exceptions/no_permission_exception.php');
+require_once(__DIR__ . '/../classes/exceptions/Not_defined_Namespace_exception.php');
+
 require_once(__DIR__ . '/../classes/ns/Interface_ns.php');
 require_once(__DIR__ . '/../classes/xml_multitree.php');
 require_once(__DIR__ . '/../classes/xml_multitree_objex.php');

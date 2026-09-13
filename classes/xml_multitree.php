@@ -815,6 +815,92 @@ echo 'booh';
 // if(filter_var($text, FILTER_VALIDATE_URL))
 //echo '--' . $ref . "---\n\n";
 
+/* Eine Gegenstelle unter ihrem NAMEN statt unter ihrer Adresse (STW, 2026-09-13):
+*
+*     <tree src="qportal:faehub" />
+*     <tree src="qportal:faehub;pfleger" />      SSH-Gedanke: Name, Trennzeichen, Nutzer
+*
+* Links vom ':' steht der TYP, rechts der Profilname aus [connection]. Dass beides
+* dasteht, ist keine Doppelung, sondern eine Pruefung: qportal:faehub loest nur auf,
+* wenn das Profil faehub auch wirklich vom Typ qportal ist. Wer den Typ wechselt,
+* merkt es am Aufrufer.
+*
+* Das Geheimnis bleibt dabei in config.ini statt im Dokument - bisher stand der
+* Bearer-Token als <header><param> im Baum. Der Nutzer hinter dem ';' waehlt, welcher:
+* <profil>.key.<nutzer>.token, dieselbe Schreibweise wie [intern] key.<name>.token.
+*
+* ⚠ Die direkte Adresse bleibt erlaubt (STW: "lass das andere drin"). [connection] ist
+* also eine Bequemlichkeit und KEINE Erlaubnisliste - wer eine URL hinschreibt, kommt
+* weiterhin ueberallhin. Das ist bewusst so, solange das hier ein Sandkasten ist.
+*
+* ⚠ Ein Dateipfad kann hier nicht hineinlaufen: das Schema braucht mindestens zwei
+* Zeichen und darf keinen Schraegstrich enthalten, 'template/...' hat gar keinen
+* Doppelpunkt, und http/https sind ausgenommen - die gehen den Weg darunter. */
+if(!file_exists($ref)
+   && preg_match('#^([a-z][a-z0-9_]+):([^;/\\\\]+)(?:;(.+))?$#i', trim($ref), $qp_teile)
+   && !in_array(strtolower($qp_teile[1]), ['http', 'https'], true)
+   && class_exists('ConnectionProfile'))
+{
+	$qp_typ    = strtolower($qp_teile[1]);
+	$qp_name   = trim($qp_teile[2]);
+	$qp_nutzer = isset($qp_teile[3]) ? trim($qp_teile[3]) : '';
+
+	if(!ConnectionProfile::exists($qp_name))
+		throw new SourceNotFoundException('Verbindungsprofil "' . $qp_name
+			. '" steht nicht in [connection] (' . $ref . ')');
+
+	$qp_profil = ConnectionProfile::get($qp_name);
+
+	if(strtolower($qp_profil->type()) !== $qp_typ)
+		throw new SourceNotFoundException('Verbindungsprofil "' . $qp_name . '" ist vom Typ "'
+			. $qp_profil->type() . '", gerufen wurde "' . $qp_typ . '" (' . $ref . ')');
+
+	if('' === $qp_profil->address())
+		throw new SourceNotFoundException('Verbindungsprofil "' . $qp_name
+			. '" hat keine address - das ist DIESE Instanz, die ruft man nicht ueber das Netz');
+
+	/* Der Token kommt aus dem Profil, nicht aus dem Dokument. Ohne Nutzer der
+	*  allgemeine, mit Nutzer der benannte.
+	*
+	*  ⚠ parse_ini_file_multi macht aus Punkt-Schluesseln VERSCHACHTELTE Arrays:
+	*  faehub.key.pfleger.token wird zu ['key']['pfleger']['token'], nicht zu einem
+	*  flachen Feld 'key.pfleger.token'. Darum hier in zwei Schritten. */
+	$qp_token = '';
+
+	if('' === $qp_nutzer)
+		$qp_token = (string) $qp_profil->field('token', '');
+	else
+	{
+		$qp_bund = $qp_profil->field('key', []);
+
+		if(is_array($qp_bund) && isset($qp_bund[$qp_nutzer]['token']))
+			$qp_token = (string) $qp_bund[$qp_nutzer]['token'];
+	}
+
+	if('' === $qp_token && '' !== $qp_nutzer && $logger_class)
+		$logger_class->setAssert('load: Profil "' . $qp_name . '" kennt keinen Schluessel "'
+			. $qp_nutzer . '" - der Aufruf geht ohne', 0);
+
+	if('' !== $qp_token)
+	{
+		if(!array_key_exists('RequestHeaders', $com_parameter))
+			$com_parameter['RequestHeaders'] = [];
+
+		$qp_schon_da = false;
+		foreach($com_parameter['RequestHeaders'] as $qp_h)
+			if(0 === stripos(trim((string) $qp_h), 'authorization:')) $qp_schon_da = true;
+
+		if(!$qp_schon_da)
+			$com_parameter['RequestHeaders'][] = 'Authorization: Bearer ' . $qp_token;
+	}
+
+	if($logger_class) $logger_class->setAssert('load: "' . $ref . '" aufgeloest zu '
+		. $qp_profil->address() . ($qp_nutzer !== '' ? ' als "' . $qp_nutzer . '"' : '')
+		. ($qp_token !== '' ? ' (mit Schluessel)' : ' (ohne Schluessel)'), 5);
+
+	$ref = $qp_profil->address();
+}
+
 //if(filter_var($text, FILTER_VALIDATE_URL))
 if(!file_exists($ref) && filter_var($ref, FILTER_VALIDATE_URL)){
 $client = new REST_Connection($ref);
