@@ -40,5 +40,18 @@
 		<access><param name="sector" >alpha</param><param name="hinzu" >ja</param><![CDATA[{"Identifire":"*","Command":{"Name":"__position_stamp"}}]]></access>
 	</tree>
 
+	<!-- Der OWNER, die dritte Klammer. Ein <access> wechselt fuer die Dauer seiner Kette
+	     den Eigner auf sich selbst - STW: "access bekommt ueber ihn den Rueckgabewert".
+	     Ein __to_owner darin schreibt damit in DIESEN Knoten statt nach aussen.
+	     Beobachtet an der Logzeile von __to_owner, die den Empfaenger nennt, und daran,
+	     dass die Antwort nach aussen LEER bleibt.
+
+	     ⚠ Die Kette hat zwei Schritte mit Absicht: __position_stamp baut fuer sein Value
+	     ein NEUES EventObject. Genau dort ging der Eigner frueher verloren, weil der
+	     Konstruktor ihn auf den Requester setzt (EventObject::next_in_chain). -->
+	<tree name="eigner" value="Zugang mit Rueckgabe">
+		<access><![CDATA[{"Identifire":"*","Command":{"Name":"__position_stamp","Value":{"Identifire":"*","Command":{"Name":"__to_owner"}}}}]]></access>
+	</tree>
+
 </final>
 </indextree>

@@ -31,10 +31,18 @@ class EventObject
 	*  Rahmen nicht benutzt, merkt nichts von ihm — er ist leer und wird von nichts
 	*  Bestehendem gelesen.
 	*
-	*  ⚠ OFFEN: die LEBENSDAUER. Heute lebt der Rahmen so lange wie das Ereignis. Ob er
-	*  geklammert gehoert wie clearance (push/pop je Kette), entscheidet sich daran, ob
-	*  verschachtelte Ketten sich gegenseitig ueberschreiben duerfen. Siehe den Kopf von
-	*  __argument. */
+	*  DIE LEBENSDAUER ist die KETTE, nicht das Ereignis (STW, 2026-09-14: "Wenn die Kette
+	*  fertig ist, beschaeftigt sich der Garbage Collector mit ihr. Es gibt nur einen
+	*  Prozessstrang."). Zwei Stellen halten das:
+	*
+	*    next_in_chain()  traegt den Rahmen ueber die Befehle EINER Kette weiter — auch
+	*                     ueber die, die fuer ihr Value ein neues Ereignis bauen.
+	*    __call           klammert ihn (behavior/std.php): der Gerufene faengt mit den
+	*                     Attributen des Aufrufs an, der Rufer bekommt seinen Stand
+	*                     zurueck. Ein Aufruf ist ein Aufruf, kein Weiterreichen.
+	*
+	*  ⚠ OFFEN bleibt nur, WER IHN LIEST: heute niemand ausser action=apply. Siehe den
+	*  Kopf von __argument, Punkt 3. */
 	var $myarguments = array();
 
 	var $mylocked = false;
@@ -92,6 +100,38 @@ class EventObject
 		$this->myowner = &$owner;
 	}
 	
+	/** Das naechste Ereignis DERSELBEN Kette.
+	*
+	*  Ein Befehl, der seinem Value einen Wert mitgeben will, baut dafuer ein neues
+	*  EventObject (so __position_stamp, __add_node, __get_attribute) statt set_context
+	*  zu rufen - der Kontext ist eine Referenz, und ein set_context wuerde dem Aufrufer
+	*  seinen ueberschreiben.
+	*
+	*  ⚠ Der Konstruktor setzt myowner auf den REQUESTER. Ueber den Intern-Weg ist das
+	*  der ContentGenerator - und damit verlor eine Kette an genau dieser Stelle den
+	*  Owner, den ihr jemand gegeben hatte. Gemessen an <access>, das ueber den Owner
+	*  seinen Rueckgabewert bekommt: der Wert ging nach aussen statt an den Knoten.
+	*
+	*  Wer die Kette fortschreibt, nimmt Owner UND Argumentrahmen mit. Wer keinen Owner
+	*  gesetzt hat, merkt nichts: dann ist er weiter der Requester.
+	*
+	*  ⚠ Der Rahmen wird KOPIERT, nicht geteilt - set_arguments weist zu, das & in seiner
+	*  Signatur spart nur die Kopie beim Uebergeben. Der Folgeschritt sieht also alles,
+	*  was bis hierher gesammelt wurde, und schreibt nicht in ein Ereignis zurueck, das
+	*  der Rufer noch in der Hand haelt. Heute ist der Unterschied nicht zu beobachten:
+	*  ausser apply liest den Rahmen niemand (siehe __argument, offener Punkt 3). Wenn
+	*  das entschieden ist, ist DAS hier die Stelle.
+	*/
+	function next_in_chain(&$context)
+	{
+		$folge = new EventObject($this->myrequest, $this->myrequester, $context);
+
+		$folge->set_owner($this->myowner);
+		$folge->set_arguments($this->myarguments);
+
+		return $folge;
+	}
+
 	function set_node(&$node)
 	{
 		if(is_object($this->mynode))unset($this->mynode);

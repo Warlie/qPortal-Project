@@ -82,9 +82,8 @@ function event_initiated()
 *	und liegt auf derselben Ebene wie das, was es erlaubt. Die uebrigen Slots des
 *	Zugangs sind ebenso benannt (commandline, request).
 *
-*	⚠ Die Stufe kann nur SENKEN, nie heben — pushClearance klammert auf das, was
-*	gerade gilt. Ein Dokument, das sich selbst hochstufen koennte, haette die ganze
-*	Einstufung ausgehebelt. Gehoben wird nur beim Eintritt, aus dem API-Schluessel.
+*	⚠ Die Stufe DARF hier heben (Punkt 2 darunter) — ein Zugang ist eine Erklaerung,
+*	kein Zweig. Ein <tree securitylevel> klammert weiter nach unten.
 *
 *	⚠ Das Verlassen steht in finally: eine Ausnahme aus der Kette darf den Stapel
 *	nicht stehen lassen, sonst gilt die fremde Stufe weiter.
@@ -193,7 +192,7 @@ function event_message_in($type,&$obj)
 		/* ⚠ Das Schieben fehlte: der finally-Zweig nahm eine Ebene vom Stapel, die
 		*  nie jemand daraufgelegt hatte — also die des umgebenden <tree>. Ein <access>
 		*  mit security haette damit nicht gesenkt, sondern die Klammer des Elternzweiges
-		*  aufgerissen. Gehoben wird hier nichts, dafuer sorgt das min() in pushClearance. */
+		*  aufgerissen. */
 		/* SETZEN, nicht klammern: ein <access> darf die Stufe auch HEBEN (zweites
 		*  Argument). Ein <tree securitylevel> klammert weiter nach unten - ein Zweig ist
 		*  Navigation, ein Zugang ist eine Erklaerung. */
@@ -212,12 +211,38 @@ function event_message_in($type,&$obj)
 		if($eigener_sektor)
 			$cg->pushSectors($sektor, 'ja' === strtolower((string) $this->param_named('hinzu')));
 
+		/* Die dritte Klammer: WER DIE ANTWORT BEKOMMT.
+		*
+		*  STW (2026-09-14): "Bei access bin ich mir sicher, dass der owner wechselt, da
+		*  access ueber ihn den Rueckgabewert bekommt."
+		*
+		*  Damit hat ein Zugang nicht nur Bedingungen, sondern auch ein Ergebnis: ein
+		*  __to_owner in seiner Kette schreibt in DIESEN Knoten (Knotenzweig von
+		*  __to_owner: $eigner->setdata(...)), statt nach aussen zu gehen.
+		*
+		*  ⚠ Erster Gebrauch von set_owner ueberhaupt - der Slot existierte, __to_owner
+		*  las ihn, aber gesetzt hat ihn nie jemand (die einzige Zuweisung stand
+		*  auskommentiert in class_Contentgenerator.php:798). Es kann daran also nichts
+		*  kaputtgehen; es faengt hier an.
+		*
+		*  ⚠ Und zurueckgegeben wie die anderen zwei: nach dem Zugang gilt wieder der
+		*  alte Eigner, sonst schriebe eine spaetere Kette weiter in diesen Knoten. */
+		$eigner_vorher = ($obj instanceof EventObject) ? $obj->get_owner() : null;
+		$eigener_eigner = ($obj instanceof EventObject);
+
+		if($eigener_eigner)
+		{
+			$ich = $this;
+			$obj->set_owner($ich);
+		}
+
 		try
 		{
 			$this->hold_messages($show,$obj);
 		}
 		finally
 		{
+			if($eigener_eigner) $obj->set_owner($eigner_vorher);
 			if($eigener_sektor) $cg->popSectors();
 			if($eigen)          $cg->popClearance();
 		}

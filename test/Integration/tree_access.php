@@ -15,6 +15,12 @@
 *	Die 5 ist der Beleg: die innere Klammer hat die Stufe GEHOBEN, von 0 auf 5. Mit dem
 *	alten min() waere sie bei 0 geblieben.
 *
+*	Dazu die dritte Klammer, der EIGNER. Ein <access> nimmt fuer die Dauer seiner Kette
+*	den Owner auf sich; ein __to_owner darin schreibt in den Zugang statt nach aussen.
+*	Gemessen an beiden Seiten: die Logzeile nennt den Zugang als Empfaenger, und die
+*	Antwort nach aussen bleibt leer. Der Gegenfall ist dieselbe Kette ohne Zugang -
+*	sie geht hinaus.
+*
 *	Aufruf (Server muss laufen, ./server.sh):
 *	    php -d error_reporting=E_ERROR test/Integration/tree_access.php
 */
@@ -103,6 +109,48 @@ curl_close($ch);
 
 result('nichts davon in der Antwort', false === stripos($seite, 'ABGEWIESEN')
        && false === stripos($seite, 'GEHOBEN'), strlen($seite) . ' bytes, ohne Stufen');
+
+/* --- die dritte Klammer: der EIGNER ------------------------------------------------
+*  STW (2026-09-14): "Bei access bin ich mir sicher, dass der owner wechselt, da access
+*  ueber ihn den Rueckgabewert bekommt."
+*
+*  ⚠ Die Kette ist zweistufig (__position_stamp -> __to_owner), und das ist der Punkt:
+*  __position_stamp baut fuer sein Value ein NEUES EventObject. Dessen Konstruktor setzt
+*  den Owner auf den Requester - ueber den Intern-Weg also auf den ContentGenerator.
+*  Genau dort fiel der Eigner heraus, den <access> gesetzt hatte; der Wert ging nach
+*  aussen statt in den Knoten. EventObject::next_in_chain traegt ihn jetzt weiter. */
+$eigner = lauf('eigner');
+
+result('Empfaenger ist der Zugang',
+       false !== strpos($eigner, '__to_owner: Wert an "' . T . 'access"'),
+       preg_match('/__to_owner: Wert an "[^"]*"/', $eigner, $m) ? $m[0] : 'keine Zeile');
+
+/* Und die Gegenprobe nach aussen: ohne Zugang kommt derselbe Wert heraus, mit Zugang
+*  nicht. Sonst koennte "leer" auch heissen, dass die Kette gar nicht lief. */
+function roh($payload)
+{
+	global $fixture, $token;
+	$ch = curl_init($fixture);
+	curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_SLASHES),
+		CURLOPT_HTTPHEADER => array_filter(['Content-Type: application/json',
+			$token !== '' ? 'Authorization: Bearer ' . $token : null]),
+		CURLOPT_RETURNTRANSFER => true, CURLOPT_SSL_VERIFYPEER => false,
+		CURLOPT_SSL_VERIFYHOST => false, CURLOPT_TIMEOUT => 30]);
+	$b = (string) curl_exec($ch);
+	curl_close($ch);
+	return json_decode($b, true);
+}
+
+$kette  = ['Identifire' => '*', 'Command' => ['Name' => '__position_stamp',
+           'Value' => ['Identifire' => '*', 'Command' => ['Name' => '__to_owner']]]];
+$ohne   = roh($kette);
+$mit    = roh(['Identifire' => T . 'indextree', 'Command' => ['Name' => 'start'],
+               'Attribute' => ['eigner']]);
+
+result('ohne Zugang geht der Wert hinaus', isset($ohne[0]['value']),
+       'value = ' . json_encode($ohne[0]['value'] ?? null));
+result('mit Zugang bleibt aussen nichts', !isset($mit[0]['value']) && false === ($mit['answered'] ?? true),
+       'answered = ' . json_encode($mit['answered'] ?? null));
 
 $ok = 0; $fail = 0;
 foreach ($results as [$name, $good, $note])

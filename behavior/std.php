@@ -181,7 +181,7 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 				$hash  = $new_node->position_hash_map($path);
 				$stamp = sprintf('%04d', $hash) . '.' . $new_node->get_idx() . $path;
 
-				$new_obj = new EventObject($obj->get_request(), $obj->get_requester(), $stamp);
+				$new_obj = $obj->next_in_chain($stamp);
 				$new_node->hold_messages($value, $new_obj);
 			}
 
@@ -539,7 +539,7 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			$value = $structur['Command']['Value'];
 			if (!empty($value))
 			{
-				$new_obj = new EventObject($obj->get_request(), $obj->get_requester(), $stamp);
+				$new_obj = $obj->next_in_chain($stamp);
 				$node->hold_messages($value, $new_obj);
 			}
 			return true;
@@ -664,7 +664,7 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			$value = $structur['Command']['Value'];
 			if (!empty($value))
 			{
-				$new_obj = new EventObject($obj->get_request(), $requester, $res);
+				$new_obj = $obj->next_in_chain($res);
 				$node->hold_messages($value, $new_obj);
 			}
 			elseif ($is_node)
@@ -1120,6 +1120,41 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 				$cg->createScope();
 				$zurueck = $parser->cur_idx();
 
+				/* ⚠ EIN AUFRUF IST EIN AUFRUF, kein Weiterreichen. __call feuert unten ein
+				*  start (hold_messages mit ''), also faengt drueben ein Prozess von vorn an -
+				*  und der darf nicht sehen, was der Rufer zuletzt in der Hand hatte.
+				*
+				*  STW (2026-09-14): "__call wird doch bestimmt ein start auf einen tree
+				*  abschiessen. Ein leeres EventObjekt klingt hier fuer mich sinnvoll. Wenn
+				*  ich keine Argumente mitgebe, sollten keine da sein."
+				*
+				*  Gemessen war es vorher anders: eine innere Kette schrieb in DENSELBEN
+				*  Rahmen, und ihre Argumente standen nach dem Aufruf beim Rufer noch da.
+				*  Nicht weil es mehrere Prozessstraenge gaebe - es gibt einen -, sondern
+				*  weil dasselbe $obj durchgereicht wird. Reentranz in einem Strang.
+				*
+				*  ⚠ Gesichert und zurueckgegeben wird auf DEMSELBEN Ereignis, statt ein neues
+				*  zu bauen. Ein neues muesste Feld fuer Feld entschieden werden, und drei
+				*  davon duerfen NICHT frisch sein: myrequester (tree_tree.php:218 ruft darauf
+				*  found_relevant_page), mylocked (gatet event_message_check - frisch hiesse
+				*  entsperrt) und myowner. So bleibt die Identitaet und nur der Arbeitsstand
+				*  wechselt.
+				*
+				*  Der ANFANGSRAHMEN sind die Attribute des Aufrufs. Damit ist die
+				*  Argumentuebergabe schon da, ohne neue Notation:
+				*      __argument(name=x, value=1, action=apply) -> __call(...)
+				*  apply schreibt in die Attribute des naechsten Befehls, und __call hat keine
+				*  eigenen - was ankommt, ist der Rahmen des Gerufenen. */
+				$rahmen_vorher  = $obj->get_arguments();
+				$kontext_vorher = $obj->get_context();
+
+				$mitgegeben    = $structur['Command']['Attribute'] ?? array();
+				$anfangsrahmen = is_array($mitgegeben) ? $mitgegeben : array();
+				$nichts        = null;
+
+				$obj->set_arguments($anfangsrahmen);
+				$obj->set_context($nichts);
+
 				try
 				{
 					$src = $node->get_ns_attribute($T . 'src');
@@ -1193,6 +1228,10 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 				}
 				finally
 				{
+					/* Zurueck auf den Stand des Rufers - auch wenn es geworfen hat. */
+					$obj->set_arguments($rahmen_vorher);
+					$obj->set_context($kontext_vorher);
+
 					$cg->leaveScope();
 					$parser->change_idx($zurueck);
 				}
