@@ -878,21 +878,25 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 
 		$this->XMLlist->prevent_read_event(false);
 
-		if(!is_null($this->rst))
-		{
-		if(0 == $this->rst->rst_num())
-			{
-				
-				$this->rst->setValue('precache.value',$res);
-				$this->rst->update();
-				$this->dbAccess->insert_rst($this->rst);
-			}
-		if(0 < $this->rst->rst_num())
-			{
-				$this->rst->first_ds();
-				return $this->rst->value('precache.value');
-			}
-		}
+		/* Hier lag ein Seiten-Cache: die fertige Ausgabe ging in die Tabelle precache
+		*  (name, best_before, value) und wurde beim naechsten Mal statt des Laufs
+		*  zurueckgegeben. Entfernt 2026-09-13 samt Tabelle (STW: "Das Cachen hat seit
+		*  einem Jahrzehnt keinen mehr interessiert").
+		*
+		*  Er lief ohnehin nie: $this->rst wurde nirgends zugewiesen und war nicht einmal
+		*  als Eigenschaft deklariert, die Bedingung also immer falsch. best_before wurde
+		*  nirgends gelesen. Die einzige Zeile in der Tabelle stammte vom 25.10.2008.
+		*
+		*  ⚠ Und die Form waere heute falsch, nicht nur ungenutzt. Sie stammt aus TYPO3,
+		*  wo eine Seite INHALT ist: teuer zu rendern, selten geaendert. Hier ist ein
+		*  Dokument ein PROGRAMM. Ein Treffer im Cache gaebe die Ausgabe zurueck OHNE den
+		*  Lauf - kein first, kein once, keine Tabelle angelegt, kein Fuehler befragt.
+		*
+		*  Was von der Idee bleibt: cachen ist erlaubt, wo etwas WIRKUNGSFREI ist, und
+		*  genau das koennen die Tuerschilder sagen (desc:effect="keiner, liest nur").
+		*  STW denkt es eine Ebene hoeher weiter - eigene Befehle koennen einen Befehl
+		*  auch UEBERSCHREIBEN, dort waere der Platz dafuer. Nicht hier.
+		*/
 		return $res;
 	}
 
