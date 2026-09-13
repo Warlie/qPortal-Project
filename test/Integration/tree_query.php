@@ -7,11 +7,17 @@
 *
 *	Zusagen:
 *	    sparql laeuft, und Knoten kommen als {uri, name, stamp} zurueck
-*	    ohne statement, unbekanntes Modell und xpath melden sich als note statt zu werfen
+*	    source waehlt die Gegenstelle ueber ihren Profilnamen
+*	    ohne statement, unbekanntes Modell, xpath und unbekannte Quelle melden sich als
+*	    note statt zu werfen
 *	    die Stufe steht auf 6
 *
-*	⚠ KEIN scope, anders als bei __where_am_i: OWL ist in dieser Instanz instanzweit,
-*	es gibt nichts zu begrenzen (STW).
+*	⚠ KEIN scope, anders als bei __where_am_i - dort haengen die Tuerschilder an tree
+*	und final, die es je Dokument gibt. Was hier die Rolle des scope spielt, ist die
+*	QUELLE: ein Graph wird aus mehreren Gegenstellen zusammengesetzt. STW: "Es ist
+*	Zufall, dass sie alle aus der Datenbank kommen. Teile koennten auch aus einem Fuseki
+*	kommen." Gemessen: die sieben <sub> von real_estate_data.xml waehlen ihre Quelle
+*	schon heute je Sub ueber <remote name="DBO.useProfil.profile">.
 *
 *	Aufruf (Server muss laufen, ./server.sh):
 *	    php -d error_reporting=E_ERROR test/Integration/tree_query.php
@@ -83,6 +89,17 @@ result('xpath: note statt Wurf',   false !== strpos($xp['note'] ?? '', 'noch nic
 /* Ein kaputter Ausdruck ebenso - der Parser meldet sich, der Aufruf stirbt nicht. */
 $kaputt = frage(['statement' => 'SELECT ?s WHERE {{{']);
 result('kaputter Ausdruck: note',  isset($kaputt['note']), substr($kaputt['note'] ?? 'keine', 0, 58));
+
+/* --- die Quelle: sie ist hier das, was bei __where_am_i der scope waere -------------
+*  STW: "Es ist Zufall, dass sie alle aus der Datenbank kommen. Teile koennten auch aus
+*  einem Fuseki kommen." Also muss man die Gegenstelle waehlen koennen. */
+$mitQuelle = frage(['source' => 'qportal', 'statement' => PRAEFIX . 'SELECT ?s WHERE { ?s rdf:type tree:tree }']);
+result('source wird genannt',      ($mitQuelle['source'] ?? null) === 'qportal', json_encode($mitQuelle['source'] ?? null));
+result('source qportal: Zeilen da', !empty($mitQuelle['rows']), count($mitQuelle['rows'] ?? []) . ' Zeilen');
+
+$fremdeQuelle = frage(['source' => 'gibtsnicht', 'statement' => PRAEFIX . 'SELECT ?s WHERE { ?s ?p ?o }']);
+result('unbekannte Quelle: note',  false !== strpos($fremdeQuelle['note'] ?? '', 'kein Verbindungsprofil'),
+       substr($fremdeQuelle['note'] ?? 'keine', 0, 58));
 
 /* --- die Einstufung ---------------------------------------------------------------- */
 [, $info] = post(['Identifire' => '*', 'Command' => ['Name' => '__info']]);

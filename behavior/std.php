@@ -1224,12 +1224,17 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 	* liest. Mehr nimmt __query nicht entgegen.
 	*
 	* ⚠ KEIN scope, anders als bei __where_am_i. Dort hat es einen Sinn, weil tree und
-	* final je Dokument existieren und die Tuerschilder an ihnen haengen. Hier nicht:
-	* OWL ist in dieser Instanz IMMER instanzweit (STW). Die Daten liegen nicht in
-	* Baeumen, sie liegen hinter der Gegenstelle; der Graph IST die Instanz. Ein Beispiel
-	* steht im Bestand: template/ontologies/real_estate_data.xml reicht ein einziges
-	* RstTurtle-Objekt durch sieben <sub> und setzt daraus einen Graphen ueber alles
-	* zusammen - da gaebe es nichts zu begrenzen.
+	* final je Dokument existieren und die Tuerschilder an ihnen haengen. Hier nicht: die
+	* Daten liegen nicht in Baeumen.
+	*
+	* Was bei einer Abfrage die Rolle des scope spielt, ist die QUELLE - und die waehlt
+	* das Attribut source ueber einen Profilnamen aus [connection]. STW (2026-09-13):
+	* "Es ist Zufall, dass sie alle aus der Datenbank kommen. Teile koennten auch aus
+	* einem Fuseki kommen." Gemessen stimmt das: die sieben <sub> von
+	* template/ontologies/real_estate_data.xml waehlen ihre Quelle schon heute je Sub
+	* ueber <remote name="DBO.useProfil.profile">, und dass dort zehnmal dasselbe Profil
+	* steht, ist Gewohnheit und keine Eigenschaft der Sache. Ein Graph wird aus mehreren
+	* Quellen zusammengesetzt; zu begrenzen ist also die Gegenstelle, nicht der Baum.
 	*
 	* ⚠ Die Modelle sind NICHT gleichwertig, und das Interface sagt das nicht:
 	* Searching_Model verlangt nur query(). solutions(), use_source() und profile()
@@ -1260,10 +1265,13 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 
 			$model     = trim((string) ($attr['model']     ?? ''));
 			$statement = (string)       ($attr['statement'] ?? '');
+			$source    = trim((string) ($attr['source']    ?? ''));
 
 			if($model === '') $model = 'sparql';
 
 			$antwort = ['model' => $model, 'rows' => []];
+
+			if('' !== $source) $antwort['source'] = $source;
 			$parser  = $node->get_parser();
 
 			if('' === trim($statement))
@@ -1280,11 +1288,23 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 						$antwort['note'] = 'kein Suchmodell "' . $model . '"';
 					else
 					{
-						/* Die Vorbereitung ist je Modell verschieden - use_source gibt es nur
-						*  am sparql_model, ein pauschaler Aufruf waere ein Fatal. */
-						if(method_exists($m, 'source') && method_exists($m, 'use_source')
-						   && $m->source() === '')
-							$m->use_source('qportal');
+						/* Die Quelle. Sie ist bei einer Abfrage das, was bei __where_am_i der
+						*  scope waere - welche Gegenstelle wird gefragt. Genannt wird ein
+						*  Profilname aus [connection]; ohne Angabe gilt sparql.use, und ist
+						*  auch das leer, diese Instanz.
+						*
+						*  ⚠ use_source gibt es nur am sparql_model, ein pauschaler Aufruf
+						*  waere ein Fatal. */
+						if(method_exists($m, 'use_source'))
+						{
+							if('' !== $source)
+								$m->use_source($source);
+							elseif(method_exists($m, 'source') && $m->source() === '')
+								$m->use_source('qportal');
+						}
+						elseif('' !== $source)
+							$antwort['note'] = 'das Modell "' . $model . '" kennt keine Quelle'
+							                 . ' - source wurde nicht beachtet';
 
 						/* ⚠ HIER kommt die Zusatzinfo hin, sobald xpath gebaut ist: XPath ist
 						*  dokumentspezifisch und braucht den Knoten, auf dem __query steht.
@@ -1352,7 +1372,10 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 
 	$reg->addDescription(
 		'Eine Abfrage fuer alle Suchmodelle. Attribute: model (Vorgabe sparql, sonst'
-		. ' internal oder xpath) und statement - ein String, den das Modell liest. Ergebnis'
+		. ' internal oder xpath), statement - ein String, den das Modell liest - und source,'
+		. ' der Profilname der Gegenstelle aus [connection] (ohne Angabe gilt sparql.use,'
+		. ' sonst diese Instanz). source ist hier das, was bei __where_am_i der scope waere:'
+		. ' ein Graph kann aus mehreren Quellen kommen. Ergebnis'
 		. ' {model, rows:[...]} im Ereignis; mit Value (etwa __to_owner) geht es weiter.'
 		. ' Knoten in den Zeilen erscheinen als uri/name/stamp. KEIN scope: OWL ist hier'
 		. ' instanzweit, es gibt nichts zu begrenzen. Stufe 6, weil der Ausdruck'
