@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Das SPARQL-Plugin als QUELLE, so wie ein Dokument es benutzt.
+
+     Bisher holte ein Dokument Daten nur ueber DBO (Datenbank) oder den Handle
+     (<add doctype="SPARQL">, der eine fertige ANTWORT liest). Dieses Plugin STELLT die
+     Frage und gibt die Zeilen heraus wie ein DBO: moveFirst/col/next, dazu iter() zum
+     Weiterreichen per set_list. Damit ist es ein direkter Ersatz als Quelle.
+
+     ⚠ Die Bauform ist die von Hash und DBO: KONFIGURIEREN im <program>, ABHOLEN in einem
+     benannten <element> ueber eine zweite Referenz auf dieselbe id. Wer beides in einen
+     Aufruf legt, bekommt nichts in den Text - das Element ist der Empfaenger.
+
+     Gefragt wird der eigene Baum (type=qportal), also stehen in den Zeilen KNOTEN.
+     col() gibt ihre volle URI, stamp() den Positionsstempel. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="SPARQL als Quelle">
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one">test/Integration/fixtures/out_blank.xml</main>
+	</template>
+
+	<program>
+		<object id="spq" name="SPARQL" src="PlugIn/plugin_sparql.php">
+			<remote name="SPARQL.query.statement"><![CDATA[PREFIX tree: <http://www.trscript.de/tree#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+SELECT ?s WHERE { ?s rdf:type tree:tree }]]></remote>
+			<remote name="SPARQL.query" />
+			<remote name="SPARQL.moveFirst" />
+		</object>
+	</program>
+
+	<content name="http://www.w3.org/1999/xhtml#html">
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#p" ><object id="spq" ><remote name="SPARQL.many" /></object></element>
+		<element type="xhtml" value="http://www.w3.org/1999/xhtml#b" ><object id="spq" ><remote name="SPARQL.col.columnName" >s</remote><remote name="SPARQL.col" /></object></element>
+	</content>
+
+	<tree name="eins" value="Eins" />
+	<tree name="zwei" value="Zwei" />
+</final>
+</indextree>

@@ -1214,6 +1214,151 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 		. ' Kinder ausser template und tree. Ergebnis {uri, name, results:[...]} im Ereignis;'
 		. ' mit Value (etwa __to_owner) geht es weiter. Argumente folgen. Keine Attribute.');
 
+	/* __query - EINE Abfrage fuer alle Suchmodelle (STW, 2026-09-11 geplant, 09-13 gebaut).
+	*
+	*     {"Identifire":"*","Command":{"Name":"__query","Attribute":{
+	*        "model":"sparql","statement":"SELECT ?s WHERE { ?s ?p ?o }"},
+	*      "Value":{"Identifire":"*","Command":{"Name":"__to_owner"}}}}
+	*
+	* Der Automat ist der Standard (STW): eine Abfrage ist ein STRING, den ein Modell
+	* liest. Mehr nimmt __query nicht entgegen.
+	*
+	* ⚠ KEIN scope, anders als bei __where_am_i. Dort hat es einen Sinn, weil tree und
+	* final je Dokument existieren und die Tuerschilder an ihnen haengen. Hier nicht:
+	* OWL ist in dieser Instanz IMMER instanzweit (STW). Die Daten liegen nicht in
+	* Baeumen, sie liegen hinter der Gegenstelle; der Graph IST die Instanz. Ein Beispiel
+	* steht im Bestand: template/ontologies/real_estate_data.xml reicht ein einziges
+	* RstTurtle-Objekt durch sieben <sub> und setzt daraus einen Graphen ueber alles
+	* zusammen - da gaebe es nichts zu begrenzen.
+	*
+	* ⚠ Die Modelle sind NICHT gleichwertig, und das Interface sagt das nicht:
+	* Searching_Model verlangt nur query(). solutions(), use_source() und profile()
+	* stehen allein am sparql_model. Darum wird gefragt (method_exists), statt es
+	* vorauszusetzen - ein Interface, das zwei Modelle nur pro forma erfuellen, waere
+	* unehrlicher als diese Frage.
+	*
+	*     sparql     laeuft. Ohne gewaehlte Quelle wird qportal genommen (sparql.use ist
+	*                leer), dann query() und solutions() fuer die Zeilen.
+	*     internal   96 Zeilen ohne einen einzigen Aufrufer, und query() will dort eine
+	*                volle URI statt einer Abfrage - ein Nachschlageschluessel, keine
+	*                Sprache. Laeuft hier durch, liefert aber keine Zeilen.
+	*     xpath      wirft "noch nicht gebaut". Gefangen und als note zurueck.
+	*                ⚠ Wenn es kommt, braucht es ZUSATZINFO: XPath ist dokumentspezifisch
+	*                (STW), also muss der Knoten mit, auf dem der Befehl steht. Dafuer ist
+	*                der Platz unten schon markiert.
+	*
+	* ⚠ Der Ausdruck kommt VOLLSTAENDIG von aussen und geht bei type=fuseki an eine fremde
+	* Gegenstelle - anders als bei __where_am_i, das seine Abfragen aus einer festen Form
+	* mit einer Begriffsliste selbst baut. Das ist der Grund fuer die Stufe 6. */
+	$reg->__query = function($node, $obj, $event)
+		{
+			global $logger_class;
+
+			$structur = $event->get_Result_Array();
+			$attr     = $structur['Command']['Attribute'] ?? [];
+			$value    = $structur['Command']['Value']     ?? null;
+
+			$model     = trim((string) ($attr['model']     ?? ''));
+			$statement = (string)       ($attr['statement'] ?? '');
+
+			if($model === '') $model = 'sparql';
+
+			$antwort = ['model' => $model, 'rows' => []];
+			$parser  = $node->get_parser();
+
+			if('' === trim($statement))
+				$antwort['note'] = 'kein statement - ohne Ausdruck gibt es nichts zu fragen';
+			elseif(!is_object($parser))
+				$antwort['note'] = 'kein Parser am Knoten';
+			else
+			{
+				try
+				{
+					$m = $parser->seek_by_model($model);
+
+					if(is_null($m))
+						$antwort['note'] = 'kein Suchmodell "' . $model . '"';
+					else
+					{
+						/* Die Vorbereitung ist je Modell verschieden - use_source gibt es nur
+						*  am sparql_model, ein pauschaler Aufruf waere ein Fatal. */
+						if(method_exists($m, 'source') && method_exists($m, 'use_source')
+						   && $m->source() === '')
+							$m->use_source('qportal');
+
+						/* ⚠ HIER kommt die Zusatzinfo hin, sobald xpath gebaut ist: XPath ist
+						*  dokumentspezifisch und braucht den Knoten, auf dem __query steht.
+						*  Wieder ueber method_exists, damit sparql davon nichts merkt. */
+						if(method_exists($m, 'set_context'))
+							$m->set_context($node);
+
+						$treffer = $m->query($statement);
+
+						/* Zeilen kann nur, wer solutions() hat. Sonst ist die Rueckgabe von
+						*  query() alles, was es gibt. */
+						$roh = method_exists($m, 'solutions') ? $m->solutions() : $treffer;
+
+						$antwort['rows'] = array_map(function($zeile) use ($parser)
+							{
+								if(!is_array($zeile)) $zeile = ['wert' => $zeile];
+
+								foreach($zeile as $spalte => $wert)
+								{
+									/* answer_shape serialisiert keinen Knoten - Knoten werden
+									*  darum zu dem, was von aussen tragfaehig ist. */
+									if($wert instanceof Interface_node)
+										$zeile[$spalte] = ['uri'   => $wert->full_URI(),
+										                   'name'  => $wert->get_ns_attribute('http://www.trscript.de/tree#name'),
+										                   'stamp' => $wert->position_stamp()];
+									elseif(is_object($wert))
+										$zeile[$spalte] = (string) $wert;
+								}
+
+								return $zeile;
+							}, is_array($roh) ? $roh : []);
+
+						if(method_exists($m, 'solutions') === false)
+							$antwort['note'] = 'das Modell "' . $model . '" kennt keine Zeilen'
+							                 . ' - zurueck kommt, was query() gibt';
+					}
+				}
+				catch(Throwable $e)
+				{
+					/* xpath wirft hier hinein, und ein kaputter Ausdruck ebenso. Innen die
+					*  Meldung, aussen eine note - dieselbe Trennung wie ueberall. */
+					$antwort['note'] = 'Fehler: ' . $e->getMessage();
+
+					if($logger_class)
+						$logger_class->setAssert('__query (' . $model . '): ' . $e->getMessage(), 0);
+				}
+			}
+
+			$obj->set_context($antwort);
+
+			if(!empty($value))
+				$node->hold_messages($value, $obj);
+
+			return true;
+		};
+
+	$reg->addLog(function($node, $obj, $event)
+		{
+			$a = $event->get_Result_Array()['Command']['Attribute'] ?? [];
+			return '__query (' . ($a['model'] ?? 'sparql') . '): '
+			     . substr((string) ($a['statement'] ?? ''), 0, 120);
+		}, 5);
+
+	$reg->addSecurity(6);
+
+	$reg->addDescription(
+		'Eine Abfrage fuer alle Suchmodelle. Attribute: model (Vorgabe sparql, sonst'
+		. ' internal oder xpath) und statement - ein String, den das Modell liest. Ergebnis'
+		. ' {model, rows:[...]} im Ereignis; mit Value (etwa __to_owner) geht es weiter.'
+		. ' Knoten in den Zeilen erscheinen als uri/name/stamp. KEIN scope: OWL ist hier'
+		. ' instanzweit, es gibt nichts zu begrenzen. Stufe 6, weil der Ausdruck'
+		. ' vollstaendig von aussen kommt und bei einer fremden Gegenstelle landen kann.'
+		. ' xpath ist noch nicht gebaut und meldet das als note.');
+
 } catch (Exception $e) {
     echo "Fehler: " . $e->getMessage();
 }
