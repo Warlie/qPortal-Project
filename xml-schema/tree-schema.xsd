@@ -106,6 +106,7 @@
 			<xs:element name="template" type="tree:templateType"/>
 			<xs:element name="content" type="tree:contentType"/>
 			<xs:element name="sub" type="tree:subType"/>
+			<xs:element name="access" type="tree:accessType"/>
 		</xs:choice>
 		<xs:attributeGroup ref="tree:nodeAttributes"/>
 		<xs:attribute name="name" type="xs:string" use="required"/>
@@ -311,13 +312,34 @@
 
 	<xs:complexType name="accessType" mixed="true">
 		<xs:annotation><xs:documentation>
-			Ein Aufruf, kein Tag: fuehrt seinen Inhalt als Befehlsliste aus (hold_messages). type,
-			name und value stehen im Bestand an jeder Stelle.
+			Ein Aufruf, kein Tag: fuehrt seinen Inhalt als Befehlsliste aus (hold_messages) - und
+			klammert dabei die Rechte. Traeger sind tree, final, first, once und program.
+
+			Das Recht steht IM Zugang, nicht an ihm, als direktes tree:param:
+
+			    securitylevel   SETZT die Stufe fuer die Dauer der Kette - sie darf hier auch
+			                    STEIGEN. Das ist setuid: ein Dokument haelt Befehle, die auf 4
+			                    gerufen werden duerfen, und braucht innen eine 10. Ein
+			                    tree:securitylevel am Knoten klammert dagegen nur nach unten -
+			                    ein Zweig ist Navigation, ein Zugang ist eine Erklaerung.
+			    sector          Die zweite Klammer, und die Richtung ist die umgekehrte:
+			                    einengen (Schnitt) darf jeder, hinzunehmen (Union) nur ab
+			                    Stufe 10 - der Stufe, die "Zugang vergeben" heisst.
+			    hinzu           "ja" nimmt den Sektor auf statt zu schneiden.
+
+			Ein param, das tiefer in der Befehlskette steht, stellt nichts um - gelesen werden
+			nur DIREKTE Kinder.
+
+			Das Attribut security gab es hier frueher; es hat nie jemand gelesen und ist raus.
+			type, name und value stehen im Bestand an jeder Stelle.
 		</xs:documentation></xs:annotation>
+		<xs:choice minOccurs="0" maxOccurs="unbounded">
+			<xs:element name="param" type="tree:paramType"/>
+			<xs:element name="access" type="tree:accessType"/>
+		</xs:choice>
 		<xs:attribute name="name" type="xs:string"/>
 		<xs:attribute name="value" type="xs:string"/>
 		<xs:attribute name="type" type="xs:string"/>
-		<xs:attribute name="security" type="xs:integer"/>
 		<xs:anyAttribute namespace="##other" processContents="skip"/>
 	</xs:complexType>
 

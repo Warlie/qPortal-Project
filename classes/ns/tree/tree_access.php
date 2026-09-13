@@ -89,6 +89,28 @@ function event_initiated()
 *	⚠ Das Verlassen steht in finally: eine Ausnahme aus der Kette darf den Stapel
 *	nicht stehen lassen, sonst gilt die fremde Stufe weiter.
 *
+*	ENTSCHIEDEN UND GEBAUT (STW, 2026-09-13). Der Block darunter hielt die offenen Fragen
+*	fest; sie sind beantwortet:
+*
+*	1. DIE WOERTER stehen: securitylevel und sector, dieselben wie an den Knoten, dazu
+*	   hinzu="ja" fuer die Richtung des Sektors. Ein Wort je Begriff.
+*	2. DIE STUFE DARF HEBEN. STW: „Sie darf heben und muss sogar. Sonst sind wir schnell
+*	   fertig." Das ist setuid; pushClearance nimmt dafuer ein zweites Argument, der
+*	   Vorgabefall (klammern nach unten) bleibt fuer TREE_tree unveraendert.
+*	3. DER SEKTOR HAT JETZT EINE KLAMMER (pushSectors/popSectors) — mit der umgekehrten
+*	   Richtung: einengen darf jeder, hinzunehmen nur ab Stufe 10.
+*	4. BELEGT: test/Integration/tree_access.php, 8/0. Gemessen wird ueber die Abweisung
+*	   von __save_back, die die geltende Stufe nennt — so laesst sich die Klammer von
+*	   innen ablesen, ohne dass je etwas geschrieben wird.
+*
+*	OFFEN GEBLIEBEN ist nur der Punkt, der den lebenden Waechter betrifft:
+*	⚠ mayEnter() liest clearance() NICHT, sondern $_SESSION[…#securityclass] direkt. Der
+*	Stapel regelt also Befehle, nicht den Zutritt zu Knoten. Ein hebendes <access> wirkt
+*	damit auf Befehle, nicht auf die Navigation. Das haengt mit der alten Frage
+*	„Grundlinie anonym = 0 statt -1" zusammen und ist STW einzeln vorzulegen.
+*
+*	--- der urspruengliche Block, zur Herkunft ---
+*
 *	⚠⚠ MARKIERT, ZUSAMMEN ANZUSEHEN (STW, 2026-09-11) — hier ist noch nichts entschieden.
 *
 *	Der Zugang ist kaum in Verwendung (im ganzen Bestand steht KEIN einziges
@@ -156,7 +178,7 @@ function event_message_in($type,&$obj)
 		$show = $this->getdata();
 
 		$cg    = $this->get_parser()->get_context_generator();
-		$stufe = $this->param_named('security');
+		$stufe = $this->param_named('securitylevel');
 
 		/* ⚠ Dieselbe Bedingung wie in TREE_tree: "keine Angabe" heisst KEINE AUSSAGE,
 		*  nicht "Stufe 0" — sonst zoege die Klammer in pushClearance einen Zehner beim
@@ -172,7 +194,23 @@ function event_message_in($type,&$obj)
 		*  nie jemand daraufgelegt hatte — also die des umgebenden <tree>. Ein <access>
 		*  mit security haette damit nicht gesenkt, sondern die Klammer des Elternzweiges
 		*  aufgerissen. Gehoben wird hier nichts, dafuer sorgt das min() in pushClearance. */
-		if($eigen) $cg->pushClearance(intval($stufe));
+		/* SETZEN, nicht klammern: ein <access> darf die Stufe auch HEBEN (zweites
+		*  Argument). Ein <tree securitylevel> klammert weiter nach unten - ein Zweig ist
+		*  Navigation, ein Zugang ist eine Erklaerung. */
+		if($eigen) $cg->pushClearance(intval($stufe), true);
+
+		/* Der Sektor, die zweite Klammer. Erst NACH der Stufe, damit ein <access>, das
+		*  sich auf 10 hebt, danach auch hinzunehmen darf - dieselbe Reihenfolge wie bei
+		*  setuid: erst werden, dann tun.
+		*
+		*  hinzu="ja" nimmt den Sektor auf (ab Stufe 10), sonst wird geschnitten. Das
+		*  Wort steht am <param>, weil tree:param kein eigenes Verhalten hat und der
+		*  Verbraucher es liest - wie securitylevel eine Zeile darueber. */
+		$sektor = $this->param_named('sector');
+		$eigener_sektor = is_object($cg) && !is_null($sektor) && '' !== $sektor;
+
+		if($eigener_sektor)
+			$cg->pushSectors($sektor, 'ja' === strtolower((string) $this->param_named('hinzu')));
 
 		try
 		{
@@ -180,7 +218,8 @@ function event_message_in($type,&$obj)
 		}
 		finally
 		{
-			if($eigen) $cg->popClearance();
+			if($eigener_sektor) $cg->popSectors();
+			if($eigen)          $cg->popClearance();
 		}
 	}
 

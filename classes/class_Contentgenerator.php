@@ -253,6 +253,9 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	/* Die Sektoren dieses Laufs, wenn sie nicht aus der Sitzung kommen. */
 	private $sector_override = null;
 
+	/** Die Sektor-Klammer. Spiegelbild zu clearance_stack — siehe pushSectors(). */
+	private array $sector_stack = [];
+
 	/**
 	*	Die Sektoren setzen — fuer einen Schluessel, der welche mitbringt.
 	*
@@ -265,15 +268,79 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		$this->sector_override = $sektoren;
 	}
 
-	/** Die geltenden Sektoren — Schluessel vor Sitzung. */
+	/** Die geltenden Sektoren — Klammer vor Schluessel vor Sitzung. */
 	public function sectors(): string
 	{
+		if(!empty($this->sector_stack))
+			return end($this->sector_stack);
+
 		if(!is_null($this->sector_override))
 			return $this->sector_override;
 
 		$str = $_SESSION['http://www.auster-gmbh.de/surface#sector'] ?? null;
 
 		return is_null($str) ? '' : $str;
+	}
+
+	/** Semikolonform zu einer Menge — ";alpha;beta;" wie ";a;b;" wie "a;b". */
+	private static function sektor_menge(string $roh): array
+	{
+		$res = array();
+
+		foreach(explode(';', $roh) as $s)
+			if('' !== ($s = trim($s))) $res[$s] = true;
+
+		return $res;
+	}
+
+	/**
+	*	Eine Sektor-Ebene betreten. Das Gegenstueck ist popSectors().
+	*
+	*	⚠ Die Richtung ist die UMGEKEHRTE zur Stufe, und das ist kein Versehen. Bei der
+	*	Stufe klammert min() nach unten: weniger duerfen ist immer harmlos. Beim Sektor
+	*	heisst "mehr" aber nicht "mehr duerfen", sondern "mehr SEHEN" — was nicht im
+	*	Sektor liegt, existiert nicht. Deshalb:
+	*
+	*	    einengen (Schnitt)    immer erlaubt, jederzeit
+	*	    hinzunehmen (Union)   nur ab Stufe 10
+	*
+	*	STW (2026-09-13): "Es gibt zwei Sektoren mit jeweils den Modi. Mit der Auswahl des
+	*	Sektors kann man das frei geben. 10 braucht keinen Sektor, da es sich selbst einen
+	*	geben kann." Genau das ist die 10 hier: die Stufe, die nach STWs Modell "Zugang
+	*	vergeben" heisst. Damit gilt fuer Stufe und Sektor derselbe Satz — einengen darf
+	*	jeder, erweitern nur, wer Zugang vergeben darf.
+	*
+	*	⚠ Wer sich ueber <access> auf 10 gehoben hat, darf danach auch hinzunehmen. Das
+	*	ist die Folge von setuid und kein Loch daneben: wer als Eigentuemer laeuft, ist
+	*	Eigentuemer. Die Frage, WER sich heben darf, wird bei pushClearance entschieden.
+	*
+	*	@return bool  false, wenn hinzugenommen werden sollte und die Stufe nicht reicht.
+	*	              Die Ebene wird trotzdem betreten — dann eben nur mit dem Schnitt.
+	*/
+	public function pushSectors(string $sektoren, bool $hinzu = false): bool
+	{
+		global $logger_class;
+
+		$neu  = self::sektor_menge($sektoren);
+		$alt  = self::sektor_menge($this->sectors());
+		$darf = $hinzu && ($this->clearance() >= 10);
+
+		if($hinzu && !$darf && is_object($logger_class))
+			$logger_class->setAssert('Sektor NICHT hinzugenommen: "' . $sektoren
+				. '" verlangt Stufe 10, der Aufrufer hat ' . $this->clearance()
+				. ' - es bleibt beim Schnitt', 0);
+
+		$ergebnis = $darf ? ($alt + $neu) : array_intersect_key($alt, $neu);
+
+		$this->sector_stack[] = implode(';', array_keys($ergebnis));
+
+		return !$hinzu || $darf;
+	}
+
+	/** Die Sektor-Ebene wieder verlassen. */
+	public function popSectors(): void
+	{
+		array_pop($this->sector_stack);
 	}
 
 	/**
@@ -320,9 +387,41 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	*	ist erlaubt und nuetzlich: so gibt man einem untergeordneten Agenten
 	*	weniger Recht, als man selbst hat.
 	*/
-	public function pushClearance(int $stufe)
+	public function pushClearance(int $stufe, bool $setzen = false)
 	{
-		$this->clearance_stack[] = min($stufe, $this->clearance());
+		if(!$setzen)
+		{
+			$this->clearance_stack[] = min($stufe, $this->clearance());
+			return;
+		}
+
+		/* SETZEN statt klammern — die Stufe darf hier auch STEIGEN (STW, 2026-09-13:
+		*  "Sie darf heben und muss sogar. Sonst sind wir schnell fertig").
+		*
+		*  Das ist setuid: ein Dokument haelt Befehle, die auf Stufe 4 gerufen werden
+		*  duerfen, und braucht innen eine 10, um ein Dokument bereitzustellen. Das Recht
+		*  haengt am WEG, nicht am Aufrufer — wie passwd, das /etc/shadow schreibt,
+		*  obwohl ich es nicht darf.
+		*
+		*  ⚠ Nur <access> ruft so. Ein <tree securitylevel> klammert weiter nach unten
+		*  (Vorgabefall oben): ein Zweig ist Navigation, ein Zugang ist eine Erklaerung.
+		*
+		*  ⚠ Was das traegt, ist eine Aussage UEBER DAS DOKUMENT, nicht im Dokument:
+		*  dass nur Stufe 10 es schreiben darf. Lokal steht dahinter __save_back
+		*  (addSecurity 10) und das Dateisystem. Ein ueber src hereingereichtes Dokument
+		*  hat diese Zusage NICHT — STW nimmt das bewusst in Kauf ("Externe Dokumente
+		*  sind eine bloede Idee, aber ich will sie nicht verbieten"). Darum wird ein
+		*  Heben laut geloggt, statt still zu geschehen. */
+		if($stufe > $this->clearance())
+		{
+			global $logger_class;
+
+			if(is_object($logger_class))
+				$logger_class->setAssert('Stufe GEHOBEN von ' . $this->clearance()
+					. ' auf ' . $stufe, 0);
+		}
+
+		$this->clearance_stack[] = $stufe;
 	}
 
 	/** Die Ebene wieder verlassen. */

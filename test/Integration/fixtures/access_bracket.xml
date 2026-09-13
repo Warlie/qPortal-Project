@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer <access> (tree_access.php).
+
+     Gemessen wird ueber die ABWEISUNG von __save_back: der Befehl traegt als einziger
+     addSecurity(10), und die Abweisung schreibt "der Aufrufer hat <Stufe>" ins Log.
+     Damit laesst sich die Stufe INNERHALB der Klammer ablesen, ohne dass je etwas
+     geschrieben wird - die Abweisung ist das Messinstrument.
+
+     ⚠ Der Inhalt eines <access> ist eine BEFEHLSKETTE, kein Wort. Command_Object nimmt
+     JSON; ein nacktes "__save_back" laesst den Automaten an "Identifire" scheitern.
+
+     senken   <access securitylevel=0>        -> "der Aufrufer hat 0"
+     heben    0, darin 5                      -> "der Aufrufer hat 5"   belegt das HEBEN
+     -->
+<indextree xmlns="http://www.trscript.de/tree">
+
+<final name="home" value="Klammer">
+
+	<tree name="senken" value="Senken">
+		<access><param name="securitylevel" >0</param><![CDATA[{"Identifire":"*","Command":{"Name":"__save_back"}}]]></access>
+	</tree>
+
+	<!-- Das HEBEN. Der Pruefschluessel bringt eine 10 mit, also muss erst gesenkt werden,
+	     sonst ist "heben" von "klammern" nicht zu unterscheiden.
+	     ⚠ securitylevel="0" am tree senkt auf 0 und wird dabei NICHT von mayEnter
+	     abgewiesen: dort steht if($tmp = intval(...)), und 0 ist falsy. Der Zweig laeuft
+	     also, die Klammer steht aber auf 0. -->
+	<tree name="heben" value="Heben" securitylevel="0">
+		<access><param name="securitylevel" >5</param><![CDATA[{"Identifire":"*","Command":{"Name":"__save_back"}}]]></access>
+	</tree>
+
+	<!-- Der SEKTOR, und seine umgekehrte Richtung. Einengen darf jeder, hinzunehmen nur
+	     ab Stufe 10. Beobachtet wird es an der Logzeile, die das Verweigern nennt. -->
+
+	<tree name="sektor_darf" value="Sektor hinzu, mit Stufe">
+		<access><param name="sector" >alpha</param><param name="hinzu" >ja</param><![CDATA[{"Identifire":"*","Command":{"Name":"__position_stamp"}}]]></access>
+	</tree>
+
+	<tree name="sektor_darf_nicht" value="Sektor hinzu, ohne Stufe" securitylevel="0">
+		<access><param name="sector" >alpha</param><param name="hinzu" >ja</param><![CDATA[{"Identifire":"*","Command":{"Name":"__position_stamp"}}]]></access>
+	</tree>
+
+</final>
+</indextree>
