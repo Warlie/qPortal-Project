@@ -477,8 +477,11 @@ Registriert, aber im Bestand unbenutzt: `bag`, `description`, `document`, `rest`
 anonymous = 0                    ; 1 laesst den schluessellosen Weg offen
 key.pfleger.token  = <hex>       ; bin2hex(random_bytes(32)), NUR in config.ini
 key.pfleger.level  = 10
-key.pfleger.sector = alpha;beta  ; Semikolon wie in der Sitzung
+key.pfleger.sector = "alpha;beta" ; Semikolon wie in der Sitzung — MIT Anfuehrungszeichen
 ```
+
+⚠ **Der Sektor MUSS in Anführungszeichen.** In einer ini beginnt `;` einen Kommentar —
+`sector = alpha;beta` kommt als `alpha` an, und `beta` fehlt still. Gemessen.
 
 **Die Regel:** ohne Schlüssel ist der Endpunkt offen und arbeitet auf **Stufe 0**. Sobald
 **ein** Schlüssel steht, ist nichts mehr anonym — es sei denn, `anonymous = 1` lässt den
@@ -488,6 +491,14 @@ ohne einen Schlüsselbund zu führen; sie bleiben dabei auf 0.
 Ein Schlüssel **ohne `level` bekommt 0** — Rechte werden hingeschrieben, nicht stillschweigend
 geerbt. Die alte flache Form `key[] = <hex>` trägt weiter und landet ebenfalls auf 0.
 Der Name (`pfleger`) ist kein Geheimnis: er steht bei einer Abweisung im Log.
+
+⚠ **Derselbe Token in beiden Schreibweisen: die benannte gilt.** `intern_key_list()` gibt die
+benannten Einträge zuerst zurück, weil `index.php:439` den **ersten** Treffer nimmt (`break`).
+Auf die Reihenfolge in der *Datei* ist kein Verlass: `parse_ini_file` sammelt `key[]` nach
+`['key'][0]`, die Punktschlüssel expandiert `parse_ini_file_multi` erst **danach** — die flache
+Zeile steht im Array also vorn, auch wenn sie in der Datei hinten steht. Bis `2026-09-14` gewann
+darum die flache: der Schlüssel wurde angenommen, der Aufrufer stand aber auf **Stufe 0**, und
+sichtbar war das nur als `ABGEWIESEN: … verlangt Stufe 6, der Aufrufer hat 0` im Log.
 
 Ausgewertet in `index.php` (`intern_key_list()` in `mod_lib.php` bringt beide Schreibweisen
 auf eine Form); ein Treffer setzt `ContentGenerator::setClearance()` und, wenn angegeben,

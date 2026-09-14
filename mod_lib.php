@@ -138,11 +138,19 @@ function getSystemArgument($name, $list, $data)
 * Ein Schluessel OHNE level bekommt 0. Rechte werden hingeschrieben, nicht
 * stillschweigend geerbt - sonst waere ein vergessenes level ein Vollzugang.
 *
-* @return array je Eintrag ['name','token','level','sector']
+* Die BENANNTEN stehen vorn. Der Aufrufer nimmt den ersten Treffer, und steht
+* derselbe Token in beiden Schreibweisen, ist die benannte die gemeinte - die
+* flache traegt keine Stufe. Auf die Reihenfolge in der Datei ist dabei kein
+* Verlass: parse_ini_file sammelt key[] nach ['key'][0], die Punktschluessel
+* expandiert parse_ini_file_multi erst danach - die flache Zeile steht also im
+* Array vorn, auch wenn sie in der Datei hinten steht.
+*
+* @return array je Eintrag ['name','token','level','sector'], benannte zuerst
 */
 function intern_key_list($roh)
 {
-	$res = [];
+	$res   = [];
+	$flach = [];
 
 	if(!is_array($roh)) $roh = [$roh];
 
@@ -166,11 +174,11 @@ function intern_key_list($roh)
 
 		if('' === $token) continue;
 
-		$res[] = ['name' => is_string($name) ? $name : 'unbenannt',
-		          'token' => $token, 'level' => 0, 'sector' => ''];
+		$flach[] = ['name' => is_string($name) ? $name : 'unbenannt',
+		            'token' => $token, 'level' => 0, 'sector' => ''];
 	}
 
-	return $res;
+	return array_merge($res, $flach);
 }
 
 /**
