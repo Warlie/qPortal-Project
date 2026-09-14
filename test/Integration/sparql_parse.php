@@ -117,9 +117,37 @@ $roh_rows = $p->rows('PREFIX ex: <http://example.org/#> SELECT ?a WHERE { ?a ex:
 check('Parser: rohe Tabelle unaufgeloest', $roh_rows[2]['predicate'], 'ex:p');
 check('Parser: rohe Zeile nennt ihren Abschnitt', $roh_rows[2]['#section'], 'where');
 
-/* Ohne BASE und ohne bekanntes Praefix bleibt der Name stehen — man sieht, was fehlte */
-$offen = $p->parse('SELECT ?s WHERE { ?s foo:bar ?o }');
-check('Parser: unbekanntes Praefix bleibt sichtbar', $offen['where'][0]['p'], 'foo:bar');
+/* Ein unbekanntes Praefix WIRFT. Bis 2026-09-14 blieb der Name stehen, damit man
+*  im Ergebnis sieht, was fehlte — nur sieht man im Ergebnis gar nichts: die Abfrage
+*  lief gegen die Zeichenkette "foo:bar", die kein Knoten traegt, und gab still NULL
+*  Zeilen. Ein vergessenes PREFIX war von einem leeren Ergebnis nicht zu unterscheiden. */
+check('Parser: unbekanntes Praefix wirft',
+      wirft(fn() => $p->parse('SELECT ?s WHERE { ?s foo:bar ?o }')), 'ja');
+
+/* Die Meldung nennt das fehlende Praefix und die bekannten — sonst raet man wieder */
+$meldung = '';
+try { $p->parse('PREFIX tree: <http://www.trscript.de/tree#> SELECT ?s WHERE { ?s rdf:type tree:final }'); }
+catch(Throwable $e) { $meldung = $e->getMessage(); }
+check('Parser: die Meldung nennt das fehlende Praefix', false !== strpos($meldung, '"rdf:"'), true);
+check('Parser: die Meldung nennt die bekannten',       false !== strpos($meldung, 'tree:'),   true);
+
+/* Eine blanke volle URI traegt ihr Schema vor dem Doppelpunkt und geht durch */
+$blank = $p->parse('SELECT ?s WHERE { ?s http://www.trscript.de/tree#name ?o }');
+check('Parser: blanke volle URI bleibt', $blank['where'][0]['p'],
+      'http://www.trscript.de/tree#name');
+
+/* Volle URI in spitzen Klammern, an allen drei Stellen — sie ist schon aufgeloest
+*  und laeuft NICHT noch einmal durch die Praefixtabelle */
+$spitz = $p->parse('SELECT ?s WHERE { <http://example.org/#a> <http://example.org/#b> <mailto:stw@example.org> }');
+check('Parser: spitze Klammer im Subjekt',   $spitz['where'][0]['s'], 'http://example.org/#a');
+check('Parser: spitze Klammer im Praedikat', $spitz['where'][0]['p'], 'http://example.org/#b');
+check('Parser: spitze Klammer haelt mailto', $spitz['where'][0]['o'], 'mailto:stw@example.org');
+
+/* Gemischt: spitze Klammer neben erklaertem Praefix */
+$gemischt = $p->parse("PREFIX tree: <http://www.trscript.de/tree#>\n"
+                    . 'SELECT ?s WHERE { ?s <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> tree:final }');
+check('Parser: spitz und Praefix nebeneinander', $gemischt['where'][0]['o'],
+      'http://www.trscript.de/tree#final');
 
 /* Ein Name ohne Doppelpunkt haengt an der BASE, wie full_URI() es zusammensetzt */
 $mit_base = $p->parse('BASE <http://example.org/x> SELECT ?s WHERE { ?s hatWert ?o }');
@@ -145,14 +173,18 @@ check('Parser: zweiter Lauf traegt nichts mit',
 /* Was die Vorlage nicht traegt, faellt auf statt still durchzugehen */
 check('Parser: verschachtelte Klammer wirft',
       wirft(fn() => $p->parse('SELECT ?s WHERE { ?a ?b ?c . { ?d ?e ?f } }')), 'ja');
-check('Parser: volle URI in WHERE wirft',
-      wirft(fn() => $p->parse('SELECT ?s WHERE { ?s <http://x/y> ?o }')), 'ja');
 check('Parser: kleingeschriebenes select wirft',
       wirft(fn() => $p->parse('select ?s where { ?s ?p ?o }')), 'ja');
 
+/* Ein Zeichen, mit dem kein Name anfangen darf, faellt auf. Bis 2026-09-14 stand
+*  hier '<' — die spitze Klammer war in WHERE keine Kante, und die Einschraenkung
+*  war als Vertrag festgehalten. Sie traegt jetzt, darum ein anderes Zeichen. */
+check('Parser: unmoegliches Zeichen wirft',
+      wirft(fn() => $p->parse('SELECT ?s WHERE { ?s ! ?o }')), 'ja');
+
 /* Die Meldung nennt Zustand, Zeichen und Stelle — sonst sucht man im Dunkeln */
 $meldung = '';
-try { $p->parse('SELECT ?s WHERE { ?s <http://x/y> ?o }'); }
+try { $p->parse('SELECT ?s WHERE { ?s ! ?o }'); }
 catch (Exception $e) { $meldung = $e->getMessage(); }
 check('Parser: Meldung nennt den Zustand', strpos($meldung, 'space_pre') !== false, true);
 check('Parser: Meldung nennt die Stelle', strpos($meldung, 'Stelle') !== false, true);
@@ -232,10 +264,17 @@ catch (Exception $e) { $pv = 'Praedikatvariable abgewiesen'; }
 check('Auswertung: Praedikatvariable wird abgewiesen', $pv, 'Praedikatvariable abgewiesen');
 
 $kaputt = '';
-try { $sp->query('SELECT ?s WHERE { ?s <http://x/y> ?o }'); }
+try { $sp->query('SELECT ?s WHERE { ?s ! ?o }'); }
 catch (Exception $e) { $kaputt = $e->getMessage(); }
 check('Modell: kaputter Ausdruck meldet den Parser',
       strpos($kaputt, 'Mealy_Automat') !== false, true);
+
+/* Und ein vergessenes PREFIX meldet den Parser ebenso — nicht null Zeilen */
+$ohne_prefix = '';
+try { $sp->query('SELECT ?s WHERE { ?s rdf:type tree:tree }'); }
+catch (Exception $e) { $ohne_prefix = $e->getMessage(); }
+check('Modell: vergessenes PREFIX meldet sich',
+      strpos($ohne_prefix, 'unbekanntes Praefix') !== false, true);
 
 ConnectionProfile::set_collection(array());
 

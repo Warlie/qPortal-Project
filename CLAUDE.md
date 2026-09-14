@@ -324,6 +324,30 @@ fertig, haben aber keinen Aufrufer. Was beim Bau zu beachten ist:
 - Für die **Türschilder** ist es schon da: `__where_am_i scope=global` nach `__echo` fragt jeden
   geladenen Baum per SPARQL ab und listet alle `tree`/`final` mit Schild, Baum und Stempel.
 
+### Was der SPARQL-Parser als Begriff annimmt
+
+Drei Formen, an jeder der drei Tripelstellen:
+
+| | |
+|---|---|
+| `praefix:name` | braucht ein `PREFIX praefix: <…>` im selben Ausdruck |
+| `<http://…#name>` | volle URI in spitzen Klammern — geht **nicht** noch einmal durch die Präfixtabelle, darum trägt auch `<mailto:…>` |
+| `http://…#name` | blank hingeschrieben; erkannt am `://` vor dem Doppelpunkt |
+
+Dazu `?var` und, als Objekt, `"ein Literal"`. Ein Name **ohne** Doppelpunkt hängt an der
+`BASE` (mit `#`, wie `full_URI()` zusammensetzt).
+
+⚠ **Ein unbekanntes Präfix wirft** (seit `2026-09-14`). Vorher blieb es unangetastet —
+gedacht war, dass man im Ergebnis sieht, was fehlte, nur sieht man dort gar nichts: die
+Abfrage lief gegen die Zeichenkette `tree:final`, die kein Knoten trägt, und gab still
+**null Zeilen**. Ein vergessenes `PREFIX` war von einem leeren Ergebnis nicht zu
+unterscheiden. `__where_am_i` merkte nie etwas davon, weil es seinen Präfixblock selbst
+voranstellt; über `__query` schreibt den Ausdruck der Aufrufer.
+
+⚠ Die spitzen Klammern trugen in `WHERE` bis dahin **nicht** — nur in `PREFIX`/`BASE`.
+Der Automat starb an `Zustand "space_pre" hat keine Kante fuer "<"`. Das sah nach einem
+Tippfehler aus und war eine Lücke in der Grammatik.
+
 ## start ist ein Muss
 
 **Der Pfad für `start` steht im ÄUSSEREN `Attribute`** — neben `Command`, nicht darin — als

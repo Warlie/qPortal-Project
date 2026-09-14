@@ -92,6 +92,7 @@ class SPARQL_Parser
 		$m->setNodes('select', 'col', 'where', 'space', 'space_sub', 'space_pre',
 		             'space_obj', 'return', 'sub', 'pre', 'obj',
 		             'sub_txt', 'pre_txt', 'obj_txt');
+		$m->setNodes('sub_uri', 'pre_uri', 'obj_uri');
 
 		$m->setEdge('start', 'start', self::SPACE, '');
 
@@ -138,6 +139,22 @@ class SPARQL_Parser
 		$m->setStringNode('obj', 'object');
 
 		$m->setEdge('space', 'space', self::SPACE, '');
+
+		/* Volle URI in spitzen Klammern, an jeder der drei Stellen. Sie geht in ein
+		*  EIGENES Feld, wie das Literal in object_txt: was hier steht, ist schon
+		*  aufgeloest und darf nicht noch einmal durch die Praefixtabelle. Sonst
+		*  wuerde <mailto:x> als Praefix "mailto" gelesen. */
+		$m->setEdge('space_sub', 'sub_uri', '<', '');
+		$m->setStringNode('sub_uri', 'subject_uri');
+		$m->setEdge('sub_uri', 'space_pre', '>', '');
+
+		$m->setEdge('space_pre', 'pre_uri', '<', '');
+		$m->setStringNode('pre_uri', 'predicate_uri');
+		$m->setEdge('pre_uri', 'space_obj', '>', '');
+
+		$m->setEdge('space_obj', 'obj_uri', '<', '');
+		$m->setStringNode('obj_uri', 'object_uri');
+		$m->setEdge('obj_uri', 'space', '>', '');
 
 		/* Objekt als Zeichenkette */
 		$m->setEdge('space_obj', 'obj_txt', '"', '');
@@ -219,16 +236,26 @@ class SPARQL_Parser
 
 				case 'where' :
 					/* Eine Zeile ohne Subjekt ist keine Aussage, sondern die Spur einer
-					*  Klammer (deeper/shallow schreiben #section und #deep voraus). */
-					if(!isset($row['subject']))
+					*  Klammer (deeper/shallow schreiben #section und #deep voraus).
+					*  Das Subjekt steht entweder als Name da oder als <volle URI>. */
+					$subjekt = isset($row['subject_uri'])
+					           ? '<' . $row['subject_uri'] . '>'
+					           : ($row['subject'] ?? null);
+
+					if(is_null($subjekt))
 						break;
 
 					$result['where'][] = array(
-						's'    => $row['subject'],
-						'p'    => $row['predicate'] ?? '',
+						's'    => $subjekt,
+						'p'    => isset($row['predicate_uri'])
+						          ? '<' . $row['predicate_uri'] . '>'
+						          : ($row['predicate'] ?? ''),
+						/* Reihenfolge: Literal, dann volle URI, dann Name. */
 						'o'    => isset($row['object_txt'])
 						          ? '"' . $row['object_txt'] . '"'
-						          : ($row['object'] ?? ''),
+						          : (isset($row['object_uri'])
+						             ? '<' . $row['object_uri'] . '>'
+						             : ($row['object'] ?? '')),
 						'deep' => $row['#deep'] ?? 0);
 					break;
 			}
@@ -252,13 +279,27 @@ class SPARQL_Parser
 	*
 	*	rdf:type mit bekanntem Praefix wird zusammengesetzt; ein Name ohne Doppelpunkt
 	*	haengt an der BASE (mit '#', wie die Vorlage es tut — qPortal setzt seine
-	*	vollen URIs ueber full_URI() genauso zusammen). Ein unbekanntes Praefix bleibt
-	*	unangetastet, damit man im Ergebnis sieht, was gefehlt hat.
+	*	vollen URIs ueber full_URI() genauso zusammen).
+	*
+	*	Drei Formen kommen fertig an und gehen unangetastet durch:
+	*	  <voll>        in spitzen Klammern, vom Parser als eigenes Feld gelesen
+	*	  schema://…    blank hingeschriebene volle URI
+	*	  ?name         eine Variable
+	*
+	*	⚠ Ein UNBEKANNTES Praefix wirft. Bis 2026-09-14 blieb es unangetastet — die
+	*	Abfrage lief dann gegen die Zeichenkette "tree:final", die kein Knoten je
+	*	traegt, und gab still NULL Zeilen zurueck. Ein vergessenes PREFIX sah damit
+	*	aus wie ein leeres Ergebnis. Falsch-negativ verliert still einen Treffer,
+	*	darum ist das hier ein Fehler und keine Nachricht im Ergebnis.
 	*/
 	private static function resolve(string $term, string $base, array $prefixes): string
 	{
 		if($term === '' || $term[0] === '?')
 			return $term;
+
+		/* <volle URI> - schon aufgeloest, die Klammern fallen weg. */
+		if($term[0] === '<' && substr($term, -1) === '>')
+			return substr($term, 1, -1);
 
 		$colon = strpos($term, ':');
 
@@ -268,6 +309,17 @@ class SPARQL_Parser
 
 			if(isset($prefixes[$ns]))
 				return $prefixes[$ns] . substr($term, $colon + 1);
+
+			/* Eine blanke volle URI traegt ihr Schema vor dem Doppelpunkt. */
+			if(false !== strpos($term, '://'))
+				return $term;
+
+			throw new Exception('SPARQL_Parser: unbekanntes Praefix "' . $ns . ':" in "'
+			                  . $term . '". Bekannt: '
+			                  . (count($prefixes) ? implode(', ', array_map(fn($n) => $n . ':',
+			                                                array_keys($prefixes)))
+			                                      : 'keines - es steht kein PREFIX im Ausdruck')
+			                  . '. Eine volle URI geht auch in spitzen Klammern.');
 		}
 		else if($base !== '')
 			return $base . '#' . $term;
