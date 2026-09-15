@@ -54,7 +54,7 @@ return new RDF_about();
 	if($this->getRefprev()->full_URI() == 'http://www.w3.org/2002/07/owl#Ontology')
 		{
 		//echo $this->getdata() . "  \n" ;
-		 	$this->get_parser()->currentOntology($this->getdata());
+		 	$this->get_parser()->currentOntology($this->getdata()); // see xml_multitree_semantic.php
 		//setOntologyRelationship
 			$this->get_parser()->set_Namespace($this->getdata());
 		}

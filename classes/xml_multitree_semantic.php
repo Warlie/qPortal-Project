@@ -52,7 +52,7 @@ class xml_semantic extends xml_xPath_sParqle
 	
 	public function currentOntology($onto){$this->curOnt = $onto;}
 	
-	public function setOntologyRelationship($new, $basedOn)
+	public function setOntologyRelationship($new, $basedOn) // never found in use, is_a mentioned in rdf_about.php
 	{
 		$this->ontRef[] = ["base" =>  $basedOn, "new" => $new];
 	}
