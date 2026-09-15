@@ -471,7 +471,71 @@ function position_hash_map(&$stamp)
 	
 	
 	return $mult * 7 + $elem->position_hash_map($stamp);
-	
+
+}
+
+/**
+*	Der vollstaendige Positionsstempel. Der Knoten kennt seinen Baum (idx) und seinen
+*	Parser, also benennt er sich selbst so, dass go_to_stamp ihn wiederfindet (STW,
+*	2026-09-15). Bis dahin stand diese Rechnung nur im Befehl __position_stamp.
+*
+*	  relative   0000.3.0.0             gilt nur in diesem Request (Slot = Ladereihenfolge)
+*	  internal   0000.me.0.0 | prev     relativ zum Baum, auf dem der Parser steht
+*	  absolute   0000.[<datei>].0.0     ueber den Request hinaus, wenn der Baum geladen ist
+*	  external   0000.[<verschl.>].0.0  wie absolute, ohne den Pfad preiszugeben
+*
+*	⚠ Ein Stempel ist ein ORT, keine Identitaet: aendert sich das Dokument, verschiebt er
+*	sich. Die Identitaet ist rdf:about.
+*	⚠ external ohne stamp_key faellt auf absolute zurueck - ein leerer Schluessel
+*	verschluesselt nichts, und go_to_stamp entschluesselt ohne ihn gar nicht erst.
+*	⚠ Ohne Parser (zur Laufzeit angelegt) oder ohne Dateinamen gibt es keinen Baum zu
+*	nennen - dann die relative Form, soweit bekannt, statt eines Wurfs.
+*
+*	@param	string	$mode	relative | internal | absolute | external
+*	@return	string
+*/
+public function full_stamp(string $mode = 'relative'): string
+{
+	$path   = '';
+	$hash   = $this->position_hash_map($path);
+	$parser = $this->get_parser();
+	$idx    = $this->get_idx();
+
+	if(!is_object($parser) || !property_exists($parser, 'loaded_URI'))
+		return sprintf('%04d', $hash) . '.' . (is_null($idx) ? '?' : $idx) . $path;
+
+	$datei = $parser->loaded_URI[$idx] ?? null;
+
+	if($mode === 'external'
+	   && !(defined('SECURITY_STAMP_KEY') && SECURITY_STAMP_KEY !== '' && defined('SECURITY_CIPHER')))
+		$mode = 'absolute';
+
+	if(($mode === 'absolute' || $mode === 'external') && is_null($datei))
+		$mode = 'relative';
+
+	switch($mode)
+	{
+		case 'internal':
+			if($idx == $parser->idx)          $idx_part = 'me';
+			elseif($idx == $parser->idx - 1)  $idx_part = 'prev';
+			else                              $idx_part = $idx;
+			break;
+
+		case 'absolute':
+			$idx_part = '[' . $datei . ']';
+			break;
+
+		case 'external':
+			$iv       = random_bytes(openssl_cipher_iv_length(SECURITY_CIPHER));
+			$verschl  = openssl_encrypt($datei, SECURITY_CIPHER, hex2bin(SECURITY_STAMP_KEY), OPENSSL_RAW_DATA, $iv);
+			$idx_part = '[' . base64_encode($iv . $verschl) . ']';
+			break;
+
+		default:
+			$idx_part = $idx;
+	}
+
+	return sprintf('%04d', $hash) . '.' . $idx_part . $path;
 }
 
 

@@ -838,13 +838,26 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	*/
 	private function answer_shape($wert)
 	{
+		/* Ein Array darf Knoten enthalten - in einer Befehlskette bleiben sie Objekte
+		*  (__query legt seine Treffer so ins Ereignis, STW 2026-09-15). Benannt werden sie
+		*  HIER, am Rand; json_encode eines Knotens gaebe seinen ganzen Objektgraphen. */
+		if(is_array($wert))
+			return ['value' => $this->shape_inner($wert), 'serialised' => true];
+
 		if(!is_object($wert))
 			return ['value' => $wert, 'serialised' => true];
 
 		$form = ['class' => get_class($wert), 'serialised' => false];
 
 		if(method_exists($wert, 'full_URI'))       $form['uri']   = $wert->full_URI();
-		if(method_exists($wert, 'position_stamp')) $form['stamp'] = $wert->position_stamp();
+		/* Derselbe vollstaendige Stempel wie in shape_inner - go_to_stamp findet ihn wieder. */
+		if(method_exists($wert, 'full_stamp'))         $form['stamp'] = $wert->full_stamp('external');
+		elseif(method_exists($wert, 'position_stamp')) $form['stamp'] = $wert->position_stamp();
+		if(method_exists($wert, 'get_ns_attribute'))
+		{
+			$about = $wert->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#about');
+			if($about !== false && !is_null($about)) $form['about'] = $about;
+		}
 		if(method_exists($wert, 'getdata'))
 		{
 			$daten = $wert->getdata();
@@ -862,6 +875,42 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 			$form['value'] = trim((string) $wert);
 
 		return $form;
+	}
+
+	/**
+	*	Ein Wert INNERHALB eines Arrays nach aussen: Knoten als uri/name/stamp, andere
+	*	Objekte als ihre Selbstdarstellung, Arrays rekursiv. Schluessel bleiben stehen.
+	*
+	*	  uri    der TYP (full_URI) - was fuer ein Knoten
+	*	  name   tree:name, false wenn keiner
+	*	  stamp  WO: der vollstaendige Stempel, den go_to_stamp wiederfindet - mit stamp_key
+	*	         verschluesselt (external), sonst mit Dateinamen (absolute). Seit
+	*	         2026-09-15; vorher der baumlokale ".0.0", der nach der instanzweiten
+	*	         Abfrage zwei Baeume nicht mehr unterschied.
+	*	  about  WAS: rdf:about, nur wenn der Knoten eine Identitaet traegt
+	*/
+	private function shape_inner($wert)
+	{
+		if(is_array($wert))
+			return array_map([$this, 'shape_inner'], $wert);
+
+		if($wert instanceof Interface_node)
+		{
+			$form = ['uri'   => $wert->full_URI(),
+			         'name'  => $wert->get_ns_attribute('http://www.trscript.de/tree#name'),
+			         'stamp' => $wert->full_stamp('external')];
+
+			$about = $wert->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#about');
+			if($about !== false && !is_null($about))
+				$form['about'] = $about;
+
+			return $form;
+		}
+
+		if(is_object($wert))
+			return method_exists($wert, '__toString') ? (string) $wert : get_class($wert);
+
+		return $wert;
 	}
 
 	function found_relevant_page()

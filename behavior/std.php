@@ -509,33 +509,10 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 		{
 			$structur = $event->get_Result_Array();
 			$mode     = $structur['Attribute']['mode'] ?? 'relative';
-			$parser   = $node->get_parser();
-			$path     = '';
-			$hash     = $node->position_hash_map($path);
 
-			switch ($mode)
-			{
-				case 'internal':
-					$node_idx = $node->get_idx();
-					if ($node_idx == $parser->idx)           $idx_part = 'me';
-					elseif ($node_idx == $parser->idx - 1)   $idx_part = 'prev';
-					else                                      $idx_part = $node_idx;
-					break;
-				case 'absolute':
-					$idx_part = '[' . $parser->loaded_URI[$node->get_idx()] . ']';
-					break;
-				case 'external':
-					$filepath  = $parser->loaded_URI[$node->get_idx()];
-					$iv        = random_bytes(openssl_cipher_iv_length(SECURITY_CIPHER));
-					$encrypted = openssl_encrypt($filepath, SECURITY_CIPHER, hex2bin(SECURITY_STAMP_KEY), OPENSSL_RAW_DATA, $iv);
-					$idx_part  = '[' . base64_encode($iv . $encrypted) . ']';
-					break;
-				default: // relative
-					$idx_part = $node->get_idx();
-					break;
-			}
-
-			$stamp = sprintf('%04d', $hash) . '.' . $idx_part . $path;
+			/* Die Rechnung steht im Knoten (Interface_node::full_stamp) - er kennt seinen
+			*  Baum und seinen Parser. Hier wird nur noch gefragt. */
+			$stamp = $node->full_stamp((string) $mode);
 			$value = $structur['Command']['Value'];
 			if (!empty($value))
 			{
@@ -545,17 +522,12 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			return true;
 		};
 
-    $reg->addLog(fn($node, $obj, $event) => '__position_stamp: ' . (function() use ($node, $event) {
-		$mode   = $event->get_Result_Array()['Attribute']['mode'] ?? 'relative';
-		$parser = $node->get_parser();
-		$p = ''; $h = $node->position_hash_map($p);
-		$idx_part = match($mode) {
-			'internal' => ($node->get_idx() == $parser->idx ? 'me' : ($node->get_idx() == $parser->idx - 1 ? 'prev' : $node->get_idx())),
-			'absolute' => '[' . $parser->loaded_URI[$node->get_idx()] . ']',
-			default    => $node->get_idx(),
-		};
-		return sprintf('%04d', $h) . '.' . $idx_part . $p;
-	})(), 5);
+    /* Die Logzeile rechnet denselben Stempel - ausser bei external: der kaeme mit einem
+    *  neuen Zufallsvektor anders heraus als der weitergereichte, darum dort wie bisher
+    *  die relative Form. intern_walk liest den Stempel aus dieser Zeile. */
+    $reg->addLog(fn($node, $obj, $event) => '__position_stamp: '
+		. $node->full_stamp((function($m) { return $m === 'external' ? 'relative' : (string) $m; })(
+			$event->get_Result_Array()['Attribute']['mode'] ?? 'relative')), 5);
 
 	$reg->addDescription(
 		'Berechnet den Positionsstempel des Knotens und gibt ihn als Kontext an das'
@@ -1349,24 +1321,12 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 						*  query() alles, was es gibt. */
 						$roh = method_exists($m, 'solutions') ? $m->solutions() : $treffer;
 
-						$antwort['rows'] = array_map(function($zeile) use ($parser)
-							{
-								if(!is_array($zeile)) $zeile = ['wert' => $zeile];
-
-								foreach($zeile as $spalte => $wert)
-								{
-									/* answer_shape serialisiert keinen Knoten - Knoten werden
-									*  darum zu dem, was von aussen tragfaehig ist. */
-									if($wert instanceof Interface_node)
-										$zeile[$spalte] = ['uri'   => $wert->full_URI(),
-										                   'name'  => $wert->get_ns_attribute('http://www.trscript.de/tree#name'),
-										                   'stamp' => $wert->position_stamp()];
-									elseif(is_object($wert))
-										$zeile[$spalte] = (string) $wert;
-								}
-
-								return $zeile;
-							}, is_array($roh) ? $roh : []);
+						/* Die Zeilen behalten ihre OBJEKTE (STW, 2026-09-15): ein Befehl, der in
+						*  der Kette folgt, bekommt genau den Knoten, den die Abfrage fand - nicht
+						*  eine Beschreibung davon. Benannt wird erst am Rand, wo die Antwort das
+						*  System verlaesst (ContentGenerator::answer_shape). */
+						$antwort['rows'] = array_map(fn($zeile) => is_array($zeile) ? $zeile : ['wert' => $zeile],
+						                             is_array($roh) ? $roh : []);
 
 						if(method_exists($m, 'solutions') === false)
 							$antwort['note'] = 'das Modell "' . $model . '" kennt keine Zeilen'
@@ -1408,7 +1368,8 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 		. ' sonst diese Instanz). source ist hier das, was bei __where_am_i der scope waere:'
 		. ' ein Graph kann aus mehreren Quellen kommen. Ergebnis'
 		. ' {model, rows:[...]} im Ereignis; mit Value (etwa __to_owner) geht es weiter.'
-		. ' Knoten in den Zeilen erscheinen als uri/name/stamp. KEIN scope: OWL ist hier'
+		. ' Knoten bleiben in den Zeilen Objekte - ein Folgebefehl bekommt den Knoten selbst;'
+		. ' erst nach aussen erscheinen sie als uri/name/stamp. KEIN scope: OWL ist hier'
 		. ' instanzweit, es gibt nichts zu begrenzen. Stufe 6, weil der Ausdruck'
 		. ' vollstaendig von aussen kommt und bei einer fremden Gegenstelle landen kann.'
 		. ' xpath ist noch nicht gebaut und meldet das als note.');

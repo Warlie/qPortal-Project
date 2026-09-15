@@ -276,6 +276,14 @@ Präfix-Eintrag überschrieb.
 Daten `…#<QName>`. Der Baum-Stempel (`xml_multitree.php:345`) stellt `0000.<idx>` voran;
 `go_to_stamp` versteht `me` und `prev` als idx.
 
+**Den vollständigen Stempel rechnet der Knoten selbst:** `Interface_node::full_stamp($mode)`
+(seit `2026-09-15`, vorher nur im Befehl `__position_stamp`) — `relative` `0000.3.0.0` (nur in
+diesem Request), `internal` `me`/`prev`, `absolute` `0000.[<datei>].0.0`, `external` mit
+`stamp_key` verschlüsselt; ohne Schlüssel fällt `external` auf `absolute` zurück. Am Rand
+(`answer_shape`/`shape_inner`) trägt jeder Knoten `uri` (Typ), `name`, `stamp` (Ort, per
+`go_to_stamp` wieder anfahrbar) und `about` (Identität, wo es `rdf:about` gibt). ⚠ Ein Stempel ist
+ein Ort, keine Identität. ⚠ `go_to_stamp` findet `[datei]` nur unter GELADENEN Bäumen.
+
 ## Suche
 
 `seek_node()` ist die Hülle (hängt an `result_nodes`, setzt den Cursor),
@@ -314,9 +322,10 @@ fertig, haben aber keinen Aufrufer. Was beim Bau zu beachten ist:
 - Modelle: `internal`, `sparql`; `xpath` ist ein Stub.
 - `sparql.use` ist leer → `profile()` wirft; wie `__where_am_i` `use_source('qportal')` setzen oder
   die Gegenstelle als Attribut wählen lassen.
-- Rückgabe: `query()` gibt nur die Knoten der ersten Spalte, `solutions()` die Zeilen. Nach außen die
-  Zeilen, Knoten darin als `uri`/`name`/`stamp` (`answer_shape` serialisiert keinen Knoten) — über das
-  Ereignis als Zwischenspeicher, dann `__to_owner`.
+- Rückgabe: `query()` gibt nur die Knoten der ersten Spalte, `solutions()` die Zeilen. **In der Kette
+  bleiben die Knoten Objekte** (STW 09-15: ein Folgebefehl bekommt genau den Knoten); benannt als
+  `uri`/`name`/`stamp` wird erst am Rand, in `ContentGenerator::answer_shape` → `shape_inner`
+  (rekursiv durch Arrays). Über das Ereignis als Zwischenspeicher, dann `__to_owner`.
 - `collect_nodes` ist baumlokal — SPARQL aber nicht mehr: seit `2026-09-15` fragt
   `SPARQL_Tree_Query::in_every_tree` jeden geladenen Baum (Baumschleife, Parser danach zurück).
   Über alles, was `__echo` geladen hat, heißt also: nur im selben Request.
