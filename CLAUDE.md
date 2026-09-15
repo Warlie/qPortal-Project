@@ -424,6 +424,10 @@ ein eigener Befehl mit höherer Stufe. Was `mayEnter` verweigert, erscheint in k
 | `tree` | alle `tree`/`final` im Dokument des Knotens: `{scope, tree, hits:[…]}`, je Treffer mit `stamp` |
 | `global` | dasselbe über **alle geladenen Bäume** (nach `__echo` mehr), je Treffer mit `tree` und `stamp` |
 
+`stamp` ist seit `2026-09-15` der **vollständige** Stempel (`full_stamp('external')`, ohne
+`stamp_key` `absolute`) — per `__go_to_stamp` wieder anfahrbar. Sortiert wird weiter nach dem
+baumlokalen Positionsstempel (im vollen Stempel steht vorne der Hash).
+
 `show=function,delivers,…` begrenzt die Begriffe — Kurznamen (Schlüssel aus
 `PHP_Ast_Scan::DESC_KEYS`, dazu `value`, `delivers`, `columns`, `effect`) oder Präfixform
 (`desc:effect`); `uri`/`name` stehen immer drin, Unbekanntes landet in `note`. Weil der Name in die

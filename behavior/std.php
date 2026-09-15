@@ -956,8 +956,12 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 								$n = $k->get_ns_attribute($T . 'name');
 								$eintrag = ['uri' => $k->full_URI(), 'name' => ($n === false ? null : $n)];
 								if($scope === 'global') $eintrag['tree']  = $parser->indexToUri($k->get_idx());
-								if($scope !== 'local')  $eintrag['stamp'] = $k->position_stamp();
-								$treffer[spl_object_id($k)] = ['i' => $k->get_idx(), 'e' => $eintrag];
+								/* Der vollstaendige Stempel (Interface_node::full_stamp) - go_to_stamp
+								*  findet ihn wieder, auch ueber Baeume hinweg. Sortiert wird aber nach
+								*  'pos': vorne im vollen Stempel steht der Hash, und verschluesselt
+								*  waere die Reihenfolge Zufall. */
+								if($scope !== 'local')  $eintrag['stamp'] = $k->full_stamp('external');
+								$treffer[spl_object_id($k)] = ['i' => $k->get_idx(), 'pos' => $k->position_stamp(), 'e' => $eintrag];
 							}
 						}
 
@@ -977,7 +981,7 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			}
 
 			/* Dokumentreihenfolge: nach Baum, dann nach Stempel */
-			usort($treffer, fn($x, $y) => ($x['i'] <=> $y['i']) ?: strnatcmp($x['e']['stamp'] ?? '', $y['e']['stamp'] ?? ''));
+			usort($treffer, fn($x, $y) => ($x['i'] <=> $y['i']) ?: strnatcmp($x['pos'], $y['pos']));
 			$hits = array_map(fn($t) => $t['e'], $treffer);
 
 			if($scope === 'local')
