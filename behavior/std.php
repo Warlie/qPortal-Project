@@ -875,8 +875,9 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 	*    hat (delivers, columns, effect) - die Ausgaben stehen nicht in DESC_KEYS.
 	*  - ?s wird mit abgefragt, und nur die Zeilen mit GENAU diesem Knoten zaehlen: ein
 	*    blanker Name ist ein Pfadsegment, er darf anderswo im Dokument wieder stehen.
-	*  - Gefragt wird im Baum des Knotens, nicht im aktuellen (nach einem __echo liegen
-	*    mehrere Baeume im Parser); danach steht der Parser wieder, wo er war.
+	*  - Gefragt wird EINMAL ueber alle geladenen Baeume (SPARQL ist instanzweit, seit
+	*    2026-09-15); scope filtert danach nach dem Baum des Treffers (get_idx). Vorher
+	*    lief hier eine Schleife mit change_idx je Baum.
 	*  - Ergebnis ins EREIGNIS (set_context) - der Zwischenspeicher. Mit Value geht es
 	*    auf demselben Ereignis weiter, __to_owner gibt es dann nach aussen. Ohne Value
 	*    liegt es dort fuer den naechsten Befehl einer Liste.
@@ -957,58 +958,49 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 				         . "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n"
 				         . "PREFIX desc: <" . PHP_Ast_Scan::NS_DESC . "#>\n"
 				         . "PREFIX dcterms: <" . PHP_Ast_Scan::NS_DCTERMS . "#>\n";
-				$zurueck = $parser->cur_idx();
-
 				try
 				{
 					$m = $parser->seek_by_model('sparql');
 					if($m->source() === '')
 						$m->use_source('qportal');
 
-					foreach($baeume as $i)
+					/* EINE Abfrage ueber alle geladenen Baeume - SPARQL fragt instanzweit
+					*  (SPARQL_Tree_Query::in_every_tree). Welcher Baum zaehlt, entscheidet
+					*  danach der Baum des Treffers: $baeume ist ein Filter, keine Schleife. */
+					foreach($sorten as $sorte)
 					{
-						/* Gefragt wird im jeweiligen Baum - nach einem __echo liegen mehrere
-						*  im Parser; danach steht er wieder, wo er war. */
-						$parser->change_idx($i);
-
-						foreach($sorten as $sorte)
+						/* Erst die Knoten, dann die Begriffe - sonst fiele einer ohne
+						*  jeden Schildbegriff still heraus. */
+						$m->query($praefix . 'SELECT ?s WHERE { ?s rdf:type ' . $sorte . ' }');
+						foreach($m->solutions() as $z)
 						{
-							/* Erst die Knoten, dann die Begriffe - sonst fiele einer ohne
-							*  jeden Schildbegriff still heraus. */
-							$m->query($praefix . 'SELECT ?s WHERE { ?s rdf:type ' . $sorte . ' }');
+							$k = $z['?s'] ?? null;
+							if(!is_object($k) || !in_array($k->get_idx(), $baeume)
+							   || ($scope === 'local' && $k !== $node) || !$darf($k))
+								continue;
+
+							if(!isset($treffer[spl_object_id($k)]))
+							{
+								$n = $k->get_ns_attribute($T . 'name');
+								$eintrag = ['uri' => $k->full_URI(), 'name' => ($n === false ? null : $n)];
+								if($scope === 'global') $eintrag['tree']  = $parser->indexToUri($k->get_idx());
+								if($scope !== 'local')  $eintrag['stamp'] = $k->position_stamp();
+								$treffer[spl_object_id($k)] = ['i' => $k->get_idx(), 'e' => $eintrag];
+							}
+						}
+
+						foreach($begriffe as $b)
+						{
+							$m->query($praefix . 'SELECT ?s ?wert WHERE { ?s rdf:type ' . $sorte . ' . ?s ' . $b . ' ?wert }');
 							foreach($m->solutions() as $z)
-							{
-								$k = $z['?s'] ?? null;
-								if(!is_object($k) || ($scope === 'local' && $k !== $node) || !$darf($k))
-									continue;
-
-								if(!isset($treffer[spl_object_id($k)]))
-								{
-									$n = $k->get_ns_attribute($T . 'name');
-									$eintrag = ['uri' => $k->full_URI(), 'name' => ($n === false ? null : $n)];
-									if($scope === 'global') $eintrag['tree']  = $parser->indexToUri($i);
-									if($scope !== 'local')  $eintrag['stamp'] = $k->position_stamp();
-									$treffer[spl_object_id($k)] = ['i' => $i, 'e' => $eintrag];
-								}
-							}
-
-							foreach($begriffe as $b)
-							{
-								$m->query($praefix . 'SELECT ?s ?wert WHERE { ?s rdf:type ' . $sorte . ' . ?s ' . $b . ' ?wert }');
-								foreach($m->solutions() as $z)
-									if(is_object($z['?s'] ?? null) && isset($treffer[spl_object_id($z['?s'])]))
-										$treffer[spl_object_id($z['?s'])]['e'][$b] = $z['?wert'];
-							}
+								if(is_object($z['?s'] ?? null) && isset($treffer[spl_object_id($z['?s'])]))
+									$treffer[spl_object_id($z['?s'])]['e'][$b] = $z['?wert'];
 						}
 					}
 				}
 				catch(Throwable $ex)
 				{
 					$notes[] = 'Fehler: ' . $ex->getMessage();
-				}
-				finally
-				{
-					$parser->change_idx($zurueck);
 				}
 			}
 

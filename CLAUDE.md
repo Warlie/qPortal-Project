@@ -25,8 +25,8 @@ php -d error_reporting=E_ERROR test/Integration/tree_passthrough.php   # 7/0
 php -d error_reporting=E_ERROR test/Integration/tree_echo.php          # 21/0
 php -d error_reporting=E_ERROR test/Integration/tree_where.php         # 31/0
 php -d error_reporting=E_ERROR test/Integration/logger_listen.php      # 18/0 (Teil 1 ohne Server)
-php -d error_reporting=E_ERROR test/Integration/tree_call.php          # 12/0
-php -d error_reporting=E_ERROR test/Integration/schema_check.php       # 14/0 (Bestand: 512 gueltig / 60 nicht)
+php -d error_reporting=E_ERROR test/Integration/tree_call.php          # 16/0
+php -d error_reporting=E_ERROR test/Integration/schema_check.php       # 20/0 (Bestand: 512 gueltig / 60 nicht)
 ```
 
 ```bash
@@ -317,8 +317,9 @@ fertig, haben aber keinen Aufrufer. Was beim Bau zu beachten ist:
 - Rückgabe: `query()` gibt nur die Knoten der ersten Spalte, `solutions()` die Zeilen. Nach außen die
   Zeilen, Knoten darin als `uri`/`name`/`stamp` (`answer_shape` serialisiert keinen Knoten) — über das
   Ereignis als Zwischenspeicher, dann `__to_owner`.
-- `collect_nodes` ist baumlokal: über alles, was `__echo` geladen hat, mit derselben Baumschleife und
-  demselben Zurückstellen des Parsers wie `__where_am_i scope=global`. Nur im selben Request.
+- `collect_nodes` ist baumlokal — SPARQL aber nicht mehr: seit `2026-09-15` fragt
+  `SPARQL_Tree_Query::in_every_tree` jeden geladenen Baum (Baumschleife, Parser danach zurück).
+  Über alles, was `__echo` geladen hat, heißt also: nur im selben Request.
 - Stufe: `__query` sieht auch die Umsetzung der Prozesse → `addSecurity` auf eine höhere Stufe (der
   „andere Befehl“ für alles, was nicht `tree`/`final` ist).
 - Für die **Türschilder** ist es schon da: `__where_am_i scope=global` nach `__echo` fragt jeden
@@ -386,8 +387,16 @@ jeder Knoten bekommt den Befehl selbst; nach unten **ohne** `Value`, der Eingang
 zwischen Dokumenten. Nur `tree#src`, nur Dateien (Adresse → Logzeile), kein Laden hinter
 `mayEnter` = nein. Doppelt geladen wird nicht (`xml::load()` gibt den vorhandenen Baum zurück;
 gemessen: depth 5 über einen Kreis = 5 Ladevorgänge, 2 Bäume). Log Stufe 5 nur für
-`src`-Ereignisse. ⚠ Danach liegen die Bäume im Parser — **SPARQL fragt aber nur den aktuellen
-Baum** (`collect_nodes` ist baumlokal, kein `FROM`); das ist der nächste Schritt.
+`src`-Ereignisse. Danach liegen die Bäume im Parser, und **SPARQL fragt sie alle** (seit
+`2026-09-15`, `SPARQL_Tree_Query::in_every_tree`): Struktur ist baumlokal, Bedeutung ist global.
+⚠ **Eine Abfrage hat keinen Scope** (STW): `__query` fragt die Bedeutung direkt, und das Framework
+ist global. `__where_am_i` dagegen ist eine **Anwendung auf `tree`** — sein `scope` gehört der
+Anwendung, nicht der Abfrage.
+
+⚠ **`rdf:type` ist EIN Schritt `link_to_class`** (STW 09-15): der Tag IST die Aussage, implizit,
+nie ins Dokument. Die ganze Prototyp-Kette (`is_Node`) ist **nicht** `rdf:type` — Prototyping legt
+Instanz-von und Unterklasse-von zusammen, RDF nicht. `<rdf:type rdf:resource>`-Kinder im Bestand
+sind Altlast (`.claude/TODO.md`).
 
 **Das Ereignis ist der Zwischenspeicher.** Ein Befehl legt ein Ergebnis per `set_context` ins
 `EventObject`, der nächste liest es mit `get_context()` (so schon `__set_data`, und
@@ -412,8 +421,9 @@ ein eigener Befehl mit höherer Stufe. Was `mayEnter` verweigert, erscheint in k
 Abfrage eingesetzt wird, gilt nur `präfix:name`.
 
 Gefragt wird **per SPARQL** (`?s rdf:type tree:tree|tree:final`, dann je Begriff eine kleine
-Abfrage — kein `OPTIONAL`, keine Prädikatvariable), im jeweiligen Baum (`change_idx` hin und
-zurück). Begriffe ohne `show`: `tree:value`, die Zielwerte aus `DESC_KEYS` und
+Abfrage — kein `OPTIONAL`, keine Prädikatvariable), **einmal über alle geladenen Bäume**;
+`scope` filtert danach nach dem Baum des Treffers (bis `2026-09-15` eine Schleife mit
+`change_idx` je Baum). Begriffe ohne `show`: `tree:value`, die Zielwerte aus `DESC_KEYS` und
 `desc:delivers`/`desc:columns`/`desc:effect` — die Ausgaben stehen **nicht** in `DESC_KEYS`.
 `sparql.use` ist leer → `use_source('qportal')`. Nach außen:
 

@@ -7,6 +7,11 @@
 *	die Tripel zu Loesungen. Getrennt gehalten, weil das zwei verschiedene Fragen sind:
 *	die Sprache ist ueberall dieselbe, der Baum ist diese Instanz.
 *
+*	Gefragt wird ueber ALLE geladenen Baeume (in_every_tree), nicht nur den, auf dem
+*	der Parser steht: die Bedeutung ist instanzweit, eine Abfrage hat keinen Scope.
+*	Welcher Baum einen Knoten traegt, ist Struktur - das geht eine Anwendung auf tree
+*	an (__where_am_i), nicht die Abfrage.
+*
 *	== Was ein Tripel im Baum ist ==
 *
 *	Nichts wird umgewandelt — der geparste Baum IST die Tripelmenge:
@@ -194,10 +199,14 @@ class SPARQL_Tree_Query
 		{
 			if(self::is_var($t['o']))
 				throw new Exception('SPARQL_Tree_Query: "?s rdf:type ?typ" ohne weitere '
-				                  . 'Einschraenkung waere der ganze Baum. Nenne die Sorte '
+				                  . 'Einschraenkung waeren alle geladenen Baeume. Nenne die Sorte '
 				                  . 'oder binde ?s vorher.');
 
-			foreach($this->tree->collect_nodes($t['o']) as $node)
+			/* rdf:type ist EIN Schritt link_to_class, und der Tag ist die Aussage:
+			*  full_URI() des Knotens ist die IRI seines Prototyps. Die ganze Kette
+			*  (is_Node) ist nicht rdf:type - Prototyping legt Instanz-von und
+			*  Unterklasse-von zusammen, RDF tut das nicht. */
+			foreach($this->in_every_tree(fn() => $this->tree->collect_nodes($t['o'])) as $node)
 				$res[] = array('node' => $node, 'value' => $t['o']);
 
 			return $res;
@@ -206,7 +215,8 @@ class SPARQL_Tree_Query
 		/* Ueber die ATTRIBUTKNOTEN: sie stehen seit 23.08. selbst in der
 		*  Lookup-Tabelle, der Weg zum Traeger ist getRefprev(). Damit kostet
 		*  "wer hat dieses Praedikat" einen Tabellenzugriff statt eines Durchlaufs. */
-		$attribute = $this->tree->collect_nodes($t['p'], null, null, null, -1, ATTRIBUTE);
+		$attribute = $this->in_every_tree(
+			fn() => $this->tree->collect_nodes($t['p'], null, null, null, -1, ATTRIBUTE));
 		$fest      = self::is_var($t['o']) ? null : self::plain($t['o']);
 
 		foreach($attribute as $attr)
@@ -222,6 +232,45 @@ class SPARQL_Tree_Query
 				continue;
 
 			$res[] = array('node' => $traeger, 'value' => $wert);
+		}
+
+		return $res;
+	}
+
+	/**
+	*	Dieselbe baumlokale Suche in JEDEM geladenen Baum.
+	*
+	*	Struktur ist baumlokal, Bedeutung ist global: collect_nodes ist ein Werkzeug der
+	*	Struktur (looking_index ist nach [$idx] geschluesselt), die Frage ist eine der
+	*	Bedeutung. Darum steht die Baumschleife hier und nicht in collect_nodes. Der
+	*	Parser steht danach wieder, wo er stand - auch wenn es wirft.
+	*
+	*	Ein entladener Baum liefert nichts: delete_index raeumt seine Tabellen
+	*	(drop_index_of), und Slots werden nicht wiederverwendet.
+	*
+	*	@param	callable	$suche	die Suche im aktuellen Baum, gibt Knoten zurueck
+	*	@return	array
+	*/
+	private function in_every_tree(callable $suche): array
+	{
+		$res     = array();
+		$zurueck = $this->tree->cur_idx();
+
+		try
+		{
+			for($i = 0; $i <= $this->tree->max_idx(); $i++)
+			{
+				$this->tree->change_idx($i);
+
+				foreach($suche() as $knoten)
+					$res[] = $knoten;
+			}
+		}
+		finally
+		{
+			/* Ohne setNewTree steht cur_idx auf null - change_idx wuerfe darauf. */
+			if(is_numeric($zurueck))
+				$this->tree->change_idx($zurueck);
 		}
 
 		return $res;

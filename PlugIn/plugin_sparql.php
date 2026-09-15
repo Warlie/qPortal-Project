@@ -62,11 +62,10 @@ class SPARQL extends plugin
 	private bool  $gefragt = false;
 
 	/**
-	*	⚠ System.CurRef ist noetig, nicht Zierde: es gibt dem Plugin seinen KNOTEN, und
-	*	daraus den Baum, in dem es steht. Ohne das fragt eine baumlokale Abfrage den
-	*	falschen Baum - gemessen stand der Parser beim Ausfuehren eines <program> auf
-	*	@registry_surface_system, weil der PEDL-Dispatch gerade dort durchgelaufen war.
-	*	Weder das Dokument noch die Ausgabe.
+	*	System.CurRef gibt dem Plugin seinen KNOTEN. Fuer die Abfrage braucht es ihn nicht
+	*	mehr - SPARQL fragt seit 2026-09-15 ueber alle geladenen Baeume -, er steht noch
+	*	im Log, damit man sieht, von wo gefragt wurde. Frueher waehlte er den Baum: der
+	*	Parser stand beim Ausfuehren eines <program> auf @registry_surface_system.
 	*/
 	function __construct(/* System.Parser */ &$back, /* System.CurRef */ &$cur = null)
 	{
@@ -92,6 +91,8 @@ class SPARQL extends plugin
 	*/
 	public function query($statement)
 	{
+		global $logger_class;
+
 		$m = $this->modell();
 
 		/* Ohne gewaehlte Quelle die eigene Instanz - sparql.use ist im Bestand leer,
@@ -99,22 +100,40 @@ class SPARQL extends plugin
 		if(method_exists($m, 'source') && $m->source() === '')
 			$m->use_source('qportal');
 
-		/* ⚠ In MEINEM Baum fragen, nicht in dem, auf den der Parser gerade zeigt.
-		*  collect_nodes ist baumlokal, und beim Ausfuehren eines <program> steht der
-		*  Parser woanders (gemessen: auf dem Registrierungsbogen). Dieselbe Klammer wie
-		*  in __where_am_i: hin, fragen, zurueck - auch wenn es wirft. */
-		$zurueck = $this->back->cur_idx();
-		$ziel    = is_object($this->treepos) ? $this->treepos->get_idx() : $zurueck;
+		/* Gefragt werden ALLE geladenen Baeume (SPARQL_Tree_Query::in_every_tree) - auf
+		*  welchem der Parser gerade steht, spielt keine Rolle mehr.
+		*
+		*  ⚠ Stufe 6, damit man SIEHT, welche Baeume geladen waren. Eine leere Antwort
+		*  sieht sonst genauso aus wie ein fehlender Baum, und ein Wurf aus einem Plugin
+		*  wird nirgends geloggt - die Seite rendert trotzdem. Genau daran ist die
+		*  Attrappe haengengeblieben. */
+		if($logger_class)
+		{
+			$baeume = array();
+
+			for($i = 0; $i <= $this->back->max_idx(); $i++)
+				$baeume[] = $i . '=' . basename((string) $this->back->indexToUri($i));
+
+			$logger_class->setAssert('SPARQL.query: gefragt werden alle geladenen Baeume'
+			                       . ' (Parser auf idx ' . $this->back->cur_idx()
+			                       . ', CurRef ' . (is_object($this->treepos)
+			                           ? $this->treepos->full_URI() . ' in idx ' . $this->treepos->get_idx()
+			                           : 'fehlt') . ')'
+			                       . ' | Baeume: ' . implode(' ', $baeume), 6);
+		}
 
 		try
 		{
-			$this->back->change_idx($ziel);
-
 			$treffer = $m->query((string) $statement);
 		}
-		finally
+		catch(Throwable $e)
 		{
-			$this->back->change_idx($zurueck);
+			/* Ein Wurf geht weiter nach oben, aber er hinterlaesst eine Spur. Ohne sie
+			*  ist ein kaputter Ausdruck von einem leeren Ergebnis nicht zu unterscheiden. */
+			if($logger_class)
+				$logger_class->setAssert('SPARQL.query WIRFT: ' . $e->getMessage(), 6);
+
+			throw $e;
 		}
 
 		/* Zeilen kann nur, wer solutions() hat - das Interface Searching_Model verlangt
@@ -124,6 +143,12 @@ class SPARQL extends plugin
 		$this->zeilen  = is_array($roh) ? array_values($roh) : array();
 		$this->pos     = 0;
 		$this->gefragt = true;
+
+		if($logger_class)
+			$logger_class->setAssert('SPARQL.query: ' . count($this->zeilen) . ' Zeile(n)'
+			                       . ($this->zeilen
+			                           ? ', Spalten ' . implode(',', array_keys($this->zeilen[0]))
+			                           : ''), 6);
 
 		return $this;
 	}

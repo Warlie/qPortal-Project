@@ -276,6 +276,38 @@ catch (Exception $e) { $ohne_prefix = $e->getMessage(); }
 check('Modell: vergessenes PREFIX meldet sich',
       strpos($ohne_prefix, 'unbekanntes Praefix') !== false, true);
 
+/* Eine Abfrage hat keinen Scope: sie fragt ALLE geladenen Baeume, gleich, auf welchem der
+*  Parser steht (SPARQL_Tree_Query::in_every_tree). Struktur ist baumlokal, Bedeutung ist
+*  global. Dazu ein zweiter Baum - mit einem anonymen tree, der muss mitzaehlen. */
+$zweit = <<<XML
+<?xml version='1.0' encoding="UTF-8"?>
+<indextree xmlns="http://www.trscript.de/tree">
+	<final name="zweit">
+		<tree name="drueben" src="d.xml" />
+		<tree value="anonym" />
+	</final>
+</indextree>
+XML;
+
+$baum->setNewTree('zweit');
+$baum->load_Stream($zweit, 0, 'XML');
+
+$alle_tree = $PX . 'SELECT ?t WHERE { ?t rdf:type tree:tree }';
+
+$baum->change_idx(0);
+$sp2->query($alle_tree);
+check('Zwei Baeume: Parser auf dem ersten', count($sp2->solutions()), 5);
+
+$baum->change_idx(1);
+$sp2->query($alle_tree);
+check('Zwei Baeume: Parser auf dem zweiten', count($sp2->solutions()), 5);
+check('Zwei Baeume: Parser steht danach, wo er stand', $baum->cur_idx(), 1);
+
+$sp2->query($PX . 'SELECT ?name WHERE { ?t tree:src ?src . ?t tree:name ?name }');
+$namen = array_column($sp2->solutions(), '?name');
+sort($namen);
+check('Zwei Baeume: Attribut aus beiden', implode(',', $namen), 'drueben,home,login,offen');
+
 ConnectionProfile::set_collection(array());
 
 /* ------------------------------------------------------------------- Ergebnis */
