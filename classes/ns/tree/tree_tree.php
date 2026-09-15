@@ -61,9 +61,18 @@ function &new_Instance()
 {
                                 
 				$obj = $this->get_Instance();
-				
+
 				$obj->link_to_class = &$this;
-				
+
+				/* Der Prototyp kennt seine Instanzen - wie in Interface_node::new_Instance().
+				*  Die Prototypen sind global (namespace_frameworks), also ist das die Antwort
+				*  auf "welche Knoten sind tree:tree?" ueber ALLE geladenen Baeume, die
+				*  anonymen eingeschlossen. Ausgetragen wird in removeNode().
+				*  ⚠ is_Class wird hier bewusst NICHT gesetzt: ein tree, der per rdf:about
+				*  oder tree:name praegt, ist dabei selbst Vorlage - mit is_Class reichte er
+				*  *?parse_complete_classes nicht mehr weiter (Interface_ns::event, !is_Class). */
+				$this->link_to_instance[] = &$obj;
+
 				return $obj;
 }
 
