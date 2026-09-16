@@ -453,51 +453,6 @@ if (curl_errno($ch)) {
     
     // --- NEU: Methoden zum Abrufen der Antwort ---
     
-    private function x_www_form_urlencoded(array $body)
-    {
-    	$url = "https://72.61.177.90/testme/query";
-$user = "admin";
-$pass = "MHdh3E3EhmH";
-
-// Die Daten müssen als String vorliegen, nicht als Array!
-$queryData = http_build_query($body);
-/*
-$queryData = http_build_query([
-    'query' => 'SELECT * WHERE { ?s ?p ?o } LIMIT 5',
-    'output' => 'json'
-]);
-*/
-//var_dump($this->requestHeaders);
-$ch = curl_init($url);
-
-curl_setopt($ch, CURLOPT_POST, true);
-curl_setopt($ch, CURLOPT_POSTFIELDS, $queryData); // Wichtig: String-Übergabe
-curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-curl_setopt($ch, CURLOPT_USERPWD, "$user:$pass");
-
-// Wegen des Snake-Oil-Zertifikats auf Umbreon:
-curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
-
-// Die entscheidenden Header
-curl_setopt($ch, CURLOPT_HTTPHEADER, [
-    'Content-Type: application/x-www-form-urlencoded',
-    'Accept: application/sparql-results+json',
-    'Expect:' // Verhindert den 100-continue Error
-]);
-        // Request ausführen
-        $this->rawResponseBody = curl_exec($ch);
-
-        // Informationen sammeln (Status Code etc.)
-        $this->responseInfo = curl_getinfo($ch);
-        
-if (curl_errno($ch)) {
-    echo "cURL Fehler: " . curl_error($ch);
-}
-
-    	return $this;
-    }
-
     /**
      * Gibt den rohen, unverarbeiteten Body der letzten Antwort zurück.
      *
