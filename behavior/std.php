@@ -130,12 +130,16 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 				if (false === $ns_qname)
 				{
 					$attrib_obj = $node->get_parser()->get_Object_of_Namespace($obj->get_requester()->get_Main_NS() . '#' . $key);
+					if (!is_null($attrib_parser = $node->get_parser()))
+						$attrib_obj->set_parser($attrib_parser);
 					$attrib_obj->setdata($value, 0);
 					$new_node->attribute($key, $attrib_obj);
 				}
 				else
 				{
 					$attrib_obj = $node->get_parser()->get_Object_of_Namespace($key);
+					if (!is_null($attrib_parser = $node->get_parser()))
+						$attrib_obj->set_parser($attrib_parser);
 					$att_prefix  = $node->get_parser()->get_Prefix(substr($key, 0, $ns_qname), $node->get_idx());
 					$att_postfix = substr($key, $ns_qname + 1);
 					$attrib_obj->namespace = substr($key, 0, $ns_qname);
@@ -162,6 +166,17 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			$cg = $node->get_contentGen();
 			if (!is_null($cg))
 				$new_node->set_contentGen($cg);
+
+			/* Dasselbe fuer den Parser: beim Parsen setzt ihn der Baum, ein zur
+			*  Laufzeit angelegter Knoten hatte keinen. Jeder Befehl, der auf dem
+			*  neuen Knoten get_parser() braucht - __echo, __position_stamp,
+			*  __save_back -, starb daran (gemessen: __echo auf einem frisch
+			*  angelegten tree, "Call to a member function cur_idx() on null").
+			*  Die Attributknoten bekommen ihn schon beim Anlegen, weiter oben -
+			*  wie in Interface_ns.php:792. */
+			$parser = $node->get_parser();
+			if (!is_null($parser))
+				$new_node->set_parser($parser);
 
 			// Optional text content
 			if (!is_null($text))
@@ -416,7 +431,14 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			$node->get_parser()->save_file($format, false, $file ?: false);
 			return true;
 		};
-	$reg->addLog(fn($node, $obj, $event) => '__save_back: ' . $node->get_parser()->loaded_URI[$node->get_parser()->idx], 3);
+	/* Mit file wird KOPIERT - dann muss das Log das Ziel nennen, sonst steht dort die
+	*  Vorlage, obwohl sie gar nicht angefasst wurde. */
+	$reg->addLog(function($node, $obj, $event)
+		{
+			$quelle = $node->get_parser()->loaded_URI[$node->get_parser()->idx];
+			$ziel   = $event->get_Result_Array()['Command']['Attribute']['file'] ?? '';
+			return '__save_back: ' . ('' !== (string) $ziel ? $quelle . ' -> ' . $ziel : $quelle);
+		}, 3);
 	/* Schreiben ist die magische Stufe: ab da raeumt man sich Stufen selbst weg.
 	*  STW: "muss einfach eine 10 sein und beliebig schreiben koennen." */
 	$reg->addSecurity(10);
@@ -834,6 +856,100 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			                           . ' src herunter. Leer = 1, 0 = durchlaufen ohne zu laden.'
 			                           . ' Zugleich die Grenze gegen Kreise zwischen Dokumenten.',
 			            'required'    => false]
+		]);
+
+	/* __load - ein Dokument laden, OHNE es zu starten, und Value auf seiner Wurzel feuern.
+	*
+	*  Bisher ging Laden nur ueber __echo, und das laedt nur, was ein tree per src nennt:
+	*  wer ein beliebiges Dokument bearbeiten wollte, musste erst einen tree mit src in
+	*  den Baum haengen, __echo darauf feuern und dann per __go_to_stamp hinueberspringen -
+	*  mit einem Stempel, dessen Dateiteil exakt so geschrieben sein muss, wie geladen
+	*  wurde. __load nimmt den Pfad und steht danach selbst auf der Wurzel.
+	*
+	*  - Pfad wie bei __echo ueber resolve_path, also mit %ROOT_DIR%/%PROGRAM_DIR%; der
+	*    Ladeschluessel ist dieselbe Zeichenkette - ein Dokument, das __echo schon geladen
+	*    hat, wird nicht zweimal geladen, sondern wiedergefunden.
+	*  - Nur Dateien UNTERHALB der Installation (ROOT_DIR). Anders als bei __echo nennt
+	*    hier der AUFRUFER den Pfad, nicht ein Dokument - ohne Grenze liesse sich jede
+	*    XML-Datei der Maschine in den Parser ziehen.
+	*  - Stufe 6 wie __query: __load umgeht mayEnter, weil kein tree dazwischensteht, und
+	*    zeigt damit auch die Umsetzung eines Prozesses, nicht nur sein Tuerschild.
+	*  - Nach Value steht der Parser wieder im Baum, in dem der Befehl ankam. Waehrend
+	*    Value steht er im geladenen - __save_back darin schreibt also DIESES Dokument.
+	*  - Die Wurzel kommt ins Ereignis (set_node), wie bei __go_to_stamp. */
+	$reg->__load = function($node, $obj, $event)
+		{
+			global $logger_class;
+
+			$structur = $event->get_Result_Array();
+			$attr     = $structur['Command']['Attribute'] ?? [];
+			$datei    = trim((string) ($attr['file'] ?? ''));
+			$value    = $structur['Command']['Value'] ?? null;
+
+			if('' === $datei)
+				throw new Exception('__load: file fehlt');
+
+			$pfad = resolve_path($datei);
+			$echt = realpath($pfad);
+
+			if(false === $echt || !is_file($echt))
+				throw new Exception('__load: "' . $datei . '" nicht gefunden');
+
+			$grenze = realpath(ROOT_DIR);
+			if(false === $grenze || 0 !== strpos($echt, rtrim($grenze, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR))
+				throw new Exception('__load: "' . $datei . '" liegt ausserhalb der Installation');
+
+			$parser  = $node->get_parser();
+			if(is_null($parser))
+				throw new Exception('__load: der Knoten hat keinen Parser');
+
+			$zurueck = $parser->cur_idx();
+
+			try
+			{
+				$idx    = $parser->load($pfad, 0);
+				/* War der Baum schon geladen, steht sein Zeiger womoeglich mitten drin -
+				*  wie bei __echo merken und hinterher zurueckstellen. */
+				$vorher = &$parser->show_xmlelement();
+				$parser->set_first_node();
+				/* OHNE & - wie __echo. Eine Referenz haenge am Zeiger des Parsers, und der
+				*  Knoten im Ereignis zeigte nach dem Zurueckstellen woandershin. */
+				$wurzel = $parser->show_xmlelement();
+
+				$logger_class->setAssert('__load: ' . $pfad . ' (Baum ' . $idx . ')', 5);
+
+				if(is_object($wurzel))
+				{
+					$obj->set_node($wurzel);
+					if(!empty($value))
+						$wurzel->hold_messages($value, $obj);
+				}
+
+				$parser->change_idx($idx);
+				if(is_object($vorher)) $parser->set_xmlelement($vorher);
+			}
+			finally
+			{
+				$parser->change_idx($zurueck);
+			}
+
+			return true;
+		};
+
+	$reg->addLog(fn($node, $obj, $event) => '__load: '
+		. ($event->get_Result_Array()['Command']['Attribute']['file'] ?? '?'), 6);
+	$reg->addSecurity(6);
+
+	$reg->addDescription(
+		'Laedt ein Dokument, ohne es zu starten, und feuert Value auf seiner Wurzel. Waehrend'
+		. ' Value steht der Parser im geladenen Dokument - __add_node baut dort, __save_back'
+		. ' schreibt dieses Dokument (mit file auch woandershin). Danach steht der Parser wieder'
+		. ' im Ausgangsbaum. Ein schon geladenes Dokument wird wiedergefunden, nicht neu geladen.'
+		. ' Nur Dateien unterhalb der Installation.',
+		[
+			'file' => ['description' => 'Pfad des Dokuments; %ROOT_DIR% und %PROGRAM_DIR% werden'
+			                          . ' aufgeloest.',
+			           'required'    => true]
 		]);
 
 	/* __where_am_i - das Tuerschild des Knotens, auf dem der Befehl steht, als Array
