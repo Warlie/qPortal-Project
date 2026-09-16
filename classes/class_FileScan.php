@@ -72,7 +72,13 @@ var $path_parameter;
                 	
                         $this->paste_check($this->start_path . $path,true);
                 }else
-                        echo "<p><b>" . $this->start_path . $path . "</b> is not an correct directory!<p>";
+                {
+                        global $logger_class;
+                        if(is_object($logger_class))
+                                $logger_class->setAssert('File_Scan::add_path: "' . $this->start_path . $path
+                                        . '" ist kein Verzeichnis - der Pfad wird nicht aufgenommen'
+                                        . ' (classes/class_FileScan.php:add_path)', 0);
+                }
         }
 
   // +-----------------------------------------------------------------------
@@ -83,7 +89,14 @@ var $path_parameter;
         function prohib_path($path)
         {
 
-                if(!is_dir($this->start_path . $path))echo "<p><b>" . $this->start_path . $path . "</b> is not an correct directory!<p>";
+                if(!is_dir($this->start_path . $path))
+                {
+                        global $logger_class;
+                        if(is_object($logger_class))
+                                $logger_class->setAssert('File_Scan::prohib_path: "' . $this->start_path . $path
+                                        . '" ist kein Verzeichnis - die Sperre wird trotzdem eingetragen'
+                                        . ' (classes/class_FileScan.php:prohib_path)', 0);
+                }
                 if(is_array($this->prohib))
                 {
                         $this->prohib[ count($this->prohib) ] = $this->start_path . $path;
@@ -198,7 +211,18 @@ var $path_parameter;
         //f�rt die Suche mit den eingestellten Parametern durch
         function seeking()
         {
+		/* file_listing() schleift ueber die fix-Liste; ist sie leer, laeuft die
+		*  innere Schleife nie und der Scan gaebe still null Zeilen zurueck.
+		*  "alles" ist die Vorgabe, die ein Aufrufer ohne add_fix erwartet. */
+		if(0 == count($this->fix))
+		{
+			global $logger_class;
+			if(is_object($logger_class))
+				$logger_class->setAssert('File_Scan::seeking: keine Dateibeschreibung gesetzt,'
+					. ' es gilt "*" (classes/class_FileScan.php:seeking)', 5);
 
+			$this->add_fix('*');
+		}
 
 		if(is_Null($this->document))
 		{
@@ -381,7 +405,18 @@ function loading_size($value)
                 {
 
                 	if(false === ($file_content = file($file_uri)))
-                		echo '<b>' . $file_uri . ' is not a valid URL! Current path is "' . getcwd ( ) . "\"</b><br>\n";
+                	{
+                		global $logger_class;
+                		if(is_object($logger_class))
+                			$logger_class->setAssert('File_Scan::seek_in_file: "' . $file_uri
+                				. '" ist nicht lesbar (Arbeitsverzeichnis "' . getcwd() . '")'
+                				. ' - die Datei wird uebersprungen'
+                				. ' (classes/class_FileScan.php:seek_in_file)', 0);
+
+                		/* Ohne diesen Ausstieg liefe der Tag-Zweig unten in count(false)
+                		*  und damit unter PHP 8 in einen TypeError. */
+                		return;
+                	}
 			
                 }
                         $idx0=0;		
@@ -421,7 +456,7 @@ function loading_size($value)
 
 
 
-                                                        $this->save_entry(substr($lower,$pos1),$r,$file_uri);
+                                                        $this->save_entry(substr($lower,$pos1),$r,$file_uri,$this->tag[$h]);
                                                 break;
 
 
@@ -476,9 +511,14 @@ function loading_size($value)
   // | function save_entry
   // +-----------------------------------------------------------------------
         //auslagerung der Wertespeicherung
-        function save_entry($tag,$pos,$file)
+        //$found nennt das Suchwort, das getroffen hat - bisher war es nach dem
+        //Treffer verloren, und bei mehreren Suchworten liess sich nicht mehr sagen,
+        //welches gegriffen hatte. Ohne Suchwort bleibt es null: das ist die Aussage
+        //"es gab kein Kriterium", nicht ein leerer Treffer.
+        //Die drei alten Schluessel behalten Namen und Wert.
+        function save_entry($tag,$pos,$file,$found = null)
         {
-                $this->fin_list[] = ['tag' => trim($tag), 'pos' => $pos,'file' =>  $file];
+                $this->fin_list[] = ['tag' => trim($tag), 'pos' => $pos,'file' =>  $file, 'found' => $found];
         }
 
   // +-----------------------------------------------------------------------
@@ -560,7 +600,16 @@ function read_File($byte = 4096)
 function eof()
 {
 
-	if(!$this->fs) echo 'no filepointer exists.';
+	if(!$this->fs)
+	{
+		global $logger_class;
+		if(is_object($logger_class))
+			$logger_class->setAssert('FileHandle::eof: kein Dateizeiger offen'
+				. ' (classes/class_FileScan.php:eof)', 0);
+
+		/* feof(null) waere unter PHP 8 ein TypeError. */
+		return true;
+	}
 	return feof($this->fs);
 }
 
@@ -584,9 +633,15 @@ function load_File(){
         
 if(!$this->fs)
 {
-	echo 'no filepointer exists.';
+	global $logger_class;
+	if(is_object($logger_class))
+		$logger_class->setAssert('FileHandle::load_File: kein Dateizeiger offen'
+			. ' (classes/class_FileScan.php:load_File)', 0);
+
 	return false;
 }
+
+	$content = '';
 
         while(!feof($this->fs)) {
                 $content .= fread($this->fs,4096);
