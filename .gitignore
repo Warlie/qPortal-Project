@@ -5,6 +5,7 @@
 # Editor temp files
 *#*
 *.marks
+*~
 
 # Template directory — managed separately, not part of this repo
 template/
