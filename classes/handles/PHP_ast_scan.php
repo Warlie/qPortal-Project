@@ -43,9 +43,30 @@ class PHP_Ast_Scan
 	*  traegt desc:.
 	*  Die Schreibvarianten stehen hier, damit im Quelltext nichts korrigiert werden muss.
 	*/
+	/* Kopfnotation in /*@ ... @* / (STW 2026-09-16): eine Zeile "name::" beginnt einen
+	*  Abschnitt, der Text darunter gehoert zu desc:name. Gewaehlt nach Messung ueber
+	*  15.913 Kommentarzeilen: "wort::" am Zeilenanfang kommt NIE vor ("::" steht 232 mal,
+	*  immer mitten in plugin::col()), eine Zeile "<wort>" dagegen schon 4 mal - qPortal-
+	*  Prosa zitiert XML, ein <final> allein auf einer Zeile waere still zum Kopf geworden.
+	*
+	*  Frei sind die Namen; diese hier sind bekannt und werden nicht als unbekannt gemeldet.
+	*  delivers/columns/effect stehen bewusst NICHT in DESC_KEYS: dort wuerde @delivers: zur
+	*  flachen Textform, und die Ausgabebeschreibung soll ein Verweis sein koennen. */
+	const HEAD_KNOWN    = ['delivers', 'columns', 'effect', 'text'];
+	/* Nur Praefixe, deren Namensraum der PEDL-Kopf erklaert - ein fremdes waere ein Tag
+	*  ohne Namensraum. */
+	const HEAD_PREFIXES = ['desc', 'dcterms'];
+	/* Angaben zu einer Aussage in der Klammer: "tricky(lang=de)::". Links der Schluessel
+	*  in der Notation, rechts das Attribut am erzeugten Element. Ein allgemeiner Platz -
+	*  vorgesehen sind noch die Richtung einer Verfeinerung und group/one/all (STW 06-15).
+	*  xml:lang steht so am Eigenschaftselement wie im Bestand (<rdfs:label xml:lang="de">,
+	*  197 mal) und landet beim Parsen unter http://www.w3.org/XML/1998/namespace#lang. */
+	const HEAD_ATTRIBS  = ['lang' => 'xml:lang'];
+
 	const DESC_KEYS = [
 		'title'       => 'dcterms:title',
 		'description' => 'dcterms:description',
+		'creator'     => 'dcterms:creator',   // der Dublin-Core-Name selbst - fehlte, creator:: wurde desc:creator
 		'autor'       => 'dcterms:creator',
 		'author'      => 'dcterms:creator',
 
@@ -341,6 +362,7 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 		foreach($desc as $entry)
 		{
 			if('desc:parameter' !== $entry['tag']
+				|| !isset($entry['text'])
 				|| !preg_match('#^([A-Za-z_][A-Za-z_0-9]*)\s*=\s*(.*)$#s', $entry['text'], $hit)
 				|| !isset($index[$hit[1]]))
 			{
@@ -361,7 +383,9 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 				$params[$pos]['optional'] = true;
 			}
 
-			$params[$pos]['desc'][] = ['tag' => 'desc:text', 'text' => $text];
+			$params[$pos]['desc'][] = isset($entry['attrib'])
+				? ['tag' => 'desc:text', 'text' => $text, 'attrib' => $entry['attrib']]
+				: ['tag' => 'desc:text', 'text' => $text];
 		}
 
 		return $rest;
@@ -424,11 +448,14 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 	*
 	*   Zwei Formen, beide aus den Kommentaren, die der Parser dem Knoten zuordnet:
 	*
-	*   1. /*@ ... @* / — freier, mehrzeiliger Text. Der Abschluss mit @ ist Pflicht,
-	*      damit ein blosses /*@ mit gewoehnlichem Ende nicht mitgelesen wird.
+	*   1. /*@ ... @* / — mehrzeiliger Text. Der Abschluss mit @ ist Pflicht,
+	*      damit ein blosses /*@ mit gewoehnlichem Ende nicht mitgelesen wird. Darin
+	*      gliedern Koepfe "name::" den Text, siehe block_entries().
 	*   2. @schluessel: wert — die Form, die im Bestand schon rund 500 mal steht.
+	*      Nur AUSSERHALB der Bloecke.
 	*
-	*   @return Liste von ['tag' => 'dcterms:title', 'text' => '...']
+	*   @return Liste von ['tag' => 'dcterms:title', 'text' => '...'] oder, fuer einen
+	*           Verweis, ['tag' => 'desc:delivers', 'resource' => '#plugin']
 	*/
 	public function desc_entries(Node $node) : array
 	{
@@ -438,11 +465,16 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 		{
 			$raw = $comment->getText();
 
-			//Form 1: freier Block, Abschluss mit @ verpflichtend
+			//Form 1: Block, Abschluss mit @ verpflichtend, darin Koepfe
 			if(preg_match_all('#/\*@(.*?)@\*/#s', $raw, $blocks))
 				foreach($blocks[1] as $block)
-					if('' !== ($text = $this->clean_block($block)))
-						$res[] = ['tag' => 'desc:text', 'text' => $text];
+					$res = array_merge($res, $this->block_entries($this->clean_block($block)));
+
+			/* Form 2 nur ausserhalb der Bloecke. Innen stand eine @schluessel:-Zeile sonst
+			*  doppelt - als Aussage UND im Fliesstext des Blocks. Innen versteht
+			*  block_entries() sie ohnehin als Kopf. Gemessen 2026-09-16: keine solche Zeile
+			*  im Bestand, der Schnitt aendert nichts an vorhandenen Beschreibungen. */
+			$raw = preg_replace('#/\*@.*?@\*/#s', '', $raw);
 
 			//Form 2: zeilenweise Schluessel
 			foreach(explode("\n", $raw) as $line)
@@ -462,6 +494,204 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 		}
 
 		return $res;
+	}
+
+	/* Zerlegt einen gesaeuberten Block an seinen Koepfen.
+	*
+	*  - Text vor dem ersten Kopf -> desc:text, wie bisher der ganze Block. Ein Block ohne
+	*    Kopf ergibt also genau das, was er vorher ergab.
+	*  - "name::" allein -> die folgenden Zeilen bis zum naechsten Kopf sind der Text.
+	*  - "name:: wert" -> einzeilige Aussage. Hat der Wert die Form eines Verweises
+	*    (#name oder <uri>, dieselben Formen, die der SPARQL-Parser als Begriff nimmt),
+	*    wird er rdf:resource statt Text - "delivers:: #plugin" ist ein Verweis, keine
+	*    Zeichenkette. Folgt einem Verweis noch Text, wird der ein eigenes desc:text.
+	*  - "@schluessel: wert" gilt innen als Kopf, aber nur fuer bekannte Schluessel - wie
+	*    Form 2 draussen. Unbekannt bleibt die Zeile Fliesstext.
+	*/
+	private function block_entries(string $text) : array
+	{
+		$res    = [];
+		$tag    = null;
+		$wert   = '';
+		$attr   = [];
+		$zeilen = [];
+
+		/* Ein Eintrag bekommt 'attrib' nur, wenn es etwas zu sagen gibt - ohne Klammer
+		*  sieht er aus wie vorher. */
+		$mit = fn(array $eintrag, array $a) => $a ? $eintrag + ['attrib' => $a] : $eintrag;
+
+		$abschluss = function() use (&$res, &$tag, &$wert, &$attr, &$zeilen, $mit)
+		{
+			$koerper = $this->dedent($zeilen);
+
+			if(is_null($tag))
+			{
+				if('' !== $koerper)$res[] = ['tag' => 'desc:text', 'text' => $koerper];
+				return;
+			}
+
+			if('' !== $wert && preg_match('#^(?:(\#[A-Za-z_][A-Za-z0-9_.\-]*)|<([^<>\s]+)>)$#', $wert, $v))
+			{
+				/* Ein Verweis hat in RDF keine Sprache - xml:lang gilt dann nur fuer den
+				*  Text, der ihm folgt. */
+				$am_verweis = $attr;
+				if(isset($am_verweis['xml:lang']))
+				{
+					if('' === $koerper)
+						self::melden('Kopf "' . $tag . '(lang=' . $am_verweis['xml:lang']
+							. ')::" an einem Verweis - eine Ressource hat keine Sprache, weggelassen');
+					unset($am_verweis['xml:lang']);
+				}
+
+				$res[] = $mit(['tag' => $tag, 'resource' => ('' !== $v[1]) ? $v[1] : $v[2]], $am_verweis);
+				if('' !== $koerper)
+					$res[] = $mit(['tag' => 'desc:text', 'text' => $koerper],
+						isset($attr['xml:lang']) ? ['xml:lang' => $attr['xml:lang']] : []);
+				return;
+			}
+
+			$inhalt = trim($wert . (('' !== $wert && '' !== $koerper) ? "\n" : '') . $koerper);
+
+			if('' === $inhalt)
+			{
+				self::melden('Kopf "' . $tag . '::" ohne Inhalt - uebersprungen');
+				return;
+			}
+
+			$res[] = $mit(['tag' => $tag, 'text' => $inhalt], $attr);
+		};
+
+		foreach(explode("\n", $text) as $zeile)
+		{
+			if(is_null($kopf = $this->block_head($zeile)))
+			{
+				$zeilen[] = $zeile;
+				continue;
+			}
+
+			$abschluss();
+			[$tag, $wert, $attr] = $kopf;
+			$zeilen = [];
+		}
+
+		$abschluss();
+
+		return $res;
+	}
+
+	/* [tag, wert, attribute] fuer eine Kopfzeile, sonst null. */
+	private function block_head(string $zeile) : ?array
+	{
+		$t = trim($zeile);
+
+		if(preg_match('#^([A-Za-z_][A-Za-z0-9_]*(?::[A-Za-z_][A-Za-z0-9_]*)?)(?:\(([^()]*)\))?::(?:\s+(.*))?$#', $t, $m))
+		{
+			$name = $m[1];
+			$attr = $this->head_attribs($name, $m[2] ?? '');
+			$m[2] = $m[3] ?? '';
+
+			if(false !== ($p = strpos($name, ':')))
+			{
+				if(!in_array(strtolower(substr($name, 0, $p)), PHP_Ast_Scan::HEAD_PREFIXES, true))
+				{
+					self::melden('Kopf "' . $name . '::" mit unbekanntem Praefix - bleibt Fliesstext');
+					return null;
+				}
+				return [$name, trim($m[2] ?? ''), $attr];
+			}
+
+			$key = strtolower($name);
+
+			if(isset(PHP_Ast_Scan::DESC_KEYS[$key]))
+				return [PHP_Ast_Scan::DESC_KEYS[$key], trim($m[2] ?? ''), $attr];
+
+			if(!in_array($key, PHP_Ast_Scan::HEAD_KNOWN, true))
+				self::melden('Kopf "' . $name . '::" ist kein bekannter Name - wird desc:' . $key
+					. ' (Tippfehler?)');
+
+			return ['desc:' . $key, trim($m[2] ?? ''), $attr];
+		}
+
+		if(preg_match('#^@([A-Za-z_]+)\s*:\s*(.*)$#', $t, $m) && isset(PHP_Ast_Scan::DESC_KEYS[strtolower($m[1])]))
+			return [PHP_Ast_Scan::DESC_KEYS[strtolower($m[1])], trim($m[2]), []];
+
+		return null;
+	}
+
+	/* Liest "lang=de, schluessel=wert" aus der Klammer eines Kopfes. Nur Schluessel aus
+	*  HEAD_ATTRIBS werden Attribute; alles andere wird gemeldet und weggelassen - nicht
+	*  still uebernommen. */
+	private function head_attribs(string $kopf, string $klammer) : array
+	{
+		$res = [];
+		if('' === trim($klammer))return $res;
+
+		foreach(explode(',', $klammer) as $paar)
+		{
+			if('' === trim($paar))continue;
+
+			if(!preg_match('#^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:"([^"]*)"|\'([^\']*)\'|(\S*))\s*$#', $paar, $p))
+			{
+				self::melden('Kopf "' . $kopf . '(...)": "' . trim($paar) . '" ist kein schluessel=wert - weggelassen');
+				continue;
+			}
+
+			$schluessel = strtolower($p[1]);
+			$wert       = ($p[2] ?? '') . ($p[3] ?? '') . ($p[4] ?? '');
+
+			if(!isset(PHP_Ast_Scan::HEAD_ATTRIBS[$schluessel]))
+			{
+				self::melden('Kopf "' . $kopf . '(...)": Angabe "' . $schluessel . '" ist unbekannt - weggelassen');
+				continue;
+			}
+
+			/* Sprachkennung in der Form von BCP 47: de, en, de-DE. */
+			if('lang' === $schluessel && !preg_match('#^[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*$#', $wert))
+			{
+				self::melden('Kopf "' . $kopf . '(lang=' . $wert . ')": keine Sprachkennung - weggelassen');
+				continue;
+			}
+
+			$res[PHP_Ast_Scan::HEAD_ATTRIBS[$schluessel]] = $wert;
+		}
+
+		return $res;
+	}
+
+	/* Zieht den gemeinsamen Vorspann ab und schneidet leere Randzeilen weg - der Text
+	*  unter einem Kopf ist ueblicherweise eingerueckt, die Einrueckung ist keine Aussage. */
+	private function dedent(array $zeilen) : string
+	{
+		while(count($zeilen) && '' === trim($zeilen[0]))   array_shift($zeilen);
+		while(count($zeilen) && '' === trim(end($zeilen))) array_pop($zeilen);
+
+		$breite = null;
+		foreach($zeilen as $z)
+		{
+			if('' === trim($z))continue;
+			$w = strlen($z) - strlen(ltrim($z));
+			$breite = is_null($breite) ? $w : min($breite, $w);
+		}
+
+		if($breite)
+			foreach($zeilen as $k => $z)
+				$zeilen[$k] = substr($z, $breite);
+
+		return implode("\n", $zeilen);
+	}
+
+	/* Einmal je Meldung und Lauf. Unbekannte Namen sind erlaubt (PEDL ist frei in seinen
+	*  Beschreibungen) - still sollen sie aber nicht sein, sonst wird aus fucntion:: ein
+	*  ordentliches desc:fucntion, und niemand merkt es. */
+	private static function melden(string $text) : void
+	{
+		static $gemeldet = [];
+		if(isset($gemeldet[$text]))return;
+		$gemeldet[$text] = true;
+
+		global $logger_class;
+		if(is_object($logger_class))
+			$logger_class->setAssert('PHP_Ast_Scan: ' . $text . ' (classes/handles/PHP_ast_scan.php)', 5);
 	}
 
 	/* Nimmt die Kommentar-Randzeichen weg und ruecke den Block aus, ohne die

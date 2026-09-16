@@ -533,7 +533,20 @@ class Obj_Class
 	{
 		foreach($desc as $one)
 		{
-			$attrib = array();
+			/* Ein Verweis ("delivers:: #plugin") ist keine Zeichenkette, sondern zeigt auf
+			*  einen Knoten - wie rdf:resource bei Interfaces und Oberklassen weiter unten. */
+			/* Angaben aus der Klammer eines Kopfes, etwa xml:lang. */
+			$zusatz = $one['attrib'] ?? array();
+
+			if(isset($one['resource']))
+			{
+				$attrib = array('rdf:resource' => $one['resource']) + $zusatz;
+				$xml_model->tag_open($owner, $one['tag'], $attrib);
+				$xml_model->tag_close($owner, $one['tag']);
+				continue;
+			}
+
+			$attrib = $zusatz;
 			$xml_model->tag_open($owner, $one['tag'], $attrib);
 			$xml_model->cdata($owner, $one['text']);
 			$xml_model->tag_close($owner, $one['tag']);
