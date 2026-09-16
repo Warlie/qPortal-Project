@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!--
+  Pruefstand fuer die Stufen-Weiche in mayEnter (tree_where.php, STW 2026-09-16).
+
+  Ueber den Intern-Kanal kommt die Stufe vom SCHLUESSEL (clearance), nicht aus der Sitzung -
+  vorher galt ein Schluessel hier als nicht angemeldet, und jeder Baum mit securitylevel
+  war unsichtbar. Gefragt wird mit dem hoechsten Pruefschluessel:
+
+  offen        ohne Stufe                        - immer sichtbar
+  nur_anonym   -1 = nur fuer Nichtangemeldete    - unsichtbar, ein Schluesseltraeger ist angemeldet
+  stufe1/6/10  sichtbar bis zur Schluesselstufe
+  stufe11      ueber jeder Schluesselstufe       - unsichtbar
+-->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Stufen">
+	<tree name="offen"      value="Offen" />
+	<tree name="nur_anonym" value="Nur anonym" securitylevel="-1" />
+	<tree name="stufe1"     value="Stufe 1"    securitylevel="1" />
+	<tree name="stufe6"     value="Stufe 6"    securitylevel="6" />
+	<tree name="stufe10"    value="Stufe 10"   securitylevel="10" />
+	<tree name="stufe11"    value="Stufe 11"   securitylevel="11" />
+</final>
+</indextree>

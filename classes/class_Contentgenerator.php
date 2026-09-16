@@ -470,7 +470,22 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 
 		if($tmp = intval($this->attrib_of($node, 'http://www.trscript.de/tree#securitylevel')))
 		{
-			if($_SESSION['http://www.auster-gmbh.de/surface#securityclass'])
+			/* Die Weiche je Anfrageart (STW 2026-09-16) - dieselbe Reihenfolge, die
+			*  sectors() fuer den Sektor schon hat: Klammer vor Schluessel vor Sitzung.
+			*
+			*  Kommt die Anfrage mit einem Schluessel (clearance_base) oder steht ein
+			*  <access> offen (clearance_stack), gilt clearance(). Vorher las diese Stelle
+			*  die Sitzung direkt; ueber den Intern-Kanal gibt es keine Anmeldung, also
+			*  galt ein Schluessel der Stufe 10 hier als -1 - gemessen: 16 von 55 Routen
+			*  aus main.xml (alle geschuetzten) waren unsichtbar, und die Stufen in
+			*  intern.xml selbst griffen ebenso wenig.
+			*
+			*  Der Webbetrieb ohne Schluessel und ohne Klammer fragt clearance() gar nicht:
+			*  Sitzungsklasse wie bisher, ohne Anmeldung -1, die Marke "nicht angemeldet".
+			*  Die beiden Grundlinien (0 in clearance(), -1 hier) bleiben so getrennt. */
+			if(!empty($this->clearance_stack) || !is_null($this->clearance_base))
+				$sec = $this->clearance();
+			elseif($_SESSION['http://www.auster-gmbh.de/surface#securityclass'] ?? null)
 				$sec = intval($_SESSION['http://www.auster-gmbh.de/surface#securityclass']);
 			else
 				$sec = -1;

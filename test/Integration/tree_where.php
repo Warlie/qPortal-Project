@@ -154,6 +154,26 @@ result('scope unbekannt',            strpos($j17[0]['value']['note'] ?? '', 'unb
 $keys = array_unique(array_merge(...array_map('array_keys', $j18[0]['value']['hits'] ?? [[]])));
 result('show wirkt auf die Liste',   array_diff($keys, ['uri', 'name', 'stamp', 'desc:function']) === [], json_encode(array_values($keys)));
 
+/* 14. Die Stufen-Weiche (STW 2026-09-16): ueber den Intern-Kanal zaehlt die Stufe des
+*  SCHLUESSELS. Vorher las mayEnter die Sitzung, und ein Schluessel galt als nicht angemeldet -
+*  gemessen an main.xml: 16 von 55 Routen, alle geschuetzten, fehlten. Erwartet wird aus der
+*  Stufe des Pruefschluessels gerechnet, nicht fest auf 10. */
+if ($token !== '')
+{
+	$stufe  = intval($liste[0]['level'] ?? 0);
+	$base_w = $base;
+	$base   = str_replace('doc=where_sign', 'doc=where_levels', $base);
+	[, , $j18] = post(tree_named('offen', cmd('__where_am_i', ['scope' => 'tree'], cmd('__to_owner'))));
+	$base   = $base_w;
+	$h18    = $namen($j18[0]['value']['hits'] ?? []);
+	$soll   = ['home', 'offen'];
+	foreach (['stufe1' => 1, 'stufe6' => 6, 'stufe10' => 10, 'stufe11' => 11] as $n => $l)
+		if ($l <= $stufe) $soll[] = $n;
+	result('Stufe vom Schluessel',       $h18 === $soll, 'Schluessel ' . $stufe . ': ' . json_encode($h18));
+	result('ueber der Stufe fehlt',      !in_array('stufe11', $h18, true), 'stufe11 fehlt');
+	result('-1 fehlt mit Schluessel',    !in_array('nur_anonym', $h18, true), 'nur_anonym fehlt');
+}
+
 $ok = 0; $fail = 0;
 foreach ($results as [$name, $good, $note])
 {
