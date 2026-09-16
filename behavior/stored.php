@@ -107,6 +107,11 @@ try {
 			return '__set_cmd: ' . ($a['ns'] ?? '') . '#' . ($a['name'] ?? '?')
 				. ' gespeichert';
 		}, 3);
+	/* Stufe 10 (STW): eine gespeicherte Kette laeuft unter der Stufe dessen, der sie
+	*  AUFRUFT. Duerfte man sie mit weniger anlegen - oder eine vorhandene per
+	*  ON DUPLICATE KEY ueberschreiben -, setzte man mit Stufe 0 Befehle, die spaeter
+	*  mit Stufe 10 laufen. */
+	$reg->addSecurity(10);
 
 	$reg->addDescription(
 		'Legt eine benannte Befehlskette in der Tabelle ' . QP_CMD_TABLE . ' ab. Der'
@@ -206,6 +211,9 @@ try {
 
 	$reg->addLog(fn($node, $obj, $event) =>
 		'__remove_cmd: ' . ($event->get_Result_Array()['Command']['Attribute']['name'] ?? '?'), 3);
+	/* Stufe 10 wie __set_cmd: wer loeschen darf, kann eine Kette auch durch eine gleich-
+	*  namige neue ersetzen lassen. */
+	$reg->addSecurity(10);
 
 	$reg->addDescription(
 		'Loescht eine gespeicherte Befehlskette aus der Tabelle. Wirkt erst beim naechsten'
