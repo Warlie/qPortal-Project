@@ -53,9 +53,21 @@
 			VOR dem Lauf mit done=0 geschrieben und danach auf 1 gesetzt: keine Zeile / done=0
 			(angefangen, nicht fertig) / done=1 sind drei verschiedene Aussagen.
 
-			NICHT fuer CREATE TABLE - auf MariaDB sind CREATE ... IF NOT EXISTS und ALTER ... ADD
-			COLUMN IF NOT EXISTS selbst idempotent, und ein Register daneben waere eine zweite
-			Wahrheit. Gedacht fuer Wirkungen AUSSERHALB der Datenbank (eine Datei anlegen, eine
+			HIERHER gehoert die Einrichtung der Datenbank: CREATE TABLE, ALTER TABLE. STW
+			(2026-09-20): "Er sollte das Create nicht in first, sondern in once stehen haben.
+			Diese sollte genau nur einmal geladen werden." Das Register in qp_once behauptet
+			nicht "die Tabelle existiert", sondern "dieser Einrichtungsschritt lief" - zwei
+			verschiedene Aussagen, und genau dafuer hat es drei Zustaende statt zwei.
+			(Hier stand bis 2026-09-20 das Gegenteil, mit dem Argument, die Datenbank
+			beantworte IF NOT EXISTS selbst und ein Register daneben waere eine zweite
+			Wahrheit. Der Einwand stammte aus dem Nachmittag des 2026-09-11 - also von VOR
+			dem Bau von once - und war hier stehengeblieben.)
+
+			Eine spaetere Aenderung bekommt ein EIGENES once mit eigenem Namen
+			(fridge;tabellen_v1, dann fridge;tabellen_v2): auf einer Installation, die v1
+			schon hinter sich hat, muss v2 noch laufen. Das ist der Gewinn des Registers.
+
+			Ebenso gedacht fuer Wirkungen AUSSERHALB der Datenbank (eine Datei anlegen, eine
 			Gegenstelle rufen) und fuer Datenumformungen, die kein zweites Mal vertragen.
 
 			Kein template und kein content: beides sind Aussagen ueber die AUSGABE, und was nur
