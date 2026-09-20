@@ -131,8 +131,17 @@ function event_message_in($type,&$obj)
 				}	
 				else
 				{
-				echo "Der Name $other_template konnte nicht bei den Templates gefunden werden";
-				$template = $this->contentGen->get_out_template($other_template);
+				/* ⚠ Bis 2026-09-20 ein echo plus stiller Rueckfall auf das Ausgabedokument:
+				*  die Seite rendert, nur eben woanders hinein, und die Meldung zerstoert
+				*  dabei jede Serialisierung. Ein genannter Name, den es nicht gibt, ist ein
+				*  Tippfehler - dieselbe Lehre wie beim vergessenen SPARQL-PREFIX.
+				*  Gemessen 2026-09-20: von 271 content-ids im Bestand loesen sich 268 im
+				*  eigenen Dokument auf; die drei uebrigen (calendar, in, empty) koennen ihren
+				*  Namen aus einem aufrufenden Dokument bekommen, weil der ContentGenerator
+				*  ueber <sub> hinweg derselbe ist. */
+				throw new \RuntimeException('Der Name "' . $other_template . '" steht nicht '
+					. 'im Template-Register. Er kommt von <add id="...">, <new id="..."> oder '
+					. '<main>; "@me" ist der eigene Baum.');
 				}
 			}
 		
@@ -170,7 +179,17 @@ function event_message_in($type,&$obj)
 	}
 	else
 	{
-		echo 'Tag "' . $tag_name . '" was not found in the ' . $template . " document<br>\n";
+		/* ⚠ Bis 2026-09-20 ein echo mitten in die Antwort. Hier wird BEWUSST nicht
+		*  geworfen, anders als beim unbekannten Template-NAMEN weiter oben: ein
+		*  falscher Name ist ein Tippfehler ohne gueltige Lesart, ein fehlender TAG
+		*  dagegen kann richtig sein - dasselbe Unterdokument kann mehrere Vorlagen
+		*  bedienen, und nicht jede hat jeden Tag. Der Inhalt haengt sich dann eben
+		*  nirgends ein.
+		*  Stufe 0, damit es auch im knappsten Log steht. (Gemessen 2026-09-20 beim
+		*  Versuch, ein <content name="...#html"> gegen ein Turtle-Geruest zu haengen.) */
+		global $logger_class;
+		$logger_class->setAssert('content: Tag "' . $tag_name . '" steht nicht im Dokument "'
+			. $template . '" - dieser Inhalt haengt sich nirgends ein', 0);
 				$this->get_parser()->test_consistence();
 		//var_dump($tag_array);
 	}

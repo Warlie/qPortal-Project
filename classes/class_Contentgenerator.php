@@ -645,21 +645,48 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		return $this->heap['template'][$id];
 	}
 	
+	/* ⚠ Bis 2026-09-20 stand hier ein echo. Es stammte aus einer Zeit, in der nur STW
+	*  mitlas; heute landet es mitten in der Antwort und zerstoert JSON_RESPONSE und jede
+	*  Serialisierung. STW: "Werf sie weg oder werfe dort einen Fehler. Vermutlich werde ich
+	*  in naechster Zukunft kaum noch was selbst schreiben."
+	*
+	*  LEERER Name ist kein Fehler, sondern der Erbfall: ein Unterdokument ohne eigenes
+	*  <main> uebernimmt das Ausgabedokument des Aufrufers (196 Dokumente im Bestand haben
+	*  <content> ohne <main>). Ein GENANNTER Name, der nicht im Register steht, ist dagegen
+	*  ein Tippfehler - und der soll nicht still ins falsche Dokument schreiben. */
 	function set_out_template($id) 
 	{
+		if('' === (string) $id)
+		{
+			$this->out_template = null;
+			return;
+		}
 
-		if(!$this->heap['template'][$id])echo " $id nicht verfuegbar";
+		if(!($this->heap['template'][$id] ?? null))
+			throw new \RuntimeException('Ausgabedokument "' . $id . '" steht nicht im '
+				. 'Template-Register. Der Name kommt von <main> oder <add id="...">.');
+
 		$this->out_template = $this->heap['template'][$id];
-		
-		
-		
 	}
 	
 	function set_current_template($id) 
 	{
 		//var_dump( $this->heap);
 
-		if(!$this->heap['template'][$id])echo " '$id' nicht verfuegbar \n";
+		/* Siehe set_out_template: leer = Erbfall, genannt-und-unbekannt = Tippfehler.
+		*  ⚠ tree_content.php:113 und tree_addtree.php:67 geben hier eine URI statt einer
+		*  id herein (get_out_template()); das traegt, weil <main> sich unter seinem
+		*  eigenen Pfad eintraegt. Ohne <main> ist der Wert leer - der Erbfall. */
+		if('' === (string) $id)
+		{
+			$this->cur_template = null;
+			return;
+		}
+
+		if(!($this->heap['template'][$id] ?? null))
+			throw new \RuntimeException('Template "' . $id . '" steht nicht im Register. '
+				. 'Der Name kommt von <add id="...">, <new id="..."> oder <main>.');
+
 		$this->cur_template = $this->heap['template'][$id];
 		//echo $this->cur_template;
 		
