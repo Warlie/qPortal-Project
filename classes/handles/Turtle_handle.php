@@ -75,7 +75,7 @@ class Turtle_handle extends Interface_handle
 
         // Pfad B — add new predicates directly to the already-registered canonical node.
         if (!empty($existing))
-            $this->_extend_existing($existing, $data['prefixes']);
+            $this->_extend_existing($existing, $data['prefixes'], $data['target'] ?? null);
     }
 
     // Returns the idx of the last TURTLE-typed slot with a valid mirror.
@@ -164,11 +164,18 @@ class Turtle_handle extends Interface_handle
     // ALIAS BUG: tag_close does  cur_pointer[$idx] = &var->prev_el, making
     // them reference aliases.  A plain  cur_pointer[$idx] = $saved_cur  would
     // then corrupt var->prev_el.  Break the alias with unset() first.
-    private function _extend_existing(array $existing_subjects, array $prefixes): void
+    /* ⚠ $ziel wird HEREINGEREICHT. Bis 2026-09-21 stand hier $data['target'] - eine
+    *  Variable, die es in dieser Methode gar nicht gibt (sie ist Parameter von
+    *  parse_document_from_array). Das ?? verschluckte den Fehler, das benannte Ziel
+    *  wurde ignoriert, und die Anreicherung eines SCHON BEKANNTEN Knotens landete im
+    *  positionell gewaehlten Slot - also womoeglich in einer Ontologie.
+    *  Eingeschleppt beim Bau von "target" (aa97a53): die Ersetzung traf beide
+    *  Aufrufstellen, geprueft wurde nur die eine. */
+    private function _extend_existing(array $existing_subjects, array $prefixes, ?string $ziel = null): void
     {
         $RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
 
-        $target_idx = $this->_find_named_idx($data['target'] ?? null)
+        $target_idx = $this->_find_named_idx($ziel)
                     ?? $this->_find_turtle_idx() ?? $this->_find_main_doc_idx();
         if ($target_idx === null) return;
 
