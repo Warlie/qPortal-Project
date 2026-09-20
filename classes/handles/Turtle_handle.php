@@ -52,13 +52,14 @@ class Turtle_handle extends Interface_handle
             // omni_handle skips the outer rdf:RDF wrapper; subjects land directly in the tree.
             // Works for TURTLE slots and XML slots (e.g. doctype_out="XML" with OWL skeleton).
             if (!empty($new)) {
-                $target_idx = $this->_find_turtle_idx() ?? $this->_find_main_doc_idx();
+                $target_idx = $this->_find_named_idx($data['target'] ?? null)
+                    ?? $this->_find_turtle_idx() ?? $this->_find_main_doc_idx();
                 if ($target_idx !== null) {
                     $saved_idx = $this->base_object->idx;
                     $this->base_object->change_idx($target_idx);
                     $this->base_object->set_first_node();
                     $stamp    = $this->base_object->position_stamp();
-                    $new_data = ['prefixes' => $data['prefixes'], 'subjects' => $new, 'queryable' => ($data['queryable'] ?? false)];
+                    $new_data = ['prefixes' => $data['prefixes'], 'subjects' => $new, 'queryable' => ($data['queryable'] ?? false), 'target' => ($data['target'] ?? null)];
                     $rdf_xml  = $this->_to_rdf_xml($new_data);
                     $this->base_object->load_Stream($rdf_xml, 0, 'XML', '', $stamp);
                     $this->base_object->change_idx($saved_idx);
@@ -67,7 +68,7 @@ class Turtle_handle extends Interface_handle
         } else {
             // Pfad A (load_Stream) — convert to RDF/XML and load into a new slot.
             // Always run even when $new is empty so mirror[$idx] gets initialised (rdf:RDF root).
-            $new_data = ['prefixes' => $data['prefixes'], 'subjects' => $new, 'queryable' => ($data['queryable'] ?? false)];
+            $new_data = ['prefixes' => $data['prefixes'], 'subjects' => $new, 'queryable' => ($data['queryable'] ?? false), 'target' => ($data['target'] ?? null)];
             $rdf_xml  = $this->_to_rdf_xml($new_data);
             $this->base_object->load_Stream($rdf_xml, 0, 'XML', $this->_ontology_uri($new_data));
         }
@@ -95,6 +96,44 @@ class Turtle_handle extends Interface_handle
     // Returns the idx of the main RDF output document — first rdf:RDF-rooted slot whose
     // loaded_URI is a regular file path (not a @system-slot like @registry_surface_system).
     // Used as injection target when no TURTLE slot exists (XML/OWL output mode).
+    // Loest einen BENANNTEN Zieldokument-Verweis auf. Der Name ist derselbe, den
+    // <add id="..."> vergibt: ContentGenerator::set_template(id, uri). Von dort
+    // geht es ueber uriToIndex() zurueck auf den Slot - genau der Weg, den
+    // tree_main.php:124 fuer das Ausgabedokument schon geht (change_URI).
+    //
+    // "@me" ist der eigene Baum, wie in tree_content.php:123.
+    //
+    // ⚠ Ein unbekannter Name WIRFT. Er fiele sonst auf die Positionswahl zurueck und
+    // schriebe still in ein fremdes Dokument - dieselbe Falle wie ein vergessenes
+    // PREFIX in SPARQL, das bis 2026-09-14 null Zeilen statt eines Fehlers gab.
+    private function _find_named_idx(?string $ziel): ?int
+    {
+        if ($ziel === null || '' === trim($ziel)) return null;
+        $ziel = trim($ziel);
+
+        if ('@me' === $ziel) return $this->base_object->cur_idx();
+
+        $cg = method_exists($this->base_object, 'get_context_generator')
+            ? $this->base_object->get_context_generator() : null;
+
+        $uri = (is_object($cg) && method_exists($cg, 'get_template'))
+            ? $cg->get_template($ziel) : null;
+
+        if (!$uri)
+            throw new \RuntimeException(
+                'RstTurtle: target "' . $ziel . '" steht nicht im Template-Register. '
+                . 'Der Name kommt von <add id="..."> oder <main>; "@me" ist der eigene Baum.');
+
+        $idx = $this->base_object->uriToIndex($uri);
+
+        if (false === $idx)
+            throw new \RuntimeException(
+                'RstTurtle: target "' . $ziel . '" zeigt auf "' . $uri . '", aber dieses '
+                . 'Dokument ist nicht geladen.');
+
+        return (int) $idx;
+    }
+
     private function _find_main_doc_idx(): ?int
     {
         $RDF_ROOT = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#RDF';
@@ -129,7 +168,8 @@ class Turtle_handle extends Interface_handle
     {
         $RDF_TYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
 
-        $target_idx = $this->_find_turtle_idx() ?? $this->_find_main_doc_idx();
+        $target_idx = $this->_find_named_idx($data['target'] ?? null)
+                    ?? $this->_find_turtle_idx() ?? $this->_find_main_doc_idx();
         if ($target_idx === null) return;
 
         $saved_idx = $this->base_object->idx;

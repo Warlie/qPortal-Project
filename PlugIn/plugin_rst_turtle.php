@@ -132,6 +132,21 @@ class RstTurtle extends plugin
         *  nicht aendern. STW: "Es war noch nie mit SPARQL zusammen in Nutzung." */
         $this->queryable = (bool)($cfg['queryable'] ?? false);
 
+        /* target: in WELCHES geladene Dokument geschrieben wird. Der Name ist
+        *  derselbe, den <add id="..."> vergibt (ContentGenerator::set_template);
+        *  "@me" ist der eigene Baum.
+        *
+        *  Ohne target waehlt Turtle_handle den Slot nach POSITION - der letzte
+        *  rdf:RDF-Slot. Das traegt, solange nur ein Dokument angereichert wird und
+        *  nichts anderes davor geladen ist. Gemessen 2026-09-20: sobald <first>
+        *  die Grunddokumente laedt, ist der letzte Slot eine ONTOLOGIE, und der
+        *  ganze Bestand landet dort - das Ergebnisdokument bleibt leer und sagt
+        *  nichts. Zwei Ziele in einem Lauf gehen ueberhaupt nicht: beide
+        *  RstTurtle-Instanzen teilen sich System.Parser und damit die Wahl.
+        *
+        *  Vorgabe null = wie bisher, damit real_estate_data.xml unberuehrt bleibt. */
+        $this->target = isset($cfg['target']) ? (string)$cfg['target'] : null;
+
         foreach ($cfg['prefixes'] ?? [] as $prefix => $ns)
             $this->setPrefix($prefix, $ns);
 
@@ -158,6 +173,7 @@ class RstTurtle extends plugin
     }
 
     private bool $queryable = false;
+    private ?string $target = null;
 
     public function execute(): void
     {
@@ -236,7 +252,8 @@ class RstTurtle extends plugin
         $handle = My_Handle_factory::handle_factory('TURTLE');
         $handle->set_object($this->back);
         $handle->parse_document_from_array(
-            ['prefixes' => $this->prefixes, 'subjects' => $subjects, 'queryable' => $this->queryable],
+            ['prefixes' => $this->prefixes, 'subjects' => $subjects,
+             'queryable' => $this->queryable, 'target' => $this->target],
             true
         );
     }
