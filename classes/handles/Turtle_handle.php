@@ -99,6 +99,7 @@ class Turtle_handle extends Interface_handle
     {
         $RDF_ROOT = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#RDF';
         $max = $this->base_object->max_idx ?? 0;
+        $result = null;
         for ($i = 0; $i <= $max; $i++) {
             $uri = $this->base_object->loaded_URI[$i] ?? '';
             $m   = $this->base_object->mirror[$i] ?? null;
@@ -106,10 +107,10 @@ class Turtle_handle extends Interface_handle
                 && $m->full_URI() === $RDF_ROOT
                 && $uri !== ''
                 && $uri[0] !== '@') {
-                return $i;
+                $result = $i;
             }
         }
-        return null;
+        return $result;
     }
 
     // Appends new predicate nodes to already-registered subjects.
