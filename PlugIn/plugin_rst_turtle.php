@@ -123,6 +123,15 @@ class RstTurtle extends plugin
 
         $this->predicate_defs = [];
 
+        /* queryable: schreibt die Praedikate ZUSAETZLICH als Attribute an das
+        *  Element. Noetig, weil SPARQL_Tree_Query ein Praedikat als ATTRIBUT liest
+        *  (Element=Subjekt, Attribut=Praedikat, Attributwert=Objekt) - die
+        *  gestreifte Kindknotenform des RDF/XML-Standards sieht es nicht.
+        *  Gemessen 2026-09-20: ?s storage:designation ?o fand 0 von 7.
+        *  Vorgabe false, damit bestehende Dokumente (real_estate_data.xml) sich
+        *  nicht aendern. STW: "Es war noch nie mit SPARQL zusammen in Nutzung." */
+        $this->queryable = (bool)($cfg['queryable'] ?? false);
+
         foreach ($cfg['prefixes'] ?? [] as $prefix => $ns)
             $this->setPrefix($prefix, $ns);
 
@@ -147,6 +156,8 @@ class RstTurtle extends plugin
             );
         }
     }
+
+    private bool $queryable = false;
 
     public function execute(): void
     {
@@ -224,7 +235,10 @@ class RstTurtle extends plugin
 
         $handle = My_Handle_factory::handle_factory('TURTLE');
         $handle->set_object($this->back);
-        $handle->parse_document_from_array(['prefixes' => $this->prefixes, 'subjects' => $subjects], true);
+        $handle->parse_document_from_array(
+            ['prefixes' => $this->prefixes, 'subjects' => $subjects, 'queryable' => $this->queryable],
+            true
+        );
     }
 
     public function getAdditiveSource() {}

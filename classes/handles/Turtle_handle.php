@@ -58,7 +58,7 @@ class Turtle_handle extends Interface_handle
                     $this->base_object->change_idx($target_idx);
                     $this->base_object->set_first_node();
                     $stamp    = $this->base_object->position_stamp();
-                    $new_data = ['prefixes' => $data['prefixes'], 'subjects' => $new];
+                    $new_data = ['prefixes' => $data['prefixes'], 'subjects' => $new, 'queryable' => ($data['queryable'] ?? false)];
                     $rdf_xml  = $this->_to_rdf_xml($new_data);
                     $this->base_object->load_Stream($rdf_xml, 0, 'XML', '', $stamp);
                     $this->base_object->change_idx($saved_idx);
@@ -67,7 +67,7 @@ class Turtle_handle extends Interface_handle
         } else {
             // Pfad A (load_Stream) — convert to RDF/XML and load into a new slot.
             // Always run even when $new is empty so mirror[$idx] gets initialised (rdf:RDF root).
-            $new_data = ['prefixes' => $data['prefixes'], 'subjects' => $new];
+            $new_data = ['prefixes' => $data['prefixes'], 'subjects' => $new, 'queryable' => ($data['queryable'] ?? false)];
             $rdf_xml  = $this->_to_rdf_xml($new_data);
             $this->base_object->load_Stream($rdf_xml, 0, 'XML', $this->_ontology_uri($new_data));
         }
@@ -224,7 +224,31 @@ class Turtle_handle extends Interface_handle
                 : 'rdf:Description';
 
             $about = htmlspecialchars($subject, ENT_XML1 | ENT_QUOTES);
-            $body .= "\n  <{$element_tag} rdf:about=\"{$about}\">";
+
+            /* queryable: dieselben Praedikate ZUSAETZLICH als Attribute. SPARQL_Tree_Query
+            *  liest ein Praedikat als ATTRIBUT (Element=Subjekt, Attribut=Praedikat,
+            *  Attributwert=Objekt); die gestreifte Kindknotenform darunter sieht es nicht.
+            *  Gemessen 2026-09-20: ohne dies fand "?s storage:designation ?o" 0 von 7.
+            *
+            *  ⚠ Ein Attributname kommt je Element nur EINMAL vor. Bei einem mehrfach
+            *  belegten Praedikat traegt darum nur das erste - die Kindknoten darunter
+            *  halten weiter alle. Das Attribut ist der Suchweg, nicht die Wahrheit.
+            *
+            *  ⚠ Der Datentyp geht im Attribut verloren (ein Attributwert ist eine
+            *  Zeichenkette). Er steht unveraendert am Kindknoten. */
+            $such_attr = '';
+            if (!empty($data['queryable'])) {
+                $gesehen = [];
+                foreach ($others as $t) {
+                    $tag = $this->_uri_to_qname($t['predicate'], $prefixes);
+                    if (isset($gesehen[$tag])) continue;
+                    $gesehen[$tag] = true;
+                    $such_attr .= ' ' . $tag . '="'
+                        . htmlspecialchars((string)$t['object']['value'], ENT_XML1 | ENT_QUOTES) . '"';
+                }
+            }
+
+            $body .= "\n  <{$element_tag} rdf:about=\"{$about}\"{$such_attr}>";
 
             foreach ($types as $extra_type) {
                 $res   = htmlspecialchars($extra_type, ENT_XML1 | ENT_QUOTES);
