@@ -156,37 +156,8 @@ function event_message_in($type,&$obj)
 			$this->get_parser()->load($uri_src,0);
 		//$this->get_parser()->ALL_URI();
 
-		$var_name;
 		// changes content in document, based on the parameter section
-		if(count($param_arr)){
-		$this->get_parser()->flash_result();
-		$this->get_parser()->seek_node('http://www.trscript.de/tree#variable');
-		$this->get_parser()->seek_node('http://www.trscript.de/tree#object');
-		$res_tags = $this->get_parser()->get_result();
-		
-		foreach($res_tags as $value){
-			if($value instanceof TREE_object)
-				If(array_key_exists(
-					$var_name = $value->get_ns_attribute('http://www.trscript.de/tree#variable'),
-					$param_arr)
-					)
-				
-						$value->set_ns_attribute('http://www.trscript.de/tree#id', $param_arr[$var_name]);
-
-					//$value->setdata( $param_arr[$var_name] ,0);
-				 
-			if($value instanceof TREE_variable)
-				If(array_key_exists(
-					$var_name = $value->get_ns_attribute('http://www.trscript.de/tree#name'),
-					$param_arr)
-					){
-					 $value->setdata( $param_arr[$var_name] ,0);
-				}
-		}
-				
-		
-		 $this->get_parser()->flash_result();
-		}
+		self::apply_arguments($this->get_parser(), $param_arr);
 
 			//prepares the first and the final part in the document for seriel processing
 			$this->get_parser()->flash_result();
@@ -296,6 +267,62 @@ function event_message_in($type,&$obj)
 		// hier einfach nur result an den parent node clonen 
 		$this->contentGenerator->leaveScope();
 	}
+
+/**
+*	Setzt einen Satz Argumente in ein GELADENES Dokument ein.
+*
+*	Zwei Traeger, zwei Wege - so war es schon, als es hier noch inline stand:
+*	    <object variable="x">   bekommt tree:id      (ein Verweis auf ein Objekt)
+*	    <variable name="x">     bekommt seinen Datenteil (ein Wert; der Inhalt,
+*	                            der im Dokument steht, ist die Vorgabe und wird
+*	                            ueberschrieben)
+*
+*	Herausgeloest 2026-09-20, damit __call denselben Weg nimmt wie <sub>. Vorher
+*	stand die Schleife nur hier, und __call setzte zwar einen Argumentrahmen, aber
+*	niemand las ihn (offen seit 2026-09-14). Ein Prozess soll nicht merken, wer ihn
+*	gerufen hat.
+*
+*	⚠ Es wird das GELADENE Dokument geaendert, nicht eine Abschrift. Derselbe src
+*	zweimal im selben Request bekommt beim zweiten Mal die Werte des ersten Aufrufs
+*	zu sehen, wo der zweite keinen eigenen mitbringt. Das war vorher schon so.
+*
+*	@return int wie viele Platzhalter belegt wurden
+*/
+public static function apply_arguments($parser, array $param_arr)
+{
+	if(!count($param_arr) || !is_object($parser)) return 0;
+
+	$belegt = 0;
+
+	$parser->flash_result();
+	$parser->seek_node('http://www.trscript.de/tree#variable');
+	$parser->seek_node('http://www.trscript.de/tree#object');
+	$res_tags = $parser->get_result();
+
+	foreach($res_tags as $value)
+	{
+		if($value instanceof TREE_object)
+			if(array_key_exists(
+				$var_name = $value->get_ns_attribute('http://www.trscript.de/tree#variable'),
+				$param_arr))
+			{
+				$value->set_ns_attribute('http://www.trscript.de/tree#id', $param_arr[$var_name]);
+				$belegt++;
+			}
+
+		if($value instanceof TREE_variable)
+			if(array_key_exists(
+				$var_name = $value->get_ns_attribute('http://www.trscript.de/tree#name'),
+				$param_arr))
+			{
+				$value->setdata($param_arr[$var_name], 0);
+				$belegt++;
+			}
+	}
+
+	$parser->flash_result();
+	return $belegt;
+}
 }
 
 ?>

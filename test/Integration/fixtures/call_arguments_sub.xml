@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<indextree xmlns="http://www.trscript.de/tree">
+	<final>
+		<program>
+			<object id="dbo" name="DBO" src="PlugIn/plugin_dbo.php">
+				<remote name="DBO.useProfil.profile">real_estate</remote>
+				<remote name="DBO.useProfil" />
+				<remote name="DBO.setStatement.statement">SELECT 'gruss=<variable name="gruss">VORGABE</variable>|zahl=<variable name="zahl">0</variable>' AS g</remote>
+				<remote name="DBO.setStatement" />
+			</object>
+			<result>fertig</result>
+		</program>
+	</final>
+</indextree>

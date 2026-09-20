@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer die Argumentuebergabe an __call (2026-09-20).
+
+     <variable name="x">VORGABE</variable> ist ein benanntes Loch mit Vorgabe.
+     Kommt ein Argument dieses Namens, wird der Datenteil ersetzt; kommt keines,
+     bleibt die Vorgabe stehen. Genau wie bei <sub><param name="x">.
+
+     Das Zimmer gibt zusammengesetzten Text zurueck, damit man sieht, WAS ersetzt
+     wurde und was nicht. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Argumente">
+	<tree name="mit_argumenten" value="Argumente" src="test/Integration/fixtures/call_arguments_sub.xml" />
+</final>
+</indextree>

@@ -1253,6 +1253,24 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 						{
 							$parser->load($pfad, 0);
 
+							/* Die Argumente des Aufrufs in das geladene Dokument setzen -
+							*  denselben Weg, den <sub> mit seinen <param> geht
+							*  (TREE_sub::apply_arguments). Damit merkt ein Prozess nicht, wer
+							*  ihn gerufen hat: <variable name="x"> bekommt seinen Wert,
+							*  <object variable="x"> bekommt eine id.
+							*
+							*  Der Rahmen steht seit 2026-09-14 (STW: "Wenn ich keine Argumente
+							*  mitgebe, sollten keine da sein"), es las ihn nur niemand. Ein
+							*  __call ohne Attribute aendert nichts - apply_arguments geht bei
+							*  leerem Rahmen sofort zurueck.
+							*
+							*  ⚠ Geaendert wird das GELADENE Dokument. Derselbe src zweimal im
+							*  selben Request sieht beim zweiten Mal die Werte des ersten, wo der
+							*  zweite keinen eigenen mitbringt - bei <sub> war das schon so. */
+							$gesetzt = TREE_sub::apply_arguments($parser, $anfangsrahmen);
+							if($gesetzt)
+								$antwort['arguments'] = $gesetzt;
+
 							$parser->flash_result();
 							$parser->seek_node($T . 'first');
 							$liste = $parser->get_result();

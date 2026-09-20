@@ -157,6 +157,49 @@ result('derselbe src zweimal: kein Scope-Fehler', strpos($spur2, 'existiert bere
        strpos($spur2, 'existiert bereits') === false ? 'kein "existiert bereits" im Log' : 'Scope-Name wurde nicht frei');
 result('derselbe src zweimal: Seite steht',       strpos($hole2($start), 'SUB LIEFWERT') !== false, 'die Rueckgabe steht');
 
+/* Die ARGUMENTE eines __call (2026-09-20). Der Rahmen stand seit 09-14 - __call setzte ihn
+*  aus den Attributen des Aufrufs -, aber niemand las ihn. Jetzt geht er denselben Weg wie die
+*  <param> eines <sub>: TREE_sub::apply_arguments setzt <variable name="x"> den Datenteil und
+*  <object variable="x"> eine id.
+*
+*  Gemessen wird an der zusammengesetzten SQL-Anweisung im Log, nicht an der Rueckgabe: ein
+*  <result> setzt seinen Text NICHT aus Kindknoten zusammen, ein <remote> schon - und der
+*  <remote> ist der Weg, den ein Prozess wirklich nimmt. */
+$ar = (getenv('QPORTAL_FIXTURE_URL') ?: 'https://localhost:8002/test/Integration/fixture_entry.php') . '?doc=call_arguments';
+$hole3 = function($payload) use ($ar, $token)
+{
+	$ch = curl_init($ar);
+	curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_POSTFIELDS => json_encode($payload),
+		CURLOPT_HTTPHEADER => array_filter(['Content-Type: application/json', $token !== '' ? 'Authorization: Bearer ' . $token : null]),
+		CURLOPT_RETURNTRANSFER => true, CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => false, CURLOPT_TIMEOUT => 30]);
+	$b = (string) curl_exec($ch);
+	curl_close($ch);
+	return $b;
+};
+$kette = function($attr)
+{
+	$call = ['Identifire' => '*', 'Command' => ['Name' => '__call']];
+	if ($attr !== null) $call['Command']['Attribute'] = $attr;
+	return ['Identifire' => '*', 'Command' => ['Name' => '__give_log', 'Value' =>
+		['Identifire' => '*', 'Command' => ['Name' => '__find_node',
+			'Attribute' => ['json' => json_encode(['name' => T . 'tree'])],
+			'Value' => $call]]]];
+};
+$ohne = $hole3($kette(null));
+$mit  = $hole3($kette(['gruss' => 'hallo', 'zahl' => '42']));
+
+result('__call ohne Argumente: Vorgabe steht',
+       strpos($ohne, "SELECT 'gruss=VORGABE|zahl=0'") !== false,
+       preg_match("/SELECT 'gruss=[^']*'/", $ohne, $m) ? $m[0] : 'keine Anweisung im Log');
+result('__call mit Argumenten: Werte kommen an',
+       strpos($mit, "SELECT 'gruss=hallo|zahl=42'") !== false,
+       preg_match("/SELECT 'gruss=[^']*'/", $mit, $m) ? $m[0] : 'keine Anweisung im Log');
+/* Gegenprobe: die Vorgabe MUSS verschwinden. Ohne sie wuerde der Test auch dann gruen, wenn
+*  apply_arguments gar nichts taete und beide Laeufe zufaellig gleich aussaehen. */
+result('__call mit Argumenten: Vorgabe ist weg',
+       strpos($mit, 'VORGABE') === false,
+       strpos($mit, 'VORGABE') === false ? 'kein VORGABE im Log' : 'die Vorgabe steht noch da');
+
 $ok = 0; $fail = 0;
 foreach ($results as [$name, $good, $note])
 {
