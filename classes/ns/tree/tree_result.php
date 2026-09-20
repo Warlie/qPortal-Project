@@ -79,6 +79,24 @@ function event_message_in($type,&$obj)
 
 		$obj->set_node($res);
 		$this->send_messages('*',$obj);
+
+		/* Ein OBJEKT steht nicht im Datenteil DIESES Knotens, sondern im Datenteil des
+		*  Kindes, das es erzeugt hat - <result><object id="dbo"><remote name="iter"/></object>.
+		*  Es entsteht erst durch send_messages() oben, darum wird es DANACH abgeholt.
+		*  Dieselbe Uebergabe wie beim einfachen Wert, nur eine Ebene tiefer (2026-09-17).
+		*  Ein Verweis auf ein laufendes Objekt ist kein Text: geklont wird nichts. */
+		if(is_null($res->getdata()) || '' === (string) $res->getdata())
+		{
+			foreach(($this->getRefnext() ?? array()) as $kind)
+			{
+				$kind_wert = $kind->getdata();
+				if(is_object($kind_wert))
+				{
+					$res->setdata($kind_wert, 0);
+					break;
+				}
+			}
+		}
 		$this->get_parser()->get_context_generator()->addResultToScope($res);
 	}
 

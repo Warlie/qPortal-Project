@@ -62,6 +62,7 @@ function event_initiated()
 		|| $uri == 'http://www.trscript.de/tree#program'
 		|| $uri == 'http://www.trscript.de/tree#element'
 		|| $uri == 'http://www.trscript.de/tree#remote'
+		|| $uri == 'http://www.trscript.de/tree#result'
 	)
 	{
 	
