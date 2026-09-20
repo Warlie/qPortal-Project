@@ -450,8 +450,23 @@ public function set_Column_config($tag_name, $field_name,$content, $value, $data
 	$this->cur = $tag_name;
 	$this->order[] = $tag_name;
 	$this->tag[$this->cur]['field'] = $field_name;
+	/* ⚠ Hier stand bis 2026-09-20 if($value) - und eine LEERE Zeichenkette ist falsy,
+	*  also wurde sie nie gesetzt. Das ist dasselbe Missverstaendnis wie in
+	*  behavior/std.php __get_data: "leer" wird wie "nicht vorhanden" behandelt.
+	*
+	*  Unterscheidbar sind sie sehr wohl - ein nicht uebergebener Parameter kommt als
+	*  NULL an (PEDL-dispatch: table=[0=>"...", 1=>"...", 2=>NULL, 3=>"Fach 2", 4=>NULL]).
+	*  Darum !is_null statt truthy.
+	*
+	*  Gemessen an store;add: ein leerer parent erreichte die Spalte nie, sie ging als
+	*  NULL gegen NOT NULL, und INSERT IGNORE schluckte den Fehlschlag - ein Wurzellager
+	*  war nicht anzulegen, und niemand sagte es.
+	*
+	*  content und datatype bleiben vorerst wie sie waren: dort entscheidet
+	*  saves_dataset_back ueber is_null(content) welcher Zweig laeuft, und das ist eine
+	*  eigene Frage. */
 	if($content)$this->tag[$this->cur]['content'] = $content;
-	if($value)$this->tag[$this->cur]['value'] = $value;
+	if(!is_null($value))$this->tag[$this->cur]['value'] = $value;
 	if($datatype)$this->tag[$this->cur]['datatype'] = $datatype;
 }
 

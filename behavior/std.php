@@ -495,11 +495,37 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			if(!is_null($tmp = &$node->getdata($event->get_Command(0,1))))
 			{
 				$logger_class->setAssert($obj->get_requester()->full_URI() . " gets $tmp to its datapart " ,5);
+				/* Drei Faelle, und bis 2026-09-20 kannte die Zeile nur zwei.
+				*
+				*  OBJEKT    geht durch (ein Verweis auf ein laufendes Objekt).
+				*  ARRAY     geht NICHT durch. Das ist kein Wert, sondern eine
+				*            Aufruftabelle - DBO.freeSQL etwa reicht [0 => "CREATE ..."]
+				*            herein. Vorher lief das in strlen() und warf einen TypeError
+				*            bei JEDEM solchen Aufruf; gefangen wurde er, aber im Log stand
+				*            er. Jetzt wird er benannt statt geworfen.
+				*  TEXT      geht durch, AUCH WENN ER LEER IST. Das war die eigentliche
+				*            Schranke: elseif(strlen($tmp) > 0) behandelte "leer" wie "nicht
+				*            vorhanden". Genau diese beiden unterscheidet das System sonst
+				*            sehr genau - "ein Attribut mit leerem Wert ist eine Aussage, ein
+				*            fehlendes ist keine" (Code-Karte zu get_ns_attribute). NULL ist
+				*            schon oben durch die is_null-Pruefung draussen.
+				*            STW 2026-09-20: "Du solltest keine Reglementierung haben."
+				*
+				*  ⚠ Gemessen: laesst man den Array mitlaufen, stirbt die Anreicherung der
+				*  Bibliotheks-Attrappe (?i=.library_data) - er landet im Datenteil und
+				*  toetet spaeter tree_object. Die alte Zeile hat ihn nur zufaellig
+				*  aufgehalten, mit einer Ausnahme als Bremse. */
 				if(is_Object($tmp))
 				{
 					$obj->get_requester()->setdata($tmp, 0, false, false);
 				}
-				elseif(strlen($tmp) > 0)
+				elseif(is_array($tmp))
+				{
+					$logger_class->setAssert('__get_data: "' . $node->full_URI() . '" haelt eine '
+						. 'Aufruftabelle (' . count($tmp) . ' Eintraege), keinen Wert - nicht '
+						. 'weitergereicht', 5);
+				}
+				else
 				{
 					$booh = $tmp;
 					$obj->get_requester()->setdata($booh, 0, false, false);
