@@ -122,6 +122,34 @@ class SPARQL_Tree_Query
 		{
 			$gebunden = self::is_var($t['s']) ? ($l[$t['s']] ?? null) : null;
 
+			/* ⚠ Der Kante FOLGEN: eine Variable, die aus einer OBJEKT-Stelle kommt, haelt
+			*  einen Attributwert - also eine Zeichenkette, keinen Knoten. Steht sie im
+			*  naechsten Tripel als SUBJEKT, muss daraus erst der Knoten werden, der diese
+			*  URI als Identitaet traegt. Dafuer gibt es identity_index: global ueber alle
+			*  geladenen Baeume, geschluesselt ueber rdf:about (seit 2026-08-26, "Bedeutung
+			*  ist global"), und node_by_identity() prueft beim Lesen nach.
+			*
+			*  Bis 2026-09-20 fehlte dieser Schritt. Die Bindung war dann kein Objekt, der
+			*  Zweig "Subjekt noch offen" lief an und zaehlte die ganze Menge NEU auf - aus
+			*  einer Verbindung wurde ein Kreuzprodukt. Gemessen am Kuehlschrank:
+			*      ?p location <#fach1>                        2   richtig
+			*      ?f inStorage <#fridge>                      4   richtig
+			*      ?p location ?f . ?f inStorage <#fridge>    28   statt 7  (7 x 4)
+			*
+			*  ⚠ Loest die Zeichenkette auf keinen Knoten auf, ist die Loesung TOT. Sie darf
+			*  nicht in die Aufzaehlung fallen: eine gebundene Variable ist gebunden, auch
+			*  wenn nichts zu ihr passt. */
+			if(!is_object($gebunden) && self::is_var($t['s']) && array_key_exists($t['s'], $l))
+			{
+				$wert = (string) $l[$t['s']];
+				$knoten = ('' === $wert) ? null : $this->tree->node_by_identity($wert);
+
+				if(!is_object($knoten))
+					continue;
+
+				$gebunden = $knoten;
+			}
+
 			/* Subjekt schon gebunden: der Knoten steht fest, das Tripel prueft nur. */
 			if(is_object($gebunden))
 			{
@@ -147,13 +175,59 @@ class SPARQL_Tree_Query
 					$erweitert[$t['s']] = $paar['node'];
 
 				if(self::is_var($t['o']))
-					$erweitert[$t['o']] = $paar['value'];
+				{
+					/* ⚠ Steht die Objektvariable SCHON in der Loesung, ist sie gebunden -
+					*  dann prueft dieses Tripel sie, statt sie zu ueberschreiben. Genau das
+					*  fehlte bis 2026-09-20: die alte Bindung wurde stillschweigend ersetzt,
+					*  und aus der Verbindung wurde ein Kreuzprodukt.
+					*
+					*  ordered() stellt das Einschraenkende nach vorn; darum kommt der Fall
+					*  "Variable im Objekt schon gebunden" haeufiger vor als der im Subjekt. */
+					if(array_key_exists($t['o'], $l))
+					{
+						if(!$this->gleiche_bindung($l[$t['o']], $paar['value']))
+							continue;
+					}
+					else
+						$erweitert[$t['o']] = $paar['value'];
+				}
 
 				$neu[] = $erweitert;
 			}
 		}
 
 		return $neu;
+	}
+
+	/**
+	*	Sind zwei Bindungen dieselbe Sache?
+	*
+	*	Eine Bindung ist entweder ein KNOTEN (aus einer Subjektstelle) oder eine
+	*	ZEICHENKETTE (aus einer Objektstelle, denn ein Attributwert ist Text). Beide
+	*	koennen dasselbe meinen - und ob sie es tun, beantwortet identity_index:
+	*	welcher Knoten traegt diese URI als rdf:about.
+	*
+	*	⚠ Loest die Zeichenkette auf keinen Knoten auf, sind sie NICHT gleich. Ein
+	*	Verweis ins Leere ist keine Uebereinstimmung.
+	*/
+	private function gleiche_bindung($gebunden, $wert): bool
+	{
+		if(is_object($gebunden) && is_object($wert))
+			return $gebunden === $wert;
+
+		if(is_object($gebunden))
+		{
+			$knoten = $this->tree->node_by_identity((string) $wert);
+			return is_object($knoten) && $knoten === $gebunden;
+		}
+
+		if(is_object($wert))
+		{
+			$knoten = $this->tree->node_by_identity((string) $gebunden);
+			return is_object($knoten) && $knoten === $wert;
+		}
+
+		return (string) $gebunden === (string) $wert;
 	}
 
 	/**
