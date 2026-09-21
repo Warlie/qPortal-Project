@@ -1029,7 +1029,7 @@ function setdata($data,$pos = null, $add = false, $alter_sensity = true){
 					//var_dump($res, $this->data, $tmp);
 				}
 				else
-					$this->data = [$tmp];
+					$this->data = [$index => $tmp];
 				
 
 			}
