@@ -1835,9 +1835,24 @@ $permutation = $tmp[1];
 		for($i = 0;$i<count($this->verification);$i++)
 		{
 		
+		/* freexpath SAMMELT (xml_multitree_objex.php:122 raeumt bewusst nicht ab).
+		 * Trifft der xpath nichts, waechst die Liste nicht - und der Zugriff
+		 * [count-1] weiter unten greift dann den VORIGEN Treffer und schreibt in
+		 * die falsche Zelle. Ohne Fehler, mit gueltig aussehendem Wert.
+		 * Nur melden, nicht eingreifen: das Bestandsverhalten bleibt, wie es ist. */
+		$countBeforeXpath = count($this->back->get_xpath_Result());
+
 		$this->back->freexpath($this->verification[$i]['xpath'], $obj);
 		$obj_ref = $this->back->get_xpath_Result();
-		
+
+		if(count($obj_ref) === $countBeforeXpath) {
+			global $logger_class;
+			$logger_class->setAssert(
+				"XMLDO: xpath '" . $this->verification[$i]['xpath'] . "' traf nichts fuer Feld '" .
+				$this->verification[$i]['name'] . "' - geschrieben wird in den vorigen Treffer", 0
+			);
+		}
+
 		if($this->verification[$i]['attrib_data'] == 'data')
 		{
 		$tmp = $obj_ref[count($obj_ref) - 1]->index_max();
