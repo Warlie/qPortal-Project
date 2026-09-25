@@ -12,18 +12,29 @@
 *
 *	Aufruf aus einem Dokument (Reihenfolge: erst die Felder, dann send):
 *
-*	  <object id="post" name="Mail" src="PlugIn/plugin_mail.php">
-*	    <remote name="Mail.to">nsl@dws-sicherheit.de</remote>
-*	    <remote name="Mail.from">noreply@dws-sicherheit.de</remote>
-*	    <remote name="Mail.subject">Anfrage ueber die Website</remote>
-*	    <remote name="Mail.reply_to"> … Request.out … </remote>
+*	  <object id="post" name="Mail">
+*	    <remote name="Mail.to.value">post@beispiel.de</remote>
+*	    <remote name="Mail.to" />
+*	    <remote name="Mail.from.value">post@beispiel.de</remote>
+*	    <remote name="Mail.from" />
+*	    <remote name="Mail.subject.value">Anfrage ueber die Website</remote>
+*	    <remote name="Mail.subject" />
+*	    <remote name="Mail.reply_to.value"> … Request.request … </remote>
+*	    <remote name="Mail.reply_to" />
 *	    <remote name="Mail.field.name">Unternehmen</remote>
-*	    <remote name="Mail.field.value"> … Request.out … </remote>
+*	    <remote name="Mail.field.value"> … Request.request … </remote>
 *	    <remote name="Mail.field" />
-*	    <remote name="Mail.trap.value"> … Request.out (Honigtopf) … </remote>
+*	    <remote name="Mail.trap.value"> … Request.request (Honigtopf) … </remote>
 *	    <remote name="Mail.trap" />
 *	    <remote name="Mail.send" />
 *	  </object>
+*
+*	⚠ JEDES Argument geht ueber ein eigenes Remote (".value", dann der Aufruf) - wie
+*	  bei Logger.listen. Text direkt im aufrufenden Remote kommt als NULL an.
+*	⚠ Gelesen wird ein Formularwert mit Request.request (+ ".name"), NICHT mit
+*	  Request.out: out() ist die Basisimplementierung und gibt still nichts zurueck.
+*	⚠ Das Objekt muss angelegt sein, BEVOR ein spaeterer <program>-Block es fragt -
+*	  sonst "post isn't a valid object" (tree_object.php:168), und die Seite wird 404.
 *
 *	Gelesen wird wie eine Ergebnismenge, damit das Dokument verzweigen kann:
 *	  col('status')   'ok' | 'fehler' | 'spam'
@@ -148,7 +159,7 @@ class Mail extends plugin
 			return true;
 		}
 
-		$this->melde('fehler', 'Die Anfrage konnte nicht zugestellt werden. Bitte rufen Sie uns an: 02191 6080010.');
+		$this->melde('fehler', 'Die Anfrage konnte nicht zugestellt werden. Bitte versuchen Sie es noch einmal.');
 		$this->notiere('Mail: mail() hat abgelehnt (Empfaenger ' . $this->to . ')', 0);
 		return false;
 	}
