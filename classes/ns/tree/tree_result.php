@@ -84,18 +84,37 @@ function event_message_in($type,&$obj)
 		*  Kindes, das es erzeugt hat - <result><object id="dbo"><remote name="iter"/></object>.
 		*  Es entsteht erst durch send_messages() oben, darum wird es DANACH abgeholt.
 		*  Dieselbe Uebergabe wie beim einfachen Wert, nur eine Ebene tiefer (2026-09-17).
-		*  Ein Verweis auf ein laufendes Objekt ist kein Text: geklont wird nichts. */
+		*  Ein Verweis auf ein laufendes Objekt ist kein Text: geklont wird nichts.
+		*
+		*  Ein WERT aus dem Kind geht denselben Weg (2026-09-26). Ein Plugin muss keine
+		*  Ergebnismenge sein: Folder.make gibt einen Wahrheitswert, File.put einen Hash,
+		*  File.dir einen JSON-Text - im Datenteil des <object> steht dann eine
+		*  Zeichenkette, und die ist die Rueckgabe. Gemessen: ohne diesen Zweig kam beim
+		*  Aufrufer results:[null] an, obwohl die Datei geschrieben war.
+		*  ⚠ Das OBJEKT behaelt Vorrang - erst alle Kinder danach absuchen, dann die
+		*  Werte. Sonst uebernimmt ein frueher Textknoten die Rueckgabe eines spaeteren
+		*  Objekts, und das Bestandsverhalten waere verschoben. */
 		if(is_null($res->getdata()) || '' === (string) $res->getdata())
 		{
+			$wert_aus_kind = null;
+
 			foreach(($this->getRefnext() ?? array()) as $kind)
 			{
 				$kind_wert = $kind->getdata();
+
 				if(is_object($kind_wert))
 				{
 					$res->setdata($kind_wert, 0);
+					$wert_aus_kind = null;
 					break;
 				}
+
+				if(is_null($wert_aus_kind) && !is_null($kind_wert) && '' !== trim((string) $kind_wert))
+					$wert_aus_kind = trim((string) $kind_wert);
 			}
+
+			if(!is_null($wert_aus_kind))
+				$res->setdata($wert_aus_kind, 0);
 		}
 		$this->get_parser()->get_context_generator()->addResultToScope($res);
 	}

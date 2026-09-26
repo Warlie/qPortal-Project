@@ -612,11 +612,43 @@ fuseki der benannte Graph, bei qportal der Baum. `sparql.use` nennt das Vorgabep
 `use_source()` überschreibt es je Aufruf.
 Pfade dürfen `__ROOT_DIR`/`__PROGRAM_DIR` enthalten, Dokumente `%NAME%` (`resolve_path`).
 
+## Zwei Arten Plugin — Menge und Wert
+
+Ein Plugin muss **keine Ergebnismenge** sein. Der alte Typ erbt von `plugin`
+(`PlugIn/plugin_interface.php`) und wird wie ein Recordset gelesen: `moveFirst()`, `col()`,
+`next()` — so arbeiten `DBO`, `XMLDO`, `Request`, `Logger`. Der zweite Typ **gibt einen Wert
+zurück** und erbt von nichts: eine schlichte Klasse, kein `require_once` auf die
+Schnittstelle, keine Systemobjekte im Konstruktor.
+
+| | |
+|---|---|
+| `Folder` (`PlugIn/folder/plugin_folder.php`) | `make`, `exists` — Wahrheitswerte |
+| `File` (`PlugIn/file/plugin_file.php`) | `put`/`append` (Inhalt kommt **base64**, weil er durch JSON reist), `hash`, `exists`, `dir` (JSON-Text) |
+
+⚠ **Ein leerer Konstruktor ist trotzdem Pflicht.** Der Lader baut für jede Plugin-Klasse
+einen Knoten `<Klasse>.__construct`; fehlt er, stirbt es an „Cannot instantiate constructor
+… namespace node creation failed".
+
+⚠ **Argumente gehen über eigene Remotes**, auch hier: `File.put.path`, dann `File.put`.
+Text direkt im aufrufenden Remote kommt als `NULL` an.
+
+⚠ **`File` hat bewusst keinen Lesegriff für Inhalte.** Unterhalb von `ROOT_DIR` liegt auch
+`config/config.ini` mit Passwort und Intern-Token; `hash` und `dir` reichen zum Abgleichen,
+ohne Inhalt herauszugeben. Beide Plugins prüfen mit derselben Regel, dass der Pfad
+**innerhalb** der Installation liegt — `..` und Symlinks nach draußen werden abgewiesen.
+
+**`<result>` trägt seit `2026-09-26` auch einen Wert.** `TREE_result::event_message_in` holte
+aus einem Kind nur ein **Objekt** (`is_object($kind_wert)`); bei einem Wert-Plugin steht im
+Datenteil des `<object>` aber eine Zeichenkette. Gemessen: die Datei war geschrieben, beim
+Aufrufer kam `results:[null]` an. Jetzt gilt: **Objekt vor Wert** — erst alle Kinder nach einem
+Objekt absuchen, dann den ersten nichtleeren Wert nehmen.
+
 ## Arbeitsweise
 
 - **Committen: nur modifizierte getrackte Dateien.** Nie `git add -A`. Neue Dateien nur,
   wenn STW sie ausdrücklich nennt. Untracked und bewusst draußen: `db130399.sql`
-  (Produktivdump mit IBANs), `img/`, `images/`, `script/`, `.claude/`, `mcp/`, `overview/`,
+  (Produktivdump mit IBANs), `img/`, `images/`, `script/`, `.claude/`, `mcp/plugins/`,
+  `overview/`,
   `server.sh` — und **`template/`**, das laut `.gitignore` „managed separately" ist. Darum
   liegt das Vokabular in `ontologies/` und nicht bei `template/ontologies/`.
   ⚠ Erzeugte Artefakte (`*.pedl`, `*_shortcut.php`) sind ebenfalls ignoriert: git holt sie
