@@ -428,6 +428,42 @@ if(file_exists(CONFIG))
                 $_intern_token = null;
 				$_auth_header  = $_SERVER['HTTP_AUTHORIZATION'] ?? apache_request_headers()['Authorization'] ?? '';
 				if (preg_match('/^Bearer\s+(.+)$/i', $_auth_header, $_m)) $_intern_token = $_m[1];
+
+				/* Zweite Tuer fuer denselben Schluessel: eine EIGENE Kopfzeile.
+				*
+				* Authorization ist der Sonderfall, den ein Webserver fuer sich behaelt:
+				* unter mod_proxy_fcgi reicht Apache sie nicht an PHP weiter, und weder
+				* SetEnvIf noch die Umschreibvariante noch CGIPassAuth aendern das bei
+				* jedem Hoster (gemessen 2026-09-26 bei IONOS: alle drei wirkungslos,
+				* CGIPassAuth wird ohne Fehler angenommen und ignoriert). Sichtbar war
+				* das nur daran, dass ein FALSCHER Token keine 401 gab, sondern die
+				* gewoehnliche Seite mit 200 - der Aufruf kam also ohne Schluessel an.
+				*
+				* Eine eigene Kopfzeile geht diesen Weg nicht: sie steht als
+				* HTTP_X_QPORTAL_TOKEN im Request und wird durchgereicht. Sie traegt
+				* denselben Wert und wird gleich geprueft (hash_equals, siehe unten) -
+				* sie ist keine schwaechere Tuer, nur eine andere.
+				*
+				* ⚠ Reihenfolge: Authorization gewinnt, wenn beides kommt. Wer beide
+				* schickt, meint denselben Schluessel; wer sie verschieden setzt, soll
+				* das Verhalten nicht vom Zufall der Auswertung abhaengig haben. */
+				if (is_null($_intern_token))
+				{
+					/* Ueber $_SERVER ist die Schreibweise gleichgueltig - der Server macht
+					*  aus jeder Form HTTP_X_QPORTAL_TOKEN. Der zweite Weg vergleicht die
+					*  Namen dagegen so, wie der Klient sie geschickt hat; darum wird dort
+					*  ohne Ruecksicht auf Gross- und Kleinschreibung gesucht.
+					*  ⚠ apache_request_headers() gibt es nicht auf jeder SAPI - ohne die
+					*  Pruefung waere ein fataler Fehler moeglich, wo $_SERVER laengst
+					*  genuegt haette. */
+					$_own_header = $_SERVER['HTTP_X_QPORTAL_TOKEN'] ?? '';
+
+					if ('' === trim((string) $_own_header) && function_exists('apache_request_headers'))
+						foreach ((array) apache_request_headers() as $_hname => $_hvalue)
+							if (0 === strcasecmp($_hname, 'X-QPortal-Token')) { $_own_header = $_hvalue; break; }
+
+					if ('' !== trim((string) $_own_header)) $_intern_token = trim((string) $_own_header);
+				}
 				$_intern_keys  = intern_key_list(INTERN_KEYS);
 				$_has_session  = isset($_SESSION['@_mod']) && $_SESSION['@_mod'] === 'intern';
 
