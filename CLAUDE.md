@@ -646,9 +646,9 @@ Objekt absuchen, dann den ersten nichtleeren Wert nehmen.
 ## Fernwartung: eine Datei aus der Ferne ablegen
 
 **Der Weg ist kein Standard.** In `behavior/` gibt es dafür keinen Befehl; die Öffnung ist ein
-**Dokument**, das jemand hinschreibt — hier `program/edit/.put_file.xml`, angemeldet als
-`<tree name=".put_file" securitylevel="10">` im INTERN-Baum. Fehlt die Datei, gibt es den Weg
-nicht.
+**Dokument**, das jemand hinschreibt — in dieser Installation `program/edit/.put_file.xml`,
+angemeldet als `<tree name=".put_file" securitylevel="10">` im INTERN-Baum
+(`program/edit/intern.xml`). Fehlt die Datei, gibt es den Weg nicht.
 
 ⚠ **Mit Schlüssel gibt es keinen gewöhnlichen Dokumentweg.** Ist der Bearer gültig, setzt
 `index.php:471` *immer* `setXMLstructur(INTERN)` und speist den Rumpf als Befehl ein — ein
@@ -662,17 +662,21 @@ nicht.
 
 **`__call` reicht seine `Attribute` als Argumente in das gerufene Dokument** (`behavior/std.php:1259`
 → `TREE_sub::apply_arguments`): `<variable name="path">` bekommt seinen Wert, der Elementtext ist
-nur die Vorgabe. Das stand seit `2026-09-14` und hatte bis hierher keinen Aufrufer.
+nur die Vorgabe. Das stand seit `2026-09-14` und hatte bis `2026-09-26` keinen Aufrufer.
 
-`mode`: `put` (ersetzt) · `append` (Stücke) · `hash` · `dir`. Zurück kommt über `<result>` der
-sha256 bzw. die Liste. ⚠ Die Stufe steht am **Knoten**, nicht im Dokument; Sektoren kommen
-ohnehin vom Schlüssel (`mayEnter` prüft mit Schlüssel gegen `clearance()`,
-`class_Contentgenerator.php:486`).
+`mode`: `put` (ersetzt) · `append` (Stücke, base64 kostet ein Drittel mehr, darum stückeln) ·
+`hash` · `dir`. Zurück kommt über `<result>` der sha256 bzw. die Liste. ⚠ Die Stufe steht am
+**Knoten**, nicht im Dokument; Sektoren kommen ohnehin vom Schlüssel (`mayEnter` prüft mit
+Schlüssel gegen `clearance()`, `class_Contentgenerator.php:486`).
 
-**Die andere Seite ist der MCP-Adapter** (`mcp/qportal-mcp.php`, im Repo): drei eigene Werkzeuge,
-alles weitere als Plugin aus `mcp/plugins/*.php`. Ein Plugin bekommt `qp_command()` als Griff und
-**sieht den Token nie** — er bleibt in `qp_curl()`. ⚠ `mcp/plugins/` ist gitignoriert: Der Kern
-liefert die Fähigkeit mit, nicht die Öffnung.
+**Die Gegenstelle ist der MCP-Adapter, und der wohnt NICHT hier**: `~/.qportal_mcp/` mit eigenem
+Repo (`qPortal_mcp`). Er führt ein **Telefonbuch** — `default.xml` als Vorlage ohne Schlüssel,
+`phonebook.xml` daneben mit Schlüsseln und Rechten `0600`, nicht im Repo; ein Eintrag trägt
+Adresse *und* Schlüssel, weil erst beides eine Verbindung ist. Proben ohne Client:
+`php qportal-mcp.php --check [name]` und `--call [name] '<json>'`. Das Schreiben kommt dort als
+**Plugin** aus `plugins/`, und ein Plugin bekommt nur den Griff „schick dieses Kommando" — den
+Token sieht es nie. ⚠ Im Kern liegt **kein** Adapter: eine zweite Fassung liefe auseinander
+(am 2026-09-26 einmal passiert, die Kopie in `real_estate/mcp/` war einen Monat alt).
 
 ## Arbeitsweise
 

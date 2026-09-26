@@ -29,8 +29,3 @@ vendor/
 
 # Cache / test artifacts
 .phpunit.result.cache
-
-# Die Oeffnung gehoert der Installation, nicht dem Kern: der MCP-Adapter ist
-# mitgeliefert, seine Plugins nicht. Liegt hier nichts, kann der Adapter nur
-# lesen und durchreichen.
-mcp/plugins/
