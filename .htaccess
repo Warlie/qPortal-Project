@@ -79,16 +79,19 @@ RedirectMatch 404 ^/program/(edit|proben|validation|api|realms|pages|sections|te
 #   /impressum      -> index.php?i=impressum
 #   /api/glossary   -> index.php?i=api&j=glossary
 #
-# ⚠ ERST DIE ADRESSEN IN DER HUELLE ABSOLUT MACHEN, DANN EINSCHALTEN.
-#   templates/dws/shell_dws.xml adressiert heute relativ ("program/css/dws.css").
-#   Unter /impressum loest der Browser das noch gegen / auf, unter /api/glossary
-#   aber gegen /api/ — dann fehlen Stil, Logo und Schriften. Ein angehaengtes "/"
-#   tut dasselbe. Zu tun: drei Adressen auf /program/… setzen, die Fusslinks von
-#   ?i=… auf /…, danach diese sechs Zeilen freigeben.
+# ⚠ BEDINGUNG, seit 2026-09-26 erfuellt: die Huelle und die Abschnitte adressieren
+#   ihre Beiwerke ABSOLUT (/program/css/dws.css, /program/img/…). Relativ ginge es
+#   unter /impressum noch gut, unter /api/glossary aber loest der Browser gegen
+#   /api/ auf — dann fehlen Stil, Logo und Schriften. Wer dort etwas ergaenzt,
+#   schreibt den fuehrenden Schraegstrich mit.
+#   ⚠ Die alte Form ?i=… traegt weiter: sie kommt gar nicht erst hierher, sondern
+#   direkt an index.php. Lesezeichen und alte Verweise bleiben gueltig.
+#   ⚠ Eine Datei oder ein Verzeichnis, das es gibt, wird NICHT umgeschrieben
+#   (!-f, !-d) — /program/css/dws.css bleibt eine Datei.
 #
-# RewriteCond %{REQUEST_FILENAME} !-f
-# RewriteCond %{REQUEST_FILENAME} !-d
-# RewriteRule ^([A-Za-z0-9_.-]+)/?$ index.php?i=$1 [QSA,L]
-# RewriteCond %{REQUEST_FILENAME} !-f
-# RewriteCond %{REQUEST_FILENAME} !-d
-# RewriteRule ^([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)/?$ index.php?i=$1&j=$2 [QSA,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([A-Za-z0-9_.-]+)/?$ index.php?i=$1 [QSA,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)/?$ index.php?i=$1&j=$2 [QSA,L]
