@@ -1,0 +1,9 @@
+# config/ wird eingebunden, nie gerufen.
+#
+# Die zweite Sperre, absichtlich neben der im Wurzelverzeichnis: greift eine
+# Regel dort nicht mehr — weil jemand sie umschreibt, weil ein Update sie
+# ueberschreibt, weil ein Hoster mod_rewrite abschaltet —, dann haelt diese noch.
+# Der Preis dafuer sind drei Zeilen; der Preis fuer ihr Fehlen war am 2026-09-26
+# eine live abrufbare config.ini mit Datenbankpasswort und Intern-Token.
+
+Require all denied

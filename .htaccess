@@ -1,0 +1,94 @@
+# qPortal — Apache im Wurzelverzeichnis der Installation
+# ======================================================
+# Nur index.php ist der Eingang. Alles andere wird eingebunden, nie direkt
+# gerufen — und was nicht gerufen wird, soll auch nicht ausgeliefert werden.
+#
+# ⚠ Gemessen am 2026-09-26 an der laufenden Seite, ohne Sperren:
+#     config/config.ini   200, 1138 Bytes   <- Datenbankpasswort, Intern-Token
+#     config/default.ini  200, 11430 Bytes
+#     qportal.sql         200               composer.json 200
+#     test/…/*.php        200 (ausgefuehrt) mod_lib.php   200 (ausgefuehrt)
+#     program/edit/.put_file.xml  200       <- das Tor der Fernwartung
+#   Darum sperrt diese Datei nach ART und nach ORDNER: eine Art greift auch dort,
+#   wo kein Ordner genannt ist.
+
+RewriteEngine On
+
+# ---------------------------------------------------------------- Transport
+# http gibt es nicht. Ein Schluessel im Klartext ueber die Leitung waere
+# derselbe Fehler wie eine lesbare config.ini.
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# ------------------------------------------------------------- Bearer-Token
+# ⚠ DIES IST DIE ZEILE, AN DER DIE FERNWARTUNG HAENGT. Apache reicht die
+# Kopfzeile Authorization nicht an FPM/CGI weiter. Ohne sie kommt der
+# Intern-Schluessel nie bei index.php an (:429 liest HTTP_AUTHORIZATION): der
+# Aufrufer steht auf Stufe 0, der Befehl wird nicht ausgefuehrt, und die Antwort
+# ist eine gerenderte Seite mit 200 — also gerade KEIN sichtbarer Fehler.
+#
+# Gemessen: ein absichtlich FALSCHER Token muss 401 geben (index.php:451).
+# Kommt 200 mit text/html, ist die Kopfzeile unterwegs verloren gegangen.
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Zweiter Weg zum selben Ziel, falls die Umschreibvariante beim Hoster nichts
+# bewirkt. Beides zusammen schadet nicht: es setzt dieselbe Variable.
+<IfModule mod_setenvif.c>
+	SetEnvIf Authorization "(.+)" HTTP_AUTHORIZATION=$1
+</IfModule>
+
+# Der dritte Weg, ab Apache 2.4.13 und der saubere — aber MANCHE HOSTER
+# ERLAUBEN IHN NICHT, und eine unbekannte Direktive beantwortet jede Anfrage
+# mit 500. Ein <IfModule>-Rahmen hilft dagegen nicht, denn es ist eine
+# Kerndirektive. Darum steht sie hier auskommentiert: erst einschalten, dann
+# die Startseite aufrufen.
+CGIPassAuth On
+
+# -------------------------------------------------------------- Kein Index
+Options -Indexes
+
+# ------------------------------------------------------------- Nach Dateiart
+# ⚠ .json ist mit gesperrt (composer.json). Soll die Seite spaeter eine
+# oeffentliche JSON-Schnittstelle als DATEI anbieten, muss sie hier heraus —
+# ueber index.php ausgelieferte Antworten sind davon nicht betroffen.
+<FilesMatch "(?i)\.(ini|sql|log|md|json|lock|dist|bak|old|orig|save|swp|sqlite3?|pedl)$">
+	Require all denied
+</FilesMatch>
+
+# Punktdateien UND Sicherungskopien des Editors in einem Griff.
+# ⚠ Der zweite Teil ist der wichtigere: datei.php~ wird als TEXT ausgeliefert,
+# also als Quelltext — gefaehrlicher als die .php daneben, die nur laeuft.
+<FilesMatch "(^\.|~$)">
+	Require all denied
+</FilesMatch>
+
+# -------------------------------------------------------------- Nach Ordner
+# Der Code der Installation wird eingebunden, nicht gerufen.
+# ⚠ Ein direkter Aufruf einer Klassendatei gibt heute 500, nicht 403 — sie
+# laeuft also an, ohne ihre Umgebung. Das ist kein Schutz, das ist Zufall.
+RedirectMatch 404 ^/(config|test|mcp|classes|behavior|PlugIn|dependency|vendor|source|script|error|anttree|faehub|examples|ontologies|xml-schema)(/|$)
+
+# program/ traegt Dokumente UND die oeffentlichen Beiwerke (css, img, fonts).
+# Gesperrt wird nur, was Ablauf ist: Editier-, Intern- und Pruefdokumente.
+RedirectMatch 404 ^/program/(edit|proben|validation|api|realms|pages|sections|templates)(/|$)
+
+# --------------------------------------------------- Sprechende Adressen (i,j)
+# QUERY_PARAM = "i,j" ist die Achsenfolge, aus der qPortal den Pfad im Baum baut
+# (class_Contentgenerator.php:787).
+#   /impressum      -> index.php?i=impressum
+#   /api/glossary   -> index.php?i=api&j=glossary
+#
+# ⚠ ERST DIE ADRESSEN IN DER HUELLE ABSOLUT MACHEN, DANN EINSCHALTEN.
+#   templates/dws/shell_dws.xml adressiert heute relativ ("program/css/dws.css").
+#   Unter /impressum loest der Browser das noch gegen / auf, unter /api/glossary
+#   aber gegen /api/ — dann fehlen Stil, Logo und Schriften. Ein angehaengtes "/"
+#   tut dasselbe. Zu tun: drei Adressen auf /program/… setzen, die Fusslinks von
+#   ?i=… auf /…, danach diese sechs Zeilen freigeben.
+#
+# RewriteCond %{REQUEST_FILENAME} !-f
+# RewriteCond %{REQUEST_FILENAME} !-d
+# RewriteRule ^([A-Za-z0-9_.-]+)/?$ index.php?i=$1 [QSA,L]
+# RewriteCond %{REQUEST_FILENAME} !-f
+# RewriteCond %{REQUEST_FILENAME} !-d
+# RewriteRule ^([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)/?$ index.php?i=$1&j=$2 [QSA,L]
