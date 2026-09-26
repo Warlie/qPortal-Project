@@ -643,6 +643,37 @@ Datenteil des `<object>` aber eine Zeichenkette. Gemessen: die Datei war geschri
 Aufrufer kam `results:[null]` an. Jetzt gilt: **Objekt vor Wert** — erst alle Kinder nach einem
 Objekt absuchen, dann den ersten nichtleeren Wert nehmen.
 
+## Fernwartung: eine Datei aus der Ferne ablegen
+
+**Der Weg ist kein Standard.** In `behavior/` gibt es dafür keinen Befehl; die Öffnung ist ein
+**Dokument**, das jemand hinschreibt — hier `program/edit/.put_file.xml`, angemeldet als
+`<tree name=".put_file" securitylevel="10">` im INTERN-Baum. Fehlt die Datei, gibt es den Weg
+nicht.
+
+⚠ **Mit Schlüssel gibt es keinen gewöhnlichen Dokumentweg.** Ist der Bearer gültig, setzt
+`index.php:471` *immer* `setXMLstructur(INTERN)` und speist den Rumpf als Befehl ein — ein
+`?i=…` landet dann nie auf einer Seite. Pfad und Inhalt müssen also **im Befehl** mitreisen:
+
+```json
+{"Identifire":"*","Command":{"Name":"__find_node","Attribute":{"json":"{\"name\":\"http://www.trscript.de/tree#tree\",\"attribute\":{\"http://www.trscript.de/tree#name\":\".put_file\"}}"},
+ "Value":{"Identifire":"*","Command":{"Name":"__call","Attribute":{"path":"program/sections/x.xml","content":"<base64>","mode":"put"},
+ "Value":{"Identifire":"*","Command":{"Name":"__to_owner"}}}}}}
+```
+
+**`__call` reicht seine `Attribute` als Argumente in das gerufene Dokument** (`behavior/std.php:1259`
+→ `TREE_sub::apply_arguments`): `<variable name="path">` bekommt seinen Wert, der Elementtext ist
+nur die Vorgabe. Das stand seit `2026-09-14` und hatte bis hierher keinen Aufrufer.
+
+`mode`: `put` (ersetzt) · `append` (Stücke) · `hash` · `dir`. Zurück kommt über `<result>` der
+sha256 bzw. die Liste. ⚠ Die Stufe steht am **Knoten**, nicht im Dokument; Sektoren kommen
+ohnehin vom Schlüssel (`mayEnter` prüft mit Schlüssel gegen `clearance()`,
+`class_Contentgenerator.php:486`).
+
+**Die andere Seite ist der MCP-Adapter** (`mcp/qportal-mcp.php`, im Repo): drei eigene Werkzeuge,
+alles weitere als Plugin aus `mcp/plugins/*.php`. Ein Plugin bekommt `qp_command()` als Griff und
+**sieht den Token nie** — er bleibt in `qp_curl()`. ⚠ `mcp/plugins/` ist gitignoriert: Der Kern
+liefert die Fähigkeit mit, nicht die Öffnung.
+
 ## Arbeitsweise
 
 - **Committen: nur modifizierte getrackte Dateien.** Nie `git add -A`. Neue Dateien nur,

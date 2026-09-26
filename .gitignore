@@ -16,6 +16,7 @@ classes/php.err.log
 # Config with credentials — never commit
 config/config.ini
 config/config_console.ini
+config/config.live.ini
 
 # Local dev / debug
 phpinfo.php
@@ -28,3 +29,8 @@ vendor/
 
 # Cache / test artifacts
 .phpunit.result.cache
+
+# Die Oeffnung gehoert der Installation, nicht dem Kern: der MCP-Adapter ist
+# mitgeliefert, seine Plugins nicht. Liegt hier nichts, kann der Adapter nur
+# lesen und durchreichen.
+mcp/plugins/
