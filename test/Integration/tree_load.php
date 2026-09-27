@@ -13,7 +13,8 @@
 *
 *	Geprueft wird an drei Dokumenten (fixtures/load_a|b|c.xml):
 *
-*	    load_a  das Hauptdokument, laedt load_b mit - und load_c hinter sector="niemand"
+*	    load_a  das Hauptdokument, laedt load_b (load) und load_d (embedded) mit - und
+*	            load_c hinter sector="niemand"
 *	    load_b  laedt load_a ZURUECK: der Kreis
 *	    load_c  darf nie geladen werden
 *
@@ -22,7 +23,7 @@
 *	  2. load_c ist NICHT geladen    (hinter mayEnter-Nein wird nicht geladen, wie __echo)
 *	  3. der Kreis endet             (kein zweites Parsen: load() gibt den vorhandenen
 *	                                  Baum zurueck, also feuert kein zweites event_initiated)
-*	  4. genau ZWEI Baeume           (⚠ und nicht drei: bis realpath() in drain_documents
+*	  4. genau DREI Baeume           (⚠ und nicht drei: bis realpath() in drain_documents
 *	                                  stand, kam dieselbe Datei einmal relativ und einmal
 *	                                  absolut herein - loaded_URI vergleicht Zeichenketten,
 *	                                  und der Kreis legte einen Doppelgaenger an)
@@ -123,8 +124,10 @@ foreach ($antwort as $eintrag)
 result('load_a ist da',        isset($baeume['load_a.xml']), 'das Hauptdokument, ueber ?doc=load_a');
 result('load_b mitgeladen',    isset($baeume['load_b.xml']), 'mode=load hat die Adresse in die Schlange gelegt');
 result('load_c NICHT geladen', !isset($baeume['load_c.xml']), 'sector="niemand" - hinter mayEnter-Nein wird nicht geladen');
-result('genau zwei Baeume',    count($baeume) === 2,
-       'kein Doppelgaenger: realpath() bringt relativ und absolut auf eine Adresse (' . count($baeume) . ')');
+result('load_d eingebettet',   isset($baeume['load_d.xml']),
+       'mode=embedded laedt auch - attached UND load in einem Wort');
+result('genau drei Baeume',    count($baeume) === 3,
+       'a, b (load) und d (embedded) - kein Doppelgaenger, realpath() bringt relativ und absolut auf eine Adresse (' . count($baeume) . ')');
 result('der Kreis endet',      isset($namen['zurueck']),
        'load_b zeigt auf load_a zurueck und ist trotzdem fertig geworden');
 

@@ -3,6 +3,7 @@
 <indextree xmlns="http://www.trscript.de/tree">
 <final name="home" value="Lade A">
 	<tree name="mit" value="mitgeladen" src="test/Integration/fixtures/load_b.xml" ><param name="mode" >load</param></tree>
+	<tree name="eingebettet" value="eingebettet" src="test/Integration/fixtures/load_d.xml" ><param name="mode" >embedded</param></tree>
 	<tree name="gesperrt" value="gesperrt" sector="niemand" src="test/Integration/fixtures/load_c.xml" ><param name="mode" >load</param></tree>
 </final>
 </indextree>
