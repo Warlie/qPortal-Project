@@ -65,6 +65,22 @@ private $responseBuffer = null;
 private $responseMime = 'application/json';
 private $result_for_output = []; // external call could return data by calling __to_owner
 
+/* Die Schlange der mitzuladenden Dokumente (STW, 2026-09-27).
+*
+*  Ein <tree> mit <param name="mode">load</param> laedt sein src NICHT selbst: es legt
+*  die Adresse hier ab, und abgearbeitet wird sie in generate(), wenn der Parser wieder
+*  still steht. Der Grund ist der Zeitpunkt - event_initiated() feuert im tag_close,
+*  also MITTEN im Parsen des umgebenden Dokuments. Ein load() von dort aus setzt einen
+*  neuen Baumindex, waehrend der aeussere Parser noch in seinem Dokument steht.
+*  STW: "Das holt die Komplexitaet aus dem Baum und setzt sie in ContentGenerator."
+*
+*  ⚠ Kein Register "schon geladen" daneben: xml::load() laeuft ueber loaded_URI und gibt
+*  bei einem Treffer den vorhandenen Index zurueck, OHNE neu zu parsen
+*  (xml_multitree.php, die Schleife in load()). Kein zweites Parsen heisst kein zweites
+*  event_initiated, also haengt auch nichts wieder an: ein Kreis a->b->a laeuft genau
+*  einmal herum und die Schlange ist leer. */
+private $document_queue = [];
+
 private $foundAPage = false;
 
 // scope
@@ -448,6 +464,96 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	}
 
 	/**
+	*	EIN DOKUMENT ZUM MITLADEN ANMELDEN.
+	*
+	*	Gerufen aus TREE_tree::event_initiated (mode=load). Hier wird NICHT geladen,
+	*	hier wird nur vermerkt - siehe die Begruendung an $document_queue.
+	*
+	*	⚠ Der Waechter fragt HIER, nicht beim Abarbeiten: dort ist der Knoten nicht mehr
+	*	zur Hand. Hinter einem mayEnter-Nein wird nicht geladen - dieselbe Regel wie bei
+	*	__echo (behavior/std.php), damit ein gesperrter Zweig seine Dokumente nicht doch
+	*	in den Parser bringt.
+	*/
+	public function queue_document($src, $node = null): bool
+	{
+		global $logger_class;
+
+		$src = trim((string) $src);
+
+		if('' === $src) return false;
+
+		if(is_object($node) && !$this->mayEnter($node))
+		{
+			if(is_object($logger_class))
+				$logger_class->setAssert('mitladen: "' . $src . '" nicht angemeldet - mayEnter sagt nein', 5);
+
+			return false;
+		}
+
+		$this->document_queue[] = $src;
+
+		if(is_object($logger_class))
+			$logger_class->setAssert('mitladen: "' . $src . '" in die Schlange (' . count($this->document_queue) . ')', 5);
+
+		return true;
+	}
+
+	/**
+	*	DIE SCHLANGE ABARBEITEN. Vorne heraus, hinten darf waehrenddessen dazukommen:
+	*	ein nachgeladenes Dokument kann selbst mode=load tragen. Die Schleife endet von
+	*	selbst, weil ein zweites Laden desselben Pfades nicht neu parst.
+	*
+	*	⚠ Jedes Laden wechselt den Baumindex. Er wird vorher gemerkt und hinterher
+	*	zurueckgestellt - steht er beim start falsch, geht die Botschaft in das falsche
+	*	Dokument. Dieselbe Klammer wie in SPARQL_Tree_Query::in_every_tree.
+	*
+	*	⚠ Nur Dateien. Eine Adresse bekommt eine Logzeile und wird uebersprungen - wie
+	*	bei __echo: was von aussen kommt, holt man ausdruecklich, nicht beilaeufig beim
+	*	Aufbau einer Seite.
+	*/
+	public function drain_documents(): int
+	{
+		global $logger_class;
+
+		if(!is_object($this->XMLlist)) return 0;
+
+		$vorher  = $this->XMLlist->idx;
+		$geladen = 0;
+
+		while(count($this->document_queue))
+		{
+			$src  = array_shift($this->document_queue);
+			$pfad = function_exists('resolve_path') ? resolve_path($src) : $src;
+
+			/* ⚠ Auf EINE Schreibweise bringen. load() vergleicht loaded_URI als
+			*  ZEICHENKETTE: dieselbe Datei einmal relativ und einmal absolut sind fuer
+			*  ihn zwei Dokumente, und ein Kreis a->b->a legt dann einen zweiten Baum
+			*  desselben Inhalts an (gemessen 2026-09-27: load_a stand zweimal in
+			*  __where_am_i scope=global). realpath() macht daraus eine Adresse. */
+			$echt = realpath($pfad);
+			if(false !== $echt) $pfad = $echt;
+
+			if(!is_file($pfad))
+			{
+				if(is_object($logger_class))
+					$logger_class->setAssert('mitladen: "' . $src . '" ist keine Datei - nicht geladen', 5);
+
+				continue;
+			}
+
+			$idx = $this->XMLlist->load($pfad, 0);
+			$geladen++;
+
+			if(is_object($logger_class))
+				$logger_class->setAssert('mitladen: "' . $pfad . '" geladen, Baum ' . var_export($idx, true), 5);
+		}
+
+		$this->XMLlist->change_idx($vorher);
+
+		return $geladen;
+	}
+
+	/**
 	*	DARF BETRETEN WERDEN? Sektor und Sicherheitsstufe, sonst nichts.
 	*
 	*	Herausgeloest aus getAccess(), weil das vier verschiedene Fragen beantwortet:
@@ -763,6 +869,12 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		
 		
 		$treeEngine->load_structur($this->structur,'@registry_surface_system');
+
+		/* Die mitzuladenden Dokumente - JETZT, nicht beim Parsen: das Hauptdokument ist
+		*  fertig, die Schlange ist vollstaendig, und der start ist noch nicht gefeuert.
+		*  Damit wirken sie beim Lauf mit (SPARQL fragt jeden geladenen Baum, <subtree>
+		*  kann klonen, __where_am_i scope=global sieht sie). */
+		$this->drain_documents();
 				
 		
 				

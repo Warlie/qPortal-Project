@@ -77,6 +77,7 @@
 		</xs:documentation></xs:annotation>
 		<xs:choice minOccurs="0" maxOccurs="unbounded">
 			<xs:element name="program" type="tree:programType"/>
+			<xs:element name="param" type="tree:paramType"/>
 			<xs:element name="sub" type="tree:subType"/>
 			<xs:element name="access" type="tree:accessType"/>
 		</xs:choice>
@@ -111,9 +112,24 @@
 			geht es nur ueber src. An tree und final stehen die Tuerschilder (desc:function,
 			desc:parameter, desc:delivers, desc:columns, desc:effect, desc:tricky), die
 			__where_am_i liest; __call fuehrt ihn aus und sammelt seine result ein.
+
+			WO ER SICH ANMELDET, entscheidet ein param name="mode" als direktes Kind
+			(TREE_tree::event_initiated, gelesen im tag_close - die Kinder stehen da also schon):
+
+			  ohne mode    am indextree. Die Vorgabe und der Bestand: ein Pfadsegment ist eine
+			               Dokumentebene, alle tree eines Dokuments sind Geschwister.
+			  attached     am ELTERNKNOTEN (to_listener ohne URI). Er laeuft mit, wenn der
+			               umgebende tree/final/first laeuft - kein eigener Einstiegspunkt.
+			               ⚠ Ist noch ein Pfadsegment uebrig, wird sein Name trotzdem
+			               verglichen (tree_tree.php:170); ohne uebriges Segment laeuft er.
+			  load         der uebergeordnete tree laedt sein src mit, ohne es zu starten.
+
+			⚠ Der mode wirkt nur, wenn der Traeger unter tree, final oder first steht - unter
+			dem indextree gibt es nichts, woran er sich stattdessen haengen koennte.
 		</xs:documentation></xs:annotation>
 		<xs:choice minOccurs="0" maxOccurs="unbounded">
 			<xs:element name="tree" type="tree:treeType"/>
+			<xs:element name="param" type="tree:paramType"/>
 			<xs:element name="program" type="tree:programType"/>
 			<xs:element name="template" type="tree:templateType"/>
 			<xs:element name="content" type="tree:contentType"/>

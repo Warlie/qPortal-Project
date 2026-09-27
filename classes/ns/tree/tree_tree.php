@@ -49,6 +49,46 @@ function event_initiated()
 {
 	$this->contentGenerator = $this->get_parser()->get_context_generator();
 	$this->to_listener('http://www.trscript.de/tree#indextree');
+	
+	
+	/* ⚠ prev kann fehlen: new_Instance() klont Knoten und ruft complete() -> hier.
+	*  Ohne die Pruefung ist das ein fataler Fehler an einer Stelle, die beim Parsen
+	*  JEDES Dokuments laeuft. */
+	$uri = is_object($this->getRefprev()) ? $this->getRefprev()->full_URI() : '';
+
+	if( $uri == 'http://www.trscript.de/tree#tree' ||  $uri == 'http://www.trscript.de/tree#final'
+		|| $uri == 'http://www.trscript.de/tree#first')
+		for($i = 0 ; $i < $this->index_max();$i++)
+		{
+			$tmp = $this->getRefnext($i,true);
+			if($tmp->full_URI() == 'http://www.trscript.de/tree#param'
+				&& $tmp->get_attribute('name') == 'mode')
+			{
+				switch (trim((string) $tmp->getdata())) {
+					case 'attached': // will be excecuted, when start was called
+						$this->to_listener();
+						break;
+
+					/* Mitladen: NICHT hier laden. event_initiated feuert im tag_close,
+					*  also mitten im Parsen des umgebenden Dokuments - ein load() von
+					*  hier aus setzte einen neuen Baumindex, waehrend der aeussere
+					*  Parser noch laeuft. Die Adresse geht darum in die Schlange des
+					*  ContentGenerators, abgearbeitet wird sie in generate(), wenn der
+					*  Parser still steht (STW 2026-09-27).
+					*  ⚠ Der Waechter fragt drueben beim Anmelden, nicht hier. */
+					case 'load': 	// will be loaded, when parent was loaded
+						$quelle = $this->get_ns_attribute('http://www.trscript.de/tree#src');
+
+						if(false !== $quelle && '' !== trim((string) $quelle)
+						   && is_object($this->contentGenerator))
+							$this->contentGenerator->queue_document($quelle, $this);
+
+						break;
+				}
+				
+
+			}
+		}
 }
 
 function &get_Instance()
