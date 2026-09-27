@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer mode=load: A laedt B mit. B laedt A zurueck (Kreis). -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Lade A">
+	<tree name="mit" value="mitgeladen" src="test/Integration/fixtures/load_b.xml" ><param name="mode" >load</param></tree>
+	<tree name="gesperrt" value="gesperrt" sector="niemand" src="test/Integration/fixtures/load_c.xml" ><param name="mode" >load</param></tree>
+</final>
+</indextree>

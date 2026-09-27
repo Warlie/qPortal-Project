@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="b_heim" value="Lade B">
+	<tree name="zurueck" value="Kreis" src="test/Integration/fixtures/load_a.xml" ><param name="mode" >load</param></tree>
+</final>
+</indextree>
