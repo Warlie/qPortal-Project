@@ -66,29 +66,56 @@ function event_initiated()
 			{
 				switch (trim((string) $tmp->getdata())) {
 					case 'attached': // will be excecuted, when start was called
-						$this->to_listener();
+						$this->anmelden_am_eltern();
 						break;
 
-					/* Mitladen: NICHT hier laden. event_initiated feuert im tag_close,
-					*  also mitten im Parsen des umgebenden Dokuments - ein load() von
-					*  hier aus setzte einen neuen Baumindex, waehrend der aeussere
-					*  Parser noch laeuft. Die Adresse geht darum in die Schlange des
-					*  ContentGenerators, abgearbeitet wird sie in generate(), wenn der
-					*  Parser still steht (STW 2026-09-27).
-					*  ⚠ Der Waechter fragt drueben beim Anmelden, nicht hier. */
 					case 'load': 	// will be loaded, when parent was loaded
-						$quelle = $this->get_ns_attribute('http://www.trscript.de/tree#src');
-
-						if(false !== $quelle && '' !== trim((string) $quelle)
-						   && is_object($this->contentGenerator))
-							$this->contentGenerator->queue_document($quelle, $this);
-
+						$this->in_die_ladeschlange();
 						break;
-				}
-				
 
+					/* embedded = attached UND load: der Zweig laeuft mit, UND sein
+					*  Dokument ist geladen, bevor irgendetwas laeuft. Das ist der Fall
+					*  fuer einen Abschnitt, den man auch BEARBEITEN will: adressierbar,
+					*  ohne ihn erst zu starten (STW 2026-09-27). */
+					case 'embedded':
+						$this->anmelden_am_eltern();
+						$this->in_die_ladeschlange();
+						break;
+
+					/* ⚠ Ein vertipptes Wort faellt sonst still durch und der Knoten
+					*  verhaelt sich wie ohne mode - eine Stunde Suche. */
+					default:
+						global $logger_class;
+
+						if(is_object($logger_class))
+							$logger_class->setAssert('tree "' . $this->get_attribute('name')
+								. '": mode "' . trim((string) $tmp->getdata())
+								. '" ist keiner von attached, load, embedded - nichts getan', 0);
+				}
 			}
 		}
+}
+
+/* Laeuft dieser Zweig mit dem umgebenden, statt ueber seinen Namen gemeint zu sein?
+*  Gesetzt von anmelden_am_eltern (mode attached und embedded) und nur dort. */
+private $mitlaufend = false;
+
+/** Am ELTERNKNOTEN anmelden statt am indextree: der Zweig laeuft mit dem umgebenden. */
+private function anmelden_am_eltern(): void
+{
+	$this->mitlaufend = true;
+	$this->to_listener();
+}
+
+/** Das src in die Schlange des ContentGenerators - geladen wird in generate(). */
+private function in_die_ladeschlange(): void
+{
+	$quelle = $this->get_ns_attribute('http://www.trscript.de/tree#src');
+
+	if(false === $quelle || '' === trim((string) $quelle)) return;
+
+	if(is_object($this->contentGenerator))
+		$this->contentGenerator->queue_document($quelle, $this);
 }
 
 function &get_Instance()
@@ -208,7 +235,35 @@ $obj->set_node($this);
 		$cg = $this->get_parser()->get_context_generator();
 
 		if(is_object($cg) && !$cg->mayEnter($this))
+		{
+			/* ZWEI WEGE HIERHER, und sie verdienen zwei Antworten (STW, 2026-09-27):
+			*
+			*  GEMEINT - jemand hat den Namen im Pfad genannt. Dann ist die Abweisung die
+			*  Antwort: sie wirft, und der Aufrufer erfaehrt, dass er nicht darf.
+			*
+			*  MITGELAUFEN - der Zweig haengt als Zuhoerer am Elternknoten (mode attached
+			*  oder embedded), niemand hat ihn genannt. Dann gibt er zurueck und wird
+			*  uebersprungen, wie es TREE_content mit seiner Stufe schon tut.
+			*
+			*  ⚠ Warum das noetig war: das Werfen beendet die Schleife, die den start an die
+			*  UEBRIGEN Zuhoerer austraegt. Gemessen 2026-09-27 an der Startseite: mit
+			*  securitylevel="1" an zwei eingebetteten Abschnitten fehlten nicht die
+			*  gesperrten, sondern die DREI DANACH - 9977 statt 13989 Bytes. Damit war die
+			*  Stufe am Zweig unbenutzbar, und sie gehoert dorthin: an EINER Stelle steht,
+			*  ob ein Abschnitt erscheint - und dieselbe traegt spaeter den Menuepunkt. */
+			if($this->mitlaufend)
+			{
+				global $logger_class;
+
+				if(is_object($logger_class))
+					$logger_class->setAssert('tree "' . $this->get_ns_attribute('http://www.trscript.de/tree#name')
+						. '": laeuft mit, darf aber nicht - uebersprungen, die Geschwister laufen weiter', 5);
+
+				return false;
+			}
+
 			throw new NoPermissionException('not Allowed');
+		}
 
 		/* Ab hier laeuft der Zweig — und zwar auf der Stufe, die DIESER Knoten
 		*  verlangt (STW): "das war ohnehin erlaubt, nur das Veraendern war verboten,

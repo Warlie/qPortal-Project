@@ -73,29 +73,61 @@ function event_message_in($type,&$obj)
 		//throw new ErrorException($this->full_URI());
 		global $_SESSION;
 		
-		// requests the permission to enter a special sector tag
-		if ($att_sector = $this->get_attribute('sector'))
+		/* ZUTRITT — derselbe Waechter wie ueberall sonst.
+		*
+		*  Bis 2026-09-26 rechnete diese Stelle SELBST: sie las
+		*  $_SESSION[…#securityclass] und $_SESSION[…#sector] direkt. Damit war
+		*  <content> der einzige Ort im Baum mit einer eigenen Rechnung — ein
+		*  Schluessel der Stufe 10 zaehlte hier nicht (er steht in clearance(),
+		*  nicht in der Sitzung), und die Klammer eines <access> ebenso wenig.
+		*  Genau das hielt tree_access.php als offene Frage fest.
+		*
+		*  mayEnter() prueft Sektor UND Stufe, in dieser Reihenfolge: der Sektor ist
+		*  eine Existenzaussage und wird von keiner Stufe ueberstimmt. Mit Schluessel
+		*  gilt clearance(), im Webbetrieb die Sitzungsklasse, ohne Anmeldung -1.
+		*
+		*  ⚠ Der Waechter liest NAMENSRAUMBEHAFTET (class_Contentgenerator.php:446,
+		*  get_ns_attribute), die alte Rechnung las den ROHEN Namen. Beides ist
+		*  dieselbe Angabe, solange das Dokument im tree-Namensraum steht — und das
+		*  ist der Normalfall. Steht sie ausnahmsweise nur roh da, kennt der Waechter
+		*  sie nicht; dann rechnet wie frueher diese Stelle. So verliert kein
+		*  Bestandsdokument seine Sperre.
+		*/
+		$cg          = $this->contentGen;
+		$ns_stufe    = $this->get_ns_attribute('http://www.trscript.de/tree#securitylevel');
+		$ns_sektor   = $this->get_ns_attribute('http://www.trscript.de/tree#sector');
+		$dem_waechter = is_object($cg) && (false !== $ns_stufe || false !== $ns_sektor);
+
+		if ($dem_waechter)
 		{
-		if (false === strpos($_SESSION['http://www.auster-gmbh.de/surface#sector'],';' . $att_sector . ';' ))return false;
+			if (!$cg->mayEnter($this)) return false;
 		}
-		
-		// controls securitylevel
-		if ($att_security = $this->get_attribute('securitylevel'))
+		else
 		{
-		if ((intval($_SESSION['http://www.auster-gmbh.de/surface#securityclass']) < intval($att_security)) 
-		&& 
-		(intval($att_security) <> -1)  )
-		{
-		return false;
-		}
-		
-		// controls securityclass
-		if (($_SESSION['http://www.auster-gmbh.de/surface#securityclass']) 
-		&& 
-		(intval($att_security) == -1)  )
-		{
-		return false;
-		}
+			// requests the permission to enter a special sector tag
+			if ($att_sector = $this->get_attribute('sector'))
+			{
+			if (false === strpos($_SESSION['http://www.auster-gmbh.de/surface#sector'] ?? '',';' . $att_sector . ';' ))return false;
+			}
+
+			// controls securitylevel
+			if ($att_security = $this->get_attribute('securitylevel'))
+			{
+			if ((intval($_SESSION['http://www.auster-gmbh.de/surface#securityclass'] ?? 0) < intval($att_security))
+			&&
+			(intval($att_security) <> -1)  )
+			{
+			return false;
+			}
+
+			// controls securityclass
+			if (($_SESSION['http://www.auster-gmbh.de/surface#securityclass'] ?? null)
+			&&
+			(intval($att_security) == -1)  )
+			{
+			return false;
+			}
+			}
 		}
 
 		// ---------------------- set @me template -----------------------

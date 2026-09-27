@@ -122,7 +122,16 @@
 			               umgebende tree/final/first laeuft - kein eigener Einstiegspunkt.
 			               ⚠ Ist noch ein Pfadsegment uebrig, wird sein Name trotzdem
 			               verglichen (tree_tree.php:170); ohne uebriges Segment laeuft er.
-			  load         der uebergeordnete tree laedt sein src mit, ohne es zu starten.
+			  load         der uebergeordnete tree laedt sein src mit, ohne es zu starten. Die
+			               Adresse geht in eine Schlange am ContentGenerator und wird in
+			               generate() abgearbeitet - nicht beim Parsen, denn dort steht der
+			               Parser mitten im umgebenden Dokument.
+			  embedded     beides zugleich: laeuft mit UND ist geladen. Der Fall fuer einen
+			               Abschnitt, den man auch BEARBEITEN will - adressierbar (__find_node
+			               auf seinen tree:name), ohne ihn erst starten zu muessen.
+
+			⚠ Ein unbekanntes Wort tut NICHTS und schreibt eine Zeile ins Log (Stufe 0) - ein
+			vertipptes "atached" verhielte sich sonst wie ohne mode, und das sucht man lange.
 
 			⚠ Der mode wirkt nur, wenn der Traeger unter tree, final oder first steht - unter
 			dem indextree gibt es nichts, woran er sich stattdessen haengen koennte.

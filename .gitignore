@@ -17,6 +17,7 @@ classes/php.err.log
 config/config.ini
 config/config_console.ini
 config/config.live.ini
+config/config.home.ini
 
 # Local dev / debug
 phpinfo.php
