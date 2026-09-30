@@ -9,6 +9,13 @@
 *	    zwei        mode=embedded       -> erscheint als SPRUNGMARKE /#zwei, nicht als Weg:
 *	                                       ein eingebetteter Abschnitt laeuft mit der Seite,
 *	                                       auf der er steht (tree_tree.php, seit 2026-09-27)
+*	    drei        visible="nein"      -> erscheint NICHT, bleibt aber voll erreichbar:
+*	                                       "kein Menuepunkt" ist eine Aussage ueber das
+*	                                       Menue, nicht ueber den Zutritt
+*	    .trotzdem   Punkt + visible="ja" -> erscheint DOCH - die Angabe schlaegt das
+*	                                       Vermaechtnis (⚠ der Punkt ist seit 2026-09-30
+*	                                       veraltet: er verbiegt den Namen, und mit
+*	                                       sprechenden Adressen wird /.name zum Dotfile)
 *	    .versteckt  fuehrender Punkt    -> erscheint NICHT
 *	    gesperrt    sector="niemand"    -> erscheint NICHT
 *	    ohne_wert   kein tree:value     -> erscheint NICHT
@@ -99,7 +106,11 @@ result('zwei ist Sprungmarke',  ($links['Zwei'] ?? '') === '/#zwei',
 result('.versteckt fehlt',      !isset($links['Versteckt']), 'fuehrender Punkt - getAccess sagt nein');
 result('gesperrt fehlt',        !isset($links['Gesperrt']),  'sector="niemand"');
 result('ohne_wert fehlt',       false === strpos($seite, 'ohne_wert'), 'kein tree:value - kein Schild, keine Zeile');
-result('genau zwei Zeilen',     count($links) === 2, 'aus fuenf Knoten werden zwei (' . count($links) . ')');
+result('visible=nein fehlt',    !isset($links['Drei']),
+       'kein Menuepunkt, ohne den Knoten sonst anzutasten - Name, Schild und Zutritt bleiben');
+result('visible=ja schlaegt Punkt', isset($links['Trotzdem']),
+       'die Angabe entscheidet, auch GEGEN den fuehrenden Punkt - der Weg aus dem Vermaechtnis');
+result('genau drei Zeilen',     count($links) === 3, 'aus sieben Knoten werden drei (' . count($links) . ')');
 
 /* ⚠ use_element: die Zeilen gehoeren IN das genannte Element. Ohne die Angabe landen
 *  sie an der Dokumentwurzel - gemessen: hinter </body>, als Geschwister von <body>.

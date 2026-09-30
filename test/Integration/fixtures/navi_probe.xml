@@ -7,6 +7,9 @@
 	  zwei        mode=embedded          -> erscheint als SPRUNGMARKE /#zwei
 	  .versteckt  fuehrender Punkt       -> erscheint NICHT (getAccess)
 	  gesperrt    sector="niemand"       -> erscheint NICHT
+	  drei        visible="nein"         -> erscheint NICHT, ist aber voll erreichbar
+	  .trotzdem   Punkt UND visible="ja"  -> erscheint DOCH: die Angabe schlaegt das
+	                                         Vermaechtnis, das ist der Weg aus dem Punkt
 	  ohne_wert   kein tree:value        -> erscheint NICHT (getAccess)
 
 	build_menu schreibt die erlaubten in die Ausgabevorlage; das <content> darunter
@@ -23,6 +26,8 @@
 	<tree name="zwei"       value="Zwei" src="test/Integration/fixtures/load_d.xml" ><param name="mode" >embedded</param></tree>
 	<tree name=".versteckt" value="Versteckt" src="test/Integration/fixtures/load_d.xml" />
 	<tree name="gesperrt"   value="Gesperrt" sector="niemand" src="test/Integration/fixtures/load_d.xml" />
+	<tree name="drei"       value="Drei" visible="nein" src="test/Integration/fixtures/load_d.xml" />
+	<tree name=".trotzdem" value="Trotzdem" visible="ja" src="test/Integration/fixtures/load_d.xml" />
 	<tree name="ohne_wert"  src="test/Integration/fixtures/load_d.xml" />
 
 	<program>
