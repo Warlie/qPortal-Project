@@ -157,10 +157,11 @@
 			ContentGenerator::mayEnter - der Sektor ist eine Existenzaussage, die keine Stufe
 			ueberstimmt; -1 heisst "nur fuer Nichtangemeldete".
 
-			visible entscheidet ContentGenerator::istSichtbar und ist KEINE Zutrittsfrage:
-			ein unsichtbarer Knoten ist voll erreichbar, er steht nur in keinem Menue und
-			in keiner Aufzaehlung. ja/nein (auch yes/no, true/false, 1/0); fehlt die Angabe,
-			gilt sichtbar.
+			Die SICHTBARKEIT steht nicht hier, sondern als &lt;param name="visible"&gt;ja|nein&lt;/param&gt;
+			im Knoten - dieselbe Notation wie &lt;param name="mode"&gt;. Sie entscheidet
+			ContentGenerator::istSichtbar und ist KEINE Zutrittsfrage: ein unsichtbarer
+			Knoten ist voll erreichbar, er steht nur in keinem Menue und in keiner
+			Aufzaehlung. Fehlt die Angabe, gilt sichtbar.
 
 			⚠ Ein Name, der mit einem PUNKT beginnt, bedeutet dasselbe - das ist das
 			Vermaechtnis und seit 2026-09-30 veraltet: der Name ist zugleich das
@@ -173,7 +174,6 @@
 		<xs:attribute name="securitylevel" type="xs:integer"/>
 		<xs:attribute name="sector" type="xs:string"/>
 		<xs:attribute name="device" type="xs:string"/>
-		<xs:attribute name="visible" type="xs:string"/>
 		<xs:anyAttribute namespace="##other" processContents="skip"/>
 	</xs:attributeGroup>
 

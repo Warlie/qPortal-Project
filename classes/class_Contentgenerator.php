@@ -605,14 +605,63 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	}
 
 	/**
+	*	DER WERT EINES DIREKTEN <param name="…">-KINDES, sonst false.
+	*
+	*	Zwei Wege, wie bei attrib_of: mit einem Knotenobjekt geht es ueber dessen Kinder
+	*	(dieselbe Schleife wie TREE_tree beim mode, tree_tree.php:61), ohne eines steht
+	*	der Parser auf dem Knoten.
+	*
+	*	⚠ false heisst "kein solcher param" - eine LEERE Angabe ist etwas anderes als
+	*	keine, genau wie bei get_ns_attribute.
+	*/
+	private function param_of($node, $name)
+	{
+		if(is_object($node))
+		{
+			for($i = 0; $i < $node->index_max(); $i++)
+			{
+				$kind = $node->getRefnext($i, true);
+
+				if(is_object($kind)
+				&& $kind->full_URI() == 'http://www.trscript.de/tree#param'
+				&& $kind->get_attribute('name') == $name)
+					return trim((string) $kind->getdata());
+			}
+
+			return false;
+		}
+
+		$viele = $this->XMLlist->index_child();
+
+		for($i = 0; $i < $viele; $i++)
+		{
+			$this->XMLlist->child_node($i);
+
+			$treffer = ($this->XMLlist->cur_node() == 'param')
+			        && ($name === (string) $this->XMLlist->show_ns_attrib('http://www.trscript.de/tree#name'));
+
+			$wert = $treffer ? trim((string) $this->XMLlist->show_cur_data(0)) : false;
+
+			$this->XMLlist->parent_node();
+
+			if($treffer) return $wert;
+		}
+
+		return false;
+	}
+
+	/**
 	*	SOLL DER KNOTEN IN EINER LISTE ERSCHEINEN?
 	*
 	*	Sichtbarkeit ist keine Frage des Zutritts: ein unsichtbarer Knoten ist voll
 	*	erreichbar, er steht nur in keinem Menue und in keiner Aufzaehlung. Gemessen an
 	*	.view am 2026-09-05: unsichtbar, aber 5966 Bytes.
 	*
-	*	    <tree name="hero" visible="nein" >     kein Menuepunkt
-	*	    <tree name=".alt" visible="ja"   >     trotz Punkt wieder sichtbar
+	*	    <tree name="hero" ><param name="visible" >nein</param></tree>
+	*	    <tree name=".alt" ><param name="visible" >ja</param></tree>
+	*
+	*	Ein param, kein Attribut - dieselbe Notation wie mode am tree, und gelesen mit
+	*	derselben Schleife (STW 2026-09-30: "Sonst ist es Inkonsistenz zur Notation").
 	*
 	*	⚠ DER FUEHRENDE PUNKT IST VERALTET (STW 2026-09-30). Er traegt weiter - eine
 	*	Installation mit 40 solchen Namen soll sich nicht aendern -, aber er hat einen
@@ -627,7 +676,7 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	{
 		global $logger_class;
 
-		$angabe = $this->attrib_of($node, 'http://www.trscript.de/tree#visible');
+		$angabe = $this->param_of($node, 'visible');
 
 		if(false !== $angabe && '' !== trim((string) $angabe))
 		{
