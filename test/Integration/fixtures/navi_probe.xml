@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	Pruefstand fuer das Navigation-Plugin (test/Integration/menu_navigation.php).
+
+	Fuenf Knoten, fuenf verschiedene Antworten:
+	  eins        gewoehnlicher Weg      -> erscheint, Adresse mit Pfad-Praefix
+	  zwei        mode=embedded          -> erscheint als SPRUNGMARKE /#zwei
+	  .versteckt  fuehrender Punkt       -> erscheint NICHT (getAccess)
+	  gesperrt    sector="niemand"       -> erscheint NICHT
+	  ohne_wert   kein tree:value        -> erscheint NICHT (getAccess)
+
+	build_menu schreibt die erlaubten in die Ausgabevorlage; das <content> darunter
+	zeigt die erste Zeile im Muster, damit auch setLine gemessen ist.
+-->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Probe Navigation">
+
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one" >test/Integration/fixtures/navi_shell.htm</main>
+	</template>
+
+	<tree name="eins"       value="Eins" src="test/Integration/fixtures/load_d.xml" />
+	<tree name="zwei"       value="Zwei" src="test/Integration/fixtures/load_d.xml" ><param name="mode" >embedded</param></tree>
+	<tree name=".versteckt" value="Versteckt" src="test/Integration/fixtures/load_d.xml" />
+	<tree name="gesperrt"   value="Gesperrt" sector="niemand" src="test/Integration/fixtures/load_d.xml" />
+	<tree name="ohne_wert"  src="test/Integration/fixtures/load_d.xml" />
+
+	<program>
+		<object id="navi" name="Navigation" src="PlugIn/menu/plugin_navigation.php" >
+			<remote name="Navigation.page.page" >$this</remote>
+			<remote name="Navigation.page" />
+			<remote name="Navigation.setLine.pattern" >[%DEEP%] %NAME% = %VALUE% bei %URL%</remote>
+			<remote name="Navigation.setLine" />
+			<remote name="Navigation.build_menu" />
+		</object>
+	</program>
+
+	<content name="http://www.w3.org/1999/xhtml#div" >
+		<param name="http://www.w3.org/1999/xhtml#id" >muster</param>
+		<element type="xhtml" ><object id="navi" ><remote name="Navigation.col.columnName" >line</remote><remote name="Navigation.col" /></object></element>
+	</content>
+
+</final>
+</indextree>
