@@ -426,7 +426,21 @@ if(file_exists(CONFIG))
                                 //$content->setXMLTemplate('template/text1.htm');
                 $_intern_call  = false;
                 $_intern_token = null;
-				$_auth_header  = $_SERVER['HTTP_AUTHORIZATION'] ?? apache_request_headers()['Authorization'] ?? '';
+				/* ⚠ REDIRECT_HTTP_AUTHORIZATION gehoert dazu, nicht als Zierat: die Regel in
+				*  der .htaccess (RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}])
+				*  setzt eine Umgebungsvariable, und nach einer internen Umschreibung stellt
+				*  Apache REDIRECT_ davor. Ohne die zweite Zeile ist die Regel wirkungslos,
+				*  obwohl sie feuert.
+				*  ⚠ Das erklaert die Messung vom 2026-09-26 ("SetEnvIf, Umschreibvariante und
+				*  CGIPassAuth alle wirkungslos") neu: mod_rewrite lief auf dem Webspace GAR
+				*  NICHT, weil FollowSymLinks fehlte - gemessen 2026-09-30. Die Umschreibung
+				*  war also nie gepruefft, sondern nie ausgefuehrt.
+				*  ⚠ apache_request_headers() gibt es nicht auf jeder SAPI; ohne die Pruefung
+				*  waere hier ein fataler Fehler moeglich, wo $_SERVER laengst genuegt. */
+				$_auth_header  = $_SERVER['HTTP_AUTHORIZATION']
+				              ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+				              ?? (function_exists('apache_request_headers')
+				                  ? (apache_request_headers()['Authorization'] ?? '') : '');
 				if (preg_match('/^Bearer\s+(.+)$/i', $_auth_header, $_m)) $_intern_token = $_m[1];
 
 				/* Zweite Tuer fuer denselben Schluessel: eine EIGENE Kopfzeile.

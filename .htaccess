@@ -12,7 +12,24 @@
 #   Darum sperrt diese Datei nach ART und nach ORDNER: eine Art greift auch dort,
 #   wo kein Ordner genannt ist.
 
+# ⚠ DIESE ZWEI ZEILEN SIND DIE BEDINGUNG, nicht Zierat (gemessen 2026-09-30 an der
+# laufenden Seite). Auf diesem Webspace tat mod_rewrite NICHTS - still, ohne 500:
+#   /impressum, /gibtsnicht, /nicht/da/tief  -> alle derselbe 601-Byte-Server-404
+#   ?i=gibtsnicht                            -> qPortals eigener 404 (2665 Bytes)
+# Die Anfrage erreichte index.php also nie, waehrend RedirectMatch und FilesMatch
+# derselben Datei sehr wohl wirkten (/classes/*.php 404, CLAUDE.md 403).
+#
+# mod_rewrite verweigert in einer .htaccess den Dienst, wenn FollowSymLinks nicht
+# gilt - und schweigt dabei. Dass Options -Indexes hier durchgeht, zeigt, dass
+# Options gesetzt werden darf.
+# ⚠ DERSELBE GRUND steckte hinter der verlorenen Authorization-Kopfzeile: auch die
+# haengt an einer RewriteRule. Darum ging die Fernwartung nur ueber X-QPortal-Token.
+Options +FollowSymLinks
+
 RewriteEngine On
+
+# Ohne Basis loest die Umschreibung beim Hoster gegen das falsche Verzeichnis auf.
+RewriteBase /
 
 # ---------------------------------------------------------------- Transport
 # http gibt es nicht. Ein Schluessel im Klartext ueber die Leitung waere
