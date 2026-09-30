@@ -110,7 +110,15 @@ result('visible=nein fehlt',    !isset($links['Drei']),
        'kein Menuepunkt, ohne den Knoten sonst anzutasten - Name, Schild und Zutritt bleiben');
 result('visible=ja schlaegt Punkt', isset($links['Trotzdem']),
        'die Angabe entscheidet, auch GEGEN den fuehrenden Punkt - der Weg aus dem Vermaechtnis');
-result('genau drei Zeilen',     count($links) === 3, 'aus sieben Knoten werden drei (' . count($links) . ')');
+result('genau vier Zeilen',     count($links) === 4, 'drei aus sieben Knoten, dazu der Rueckweg (' . count($links) . ')');
+
+/* ⚠ back_in_tree ohne Angaben: die Vorgabe traegt. Ohne diese Zeile ist eine Unterseite
+*  eine Sackgasse - sie hat keine Abschnitte, also entstuende gar kein Menue (gemessen an
+*  /impressum: die Leiste stand leer). Die alte Klasse konnte das als back_in_tree. */
+result('Rueckweg steht vorn',   isset($treffer[0]) && 'zurueck' === trim($treffer[0][2]),
+       'die erste Zeile, vor allen gesammelten');
+result('Rueckweg eine Achse hoeher', isset($treffer[0]) && '/' === $treffer[0][1],
+       'ueber den Intern-Start ist keine Achse belegt - also die Wurzel (' . ($treffer[0][1] ?? '-') . ')');
 
 /* ⚠ use_element: die Zeilen gehoeren IN das genannte Element. Ohne die Angabe landen
 *  sie an der Dokumentwurzel - gemessen: hinter </body>, als Geschwister von <body>.
@@ -123,8 +131,13 @@ result('Zeilen stehen im Element',
 preg_match('#id="muster"[^>]*>([^<]*)#', $seite, $m);
 $musterzeile = trim($m[1] ?? '');
 
-result('Muster gefuellt', false !== strpos($musterzeile, 'eins = Eins'),
-       'Platzhalter ersetzt: "' . $musterzeile . '"');
+preg_match('#id="muster2"[^>]*>([^<]*)#', $seite, $m2);
+$zweite = trim($m2[1] ?? '');
+
+result('Muster auf dem Rueckweg', false !== strpos($musterzeile, '= zurueck bei /'),
+       'die erste Zeile ist der Rueckweg: "' . $musterzeile . '"');
+result('Muster auf einer Zeile', false !== strpos($zweite, 'eins = Eins'),
+       'die zweite ueber next(): "' . $zweite . '"');
 result('Muster kennt die Tiefe', 0 === strpos($musterzeile, '[0]'),
        '%DEEP% der ersten Ebene ist 0');
 

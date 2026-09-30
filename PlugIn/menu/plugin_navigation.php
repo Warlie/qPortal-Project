@@ -74,6 +74,7 @@ class Navigation extends plugin
 	private $ziel     = null;     // use_document: in welches Dokument build_menu schreibt
 	private $zielElement = '';    // use_element:  an welche Stelle darin
 	private $max_tief = -1;       // -1 = ohne Grenze
+	private $rueckweg = null;     // back_in_tree: die Zeile zurueck, vor allen anderen
 
 	/* --- Ergebnis, einmal gesammelt --- */
 	private $zeilen = null;       // null = noch nicht gesammelt
@@ -182,6 +183,32 @@ class Navigation extends plugin
 	{
 		$this->zielElement = trim((string) $id);
 		return true;
+	}
+
+	/*@
+	function::
+	   Eine Zeile ZURUECK, vor allen anderen. Ohne Angaben heisst sie "zurueck" und fuehrt
+	   eine Ebene hoeher - auf /impressum also auf die Startseite.
+
+	param:: name = die Beschriftung, Vorgabe "zurueck"
+	param:: url = das Ziel, Vorgabe die Adresse eine Achse weniger
+
+	delivers:: <http://www.w3.org/2001/XMLSchema#boolean>
+
+	tricky::
+	   ⚠ Die alte Klasse konnte das (back_in_tree, 74 Aufrufe im Bestand), und ohne sie
+	   ist eine Unterseite eine Sackgasse: die Leiste steht dort leer, weil das Menue aus
+	   den Abschnitten der Startseite kommt und die Unterseite keine hat.
+	@*/
+	public function back_in_tree($name = null, $url = null)
+	{
+		$this->rueckweg = array(
+			'name'  => '',
+			'value' => (is_null($name) || '' === trim((string) $name)) ? 'zurueck' : trim((string) $name),
+			'url'   => (is_null($url)  || '' === trim((string) $url))  ? $this->eine_ebene_hoeher() : trim((string) $url),
+			'deep'  => 0);
+
+		return $this->neu_sammeln();
 	}
 
 	/*@
@@ -352,6 +379,17 @@ class Navigation extends plugin
 		$this->back->go_to_stamp($stamp_seite);
 		$this->back->go_to_stamp($stamp_zurueck);
 
+		if(is_array($this->rueckweg))
+		{
+			$zeile = $this->rueckweg;
+
+			$zeile['line'] = str_replace(array('%NAME%', '%VALUE%', '%URL%', '%DEEP%'),
+			                             array($zeile['name'], $zeile['value'], $zeile['url'], '0'),
+			                             $this->muster);
+
+			array_unshift($this->zeilen, $zeile);
+		}
+
 		return $this->zeilen;
 	}
 
@@ -483,6 +521,33 @@ class Navigation extends plugin
 			. '" im Zieldokument - die Zeilen landen an der Wurzel', 0);
 
 		return $wurzel;
+	}
+
+	/**
+	*	Die Adresse eine Achse weniger: auf /impressum (i=impressum) ist das die Wurzel,
+	*	auf /api/glossary (i=api&j=glossary) die Seite /api.
+	*
+	*	⚠ Gerechnet wird ueber die BELEGTEN Achsen, nicht ueber den Pfad der Anfrage - die
+	*	sprechende Adresse ist nur eine Schreibweise davon, und ueber ?i=… gibt es sie gar
+	*	nicht.
+	*/
+	private function eine_ebene_hoeher(): string
+	{
+		$achsen = $this->content->getLexicalOrderParam();
+		$heap   = $this->content->getHeap()['request'] ?? array();
+
+		$belegt = array();
+		foreach($achsen as $achse)
+			if('' !== (string) ($heap[$achse] ?? '')) $belegt[] = $achse;
+
+		array_pop($belegt);
+
+		if(!count($belegt)) return '/';
+
+		$teile = array();
+		foreach($belegt as $achse) $teile[] = $achse . '=' . $heap[$achse];
+
+		return 'index.php?' . implode('&', $teile);
 	}
 
 	/** Wohin build_menu schreibt: use_document, sonst die Ausgabevorlage. */

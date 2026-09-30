@@ -12,6 +12,9 @@
 	                                         Vermaechtnis, das ist der Weg aus dem Punkt
 	  ohne_wert   kein tree:value        -> erscheint NICHT (getAccess)
 
+	Dazu der Rueckweg OHNE Angaben: er muss "zurueck" heissen und eine Achse weniger
+	zeigen - ueber den Intern-Start ist keine belegt, also die Wurzel.
+
 	build_menu schreibt die erlaubten in die Ausgabevorlage; das <content> darunter
 	zeigt die erste Zeile im Muster, damit auch setLine gemessen ist.
 -->
@@ -34,6 +37,7 @@
 		<object id="navi" name="Navigation" src="PlugIn/menu/plugin_navigation.php" >
 			<remote name="Navigation.page.page" >$this</remote>
 			<remote name="Navigation.page" />
+			<remote name="Navigation.back_in_tree" />
 			<remote name="Navigation.use_element.id" >bars</remote>
 			<remote name="Navigation.use_element" />
 			<remote name="Navigation.setLine.pattern" >[%DEEP%] %NAME% = %VALUE% bei %URL%</remote>
@@ -45,6 +49,13 @@
 	<content name="http://www.w3.org/1999/xhtml#div" >
 		<param name="http://www.w3.org/1999/xhtml#id" >muster</param>
 		<element type="xhtml" ><object id="navi" ><remote name="Navigation.col.columnName" >line</remote><remote name="Navigation.col" /></object></element>
+	</content>
+
+	<!-- Die ZWEITE Zeile, ueber next() - so ist auch das Weiterruecken der Ergebnismenge
+	     gemessen und nicht nur behauptet. -->
+	<content name="http://www.w3.org/1999/xhtml#div" >
+		<param name="http://www.w3.org/1999/xhtml#id" >muster2</param>
+		<element type="xhtml" ><object id="navi" ><remote name="Navigation.next" /><remote name="Navigation.col.columnName" >line</remote><remote name="Navigation.col" /></object></element>
 	</content>
 
 </final>
