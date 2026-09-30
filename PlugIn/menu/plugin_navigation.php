@@ -71,7 +71,8 @@ class Navigation extends plugin
 	private $seite    = null;     // welcher Baum (page)
 	private $wurzel   = true;     // die Wurzel mitnehmen?
 	private $muster   = '%VALUE%';// setLine
-	private $ziel     = null;     // use_document: wohin build_menu schreibt
+	private $ziel     = null;     // use_document: in welches Dokument build_menu schreibt
+	private $zielElement = '';    // use_element:  an welche Stelle darin
 	private $max_tief = -1;       // -1 = ohne Grenze
 
 	/* --- Ergebnis, einmal gesammelt --- */
@@ -166,6 +167,24 @@ class Navigation extends plugin
 	}
 
 	/*@
+	function::
+	   In WELCHES Element des Zieldokuments build_menu schreibt - der Wert eines
+	   id-Attributes. Ohne Angabe schreibt es an die Dokumentwurzel.
+
+	param:: id = z.B. navlinks, zu <div id="navlinks">
+
+	delivers:: <http://www.w3.org/2001/XMLSchema#boolean>
+	   ⚠ Ohne diese Angabe landen die Zeilen an der WURZEL - gemessen am Pruefstand:
+	   hinter </body>, als Geschwister von <body>. Fuer eine Navigationsleiste ist das
+	   nichts; die Stelle gehoert dorthin, wo sie im Entwurf steht.
+	@*/
+	public function use_element($id)
+	{
+		$this->zielElement = trim((string) $id);
+		return true;
+	}
+
+	/*@
 	function:: Wie tief das Menue reicht. -1 = ohne Grenze.
 	param:: deep = Zahl
 	@*/
@@ -217,16 +236,15 @@ class Navigation extends plugin
 		if('' === $ziel) return 0;
 
 		$this->back->change_URI($ziel);
-		$stamp_ziel = $this->back->position_stamp();
+		$stamp_ziel = $this->stelle_im_ziel();
 
+		/* ⚠ Kein Trenner zwischen den Zeilen. Ein <span> waere in einer Leiste mit
+		*  display:flex ein eigenes Flex-Element und risse die Abstaende auseinander;
+		*  getrennt wird im Stylesheet (gap), nicht im Dokument. */
 		foreach($zeilen as $zeile)
 		{
 			$this->back->create_Ns_Node('a', $stamp_ziel, array('href' => $zeile['url']));
 			$this->back->set_node_cdata($zeile['value'], 0);
-			$this->back->parent_node();
-
-			$this->back->create_Ns_Node('span', $stamp_ziel, array());
-			$this->back->set_node_cdata(' ', 0);
 			$this->back->parent_node();
 		}
 
@@ -425,6 +443,34 @@ class Navigation extends plugin
 		}
 
 		return '';
+	}
+
+	/**
+	*	Die Stelle im Zieldokument: das Element mit der genannten id, sonst die Wurzel.
+	*	Gesucht wird wie im Befehl __find_node (behavior/std.php:60) - flash_result davor,
+	*	weil seek_node zurueckgibt, ob ueberhaupt etwas in der Ergebnisliste steht, nicht
+	*	ob DIESE Suche etwas fand.
+	*/
+	private function stelle_im_ziel(): string
+	{
+		$wurzel = $this->back->position_stamp();
+
+		if('' === $this->zielElement) return $wurzel;
+
+		$treffer = $this->back->collect_nodes(null,
+			array('http://www.w3.org/1999/xhtml#id' => $this->zielElement), null, null, -1);
+
+		/* ⚠ full_stamp('relative'), NICHT position_stamp(): der Knoten gibt den
+		*  baumlokalen Stempel (.i.j.k), der Parser erwartet den mit dem Baumkopf davor
+		*  (0000.<idx>). Mit dem kurzen findet go_to_stamp nichts und create_Ns_Node legt
+		*  still an der WURZEL an - gemessen: die Zeilen standen hinter </body>. */
+		if(is_array($treffer) && count($treffer) && is_object($treffer[0]))
+			return $treffer[0]->full_stamp('relative');
+
+		$this->melde('Navigation: kein Element mit id="' . $this->zielElement
+			. '" im Zieldokument - die Zeilen landen an der Wurzel', 0);
+
+		return $wurzel;
 	}
 
 	/** Wohin build_menu schreibt: use_document, sonst die Ausgabevorlage. */
