@@ -101,6 +101,13 @@ result('gesperrt fehlt',        !isset($links['Gesperrt']),  'sector="niemand"')
 result('ohne_wert fehlt',       false === strpos($seite, 'ohne_wert'), 'kein tree:value - kein Schild, keine Zeile');
 result('genau zwei Zeilen',     count($links) === 2, 'aus fuenf Knoten werden zwei (' . count($links) . ')');
 
+/* ⚠ use_element: die Zeilen gehoeren IN das genannte Element. Ohne die Angabe landen
+*  sie an der Dokumentwurzel - gemessen: hinter </body>, als Geschwister von <body>.
+*  Dort nuetzt eine Navigationsleiste niemandem. */
+result('Zeilen stehen im Element',
+       (bool) preg_match('#<div id="bars"[^>]*>\s*<a href#', $seite),
+       'use_element(bars) - nicht an der Wurzel hinter </body>');
+
 /* setLine: die erste Zeile im Muster, im zweiten div */
 preg_match('#id="muster"[^>]*>([^<]*)#', $seite, $m);
 $musterzeile = trim($m[1] ?? '');

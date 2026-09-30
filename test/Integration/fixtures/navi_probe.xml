@@ -29,6 +29,8 @@
 		<object id="navi" name="Navigation" src="PlugIn/menu/plugin_navigation.php" >
 			<remote name="Navigation.page.page" >$this</remote>
 			<remote name="Navigation.page" />
+			<remote name="Navigation.use_element.id" >bars</remote>
+			<remote name="Navigation.use_element" />
 			<remote name="Navigation.setLine.pattern" >[%DEEP%] %NAME% = %VALUE% bei %URL%</remote>
 			<remote name="Navigation.setLine" />
 			<remote name="Navigation.build_menu" />
