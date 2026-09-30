@@ -372,9 +372,11 @@ class Navigation extends plugin
 
 			if($this->back->cur_node() == 'tree')
 			{
-				/* ⚠ EIN Zutrittstest, und zwar der gemeinsame: getAccess() prueft Stufe,
-				*  Sektor, den fuehrenden Punkt und ein fehlendes value. In der alten Klasse
-				*  stand er zweimal - und in build_menu gar nicht. */
+				/* ⚠ EIN Zutrittstest, und zwar der gemeinsame - getAccess fragt Stufe,
+				*  Sektor, Tuerschild, Geraet und die SICHTBARKEIT (visible="nein", ersatzweise
+				*  der veraltete fuehrende Punkt). Das Plugin kennt davon nichts und soll es
+				*  nicht: sonst gaebe es zwei Stellen, die "erscheint nicht" bedeuten, und sie
+				*  wuerden auseinanderlaufen. */
 				if($this->content->getAccess())
 				{
 					$this->zeilen[] = $this->zeile_vom_knoten($tiefe);
@@ -426,6 +428,16 @@ class Navigation extends plugin
 	/** Der mode aus einem direkten <param name="mode">-Kind, oder ''. */
 	private function mode_des_knotens(): string
 	{
+		return $this->param_des_knotens('mode');
+	}
+
+	/**
+	*	Der Wert eines direkten <param name="…">-Kindes, oder ''.
+	*
+	*	EINE Stelle fuer alle Parameter des Knotens - mode und menu lesen dasselbe.
+	*/
+	private function param_des_knotens(string $gesucht): string
+	{
 		$viele = $this->back->index_child();
 
 		for($i = 0; $i < $viele; $i++)
@@ -433,7 +445,7 @@ class Navigation extends plugin
 			$this->back->child_node($i);
 
 			$treffer = ($this->back->cur_node() == 'param')
-			        && ('mode' === (string) $this->back->show_ns_attrib('http://www.trscript.de/tree#name'));
+			        && ($gesucht === (string) $this->back->show_ns_attrib('http://www.trscript.de/tree#name'));
 
 			$wert = $treffer ? trim((string) $this->back->show_cur_data(0)) : '';
 

@@ -605,8 +605,69 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	}
 
 	/**
+	*	SOLL DER KNOTEN IN EINER LISTE ERSCHEINEN?
+	*
+	*	Sichtbarkeit ist keine Frage des Zutritts: ein unsichtbarer Knoten ist voll
+	*	erreichbar, er steht nur in keinem Menue und in keiner Aufzaehlung. Gemessen an
+	*	.view am 2026-09-05: unsichtbar, aber 5966 Bytes.
+	*
+	*	    <tree name="hero" visible="nein" >     kein Menuepunkt
+	*	    <tree name=".alt" visible="ja"   >     trotz Punkt wieder sichtbar
+	*
+	*	⚠ DER FUEHRENDE PUNKT IST VERALTET (STW 2026-09-30). Er traegt weiter - eine
+	*	Installation mit 40 solchen Namen soll sich nicht aendern -, aber er hat einen
+	*	Geburtsfehler: der Name ist zugleich das Pfadsegment. Mit sprechenden Adressen wird
+	*	aus ihm /.impressum, und ein Dotfile liefert kein Webspace aus ("htaccess wiegt
+	*	schon schwer"). Wer heute etwas versteckt, schreibt es hin.
+	*
+	*	Die Reihenfolge ist die Migration: steht visible da, entscheidet es - auch GEGEN
+	*	den Punkt. Fehlt es, entscheidet der Punkt wie eh und je.
+	*/
+	public function istSichtbar($node = null)
+	{
+		global $logger_class;
+
+		$angabe = $this->attrib_of($node, 'http://www.trscript.de/tree#visible');
+
+		if(false !== $angabe && '' !== trim((string) $angabe))
+		{
+			switch(strtolower(trim((string) $angabe)))
+			{
+				case 'nein': case 'no':  case 'false': case '0': return false;
+				case 'ja':   case 'yes': case 'true':  case '1': return true;
+			}
+
+			/* Wie beim mode am tree: ein unbekannter Wert wird nicht geraten, er wird
+			*  gemeldet. Sichtbar bleibt der Knoten - Verstecken ist die Ausnahme und
+			*  will hingeschrieben sein. */
+			if(is_object($logger_class))
+				$logger_class->setAssert('Sichtbarkeit: "' . $angabe . '" kenne ich nicht -'
+					. ' erlaubt sind ja/nein (auch yes/no, true/false, 1/0).'
+					. ' Der Knoten bleibt sichtbar.', 0);
+
+			return true;
+		}
+
+		/* Vermaechtnis: ein Name, der mit . BEGINNT, ist unsichtbar. Ein Punkt weiter
+		*  hinten im Namen ist harmlos - nur Position 0 zaehlt. */
+		$name = (string) $this->attrib_of($node, 'http://www.trscript.de/tree#name');
+
+		if(0 === strpos($name, '.'))
+		{
+			if(is_object($logger_class))
+				$logger_class->setAssert('Sichtbarkeit von "' . $name . '" kommt aus dem'
+					. ' fuehrenden Punkt. Der ist veraltet - visible="nein" sagt dasselbe,'
+					. ' ohne den Namen zu verbiegen (und ohne Dotfile in der Adresse).', 6);
+
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
 	*	DARF IM MENUE ERSCHEINEN? Zutritt plus Sichtbarkeit plus Geraet.
-	*	Verhalten unveraendert; der Zutrittsteil steht jetzt in mayEnter().
+	*	Der Zutrittsteil steht in mayEnter().
 	*/
 	function getAccess($node = null)
 	{
@@ -614,8 +675,7 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 
 		$result = $result && (false !== $this->attrib_of($node, 'http://www.trscript.de/tree#value'));
 
-		if(!(false === ($hidden = strpos((string) $this->attrib_of($node, 'http://www.trscript.de/tree#name'), '.')))
-		&& intval($hidden) == 0) $result = false;
+		$result = $result && $this->istSichtbar($node);
 
 		// Abfrage client
 		if($tmp = $this->attrib_of($node, 'http://www.trscript.de/tree#device'))

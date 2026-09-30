@@ -156,12 +156,24 @@
 			oder die Adresse einer entfernten Instanz. securitylevel und sector entscheidet
 			ContentGenerator::mayEnter - der Sektor ist eine Existenzaussage, die keine Stufe
 			ueberstimmt; -1 heisst "nur fuer Nichtangemeldete".
+
+			visible entscheidet ContentGenerator::istSichtbar und ist KEINE Zutrittsfrage:
+			ein unsichtbarer Knoten ist voll erreichbar, er steht nur in keinem Menue und
+			in keiner Aufzaehlung. ja/nein (auch yes/no, true/false, 1/0); fehlt die Angabe,
+			gilt sichtbar.
+
+			⚠ Ein Name, der mit einem PUNKT beginnt, bedeutet dasselbe - das ist das
+			Vermaechtnis und seit 2026-09-30 veraltet: der Name ist zugleich das
+			Pfadsegment, und mit sprechenden Adressen wird daraus /.name, ein Dotfile, das
+			kein Webspace ausliefert. visible schlaegt den Punkt, auch auf "ja" - das ist
+			der Weg aus einem alten Namen heraus, ohne ihn zu aendern.
 		</xs:documentation></xs:annotation>
 		<xs:attribute name="value" type="xs:string"/>
 		<xs:attribute name="src" type="xs:string"/>
 		<xs:attribute name="securitylevel" type="xs:integer"/>
 		<xs:attribute name="sector" type="xs:string"/>
 		<xs:attribute name="device" type="xs:string"/>
+		<xs:attribute name="visible" type="xs:string"/>
 		<xs:anyAttribute namespace="##other" processContents="skip"/>
 	</xs:attributeGroup>
 
