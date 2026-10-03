@@ -667,7 +667,61 @@ function removeRefnext(&$ref)
 		foreach ($this->next_el as $i => $child)
 			if ($i !== $pos) $tmp[] = &$this->next_el[$i];
 		$this->next_el = $tmp;
+		$this->close_data_gap($pos);
 		return true;
+	}
+
+/* Text und Kinder liegen GETRENNT: data[i] ist der Text VOR Kind i, der letzte Behaelter
+*  steht hinter dem letzten Kind; ausgegeben wird verschraenkt (XML_handle::save_back).
+*  Faellt Kind $pos weg, verschmelzen die beiden Texte um es herum zu einem, und alles
+*  dahinter rueckt um eins nach vorn.
+*  ⚠ Bis 2026-10-03 rueckte nur next_el nach: jeder Text hinter dem entfernten Knoten
+*  stand danach ein Kind zu frueh, und der letzte lag hinter index_max() und fiel aus der
+*  Ausgabe. Gemessen an <p>A<b>1</b>B<i>2</i>C<u>3</u>D</p> ohne <b>: A<i>2</i>B<u>3</u>C.
+*  ⚠ Ein Behaelter kann ein OBJEKT tragen (cdata_ref). Das laesst sich nicht verketten -
+*  steht auf beiden Seiten etwas und eins davon ist ein Objekt, bleibt der vordere und
+*  der hintere geht verloren, mit Logzeile. Im Bestand sitzen Objekte nicht in
+*  gemischtem Text; die Zeile meldet, falls doch.
+*  Kein event_alterdata: das Entfernen ist eine Strukturaenderung wie das Nachruecken in
+*  next_el auch. */
+private function close_data_gap($pos)
+	{
+		if (!is_array($this->data)) return;
+
+		$leer = fn($w) => is_null($w) || '' === $w;
+		$neu  = [];
+
+		foreach ($this->data as $k => $w)
+		{
+			if ($k <= $pos)  { $neu[$k] = &$this->data[$k]; continue; }
+			if ($k > $pos + 1) { $neu[$k - 1] = &$this->data[$k]; continue; }
+
+			/* $k == $pos + 1: der Text hinter dem entfernten Kind */
+			if (!array_key_exists($pos, $neu) || $leer($neu[$pos]))
+			{
+				unset($neu[$pos]);
+				$neu[$pos] = &$this->data[$k];
+			}
+			elseif ($leer($w))
+				;
+			elseif (is_object($w) || is_object($neu[$pos]))
+			{
+				global $logger_class;
+				if (is_object($logger_class))
+					$logger_class->setAssert('removeRefnext: Behaelter ' . ($pos + 1) . ' in '
+						. $this->full_URI() . ' traegt ein Objekt neben Text - der hintere'
+						. ' Inhalt geht verloren', 0);
+			}
+			else
+			{
+				$verbunden = $neu[$pos] . $w;
+				unset($neu[$pos]);
+				$neu[$pos] = $verbunden;
+			}
+		}
+
+		ksort($neu);
+		$this->data = $neu;
 	}
 
 function removeNode()
