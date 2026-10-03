@@ -92,6 +92,11 @@ class xml  {
    var $MIME = array();
    var $DOC = array();
    var $INSTR = array();
+   /* Kommentare AUSSERHALB der Wurzel, je Baum: 'vor' und 'nach'. Die innerhalb haengen
+   *  am Knoten (Interface_node::add_comment). $root_closed sagt tag_comment, auf welcher
+   *  Seite der Wurzel es steht - gesetzt in tag_close, wenn die Wurzel schliesst. */
+   var $COMMENTS = array();
+   var $root_closed = array();
    
    //config
    var $only_child_node = false;
@@ -1610,6 +1615,24 @@ return $res;
    	   array_push($this->INSTR[$this->idx],array('target'=>$target, 'data'=>$data));
 
    }   
+
+//function for comments - expat meldet sie nur ueber den Default-Handler
+   /* Nimmt NUR <!--...-->. Was sonst ueber den Default-Handler kommt, blieb ohne ihn
+   *  liegen und bleibt es auch jetzt: kein Rueckgabewert, keine Weitergabe. */
+   function tag_default($parser, $data)
+   {
+   	   if(!is_string($data) || 7 > strlen($data)
+   	   || 0 !== strpos($data, '<!--') || '-->' !== substr($data, -3)) return;
+
+   	   $text = substr($data, 4, -3);
+
+   	   if(!isset($this->mirror[$this->idx]))
+   	   	   $this->COMMENTS[$this->idx]['vor'][] = $text;
+   	   elseif(!empty($this->root_closed[$this->idx]) || !isset($this->cur_pointer[$this->idx]))
+   	   	   $this->COMMENTS[$this->idx]['nach'][] = $text;
+   	   else
+   	   	   $this->cur_pointer[$this->idx]->add_comment($text);
+   }
 
    function check(){
    if(isset($this->mirror[$this->idx])){

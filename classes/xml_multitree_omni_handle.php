@@ -227,7 +227,9 @@ function save_file_stream(&$stream,$format = '',$send_header=false){
 	   	//echo $this->TYPE[$this->idx];
 	   		$obj = &My_Handle_factory::handle_factory($this->TYPE[$this->idx]);
 			$obj->set_object($this);
-			
+			/* Nur der Weg in eine Datei schreibt Kommentare zurueck - die Seite fuer den
+			*  Besucher (handle_save) bekommt sie nie. */
+			$obj->set_attribute('COMMENTS', true);
 			
 			//var_dump($format);
 			return $obj->save_stream_back($stream,$format);

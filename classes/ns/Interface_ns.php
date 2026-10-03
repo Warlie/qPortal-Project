@@ -91,6 +91,14 @@ protected $has_behavior = false;
 var $data;
 var $cdata = false;
 
+/* Kommentare - ein Stiefkind (STW, 2026-10-03). Je Eintrag [Behaelter, Stelle im Text,
+*  Kommentartext]: data[Behaelter] ist der Text, in dem er stand, die Stelle zaehlt in
+*  Bytes. Angefasst wird das nur beim Parsen (add_comment), beim Nachruecken der
+*  Behaelter (close_data_gap/open_data_gap) und beim Schreiben in eine DATEI
+*  (XML_handle::slot_out) - nie in der Kindliste, damit kein Lauf ueber die Kinder je
+*  einen Kommentar sieht. Zum Besucher geht er nicht. */
+private $comments = array();
+
 var $index = 0;
 private $is_Class = false;
 /* Hat ein Name an diesem Knoten einen Namensraum betreten? Gesetzt von den drei
@@ -691,6 +699,16 @@ function removeRefnext(&$ref)
 *  next_el auch. */
 private function close_data_gap($pos)
 	{
+		/* Die Kommentare zuerst - ein Knoten kann welche tragen, ohne Text zu haben. Wer im
+		*  hinteren Behaelter stand, steht danach im vorderen, hinter dessen Text. */
+		$vorn = (is_array($this->data) && is_string($this->data[$pos] ?? null))
+		      ? strlen($this->data[$pos]) : 0;
+		foreach ($this->comments as $n => [$slot, $stelle, $text])
+		{
+			if ($slot == $pos + 1)    $this->comments[$n] = [$pos, $stelle + $vorn, $text];
+			elseif ($slot > $pos + 1) $this->comments[$n] = [$slot - 1, $stelle, $text];
+		}
+
 		if (!is_array($this->data)) return;
 
 		$leer = fn($w) => is_null($w) || '' === $w;
@@ -735,6 +753,11 @@ private function close_data_gap($pos)
 *  eingefuegt ergab A<em/>B<b>1</b>C<i>2</i> - jeder Text ein Kind zu frueh. */
 private function open_data_gap($pos)
 	{
+		/* Ein Kommentar in data[$pos] bleibt, wo er ist - das neue Kind kommt hinter den
+		*  ganzen Text. Alles dahinter rueckt mit auf. */
+		foreach ($this->comments as $n => [$slot, $stelle, $text])
+			if ($slot > $pos) $this->comments[$n] = [$slot + 1, $stelle, $text];
+
 		if (!is_array($this->data)) return;
 
 		$neu = [];
@@ -747,6 +770,28 @@ private function open_data_gap($pos)
 
 		ksort($neu);
 		$this->data = $neu;
+	}
+
+/* Ein Kommentar beim Parsen: er steht im Behaelter, der gerade gefuellt wird
+*  (index_max() = Zahl der Kinder, wie in cdata()), an der Stelle, bis zu der dessen
+*  Text bisher reicht. */
+function add_comment($text)
+	{
+		$slot   = $this->index_max();
+		$bisher = (is_array($this->data) && is_string($this->data[$slot] ?? null))
+		        ? strlen($this->data[$slot]) : 0;
+		$this->comments[] = [$slot, $bisher, (string) $text];
+	}
+
+/* Die Kommentare eines Behaelters als [Stelle, Text], nach Stelle geordnet; bei
+*  gleicher Stelle in der Reihenfolge des Dokuments. */
+function comments_at($slot)
+	{
+		$raus = [];
+		foreach ($this->comments as [$s, $stelle, $text])
+			if ($s == $slot) $raus[] = [$stelle, $text];
+		usort($raus, fn($a, $b) => $a[0] <=> $b[0]);
+		return $raus;
 	}
 
 function removeNode()

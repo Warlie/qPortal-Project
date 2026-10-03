@@ -272,6 +272,23 @@ Liste nach, traf nie, und setzte den Präfix ersatzweise auf die URI. Dieselbe F
 außerdem `$newKey` zwischen den Runden stehen, wodurch jedes gewöhnliche Attribut einen
 Präfix-Eintrag überschrieb.
 
+**Text und Kinder liegen getrennt** (STW: „damals Naivität, nun eine Besonderheit“): `data[i]`
+ist der Text **vor** Kind `i`, `next_el[i]` die Kinder, der letzte Behälter steht hinter dem
+letzten Kind; `XML_handle::save_back` gibt beides verschränkt aus. Wer ein Kind entfernt oder
+mitten hinein einfügt, muss die Behälter mitnehmen — das tun `close_data_gap`/`open_data_gap`
+in `removeRefnext`/`setRefnext` (seit `2026-10-03`; vorher stand danach jeder Text ein Kind
+daneben, und `tag_open` machte beim Einfügen mit `$pos` das **letzte** Kind zum Arbeitsknoten).
+
+**Kommentare sind ein Stiefkind, kein Knoten.** Expat meldet sie nur über
+`xml_set_default_handler` → `tag_default`. Innerhalb der Wurzel hängen sie am Knoten als
+`[Behälter, Byte-Stelle im Text, Text]` (`add_comment`, `comments_at`), davor/danach in
+`COMMENTS[idx]['vor'|'nach']`. **Nie in der Kindliste** — kein Lauf über die Kinder sieht sie.
+⚠ Geschrieben werden sie **nur in eine Datei**: `save_file_stream` setzt `COMMENTS` am Handle,
+die Seite für den Besucher (`handle_save`) bekommt sie nie — gemessen über 727 Dokumente
+byte-gleich. ⚠ In CDATA-Text wird an der Stelle **geteilt** (`slot_out`), sonst stünde der
+Kommentar innerhalb von `<![CDATA[ ]]>`. Wird ein Text ersetzt, rutscht ein Kommentar dahinter
+ans Ende des Behälters.
+
 **Positionsstempel** (`Interface_ns.php:369`): Element `.i.j.k`, Attribut `…@<full_URI>`,
 Daten `…#<QName>`. Der Baum-Stempel (`xml_multitree.php:345`) stellt `0000.<idx>` voran;
 `go_to_stamp` versteht `me` und `prev` als idx.

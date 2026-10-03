@@ -31,6 +31,9 @@ class XML_handle extends Interface_handle
 			xml_set_notation_decl_handler($this->parser, [$this->base_object, "tag_notation"]);
 			xml_set_unparsed_entity_decl_handler($this->parser, [$this->base_object, "tag_up_entity"]);
 			xml_set_processing_instruction_handler($this->parser, [$this->base_object, "tag_instruction_entry"]);
+			/* Kommentare kommen bei expat NUR hier an - ohne ihn verwarf der Parser sie
+			*  schon beim Lesen, und __save_back schrieb ein Dokument ohne sie zurueck. */
+			xml_set_default_handler($this->parser, [$this->base_object, "tag_default"]);
 		
 			
 
@@ -247,6 +250,14 @@ class XML_handle extends Interface_handle
       //if($this->base_object->DOC[$this->base_object->idx] <> '')echo $this->base_object->DOC[$this->base_object->idx];
       if(($this->base_object->DOC[$this->base_object->idx] <> '') && !is_array($this->base_object->DOC[$this->base_object->idx]))$res .= $this->base_object->DOC[$this->base_object->idx];
 
+      /* Kommentare nur in eine DATEI (save_file_stream setzt COMMENTS). Seite und Datei
+      *  laufen beide hier durch - ohne die Weiche bekaeme der Besucher jeden Kommentar
+      *  aus Huelle und Seiten. */
+      $komm = !empty($this->attribute_values['COMMENTS']);
+      if($komm)
+      	foreach($this->base_object->COMMENTS[$this->base_object->idx]['vor'] ?? [] as $kom)
+      		$res .= '<!--' . $kom . '-->' . $nl;
+
 
 /**
 *
@@ -297,7 +308,7 @@ $myhelp = 0;
    	//   set_read_event
 //echo $this->base_object->cur_node() . "\n";
     $res .=  '<' .  $this->base_object->cur_node() . $this->base_object->all_attrib_axo($format) . $this->positionstamp($modus) . '>';
-    $res .=  $this->base_object->setcdata_tag($this->base_object->show_cur_data(0),$this->base_object->show_curtag_cdata(), $quotes);
+    $res .=  $this->slot_out(0, $quotes, $komm);
     $reset = true;
 
      if(!$this->base_object->child_node(0)) 
@@ -315,7 +326,7 @@ $myhelp = 0;
         $deep[$this->base_object->idx]++;
       }elseif((($this->base_object->index_child()-1) > $this->base_object->show_pointer()) ){
                                                                        
-       $res .=  $this->base_object->setcdata_tag($this->base_object->show_cur_data($this->base_object->show_pointer()+1,$format),$this->base_object->show_curtag_cdata(), $quotes); 
+       $res .=  $this->slot_out($this->base_object->show_pointer()+1, $quotes, $komm);
        $reset = true;
        $check = $this->base_object->child_node($this->base_object->show_pointer() + 1);
        $deep[$this->base_object->idx]++;
@@ -332,7 +343,7 @@ $myhelp = 0;
 
        }else{
 
-        $res .=  $this->base_object->setcdata_tag($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$this->base_object->show_curtag_cdata(), $quotes);
+        $res .=  $this->slot_out($this->base_object->show_pointer()+1, $quotes, $komm);
 
         $res .=  '</' .  $this->base_object->cur_node() . '>';
 
@@ -346,9 +357,12 @@ $myhelp = 0;
 
                                                                         if(-1 == $this->base_object->show_pointer()){
                                                                         $res .=  '<' .  $this->base_object->cur_node() . $this->base_object->all_attrib_axo($format) . $this->positionstamp($modus) ;}
-                                                                                if( '' <>( $this->base_object->show_cur_data($this->base_object->show_pointer()+1)) )
+                                                                                /* Ein Blatt, das nur einen Kommentar traegt, braucht >…</x> statt /> */
+                                                                                if( '' <>( $this->base_object->show_cur_data($this->base_object->show_pointer()+1))
+                                                                                 || ($komm && is_object($this->base_object->show_xmlelement())
+                                                                                     && [] !== $this->base_object->show_xmlelement()->comments_at($this->base_object->show_pointer()+1)) )
                                                                                 {
-                                                                                $res .=  '>' . $this->base_object->setcdata_tag($this->base_object->show_cur_data($this->base_object->show_pointer()+1) ,$this->base_object->show_curtag_cdata(), $quotes);
+                                                                                $res .=  '>' . $this->slot_out($this->base_object->show_pointer()+1, $quotes, $komm);
                                                                                 $res .=  '</' .  $this->base_object->cur_node() . '>';   // str_repeat (" ", 2*$deep[$this->idx])
                                                                                 }
                                                                                 else
@@ -362,6 +376,9 @@ $myhelp = 0;
 
                                 }
                                 $res .= "\n";
+      if($komm)
+      	foreach($this->base_object->COMMENTS[$this->base_object->idx]['nach'] ?? [] as $kom)
+      		$res .= '<!--' . $kom . '-->' . $nl;
 }
 if($printall) $res .=  '</root>';
 
@@ -374,6 +391,41 @@ if($printall) $res .=  '</root>';
 		
 	}
 	
+/* Ein Textbehaelter des aktuellen Knotens. Ohne Kommentare genau wie bisher. Mit
+*  Kommentaren wird der Text an deren Stellen GETEILT und jedes Stueck einzeln durch
+*  setcdata_tag geschickt - ein Kommentar in die fertige Zeichenkette geschoben stuende
+*  sonst innerhalb von <![CDATA[ ]]> und waere nur noch Text. Leere Stuecke entfallen.
+*  Eine Stelle hinter dem Textende (der Text wurde seitdem ersetzt) wird aufs Ende
+*  gekappt: der Kommentar rutscht nach hinten, verloren geht er nicht. */
+private function slot_out($slot, $quotes, $komm)
+{
+	$b    = $this->base_object;
+	$text = $b->show_cur_data($slot);
+	$cd   = $b->show_curtag_cdata();
+
+	if(!$komm || !is_object($knoten = $b->show_xmlelement())
+	|| [] === ($liste = $knoten->comments_at($slot)))
+		return $b->setcdata_tag($text, $cd, $quotes);
+
+	if(!is_string($text))
+		$text = is_object($text) ? '' : (string) $text;
+
+	$res = '';
+	$ab  = 0;
+	foreach($liste as [$stelle, $kom])
+	{
+		$stelle = max($ab, min(intval($stelle), strlen($text)));
+		$stueck = substr($text, $ab, $stelle - $ab);
+		if('' !== $stueck) $res .= $b->setcdata_tag($stueck, $cd, $quotes);
+		$res .= '<!--' . $kom . '-->';
+		$ab = $stelle;
+	}
+	$rest = substr($text, $ab);
+	if('' !== $rest) $res .= $b->setcdata_tag($rest, $cd, $quotes);
+
+	return $res;
+}
+
 function save_stream_back(&$stream, $format,$send_header = false)
 {
 				

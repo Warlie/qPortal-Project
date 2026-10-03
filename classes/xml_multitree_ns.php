@@ -1287,6 +1287,7 @@ function delete_index($index)
         if(!isset($this->mirror[$this->idx])){
 
                 $num = 0;
+                unset($this->root_closed[$this->idx]);
 
                 $this->mirror[$this->idx] = $this->getInstance($tag,$attributes);
                 $this->cur_pointer[$this->idx] = $this->mirror[$this->idx];
@@ -1468,8 +1469,11 @@ echo $this->idx . " gibt es nicht";
 		$this->cur_pointer[$this->idx]->event_initiated();
 		//$this->cur_pointer[$this->idx]->complete();
 		//echo spl_object_id($this->cur_pointer[$this->idx]) . "complete \n";
-        if(isset($this->cur_pointer[$this->idx]->prev_el))        
+        if(isset($this->cur_pointer[$this->idx]->prev_el))
 	 $this->cur_pointer[$this->idx] = &$this->cur_pointer[$this->idx]->getRefprev();
+	else
+	 /* Die Wurzel schliesst - ein Kommentar danach steht hinter dem Dokument (tag_default). */
+	 $this->root_closed[$this->idx] = true;
  	//if(!$this->is_valid_node())echo "aaaah";
                                                       //$this->cur_pointer[$this->idx]->final_data();
 	}
