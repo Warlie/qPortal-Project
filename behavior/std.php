@@ -1013,6 +1013,12 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			$cg     = $node->get_contentGen();
 			$notes  = [];
 
+			/* lang="en" oder "en;de": die Sprache DIESER Anfrage, vor Browser und Instanz
+			*  (ContentGenerator::languages). Gilt fuer die Schilder - und fuer den Rest des
+			*  Requests, wie jede Sprachangabe der Anfrage. */
+			if('' !== trim((string) ($attr['lang'] ?? '')) && is_object($cg) && method_exists($cg, 'setLanguages'))
+				$cg->setLanguages((string) $attr['lang']);
+
 			if(!class_exists('PHP_Ast_Scan'))
 				require_once(__DIR__ . '/../classes/handles/PHP_ast_scan.php');
 
@@ -1022,12 +1028,13 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			$kurz = PHP_Ast_Scan::DESC_KEYS + ['value'    => 'tree:value',
 			                                   'delivers' => 'desc:delivers',
 			                                   'columns'  => 'desc:columns',
-			                                   'effect'   => 'desc:effect'];
+			                                   'effect'   => 'desc:effect',
+			                                   'text'     => 'desc:text'];
 			$begriffe = [];
 
 			if($show === '')
 				$begriffe = array_values(array_unique(array_merge(['tree:value'],
-					array_values(PHP_Ast_Scan::DESC_KEYS), ['desc:delivers', 'desc:columns', 'desc:effect'])));
+					array_values(PHP_Ast_Scan::DESC_KEYS), ['desc:text', 'desc:delivers', 'desc:columns', 'desc:effect'])));
 			else
 				foreach(array_map('trim', explode(',', $show)) as $w)
 				{
@@ -1103,7 +1110,7 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 								*  'pos': vorne im vollen Stempel steht der Hash, und verschluesselt
 								*  waere die Reihenfolge Zufall. */
 								if($scope !== 'local')  $eintrag['stamp'] = $k->full_stamp('external');
-								$treffer[spl_object_id($k)] = ['i' => $k->get_idx(), 'pos' => $k->position_stamp(), 'e' => $eintrag];
+								$treffer[spl_object_id($k)] = ['i' => $k->get_idx(), 'pos' => $k->position_stamp(), 'e' => $eintrag, 'k' => $k];
 							}
 						}
 
@@ -1113,6 +1120,34 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 							foreach($m->solutions() as $z)
 								if(is_object($z['?s'] ?? null) && isset($treffer[spl_object_id($z['?s'])]))
 									$treffer[spl_object_id($z['?s'])]['e'][$b] = $z['?wert'];
+						}
+					}
+
+					/* Die Schilder als KINDKNOTEN (seit 2026-10-03, xml-schema/pedl-desc.xsd):
+					*  <desc:text xml:lang="de">…</desc:text>. Gelesen ueber die Struktur, nicht
+					*  per SPARQL - ein Kindelement ist dort heute kein Praedikat. Je Begriff
+					*  EINE Fassung: die Sprache waehlt ContentGenerator::pickLanguage (Anfrage,
+					*  Browser, Instanz; ohne xml:lang gilt fuer jede; sonst die erste). Ein
+					*  Kindknoten schlaegt die Attributform. delivers/columns duerfen auf einen
+					*  Knoten zeigen - dann steht der Verweis da, kein Text. */
+					foreach($treffer as $id => $t)
+					{
+						$k = $t['k'];
+						$gruppen = [];
+						for($i = 0; $i < $k->index_max(); $i++)
+						{
+							$kind = $k->getRefnext($i);
+							if($kind instanceof Interface_node && $kind->get_NS() === PHP_Ast_Scan::NS_DESC
+							&& in_array('desc:' . $kind->get_QName(), $begriffe, true))
+								$gruppen['desc:' . $kind->get_QName()][] = $kind;
+						}
+						foreach($gruppen as $b => $fassungen)
+						{
+							$wahl = is_object($cg) && method_exists($cg, 'pickLanguage')
+							      ? $cg->pickLanguage($fassungen) : $fassungen[0];
+							$ref  = $wahl->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#resource');
+							$treffer[$id]['e'][$b] = (false !== $ref && '' !== $ref) ? ['resource' => $ref]
+							                                                       : trim((string) $wahl->getdata());
 						}
 					}
 				}

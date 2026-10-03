@@ -27,6 +27,7 @@ php -d error_reporting=E_ERROR test/Integration/tree_where.php         # 31/0
 php -d error_reporting=E_ERROR test/Integration/logger_listen.php      # 18/0 (Teil 1 ohne Server)
 php -d error_reporting=E_ERROR test/Integration/tree_call.php          # 16/0
 php -d error_reporting=E_ERROR test/Integration/schema_check.php       # 20/0 (Bestand: 512 gueltig / 60 nicht)
+php -d error_reporting=E_ERROR test/Integration/lang_choice.php        # 18/0 (Sprachfassungen)
 ```
 
 ```bash
@@ -534,9 +535,31 @@ dort zuerst.**
   erlaubt (je Sprache einmal, `xml:lang`), `delivers`/`columns` auch als `rdf:resource`.
   Gemessen: ein Schild als erstes Kind ändert keine Ausgabe, auch nicht vor `<param IF>`.
   ⚠ Unter `element`/`html` kann das Schema ein Schild nicht verbieten (dort ist alles erlaubt) —
-  und dort würde es ausgegeben. ⚠ `xml:lang` landet im Baum heute unter
-  `http://www.trscript.de/tree#lang`, nicht im XML-Namensraum: der feste Präfix `xml` ist dem
-  Parser unbekannt. ⚠ `__where_am_i` liest die Kindknoten noch **nicht**, nur die Attributform.
+  und dort würde es ausgegeben. `__where_am_i` liest die Kindknoten (über die Struktur, nicht per
+  SPARQL), je Begriff **eine** Fassung nach Sprache; ein Kindknoten schlägt die Attributform.
+
+## Sprachfassungen (xml:lang)
+
+Seit `2026-10-03`: Geschwister im **tree-Namensraum** mit `xml:lang` sind Fassungen, je Sprache
+eine — zwei `<main>`, zwei `<tree name="a">`, zwei `<program>`. Beim **`start`** läuft nur die
+beste (`Interface_node::event_message_check` → `ContentGenerator::isChosenLanguage`). Fassungen
+sind Kinder **desselben Elternknotens** (`getRefprev`, nicht der Zuhörer-Eltern) mit gleichem Typ
+und gleicher Kennung (`tree:name`, sonst `id`). Ein Knoten **ohne** `xml:lang` konkurriert nie
+und läuft immer — der Bestand ist unberührt.
+
+Reihenfolge (`languages()`): `lang=` am Befehl (`setLanguages`, heute an `__where_am_i`), dann
+`Accept-Language` — auch über den Intern-Kanal —, dann `[language] prefer` (Vorgabe `"en"`).
+Verglichen wird nur der Hauptteil (`de-DE` → `de`). Passt nichts: die Fassung ohne Sprache, dann
+die erste (`languageRank`, `pickLanguage`).
+
+⚠ **Nur beim `start`.** `__find_node`, `__set_data`, `__save_back` erreichen jede Fassung — sonst
+liesse sich die englische nie bearbeiten. ⚠ `prefer = "de;en"` **in Anführungszeichen** (das `;`
+beginnt sonst einen Kommentar). ⚠ Die Absage loggt auf Stufe 6 — bei `level = 5` unsichtbar.
+
+`xml:lang` liegt unter `http://www.w3.org/XML/1998/namespace#lang`. Bis `2026-10-03` landete es
+unter `tree#lang`: der Präfix `xml` lief über `prefixes[0]`, und das ist zugleich die Tabelle
+von **Baum 0** (`xml_multitree_ns.php`, `create_node_to_attribute`). Prüfstand:
+`test/Integration/lang_choice.php` (18).
 
 Befunde im Bestand (`schema_check.php`, Teil 2 — nur ausgewertet, `template/` wird getrennt verwaltet):
 `programm` (14 Dateien) und `add2` (13) sind **nicht registriert** — der Parser macht daraus

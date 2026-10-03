@@ -748,9 +748,13 @@ function delete_index($index)
 					
 					//var_dump($this->prefixes, $prefix, $this->prefixes[$prefix]);
 					if('xmlns' == $prefix)$prefix = 0;
-					if('xml' == $prefix)$prefix = 0;
-					
-					if(!is_null($this->prefixes[$prefix]))
+					/* xml: ist laut XML-Standard FEST an diesen Namensraum gebunden und wird nie
+					*  per xmlns erklaert. Bis 2026-10-03 lief es ueber $prefix = 0 - und
+					*  prefixes[0] ist zugleich die Tabelle von BAUM 0: xml:lang landete unter
+					*  dessen Default-Namensraum (http://www.trscript.de/tree#lang). */
+					if('xml' == $prefix)
+						$full_ns = 'http://www.w3.org/XML/1998/namespace';
+					elseif(!is_null($this->prefixes[$prefix]))
 						$full_ns = end($this->prefixes[$prefix]) ?: '';
 					else
 						$full_ns = ($prefix === 0) ? 'http://www.w3.org/XML/1998/namespace' : '';

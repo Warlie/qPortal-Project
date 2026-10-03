@@ -38,6 +38,8 @@ $list_of_configuration_parameters = [
 	'INTERN' => ['runtime', 'INTERN'],
 	'LANGUAGE_INPUT_DEFAULT' => ['default', 'LANGUAGE_INPUT'],
 	'LANGUAGE_OUTPUT_DEFAULT' => ['default', 'LANGUAGE_OUTPUT'],
+	// Sprachfassungen (xml:lang): die Reihenfolge des Vorzugs, "de;en" - MIT Anfuehrungszeichen
+	'LANGUAGE_PREFER' => ['language', 'prefer'],
 	'LOG_PATH' => ['log', 'path'],
 	'LOG_LEVEL' => ['log', 'level'],
 

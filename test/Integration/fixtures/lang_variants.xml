@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!--
+  Pruefstand fuer Sprachfassungen (lang_choice.php): von mehreren Geschwistern mit xml:lang
+  laeuft beim start nur die beste - nach Accept-Language, dann [language] prefer, dann die
+  erste vorhandene. Ein Knoten ohne xml:lang laeuft immer.
+
+  drei      de, en, fr und eine ohne Sprache
+  nur_fr    eine einzige Fassung, die in keiner Liste steht - laeuft trotzdem
+  en_fr     ohne de: en gewinnt ueber fr, weil en in der Liste steht
+  getrennt  zwei Gruppen nebeneinander (tree:name a und b) - je Gruppe eine
+  verlauf   tree-Fassungen fuer dasselbe Pfadsegment
+-->
+<indextree xmlns="http://www.trscript.de/tree"
+           xmlns:desc="http://www.trscript.de/2026/pedl-desc">
+<final name="home" value="Sprachen">
+	<desc:text xml:lang="de">Der Flur des Sprachpruefstands.</desc:text>
+	<desc:text xml:lang="en">The hallway of the language test bench.</desc:text>
+
+	<tree name="drei" value="Drei">
+		<program xml:lang="de"><result>de</result></program>
+		<program xml:lang="en"><result>en</result></program>
+		<program xml:lang="fr"><result>fr</result></program>
+		<program><result>neutral</result></program>
+	</tree>
+
+	<tree name="nur_fr" value="Nur fr">
+		<program xml:lang="fr"><result>fr</result></program>
+	</tree>
+
+	<tree name="en_fr" value="en und fr">
+		<program xml:lang="fr"><result>fr</result></program>
+		<program xml:lang="en"><result>en</result></program>
+	</tree>
+
+	<tree name="getrennt" value="Getrennt">
+		<tree name="a" xml:lang="de"><program><result>a-de</result></program></tree>
+		<tree name="a" xml:lang="en"><program><result>a-en</result></program></tree>
+		<tree name="b" xml:lang="en"><program><result>b-en</result></program></tree>
+	</tree>
+</final>
+</indextree>

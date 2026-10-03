@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!--
+  Pruefstand fuer Sprachfassungen MIT Ausgabe (lang_choice.php).
+
+  home   drei content-Fassungen an derselben Stelle: eine ohne Sprache, dann de, dann en.
+         Ein element ERSETZT den Text - es steht also der LETZTE, der lief. Liefen beide
+         Fassungen, stuende immer HOME-EN da.
+  a      zwei tree-Fassungen fuer dasselbe Pfadsegment (start mit Pfad ["a"])
+  m      zwei main-Fassungen: de auf out_blank.xml, en auf out_blank_en.xml (lang="en")
+-->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Ausgabe">
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one">test/Integration/fixtures/out_blank.xml</main>
+	</template>
+	<content name="http://www.w3.org/1999/xhtml#html"><element type="xhtml">HOME-ALLE</element></content>
+	<content name="http://www.w3.org/1999/xhtml#html" xml:lang="de"><element type="xhtml">HOME-DE</element></content>
+	<content name="http://www.w3.org/1999/xhtml#html" xml:lang="en"><element type="xhtml">HOME-EN</element></content>
+</final>
+
+<tree name="a" value="A deutsch" xml:lang="de">
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one">test/Integration/fixtures/out_blank.xml</main>
+	</template>
+	<content name="http://www.w3.org/1999/xhtml#html"><element type="xhtml">A-DE</element></content>
+</tree>
+<tree name="a" value="A english" xml:lang="en">
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one">test/Integration/fixtures/out_blank.xml</main>
+	</template>
+	<content name="http://www.w3.org/1999/xhtml#html"><element type="xhtml">A-EN</element></content>
+</tree>
+
+<tree name="m" value="Vorlage je Sprache">
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one" xml:lang="de">test/Integration/fixtures/out_blank.xml</main>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one" xml:lang="en">test/Integration/fixtures/out_blank_en.xml</main>
+	</template>
+	<content name="http://www.w3.org/1999/xhtml#html"><element type="xhtml">M</element></content>
+</tree>
+</indextree>

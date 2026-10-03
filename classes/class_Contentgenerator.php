@@ -714,6 +714,135 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		return true;
 	}
 
+	/* ------------------------------------------------------------------ Sprache
+	*
+	*  Ein Knoten mit xml:lang ist EINE Fassung von mehreren (STW 2026-10-03): zwei <main>,
+	*  zwei <tree name="x">, zwei <desc:text> - je Sprache eine. Welche gilt, entscheidet
+	*  die Liste aus languages(); passt keine, die erste vorhandene ("das Naechstbeste").
+	*  Ein Knoten OHNE xml:lang konkurriert beim Lauf nie - der Bestand bleibt unberuehrt.
+	*/
+
+	/* Die Liste fuer DIESE Anfrage. Gesetzt von aussen (setLanguages - etwa lang= am
+	*  Befehl), sonst leer; dann zaehlen die Browserangabe und danach die Instanz. */
+	private $language_request = null;
+
+	public function setLanguages($liste): void
+	{
+		$this->language_request = $this->language_list($liste);
+	}
+
+	/**
+	*	DIE SPRACHEN IN DER REIHENFOLGE DES VORZUGS, nur Hauptteil (de-DE -> de).
+	*
+	*	Vorne, was die Anfrage sagt (setLanguages), dann Accept-Language des Browsers,
+	*	dann [language] prefer aus der Konfiguration. Doppelte zaehlen beim ersten Mal.
+	*	⚠ prefer steht in der ini in Anfuehrungszeichen - ein ; beginnt dort sonst einen
+	*	Kommentar, und "de;en" kaeme als "de" an (dieselbe Falle wie beim Sektor).
+	*/
+	public function languages(): array
+	{
+		$liste = $this->language_request ?? [];
+
+		$browser = $_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? '';
+		if('' !== $browser)
+		{
+			$gewichtet = [];
+			foreach(explode(',', $browser) as $n => $teil)
+			{
+				$stuecke = explode(';', trim($teil));
+				$q = 1.0;
+				foreach(array_slice($stuecke, 1) as $s)
+					if(preg_match('/^\s*q\s*=\s*([0-9.]+)/', $s, $m)) $q = floatval($m[1]);
+				if($q > 0) $gewichtet[] = [$stuecke[0], $q, $n];
+			}
+			usort($gewichtet, fn($a, $b) => ($b[1] <=> $a[1]) ?: ($a[2] <=> $b[2]));
+			$liste = array_merge($liste, $this->language_list(array_column($gewichtet, 0)));
+		}
+
+		$liste = array_merge($liste, $this->language_list(defined('LANGUAGE_PREFER') ? LANGUAGE_PREFER : 'en'));
+
+		return array_values(array_unique($liste));
+	}
+
+	private function language_list($angabe): array
+	{
+		if(is_string($angabe)) $angabe = explode(';', str_replace(',', ';', $angabe));
+		$raus = [];
+		foreach((array) $angabe as $s)
+		{
+			$s = strtolower(trim(explode('-', trim((string) $s))[0]));
+			if('' !== $s && '*' !== $s) $raus[] = $s;
+		}
+		return $raus;
+	}
+
+	/* Die Sprache eines Knotens - xml:lang, sonst null (gilt fuer jede). */
+	public function languageOf($node): ?string
+	{
+		if(!is_object($node)) return null;
+		$l = $node->get_ns_attribute('http://www.w3.org/XML/1998/namespace#lang');
+		return (false === $l || '' === trim((string) $l)) ? null : strtolower(explode('-', trim($l))[0]);
+	}
+
+	/**
+	*	DER RANG EINER SPRACHE: kleiner ist besser. Erst die Liste, dann ohne Sprache
+	*	(gilt fuer jede), dann alles andere - ein fremder Satz ist mehr als keiner.
+	*/
+	public function languageRank(?string $lang): int
+	{
+		$liste = $this->languages();
+		if(is_null($lang)) return count($liste);
+		$pos = array_search(strtolower(explode('-', $lang)[0]), $liste, true);
+		return (false === $pos) ? count($liste) + 1 : $pos;
+	}
+
+	/**
+	*	AUS MEHREREN FASSUNGEN DIE BESTE. Gleicher Rang: die erste im Dokument.
+	*	Fuer Schilder (desc:text ...) - dort konkurriert auch die Fassung ohne Sprache.
+	*/
+	public function pickLanguage(array $knoten)
+	{
+		$beste = null; $rang = PHP_INT_MAX;
+		foreach($knoten as $k)
+		{
+			$r = $this->languageRank($this->languageOf($k));
+			if($r < $rang) { $beste = $k; $rang = $r; }
+		}
+		return $beste;
+	}
+
+	/**
+	*	LAEUFT DIESE FASSUNG? Gefragt beim start (Interface_node::event_message_check).
+	*
+	*	Ohne xml:lang: ja, immer. Sonst wird der ELTERNKNOTEN gefragt (STW): seine Kinder
+	*	gleichen Typs und gleicher Kennung (tree:name, sonst id) mit xml:lang sind die
+	*	Fassungen, und nur die beste laeuft. Gefragt wird der STRUKTURELLE Elternknoten
+	*	(getRefprev) - tree meldet sich als Zuhoerer am indextree an, steht aber unter
+	*	seinem final.
+	*/
+	public function isChosenLanguage($node): bool
+	{
+		if(is_null($this->languageOf($node))) return true;
+
+		$eltern = $node->getRefprev();
+		if(!($eltern instanceof Interface_node)) return true;
+
+		$kennung = fn($k) => (string) ($k->get_ns_attribute('http://www.trscript.de/tree#name')
+		                            ?: $k->get_ns_attribute('http://www.trscript.de/tree#id') ?: '');
+		$meine = $kennung($node);
+
+		$fassungen = [];
+		for($i = 0; $i < $eltern->index_max(); $i++)
+		{
+			$k = $eltern->getRefnext($i);
+			if($k instanceof Interface_node && $k->full_URI() === $node->full_URI()
+			&& !is_null($this->languageOf($k)) && $kennung($k) === $meine)
+				$fassungen[] = $k;
+		}
+
+		return $this->pickLanguage($fassungen) === $node;
+	}
+
 	/**
 	*	DARF IM MENUE ERSCHEINEN? Zutritt plus Sichtbarkeit plus Geraet.
 	*	Der Zutrittsteil steht in mayEnter().

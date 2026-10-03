@@ -1605,6 +1605,21 @@ global $logger_class;
 		return false;
 	}
 
+	/* Sprachfassungen (seit 2026-10-03): von mehreren Geschwistern mit xml:lang laeuft nur
+	*  die beste (ContentGenerator::isChosenLanguage). NUR beim start - ein Intern-Befehl
+	*  (__find_node, __set_data, __save_back) muss jede Fassung erreichen, sonst liesse
+	*  sich die englische nie bearbeiten. Ohne xml:lang aendert sich nichts. */
+	if('start' === $com_element->get_Command()
+	/* Nur der tree-Namensraum: ein <span xml:lang> im XHTML ist Inhalt, keine Fassung. */
+	&& 'http://www.trscript.de/tree' === $this->get_NS()
+	&& is_object($this->contentGen) && method_exists($this->contentGen, 'isChosenLanguage')
+	&& !$this->contentGen->isChosenLanguage($this))
+	{
+		$logger_class->setAssert('Sprache: ' . $this->full_URI() . ' (xml:lang="'
+			. $this->contentGen->languageOf($this) . '") laeuft nicht - eine andere Fassung passt besser', 6);
+		return false;
+	}
+
 	$bool=true;
 	for($i = 0;count($this->check_list) > $i;$i++)
 	{
