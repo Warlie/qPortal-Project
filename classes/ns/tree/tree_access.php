@@ -174,7 +174,21 @@ function event_initiated()
 
 function event_message_in($type,&$obj)
 	{
+		global $logger_class;
+
 		$show = $this->getdata();
+
+		/* ⚠ Eine LEERE Kette ist kein Befehl. hold_messages macht aus "" den leeren Befehl,
+		*  der leere Befehl ist start, und der geht an diesen Knoten - der wieder hier
+		*  landet. Bis 2026-10-03 lief das bis zum Speicherende (HTTP 500), ausgeloest von
+		*  einem getdata(), das bei luckenhaften Behaeltern "" lieferte. */
+		if(is_null($show) || (is_string($show) && '' === trim($show)))
+		{
+			if(is_object($logger_class))
+				$logger_class->setAssert('access: keine Befehlskette - nichts zu tun ('
+					. $this->full_stamp('relative') . ')', 0);
+			return false;
+		}
 
 		$cg    = $this->get_parser()->get_context_generator();
 		$stufe = $this->param_named('securitylevel');

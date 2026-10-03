@@ -28,6 +28,7 @@ php -d error_reporting=E_ERROR test/Integration/logger_listen.php      # 18/0 (T
 php -d error_reporting=E_ERROR test/Integration/tree_call.php          # 16/0
 php -d error_reporting=E_ERROR test/Integration/schema_check.php       # 20/0 (Bestand: 512 gueltig / 60 nicht)
 php -d error_reporting=E_ERROR test/Integration/lang_choice.php        # 18/0 (Sprachfassungen)
+php -d error_reporting=E_ERROR test/Integration/tree_access.php        # 11/0 (<access>-Klammer)
 ```
 
 ```bash

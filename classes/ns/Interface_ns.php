@@ -1188,7 +1188,14 @@ function &getdata($pos = null)
                 {
                 	//echo count($this->data); $this->index_max()
                 	$res1 = '';
-                         for($i = 0;$i < count($this->data);$i++)
+			/* Ueber die VORHANDENEN Behaelter, in ihrer Reihenfolge - nicht 0..count.
+			*  Seit 111cc1b (2026-09-21) landet ein Text in SEINEM Behaelter, und der
+			*  erste steht nicht mehr zwingend bei 0: <access><param/>KETTE</access> hat
+			*  nur data[1]. Die alte Schleife las dann data[0], fand nichts und gab ""
+			*  zurueck - im <access> wurde daraus der leere Befehl, also start auf sich
+			*  selbst, bis der Speicher voll war. */
+			ksort($this->data);
+                         foreach(array_keys($this->data) as $i)
                         {
 				if(is_Object($this->data[$i]))
 				{
