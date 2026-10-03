@@ -630,6 +630,11 @@ function setRefnext(&$ref,$pos = -1){
 				$tmp[$i] = &$this->next_el[$i];
 				
 			}
+			/* Einfuegen VOR Kind $pos: der Text davor bleibt davor, zwischen neuem und
+			*  altem Kind entsteht ein leerer Behaelter. Nur mitten hinein - am Ende ist
+			*  es ein Anhaengen, und dort stimmen die Behaelter schon. */
+			if($pos >= 0 && $pos < count($tmp))
+				$this->open_data_gap($pos);
 			
 			unset($this->next_el);
 			$this->next_el = array();
@@ -719,6 +724,26 @@ private function close_data_gap($pos)
 				$neu[$pos] = $verbunden;
 			}
 		}
+
+		ksort($neu);
+		$this->data = $neu;
+	}
+
+/* Das Gegenstueck zu close_data_gap: ein neues Kind an $pos. data[$pos] bleibt der Text
+*  davor, data[$pos + 1] wird ein leerer Behaelter, alles dahinter rueckt um eins auf.
+*  ⚠ Bis 2026-10-03 rueckte nur next_el: in <p>A<b>1</b>B<i>2</i>C</p> an Position 0
+*  eingefuegt ergab A<em/>B<b>1</b>C<i>2</i> - jeder Text ein Kind zu frueh. */
+private function open_data_gap($pos)
+	{
+		if (!is_array($this->data)) return;
+
+		$neu = [];
+		foreach ($this->data as $k => $w)
+		{
+			if ($k <= $pos) $neu[$k]     = &$this->data[$k];
+			else            $neu[$k + 1] = &$this->data[$k];
+		}
+		$neu[$pos + 1] = '';
 
 		ksort($neu);
 		$this->data = $neu;

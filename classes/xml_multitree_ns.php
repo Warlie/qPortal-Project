@@ -1314,7 +1314,12 @@ function delete_index($index)
                                 $this->cur_pointer[$this->idx]->setRefnext($var,$pos);
                                 //schliesst cdata ab
                                 $this->cur_pointer[$this->idx]->final_data();
-                                $this->cur_pointer[$this->idx] = &$this->cur_pointer[$this->idx]->getRefnext($this->cur_pointer[$this->idx]->index_max() - 1 ,true);
+                                /* ⚠ Mit $pos steht das neue Kind NICHT hinten. Bis 2026-10-03 wurde
+                                *  hier immer das letzte genommen - create_Ns_Node(…, $pos) arbeitete
+                                *  danach auf dem falschen Knoten und gab dessen Stempel zurueck. */
+                                $neu_an = ($pos >= 0 && $pos < $this->cur_pointer[$this->idx]->index_max() - 1)
+                                        ? $pos : $this->cur_pointer[$this->idx]->index_max() - 1;
+                                $this->cur_pointer[$this->idx] = &$this->cur_pointer[$this->idx]->getRefnext($neu_an ,true);
                                 //$this->cur_pointer[$this->idx]->setRefprev(&$this->mirror[$this->idx]);
                                 //$cur_pointer = &$this->mirror[$this->idx]->getRefnext();
                                 //var_dump($this->cur_pointer[$this->idx]->full_URI());
