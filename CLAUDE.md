@@ -526,6 +526,17 @@ dort zuerst.**
 - Attribute aus fremden Namensräumen überall (`desc:`, `dcterms:`, `xsi:`); unter `element/html`
   beliebiger Inhalt — dort steht HTML ohne eigenen Namensraum, also im tree-Namensraum.
 - **Nur registrierte Namen** (`classes/ns/tree/class_index.php`).
+- **Türschilder als Kindknoten** (seit `2026-10-03`): `xml-schema/pedl-desc.xsd` für den
+  Namensraum `http://www.trscript.de/2026/pedl-desc`, per `xs:import` eingebunden und an
+  `final`/`first`/`tree`/`program`/`content` mit `processContents="strict"` erlaubt. Acht
+  Begriffe, derselbe Wortschatz wie die PHP-Seite (`DESC_KEYS` + `HEAD_KNOWN`): `text`,
+  `delivers`, `columns`, `effect`, `function`, `parameter`, `throws`, `tricky` — mehrfach
+  erlaubt (je Sprache einmal, `xml:lang`), `delivers`/`columns` auch als `rdf:resource`.
+  Gemessen: ein Schild als erstes Kind ändert keine Ausgabe, auch nicht vor `<param IF>`.
+  ⚠ Unter `element`/`html` kann das Schema ein Schild nicht verbieten (dort ist alles erlaubt) —
+  und dort würde es ausgegeben. ⚠ `xml:lang` landet im Baum heute unter
+  `http://www.trscript.de/tree#lang`, nicht im XML-Namensraum: der feste Präfix `xml` ist dem
+  Parser unbekannt. ⚠ `__where_am_i` liest die Kindknoten noch **nicht**, nur die Attributform.
 
 Befunde im Bestand (`schema_check.php`, Teil 2 — nur ausgewertet, `template/` wird getrennt verwaltet):
 `programm` (14 Dateien) und `add2` (13) sind **nicht registriert** — der Parser macht daraus

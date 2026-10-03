@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Das Verifikationsdokument fuer die Beschreibungsschicht im Namensraum
+  http://www.trscript.de/2026/pedl-desc - die Tuerschilder.
+
+  Gefasst am 2026-10-03. Eingebunden vom tree-Schema (xml-schema/tree-schema.xsd) per
+  xs:import; dort duerfen diese Elemente als Kinder von final, first, tree, program und
+  content stehen.
+
+  Wozu: ein Agent - oder ein Mensch - laeuft den Baum entlang wie eine Ameise und liest an
+  jeder Tuer, was dahinter liegt, ohne den Raum zu betreten. Ein Schild TUT NICHTS: der
+  Parser macht daraus einen Knoten ohne Verhalten, und die Ausgabe bleibt byte-gleich
+  (gemessen an final, tree, program und content, 2026-10-03).
+
+  Grundsaetze:
+  - Kindknoten, nicht Attribut - wie PHP_handle::write_desc auf der PHP-Seite: eine
+    Beschreibung darf Zeilenumbrueche haben, und ein Begriff darf MEHRFACH stehen, etwa je
+    Sprache einmal (xml:lang).
+  - Derselbe Wortschatz wie die PHP-Seite: PHP_Ast_Scan::DESC_KEYS (function, parameter,
+    throws, tricky) und HEAD_KNOWN (delivers, columns, effect, text). Ein Dokument aus dem
+    PHP-Scan und ein tree-Dokument gehen gegen DIESES Schema.
+  - delivers und columns duerfen statt Text auf einen Knoten zeigen (rdf:resource) - so
+    schreibt es write_desc fuer "delivers:: #plugin".
+  - Wer einen Begriff vertippt (desc:delivres), faellt auf: das tree-Schema bindet diesen
+    Namensraum mit processContents="strict" ein.
+  - Kein informierender Teil fuer formale Pruefung: der wird eine eigene, einschraenkende
+    Bibliothek (STW).
+
+  ⚠ Unter element/html kann das tree-Schema ein Schild NICHT verbieten - dort ist jeder
+    Inhalt erlaubt, und alles dort wird ausgegeben. Ein Schild gehoert an den Ast, nicht in
+    die Seite.
+-->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://www.trscript.de/2026/pedl-desc"
+           xmlns:desc="http://www.trscript.de/2026/pedl-desc"
+           elementFormDefault="qualified">
+
+	<!-- ============================================================ Typen -->
+
+	<xs:complexType name="textType">
+		<xs:annotation><xs:documentation>
+			Ein Satz oder ein Absatz Text. xml:lang waehlt die Sprache; fehlt es, gilt der Text
+			fuer jede.
+		</xs:documentation></xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:string">
+				<xs:anyAttribute namespace="http://www.w3.org/XML/1998/namespace" processContents="skip"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+
+	<xs:complexType name="textOrRefType">
+		<xs:annotation><xs:documentation>
+			Text ODER ein Verweis per rdf:resource auf den Knoten, der das Beschriebene ist.
+			⚠ XSD 1.0 kann "genau eins von beiden" hier nicht ausdruecken - beides zugleich
+			geht durch.
+		</xs:documentation></xs:annotation>
+		<xs:simpleContent>
+			<xs:extension base="xs:string">
+				<xs:anyAttribute namespace="http://www.w3.org/XML/1998/namespace http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+				                 processContents="skip"/>
+			</xs:extension>
+		</xs:simpleContent>
+	</xs:complexType>
+
+	<!-- ======================================================== Begriffe -->
+
+	<xs:element name="text" type="desc:textType">
+		<xs:annotation><xs:documentation>
+			Was hier ist - die Bedeutung haengt am Traeger, wie bei tree:name: an tree und final,
+			was hinter der Tuer liegt; an program, was dort passiert; an content, was dort in
+			die Ausgabe ergaenzt wird.
+		</xs:documentation></xs:annotation>
+	</xs:element>
+
+	<xs:element name="delivers" type="desc:textOrRefType">
+		<xs:annotation><xs:documentation>
+			Was herauskommt: ein HTML-Abschnitt, eine Ergebnismenge, eine Datei, nichts.
+		</xs:documentation></xs:annotation>
+	</xs:element>
+
+	<xs:element name="columns" type="desc:textOrRefType">
+		<xs:annotation><xs:documentation>
+			Bei einer Ergebnismenge: welche Spalten sie traegt.
+		</xs:documentation></xs:annotation>
+	</xs:element>
+
+	<xs:element name="effect" type="desc:textType">
+		<xs:annotation><xs:documentation>
+			Was sich danach ausserhalb geaendert hat: eine Zeile in einer Tabelle, eine
+			verschickte Mail, ein Knoten im Ausgabedokument.
+		</xs:documentation></xs:annotation>
+	</xs:element>
+
+	<xs:element name="function" type="desc:textType">
+		<xs:annotation><xs:documentation>
+			Wofuer ein aufrufbarer Ast oder eine Funktion da ist. An einem Ast, der nur Ausgabe
+			ist, sagt text mehr.
+		</xs:documentation></xs:annotation>
+	</xs:element>
+
+	<xs:element name="parameter" type="desc:textType">
+		<xs:annotation><xs:documentation>
+			Was der Aufrufer mitgeben kann - bei einem Ast die Attribute des __call.
+		</xs:documentation></xs:annotation>
+	</xs:element>
+
+	<xs:element name="throws" type="desc:textType">
+		<xs:annotation><xs:documentation>
+			Woran es scheitern kann und wie das aussieht.
+		</xs:documentation></xs:annotation>
+	</xs:element>
+
+	<xs:element name="tricky" type="desc:textType">
+		<xs:annotation><xs:documentation>
+			Was man wissen muss, bevor man es benutzt - die Falle, die nicht im Namen steht.
+		</xs:documentation></xs:annotation>
+	</xs:element>
+
+</xs:schema>

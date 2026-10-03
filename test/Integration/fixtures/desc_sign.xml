@@ -1,0 +1,47 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!--
+  Pruefstand fuer die Tuerschilder als KINDKNOTEN (xml-schema/pedl-desc.xsd, schema_check.php).
+
+  final      text in zwei Sprachen und delivers - das Schild des Flurs
+  karten     ein Ausgabe-Ast: text und delivers, kein function
+  anfrage    ein aufrufbarer Ast: alle uebrigen Begriffe einmal
+  program    was dort passiert
+  content    was dort in die Ausgabe ergaenzt wird
+  verweis    delivers als rdf:resource statt Text
+-->
+<indextree xmlns="http://www.trscript.de/tree"
+           xmlns:desc="http://www.trscript.de/2026/pedl-desc"
+           xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+<final name="home" value="Schilder">
+	<desc:text xml:lang="de">Der Flur des Pruefstands fuer Schilder.</desc:text>
+	<desc:text xml:lang="en">The hallway of the sign test bench.</desc:text>
+	<desc:delivers>eine Seite</desc:delivers>
+
+	<tree name="karten" value="Karten">
+		<desc:text>Die vier Leistungen als Karten.</desc:text>
+		<desc:delivers>einen HTML-Abschnitt</desc:delivers>
+	</tree>
+
+	<tree name="anfrage" value="Anfrage">
+		<desc:function>Nimmt eine Anfrage entgegen und verschickt sie.</desc:function>
+		<desc:parameter>anfrage, email, nachricht</desc:parameter>
+		<desc:effect>eine Mail an die Zentrale</desc:effect>
+		<desc:throws>ohne Pflichtfelder: nichts wird verschickt, die Seite zeigt den Hinweis</desc:throws>
+		<desc:tricky>Die Pflichtfelder werden als Gruppe geprueft, nicht einzeln.</desc:tricky>
+		<desc:columns>keine</desc:columns>
+	</tree>
+
+	<program>
+		<desc:text>Legt das Mail-Objekt an - immer, auch ohne Formular.</desc:text>
+	</program>
+
+	<content name="http://www.w3.org/1999/xhtml#main">
+		<desc:text>Haengt den Abschnitt an die Stelle start.</desc:text>
+		<param name="http://www.w3.org/1999/xhtml#id">start</param>
+	</content>
+
+	<tree name="verweis" value="Verweis">
+		<desc:delivers rdf:resource="#karten"/>
+	</tree>
+</final>
+</indextree>

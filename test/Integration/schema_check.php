@@ -71,6 +71,26 @@ foreach (dateien('test/Integration/fixtures') as $f)
 	printf("[%s] %-44s %s\n", $e ? 'FEHLER' : '  ok  ', basename($f), $e ? $e[0] : 'gueltig');
 	$e ? $fail++ : $ok++;
 }
+
+/* --- Teil 1b: was das Schema ABWEISEN muss ------------------------------------------
+*  Die Tuerschilder sind mit processContents="strict" eingebunden - ein vertippter Begriff
+*  soll auffallen, nicht still durchgehen. Hier gilt umgekehrt: ok heisst ABGEWIESEN. */
+$kopf = '<?xml version="1.0" encoding="UTF-8"?><indextree xmlns="http://www.trscript.de/tree"'
+      . ' xmlns:desc="http://www.trscript.de/2026/pedl-desc"><final name="home">';
+$muss_rot = [
+	'desc:delivres vertippt'      => '<desc:delivres>eine Seite</desc:delivres>',
+	'desc:text mit Kindelement'   => '<desc:text>vor <b>fett</b> nach</desc:text>',
+	'desc:text unter param'       => '<tree name="x"><param name="mode"><desc:text>falsch</desc:text></param></tree>',
+];
+foreach ($muss_rot as $was => $innen)
+{
+	$tmp = tempnam(sys_get_temp_dir(), 'desc');
+	file_put_contents($tmp, $kopf . $innen . '</final></indextree>');
+	$e = pruefe($tmp, $schema);
+	unlink($tmp);
+	printf("[%s] %-44s %s\n", $e ? '  ok  ' : 'FEHLER', 'abgewiesen: ' . $was, $e ? $e[0] : 'wurde ANGENOMMEN');
+	$e ? $ok++ : $fail++;
+}
 echo str_repeat('-', 78) . "\n$ok gelaufen, $fail fehlgeschlagen\n";
 
 /* --- Teil 2: der Bestand, nur ausgewertet ---------------------------------------- */

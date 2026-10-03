@@ -13,6 +13,9 @@
     access, variable).
   - Attribute aus fremden Namensraeumen sind ueberall erlaubt: desc: und dcterms: (Tuerschilder),
     xsi:schemaLocation. Unpraefigierte Attribute gehoeren dem Element (tree#name usw.).
+  - Tuerschilder als KINDKNOTEN (seit 2026-10-03): desc:text, desc:delivers usw. an final, first,
+    tree, program und content - gegen xml-schema/pedl-desc.xsd, strict. Sie tun nichts; die
+    Ausgabe bleibt byte-gleich. Die Attributform (desc:function="...") bleibt gueltig.
   - Nur Namen, die classes/ns/tree/class_index.php registriert. "programm" und "add2" stehen im
     Bestand, sind aber nicht registriert - der Parser macht daraus generische Knoten, die nichts
     tun. Sie fallen hier absichtlich auf.
@@ -20,7 +23,12 @@
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            targetNamespace="http://www.trscript.de/tree"
            xmlns:tree="http://www.trscript.de/tree"
+           xmlns:desc="http://www.trscript.de/2026/pedl-desc"
            elementFormDefault="qualified">
+
+	<!-- Die Tuerschilder als Kindknoten: desc:text, desc:delivers, ... (xml-schema/pedl-desc.xsd).
+	     strict: ein vertippter Begriff faellt auf, statt still durchzugehen. -->
+	<xs:import namespace="http://www.trscript.de/2026/pedl-desc" schemaLocation="pedl-desc.xsd"/>
 
 	<!-- ================================================================== Wurzel -->
 
@@ -99,6 +107,7 @@
 			<xs:element name="sub" type="tree:subType"/>
 			<xs:element name="tree" type="tree:treeType"/>
 			<xs:element name="access" type="tree:accessType"/>
+			<xs:any namespace="http://www.trscript.de/2026/pedl-desc" processContents="strict"/>
 		</xs:choice>
 		<xs:attributeGroup ref="tree:nodeAttributes"/>
 		<xs:attribute name="name" type="xs:string"/>
@@ -144,6 +153,7 @@
 			<xs:element name="content" type="tree:contentType"/>
 			<xs:element name="sub" type="tree:subType"/>
 			<xs:element name="access" type="tree:accessType"/>
+			<xs:any namespace="http://www.trscript.de/2026/pedl-desc" processContents="strict"/>
 		</xs:choice>
 		<xs:attributeGroup ref="tree:nodeAttributes"/>
 		<xs:attribute name="name" type="xs:string" use="required"/>
@@ -191,6 +201,7 @@
 			<xs:element name="object" type="tree:objectType"/>
 			<xs:element name="result" type="tree:resultType"/>
 			<xs:element name="access" type="tree:accessType"/>
+			<xs:any namespace="http://www.trscript.de/2026/pedl-desc" processContents="strict"/>
 		</xs:choice>
 		<xs:attribute name="securitylevel" type="xs:integer"/>
 		<xs:attribute name="sector" type="xs:string"/>
@@ -212,6 +223,7 @@
 			<xs:element name="subtree" type="tree:subtreeType"/>
 			<xs:element name="object" type="tree:objectType"/>
 			<xs:element name="sub" type="tree:subType"/>
+			<xs:any namespace="http://www.trscript.de/2026/pedl-desc" processContents="strict"/>
 		</xs:choice>
 		<xs:attribute name="name" type="xs:string" use="required"/>
 		<xs:attribute name="id" type="xs:string"/>
