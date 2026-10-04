@@ -601,6 +601,23 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	}
 
 	/**
+	*	DARF ER IHN SEHEN? Der Knoten UND jeder Raum um ihn herum (STW 2026-10-04: "nicht
+	*	sehen sollte auch nicht callen koennen bedeuten").
+	*
+	*	mayEnter fragt nur den Knoten selbst. Ein <tree name="givecode2"> unter einem
+	*	<tree name="supervision" sector="technical_support"> war darum fuer einen Aufrufer
+	*	ohne den Sektor unsichtbar im Menue, aber per __find_node + __call erreichbar - eine
+	*	Tuer in einem Raum, den er nicht betreten darf. Ueber die Adresse ging das nie: der
+	*	Pfad fuehrt durch supervision. Hier dasselbe fuer den Intern-Kanal.
+	*/
+	public function maySee($node): bool
+	{
+		for($k = $node; $k instanceof Interface_node; $k = $k->getRefprev())
+			if(!$this->mayEnter($k)) return false;
+		return true;
+	}
+
+	/**
 	*	DER LICHTSCHALTER -1 (STW 2026-10-04): "Bei dem ich die gedrueckte Seite verstecke."
 	*
 	*	securitylevel="-1" heisst: ANGEZEIGT nur, solange niemand angemeldet ist - ein

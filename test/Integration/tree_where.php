@@ -143,9 +143,12 @@ result('nur tree und final',         array_diff($uris, [T . 'tree', T . 'final']
 [, , $j15] = post(cmd('__find_node', ['json' => json_encode(['name' => T . 'indextree'])], cmd('__where_am_i', null, cmd('__to_owner'))));
 result('local auf indextree',        strpos($j15[0]['value']['note'] ?? '', 'kein tree- oder final-Knoten') !== false
                                      && !isset($j15[0]['value']['name']) || ($j15[0]['value']['name'] ?? null) === null, $j15[0]['value']['note'] ?? '-');
-[, , $j16] = post(tree_named('gesperrt', cmd('__where_am_i', null, cmd('__to_owner'))));
-result('local hinter dem Sektor',    strpos($j16[0]['value']['note'] ?? '', 'kein Zutritt') !== false && !isset($j16[0]['value']['desc:function']),
-       $j16[0]['value']['note'] ?? '-');
+/* Hinter dem Sektor findet __find_node nichts mehr (maySee, 2026-10-04) - dieselbe Antwort
+*  wie bei einem Namen, den es nicht gibt, und kein Schild. */
+[, , $j16]  = post(tree_named('gesperrt', cmd('__where_am_i', null, cmd('__to_owner'))));
+[, , $j16n] = post(tree_named('gibt_es_nicht', cmd('__where_am_i', null, cmd('__to_owner'))));
+result('local hinter dem Sektor',    $j16 === $j16n && !isset($j16[0]['value']['desc:function']),
+       json_encode($j16[0] ?? $j16));
 
 /* 13. unbekannter scope, und show zusammen mit tree */
 [, , $j17] = post(tree_named('messen', cmd('__where_am_i', ['scope' => 'irgendwas'], cmd('__to_owner'))));

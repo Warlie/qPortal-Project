@@ -606,6 +606,36 @@ hinaus stehen; `mayEnter()` liest sie über `sectors()`, Schlüssel vor Sitzung.
 
 ⚠ Der Vergleich läuft über `hash_equals`, nicht `in_array`.
 
+### Sehen und Tun (seit 2026-10-04)
+
+**Das Tun hängt am Befehl, das Sehen am Dokument** (STW). Ein Befehl trägt seine Stufe per
+`addSecurity` (geprüft in `callRegContent`); ein Knoten sagt mit `securitylevel`/`sector`, wer
+ihn sieht. **Nicht sehen heißt nicht aufrufen:** `ContentGenerator::maySee($node)` fragt
+`mayEnter` am Knoten **und an jedem Raum um ihn** — eine Tür in einem verschlossenen Raum
+(`givecode2` unter `supervision sector=…`) öffnet nicht. `__find_node`, `__call` und
+`__where_am_i` fragen `maySee`; was der Aufrufer nicht sieht, beantwortet `__find_node` **wie
+einen Namen, den es nicht gibt** — die Antwort verrät nicht, dass dort etwas steht.
+
+**`-1` ist ein Lichtschalter, kein Zutritt** (STW: „nicht sicherheitsrelevant“). `mayEnter`
+kennt `-1` nicht; `lightSwitch()` blendet nach der Anmeldung aus — im Menü (`getAccess`) und
+bei `content` (ein Anmeldeformular *ist* sein Anzeigen).
+
+**Stufen der Befehle:** 6 — `__load`, `__query`, `__add_node`, `__set_attribute`,
+`__remove_attribute`, `__remove_node`; 10 — `__save_back`, `__set_cmd`, `__remove_cmd`,
+`__manifest`. ⚠ **`__set_data` und `__insert_data` bleiben ohne Stufe**, obwohl schreibend: sie
+sind Transportwege — jedes `<remote>` übergibt so seinen Parameter (`tree_remote.php:117`), jede
+`<variable>` setzt sich so ein. Beim Seitenbau läuft das unter der Stufe des Besuchers; mit 6
+blieb das Menü der Startseite leer (gemessen).
+
+**Wer was ist:** Besucher ohne Schlüssel 0 (Intern nur mit `anonymous = 1` und Sitzung:
+erst `GET ?i=__intern`, dann Befehle mit demselben Cookie). Mensch mit Konto ≥ 1. **Agenten
+haben eigene Sektoren** (`agent`, `agent.kontakt`, …): die Stufe ist die Leiter der Menschen,
+ein Agent eine andere Art Gegenüber. Ein Ast für Agenten trägt `sector="agent"`.
+
+⚠ Bis 2026-10-04 bekam jeder Knoten mit fremdem Präfix ohne eigenen nativen Knoten (`desc:`, …)
+**keinen** ContentGenerator (`xml_multitree_ns.php`, lokale statt `$this->`-Variable, seit
+`4bfd0fa`) — eine Nachricht an ihn starb an `getRegObj() on null`; `__echo` über Schilder brach ab.
+
 ## Das Log
 
 **Gelesen wird aus dem Speicher, nicht aus der Datei.** `__give_log` (LOG-Zweig in `getoutput()`)

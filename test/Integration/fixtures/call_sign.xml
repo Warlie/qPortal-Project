@@ -6,7 +6,7 @@
   einfach   <program><result>2</result></program> - die einfache Rueckgabe (wie fridge;power_consumption)
   zwei      zwei Ergebnisse
   leer      nichts auszufuehren
-  gesperrt  ein Sektor, den kein Pruefschluessel hat
+  gesperrt  ein Sektor, den kein Pruefschluessel hat - und darin drinnen, selbst offen
   unter     src auf call_sub.xml - dessen final liefert
 -->
 <indextree xmlns="http://www.trscript.de/tree">
@@ -27,6 +27,14 @@
 		<program>
 			<result>geheim</result>
 		</program>
+		<!-- Eine Tuer im verschlossenen Raum: selbst ohne Sektor, aber hinter "gesperrt".
+		     Ueber die Adresse fuehrt der Weg durch gesperrt; ueber __find_node darf er es
+		     auch nicht anders sein (maySee, 2026-10-04). -->
+		<tree name="drinnen" value="Drinnen">
+			<program>
+				<result>auch geheim</result>
+			</program>
+		</tree>
 	</tree>
 	<tree name="unter" value="Unter" src="test/Integration/fixtures/call_sub.xml" />
 </final>

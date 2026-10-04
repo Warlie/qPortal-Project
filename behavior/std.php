@@ -62,13 +62,23 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 
 			$obj->set_node($node);
 
-		foreach( $node->get_parser()->get_result() as $value_obj){
+			/* Was der Aufrufer nicht sehen darf, gibt es fuer ihn nicht (STW 2026-10-04):
+			*  ContentGenerator::maySee - der Knoten und jeder Raum um ihn. Bleibt nichts
+			*  uebrig, ist das dieselbe Antwort wie bei einem Namen, den es nicht gibt. */
+			$cg      = $node->get_contentGen();
+			$treffer = array_filter($node->get_parser()->get_result(),
+				fn($k) => !is_object($cg) || !method_exists($cg, 'maySee') || $cg->maySee($k));
+
+		foreach( $treffer as $value_obj){
 
 			
 			$value_obj->hold_messages($value,$obj) ;
 		}
 
 		 	$node->get_parser()->flash_result();
+
+			if(!$treffer)
+				throw new NotExistingBranchException( " $name does not exist");
 
 			}
 			else
@@ -202,6 +212,10 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 
 			return true;
 		};
+		/* Schreibend - Stufe 6 wie __load (STW 2026-10-04). Vorher ohne Stufe: mit
+		*  anonymous = 1 haette ein Aufrufer ohne Schluessel den Baum der Anfrage
+		*  umbauen koennen. Dauerhaft wird erst __save_back (10). */
+		$reg->addSecurity(6);
 
 	$reg->addLog(function($node, $obj, $event)
 		{
@@ -470,6 +484,10 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			$node->setdata($text, $position, alter_sensity: false);
 			return true;
 		};
+		/* ⚠ KEINE Stufe, obwohl schreibend: __set_data ist ein TRANSPORTWEG des Systems -
+		*  jedes <remote> uebergibt seinen Parameter so an das Plugin (tree_remote.php:117).
+		*  Das laeuft beim Seitenbau unter der Stufe des Besuchers. Mit Stufe 6 kamen die
+		*  Parameter nicht mehr an - gemessen 2026-10-04: das Menue der Startseite blieb leer. */
 
 	$reg->addLog(function($node, $obj, $event){return "__set_data:" . $obj->get_context(). " was add to " . $node->full_URI();}, 5);
 
@@ -484,6 +502,10 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			$node->setdata($obj->get_context(), $event->get_Command(0,1), true, false);
 			return true;
 		};
+		/* ⚠ KEINE Stufe, obwohl schreibend: __insert_data ist ein TRANSPORTWEG des Systems -
+		*  jede <variable> setzt sich so ein (tree_variable.php:54).
+		*  Das laeuft beim Seitenbau unter der Stufe des Besuchers. Mit Stufe 6 kamen die
+		*  Parameter nicht mehr an - gemessen 2026-10-04: das Menue der Startseite blieb leer. */
 
 	$reg->addDescription(
 		'Haengt den Ereigniskontext an den Datenteil des Knotens an, statt ihn zu ersetzen.'
@@ -625,6 +647,10 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			$node->set_ns_attribute($name, $value);
 			return true;
 		};
+		/* Schreibend - Stufe 6 wie __load (STW 2026-10-04). Vorher ohne Stufe: mit
+		*  anonymous = 1 haette ein Aufrufer ohne Schluessel den Baum der Anfrage
+		*  umbauen koennen. Dauerhaft wird erst __save_back (10). */
+		$reg->addSecurity(6);
 
 	$reg->addDescription(
 		'Setzt ein benanntes Attribut am Knoten. Schreibender Befehl.',
@@ -641,6 +667,10 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			$node->remove_attribute($json['name']);
 			return true;
 		};
+		/* Schreibend - Stufe 6 wie __load (STW 2026-10-04). Vorher ohne Stufe: mit
+		*  anonymous = 1 haette ein Aufrufer ohne Schluessel den Baum der Anfrage
+		*  umbauen koennen. Dauerhaft wird erst __save_back (10). */
+		$reg->addSecurity(6);
 
 	$reg->addDescription(
 		'Entfernt ein benanntes Attribut vom Knoten. Schreibender Befehl.',
@@ -733,6 +763,10 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 		{
 			return $node->removeNode();
 		};
+		/* Schreibend - Stufe 6 wie __load (STW 2026-10-04). Vorher ohne Stufe: mit
+		*  anonymous = 1 haette ein Aufrufer ohne Schluessel den Baum der Anfrage
+		*  umbauen koennen. Dauerhaft wird erst __save_back (10). */
+		$reg->addSecurity(6);
 
 	$reg->addDescription(
 		'Loest den Knoten aus dem Baum und entfernt ihn. Wirkt auf den Knoten, auf dem der Befehl'
@@ -1050,7 +1084,7 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			*  anderen Befehl, der eine hoehere Stufe tragen kann. Und was mayEnter
 			*  verweigert, taucht auch in keiner Liste auf. */
 			$sorten = [$T . 'final' => 'tree:final', $T . 'tree' => 'tree:tree'];
-			$darf   = fn($n) => !is_object($cg) || $cg->mayEnter($n);
+			$darf   = fn($n) => !is_object($cg) || (method_exists($cg, 'maySee') ? $cg->maySee($n) : $cg->mayEnter($n));
 			$baeume = [];
 
 			if(!is_object($parser))
@@ -1258,7 +1292,8 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 
 			if(!is_object($cg) || !is_object($parser))
 				$antwort['note'] = 'kein ContentGenerator oder Parser am Knoten';
-			elseif(!$cg->mayEnter($node))
+			/* maySee: auch der Raum um ihn - eine Tuer im verschlossenen Raum oeffnet nicht. */
+			elseif(!(method_exists($cg, 'maySee') ? $cg->maySee($node) : $cg->mayEnter($node)))
 				$antwort['note'] = 'kein Zutritt';
 			else
 			{

@@ -925,7 +925,12 @@ function delete_index($index)
 			$node->set_idx($this->idx);
 			$node->namespace = $full_ns;
 			$node->set_parser($this);
-			$node->set_contentGen( $context_generator );
+			/* $this->, wie in den drei anderen Zweigen. Hier stand die lokale
+			*  $context_generator, die in dieser Funktion nie belegt wird (seit 4bfd0fa):
+			*  jeder Knoten mit fremdem Praefix ohne eigenen nativen Knoten (desc:, ...)
+			*  hatte KEINEN ContentGenerator, und eine Nachricht an ihn starb an
+			*  "getRegObj() on null" - gemessen 2026-10-04 an __echo ueber Tuerschilder. */
+			$node->set_contentGen( $this->context_generator );
 			//echo "nicht nativ: " . $node->full_URI() . " \n";
 		}	
 			

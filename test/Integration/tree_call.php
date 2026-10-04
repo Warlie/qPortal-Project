@@ -62,9 +62,15 @@ result('zwei Ergebnisse',            ($j2[0]['value']['results'] ?? null) === ['
 [, $j3] = post(tree_named('leer', $call()));
 result('leer: keine Rueckgabe',      ($j3[0]['value']['results'] ?? null) === [] && !isset($j3[0]['value']['note']), json_encode($j3[0]['value'] ?? null));
 
-[, $j4] = post(tree_named('gesperrt', $call()));
-result('gesperrt: kein Zutritt',     strpos($j4[0]['value']['note'] ?? '', 'kein Zutritt') !== false && ($j4[0]['value']['results'] ?? []) === [],
-       $j4[0]['value']['note'] ?? '-');
+/* Seit 2026-10-04 (STW: "nicht sehen sollte auch nicht callen koennen bedeuten") findet
+*  __find_node einen Ast nicht, den der Aufrufer nicht sehen darf - die Antwort ist dieselbe
+*  wie bei einem Namen, den es nicht gibt. Sie verraet nicht einmal, dass dort etwas steht. */
+[, $j4]  = post(tree_named('gesperrt', $call()));
+[, $j4n] = post(tree_named('gibt_es_nicht', $call()));
+result('gesperrt: wie nicht vorhanden', $j4 === $j4n && !isset($j4[0]['value']['results']),
+       json_encode($j4[0] ?? $j4));
+[, $j4d] = post(tree_named('drinnen', $call()));
+result('Tuer im verschlossenen Raum',  $j4d === $j4n, json_encode($j4d[0] ?? $j4d));
 
 [, $j5] = post(tree_named('unter', $call()));
 result('src: Rueckgabe des Unterdokuments', ($j5[0]['value']['results'] ?? null) === ['aus dem Unterdokument'], json_encode($j5[0]['value']['results'] ?? null));
