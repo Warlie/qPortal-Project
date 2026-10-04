@@ -340,7 +340,11 @@ image/x-xpixmap 	*.xpm 	XPM-Dateien
 
 	
 	
-public function request($name, $default)
+/* ⚠ $default ist freiwillig (2026-10-04). col() ruft request($name) mit EINEM
+*  Argument - unter PHP 8 ein ArgumentCountError, Request taugte als rst nie (gefunden
+*  mit der Sonde plugin_test.php render_plugin_table). Die erste Zeile macht aus null
+*  ohnehin '', wie unter PHP 7. */
+public function request($name, $default = null)
  {
  	 global $logger_class;
  	 
