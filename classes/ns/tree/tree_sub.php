@@ -160,6 +160,18 @@ function event_message_in($type,&$obj)
 		// changes content in document, based on the parameter section
 		self::apply_arguments($this->get_parser(), $param_arr);
 
+			/* Die EINRICHTUNG des gerufenen Dokuments (2026-10-04): seine <once>-Bloecke,
+			*  vor first - dieselbe Reihenfolge wie beim start (once -> first -> final).
+			*  Bis dahin startete ein <sub> nur first und final; ein Dokument konnte nicht
+			*  sicherstellen, dass ein anderes eingerichtet ist. Der Fall: der
+			*  Kuehlschrank ruft das Lager vor sich auf (STW), und das Lager legt dabei
+			*  seine Tabellen an. Ob ein once schon lief, weiss es selbst (qp_once).
+			*  Gemessen: kein Dokument im Bestand wird per <sub> gerufen und hat <once>. */
+			$this->get_parser()->flash_result();
+			$this->get_parser()->seek_node('http://www.trscript.de/tree#once');
+			$myonces = $this->get_parser()->get_result();
+			$myonces = is_array($myonces) ? array_values($myonces) : array();
+
 			//prepares the first and the final part in the document for seriel processing
 			$this->get_parser()->flash_result();
 			$this->get_parser()->seek_node('http://www.trscript.de/tree#first');
@@ -178,6 +190,10 @@ function event_message_in($type,&$obj)
 
 			
 				$obj->set_node($this);
+
+			foreach($myonces as $myonce)
+				if(is_object($myonce))
+					$myonce->hold_messages($type,$obj);
 			
 			if($myfirst)
 				{
