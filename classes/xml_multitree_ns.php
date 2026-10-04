@@ -1551,15 +1551,26 @@ echo $this->idx . " gibt es nicht";
    }
  
    // Returns the actual tree node (Interface_node) for a fully-qualified URI.
-   // get_Class_of_Namespace returns the registered instance2; its link_to_class
-   // is instance1 — the node that was inserted into mirror[$idx] during tag_open.
    // Returns null if the URI is unknown or has no '#' fragment.
+   //
+   // ⚠ ZWEI FAELLE, gemessen 2026-10-04 - und beide muessen tragen:
+   //   - Ist das Vokabular NICHT geladen (real_estate, person.owl fehlt), registriert
+   //     rdf:about einen KLON (getRefprev()->new_Instance()). Der steht in keinem Baum,
+   //     hat keinen Elternknoten, und sein link_to_class ist der Knoten im Dokument.
+   //   - Ist es geladen (Kuehlschrank, storage.owl), steht das Registrierte SELBST im
+   //     Baum, und sein link_to_class ist die KLASSE im Vokabular (storage#Storage).
+   // Bis heute wurde immer link_to_class genommen: im zweiten Fall hingen sich die
+   // Praedikate an die Klasse. Der Umkehrschluss (immer das Registrierte) brach den
+   // ersten: isTenantOf 24 -> 0. Unterschieden wird darum, nicht bevorzugt - am
+   // Elternknoten: wer im Baum steht, IST der Knoten.
    public function &get_Tree_Node_of_Namespace(string $full_ns): ?Interface_node
    {
        $null = null;
        if (strpos($full_ns, '#') === false) return $null;
        try {
            $registered = &$this->get_Class_of_Namespace($full_ns);
+           if (is_object($registered) && is_object($registered->getRefprev()))
+               return $registered;
            if (is_object($registered) && is_object($registered->link_to_class))
                return $registered->link_to_class;
            if (is_object($registered))
