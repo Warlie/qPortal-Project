@@ -324,10 +324,13 @@
 			Ein Methodenaufruf am Objekt: name="Klasse.methode.parameter" setzt einen Parameter
 			(Text oder ein object), name="Klasse.methode" ruft auf - die Parameternamen sind die der
 			PHP-Signatur (PEDL aus dem Syntaxbaum). name="iter" gibt das Objekt selbst weiter.
+			Seit 2026-10-04 auch ein sub: sein Dokument laeuft, und was es per result
+			zurueckgibt (ein Objekt vor einem Wert), ist der Wert dieses remote.
 		</xs:documentation></xs:annotation>
 		<xs:choice minOccurs="0" maxOccurs="unbounded">
 			<xs:element name="object" type="tree:objectType"/>
 			<xs:element name="variable" type="tree:variableType"/>
+			<xs:element name="sub" type="tree:subType"/>
 		</xs:choice>
 		<xs:attribute name="name" type="xs:string" use="required"/>
 		<xs:anyAttribute namespace="##other" processContents="skip"/>
