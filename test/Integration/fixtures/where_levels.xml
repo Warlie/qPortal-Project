@@ -7,7 +7,8 @@
   war unsichtbar. Gefragt wird mit dem hoechsten Pruefschluessel:
 
   offen        ohne Stufe                        - immer sichtbar
-  nur_anonym   -1 = nur fuer Nichtangemeldete    - unsichtbar, ein Schluesseltraeger ist angemeldet
+  nur_anonym   -1 = der Lichtschalter            - im Menue nach der Anmeldung verborgen, betreten
+                                                  darf ihn jeder: auch der Schluesseltraeger sieht ihn
   stufe1/6/10  sichtbar bis zur Schluesselstufe
   stufe11      ueber jeder Schluesselstufe       - unsichtbar
 -->

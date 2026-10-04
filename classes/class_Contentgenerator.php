@@ -574,7 +574,12 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		if($tmp = $this->attrib_of($node, 'http://www.trscript.de/tree#sector'))
 			$result = in_array($tmp, explode(';', trim($this->sectors(), '; ')));
 
-		if($tmp = intval($this->attrib_of($node, 'http://www.trscript.de/tree#securitylevel')))
+		/* ⚠ -1 ist KEINE Zutrittsstufe (STW 2026-10-04): "-1 ist ueberhaupt nicht
+		*  sicherheitsrelevant und erfuellt eher die Rolle eines Lichtschalters". Sie sagt
+		*  nur, dass die Seite nach der Anmeldung nicht mehr ANGEZEIGT wird (ein Login-Link
+		*  fuer jemanden, der angemeldet ist). Betreten darf sie jeder - auch ein Agent mit
+		*  Schluessel, dem sie sonst im Flur fehlte. Ausgewertet in getAccess(). */
+		if(($tmp = intval($this->attrib_of($node, 'http://www.trscript.de/tree#securitylevel'))) && -1 !== $tmp)
 		{
 			/* Die Weiche je Anfrageart (STW 2026-09-16) - dieselbe Reihenfolge, die
 			*  sectors() fuer den Sektor schon hat: Klammer vor Schluessel vor Sitzung.
@@ -589,19 +594,37 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 			*  Der Webbetrieb ohne Schluessel und ohne Klammer fragt clearance() gar nicht:
 			*  Sitzungsklasse wie bisher, ohne Anmeldung -1, die Marke "nicht angemeldet".
 			*  Die beiden Grundlinien (0 in clearance(), -1 hier) bleiben so getrennt. */
-			if(!empty($this->clearance_stack) || !is_null($this->clearance_base))
-				$sec = $this->clearance();
-			elseif($_SESSION['http://www.auster-gmbh.de/surface#securityclass'] ?? null)
-				$sec = intval($_SESSION['http://www.auster-gmbh.de/surface#securityclass']);
-			else
-				$sec = -1;
-
-			/* -1 ist die Marke "nur fuer Nichtangemeldete": nach der Anmeldung
-			*  verschwindet der Knoten wieder. */
-			$result = $result && ((($tmp == -1) && ($sec == -1)) || (($tmp != -1) && ($sec >= $tmp)));
+			$result = $result && ($this->caller_level() >= $tmp);
 		}
 
 		return $result;
+	}
+
+	/**
+	*	DER LICHTSCHALTER -1 (STW 2026-10-04): "Bei dem ich die gedrueckte Seite verstecke."
+	*
+	*	securitylevel="-1" heisst: ANGEZEIGT nur, solange niemand angemeldet ist - ein
+	*	Login-Link im Menue, ein Anmeldeformular als <content>. Kein Zutritt: per Adresse
+	*	und ueber den Intern-Kanal bleibt der Knoten erreichbar (mayEnter kennt -1 nicht).
+	*	Gefragt von getAccess (Menue) und von TREE_content (ein Block ist sein Anzeigen).
+	*/
+	public function lightSwitch($node = null): bool
+	{
+		if(-1 !== intval($this->attrib_of($node, 'http://www.trscript.de/tree#securitylevel')))
+			return true;
+		return -1 === $this->caller_level();
+	}
+
+	/* Die Stufe des Aufrufers: Klammer vor Schluessel vor Sitzung, ohne alles -1, die
+	*  Marke "nicht angemeldet". Herausgeloest aus mayEnter (2026-10-04), weil getAccess
+	*  dieselbe Frage fuer den Lichtschalter -1 stellt. */
+	private function caller_level(): int
+	{
+		if(!empty($this->clearance_stack) || !is_null($this->clearance_base))
+			return $this->clearance();
+		if($_SESSION['http://www.auster-gmbh.de/surface#securityclass'] ?? null)
+			return intval($_SESSION['http://www.auster-gmbh.de/surface#securityclass']);
+		return -1;
 	}
 
 	/**
@@ -854,6 +877,8 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 		$result = $result && (false !== $this->attrib_of($node, 'http://www.trscript.de/tree#value'));
 
 		$result = $result && $this->istSichtbar($node);
+
+		$result = $result && $this->lightSwitch($node);
 
 		// Abfrage client
 		if($tmp = $this->attrib_of($node, 'http://www.trscript.de/tree#device'))

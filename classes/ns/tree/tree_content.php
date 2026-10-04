@@ -101,6 +101,10 @@ function event_message_in($type,&$obj)
 		if ($dem_waechter)
 		{
 			if (!$cg->mayEnter($this)) return false;
+			/* -1 ist kein Zutritt mehr, sondern der Lichtschalter (2026-10-04) - und fuer
+			*  einen Block IST Anzeigen alles, was er tut: ein Anmeldeformular verschwindet
+			*  nach der Anmeldung. */
+			if (method_exists($cg, 'lightSwitch') && !$cg->lightSwitch($this)) return false;
 		}
 		else
 		{

@@ -82,6 +82,7 @@ class Navigation extends plugin
 
 	private $urlMuster = '';      // index.php?i=impressum&j=%s
 	private $urlBasis  = '';      // index.php?i=%s
+	private $pfad      = array(); // die Namen von der Wurzel bis zum aktuellen Ast
 
 	var $tag;
 
@@ -417,8 +418,10 @@ class Navigation extends plugin
 				*  wuerden auseinanderlaufen. */
 				if($this->content->getAccess())
 				{
+					$this->pfad[] = (string) $this->back->show_ns_attrib('http://www.trscript.de/tree#name');
 					$this->zeilen[] = $this->zeile_vom_knoten($tiefe);
 					$this->ebene_sammeln($tiefe + 1);
+					array_pop($this->pfad);
 				}
 			}
 
@@ -456,6 +459,20 @@ class Navigation extends plugin
 
 		if('attached' === $mode || 'embedded' === $mode)
 			return '/#' . $name;
+
+		/* ⚠ Gesammelt von der WURZEL des Seitenbaums (page wie Vorgabe, Wurzel mit): dann
+		*  ist der Weg zum Ast der Weg von oben - i=supervision&j=edit -, nicht die aktuelle
+		*  Anfrage plus ein Segment. Mit dem Praefix stand auf /?i=login ein Impressum unter
+		*  index.php?i=login&j=impressum, also unter login - ein 404 (gemessen 2026-10-04; die
+		*  alte Menue machte denselben Fehler). Der Fall page=$this bleibt, wie er war. */
+		if($this->von_der_wurzel())
+		{
+			$achsen = $this->content->getLexicalOrderParam();
+			$teile  = array();
+			foreach(array_values($this->pfad) as $k => $segment)
+				$teile[] = ($achsen[$k] ?? ('a' . $k)) . '=' . $segment;
+			return 'index.php?' . implode('&', $teile);
+		}
 
 		if(false !== strpos($this->urlMuster, '%s'))
 			return str_replace('%s', $name, $this->urlMuster);
@@ -570,6 +587,13 @@ class Navigation extends plugin
 	*	Menuepunkte zeigen auf dieselbe Adresse. Hier faellt es darum auf urlBasis
 	*	zurueck.
 	*/
+	/* Sammelt das Menue vom Seitenbaum der Instanz aus, von oben? Nur dann ist der Weg
+	*  von der Wurzel die Adresse. */
+	private function von_der_wurzel(): bool
+	{
+		return $this->wurzel && $this->seite === $this->content->getXMLStructur();
+	}
+
 	private function url_vorlage_bauen(): void
 	{
 		$achsen = $this->content->getLexicalOrderParam();

@@ -166,12 +166,15 @@ if ($token !== '')
 	[, , $j18] = post(tree_named('offen', cmd('__where_am_i', ['scope' => 'tree'], cmd('__to_owner'))));
 	$base   = $base_w;
 	$h18    = $namen($j18[0]['value']['hits'] ?? []);
-	$soll   = ['home', 'offen'];
+	/* -1 ist seit 2026-10-04 kein Zutritt mehr, nur der Lichtschalter fuers Anzeigen
+	*  (ContentGenerator::lightSwitch) - __where_am_i ist kein Menue, also steht nur_anonym
+	*  auch beim Schluesseltraeger im Flur. */
+	$soll   = ['home', 'offen', 'nur_anonym'];
 	foreach (['stufe1' => 1, 'stufe6' => 6, 'stufe10' => 10, 'stufe11' => 11] as $n => $l)
 		if ($l <= $stufe) $soll[] = $n;
 	result('Stufe vom Schluessel',       $h18 === $soll, 'Schluessel ' . $stufe . ': ' . json_encode($h18));
 	result('ueber der Stufe fehlt',      !in_array('stufe11', $h18, true), 'stufe11 fehlt');
-	result('-1 fehlt mit Schluessel',    !in_array('nur_anonym', $h18, true), 'nur_anonym fehlt');
+	result('-1 erscheint mit Schluessel', in_array('nur_anonym', $h18, true), 'nur_anonym im Flur (Lichtschalter, kein Zutritt)');
 }
 
 $ok = 0; $fail = 0;
