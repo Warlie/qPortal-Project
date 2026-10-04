@@ -138,7 +138,7 @@ function &new_Instance()
 				*  ⚠ is_Class wird hier bewusst NICHT gesetzt: ein tree, der per rdf:about
 				*  oder tree:name praegt, ist dabei selbst Vorlage - mit is_Class reichte er
 				*  *?parse_complete_classes nicht mehr weiter (Interface_ns::event, !is_Class). */
-				$this->link_to_instance[] = &$obj;
+				$this->link_to_instance[] = $obj;
 
 				return $obj;
 }

@@ -1972,7 +1972,12 @@ function &new_Instance()
 
                 $obj = &$this->get_Instance();
 				$obj->link_to_class = &$this;
-				$this->link_to_instance[] = &$obj; //count($this->link_to_instance)
+				/* ⚠ OHNE Referenz (2026-10-04). Mit &$obj band ein Aufrufer, der das Ergebnis
+				*  mit =& nimmt und die Variable danach neu belegt, den Listeneintrag mit um:
+				*  jede rdfs:Class-Definition fuehrte sich dann SELBST als Instanz (gemessen an
+				*  storage#StockItem/Storage/Condition), SPARQL zaehlte sie als Treffer. Ein
+				*  Objekt ist ohnehin ein Griff - die Referenz brachte nichts. */
+				$this->link_to_instance[] = $obj;
 				$this->is_Class = true;
 				//echo "\n <br/>---" . $this->position_stamp() . "---<br/> \n";
 		

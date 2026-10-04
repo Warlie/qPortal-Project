@@ -27,7 +27,7 @@ function &new_Instance()
 				$obj = $this->get_Instance();
 				
 				$obj->link_to_class = &$this;
-				$this->link_to_instance[] = &$obj;
+				$this->link_to_instance[] = $obj;
 				$this->set_is_Class();
 				
 				return $obj;
