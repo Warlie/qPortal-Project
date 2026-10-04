@@ -285,6 +285,11 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			return true;
 
 		};
+	/* Stufe 6 (STW 2026-10-04): das Log zeigt Pfade, Sitzungsdaten, SQL und Daten - mit
+	*  anonymous = 1 stand es jedem offen (gemessen live: absoluter Serverpfad in Zeile 7).
+	*  6 ist die Stufe, ab der man schreiben darf - wer schreibt, soll lesen koennen, warum
+	*  etwas nicht ging. */
+	$reg->addSecurity(6);
 
 	$reg->addDescription(
 		'Schaltet die Ausgabe auf das Log um und feuert dann Value. Die Antwort des Aufrufs ist'
