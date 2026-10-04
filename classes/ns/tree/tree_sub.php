@@ -94,6 +94,24 @@ function event_message_in($type,&$obj)
 		//back up node
 		$received_node = $obj->get_node();
 		$this->rueckgabe = '';
+
+		/* Im <remote> (2026-10-04) kommt der Anstoss mit der Adresse tree#sub - an das
+		*  gerufene Dokument geht ein gewoehnlicher start. Sonst weisen first/final ihn ab
+		*  ("'…#final' rejected '…#sub'", gemessen). */
+		if(is_object($this->getRefprev())
+			&& $this->getRefprev()->full_URI() == 'http://www.trscript.de/tree#remote')
+		{
+			$type = ["Identifire"=>"*", "Command"=> ["Name"=> "start", "Attribute"=>[], "Value"=> null]];
+
+			/* ⚠ Ein Lauf braucht den ContentGenerator als Auftraggeber
+			*  (TREE_tree: $obj->myrequester->found_relevant_page()); der remote traegt
+			*  sich selbst ein - "Call to undefined method TREE_remote::found_relevant_page()",
+			*  gemessen. Ein EIGENES Ereignis, die Bindung an das des remote wird geloest. */
+			$leer = null;
+			unset($obj);
+			$obj = new EventObject('', $this->get_parser()->get_context_generator(), $leer);
+			$obj->set_node($received_node);
+		}
 		
 		
 		//--------------------------------------- check access -------------------------------------------------
@@ -208,6 +226,32 @@ function event_message_in($type,&$obj)
 			
 			
 			$uri = $this->getRefprev()->full_URI();
+
+			/* Im <remote> (2026-10-04): das Ergebnis wird der Wert des remote. Ein Objekt
+			*  vor einem Wert, wie in TREE_result - ein rst-Iterator fuer XMLDO soll als
+			*  Objekt ankommen, nicht als Text. */
+			if($uri == 'http://www.trscript.de/tree#remote')
+			{
+				$wert   = null;
+				$result = $this->contentGenerator->getResult();
+
+				for($i = 0 ; $i < count($result) && !is_object($wert); $i++)
+					if($result[$i] instanceof TREE_result)
+					{
+						$w = $result[$i]->getdata();
+						if(is_object($w))
+							$wert = $w;
+						elseif(is_null($wert) && !is_null($w) && '' !== (string) $w)
+							$wert = (string) $w;
+					}
+
+				/* ⚠ OHNE Aenderungsereignis (4. Argument false): der remote liest den Wert
+				*  gleich selbst. Mit Ereignis lief TREE_remote::event_alterdata an und starb
+				*  dort an einem fehlenden "global $logger_class" (gemessen). */
+				if(!is_null($wert))
+					$this->getRefprev()->setdata($wert, 0, false, false);
+			}
+
 			if( $uri == 'http://www.trscript.de/tree#content' 
 				|| 
 				$uri == 'http://www.trscript.de/tree#element')

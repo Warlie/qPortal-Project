@@ -99,6 +99,13 @@ function event_message_in($type,&$obj)
 	//$send = ["Identifire"=>"http://www.trscript.de/tree#object", "Command"=> ["Name"=> "__get_data", "Attribute"=>[], "Value"=> "0"]]; // 'http://www.trscript.de/tree#object?__get_data=0' 
 	$this->send_messages( ["Identifire"=>"http://www.trscript.de/tree#object", "Command"=> ["Name"=> "__get_data", "Attribute"=>[], "Value"=> "0"]],$Event);
 	$this->send_messages( ["Identifire"=>"http://www.trscript.de/tree#variable", "Command"=> ["Name"=> "", "Attribute"=>[], "Value"=> "0"]],$Event);
+
+	/* Ein <sub> im <remote> (2026-10-04): wird gestartet wie ein Lauf, und was sein
+	*  Dokument per <result> zurueckgibt, wird der Wert dieses remote - ein Objekt (etwa
+	*  ein rst-Iterator fuer XMLDO.set_list.value), sonst ein Wert. STW: "Du solltest
+	*  einfach das sub in das Remote schreiben koennen." Abgegeben wird in TREE_sub.
+	*  Gemessen: im Bestand steht kein <sub> in einem offenen <remote>. */
+	$this->send_messages( ["Identifire"=>"http://www.trscript.de/tree#sub", "Command"=> ["Name"=> "start", "Attribute"=>[], "Value"=> null]],$Event);
 	
 	
 	//--------------------------------------
