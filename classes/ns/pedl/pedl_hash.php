@@ -57,6 +57,7 @@ function &new_Instance()
 				$obj = $this->get_Instance();
 				
 				$obj->link_to_class = &$this;
+				$this->link_to_instance[] = &$obj; // die Klasse kennt ihre Instanzen (2026-10-04)
 				
 				return $obj;
 }
