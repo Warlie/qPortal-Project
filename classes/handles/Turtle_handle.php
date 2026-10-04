@@ -196,21 +196,13 @@ class Turtle_handle extends Interface_handle
             foreach ($triples as $t) {
                 if ($t['predicate'] === $RDF_TYPE) continue;
 
-                $pred_qname = $this->_uri_to_qname($t['predicate'], $prefixes);
-                $obj        = $t['object'];
+                $kind = $this->_assemble_predicate($t, $prefixes);
+                if ($kind === null) continue;
 
-                $attribs = [];
-                if ($obj['type'] === 'uri') {
-                    $attribs['rdf:resource'] = $obj['value'];
-                } elseif ($obj['type'] === 'literal') {
-                    if ($obj['datatype']) $attribs['rdf:datatype'] = $obj['datatype'];
-                    if ($obj['lang'])     $attribs['xml:lang']     = $obj['lang'];
-                }
-
-                $this->base_object->tag_open($this, $pred_qname, $attribs);
-                if ($obj['type'] === 'literal')
-                    $this->base_object->cdata($this, $obj['value']);
-                $this->base_object->tag_close($this, $pred_qname);
+                $this->base_object->tag_open($this, $kind['tag'], $kind['attribs']);
+                if ($kind['text'] !== null)
+                    $this->base_object->cdata($this, $kind['text']);
+                $this->base_object->tag_close($this, $kind['tag']);
             }
 
             // tag_close left cur_pointer[$idx] aliased to the last predicate node's
@@ -247,7 +239,6 @@ class Turtle_handle extends Interface_handle
     private function _to_rdf_xml(array $data): string
     {
         $prefixes = $data['prefixes'];
-        $rdf_type = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
 
         $xmlns = '';
         foreach ($prefixes as $prefix => $uri) {
@@ -256,73 +247,126 @@ class Turtle_handle extends Interface_handle
         }
 
         $body = '';
-        foreach ($data['subjects'] as $subject => $triples) {
-            $types  = [];
-            $others = [];
-            foreach ($triples as $t) {
-                if ($t['predicate'] === $rdf_type)
-                    $types[] = $t['object']['value'];
-                else
-                    $others[] = $t;
-            }
-
-            $element_tag = !empty($types)
-                ? $this->_uri_to_qname(array_shift($types), $prefixes)
-                : 'rdf:Description';
-
-            $about = htmlspecialchars($subject, ENT_XML1 | ENT_QUOTES);
-
-            /* queryable: dieselben Praedikate ZUSAETZLICH als Attribute. SPARQL_Tree_Query
-            *  liest ein Praedikat als ATTRIBUT (Element=Subjekt, Attribut=Praedikat,
-            *  Attributwert=Objekt); die gestreifte Kindknotenform darunter sieht es nicht.
-            *  Gemessen 2026-09-20: ohne dies fand "?s storage:designation ?o" 0 von 7.
-            *
-            *  ⚠ Ein Attributname kommt je Element nur EINMAL vor. Bei einem mehrfach
-            *  belegten Praedikat traegt darum nur das erste - die Kindknoten darunter
-            *  halten weiter alle. Das Attribut ist der Suchweg, nicht die Wahrheit.
-            *
-            *  ⚠ Der Datentyp geht im Attribut verloren (ein Attributwert ist eine
-            *  Zeichenkette). Er steht unveraendert am Kindknoten. */
-            $such_attr = '';
-            if (!empty($data['queryable'])) {
-                $gesehen = [];
-                foreach ($others as $t) {
-                    $tag = $this->_uri_to_qname($t['predicate'], $prefixes);
-                    if (isset($gesehen[$tag])) continue;
-                    $gesehen[$tag] = true;
-                    $such_attr .= ' ' . $tag . '="'
-                        . htmlspecialchars((string)$t['object']['value'], ENT_XML1 | ENT_QUOTES) . '"';
-                }
-            }
-
-            $body .= "\n  <{$element_tag} rdf:about=\"{$about}\"{$such_attr}>";
-
-            foreach ($types as $extra_type) {
-                $res   = htmlspecialchars($extra_type, ENT_XML1 | ENT_QUOTES);
-                $body .= "\n    <rdf:type rdf:resource=\"{$res}\"/>";
-            }
-
-            foreach ($others as $t) {
-                $pred_tag = $this->_uri_to_qname($t['predicate'], $prefixes);
-                $obj      = $t['object'];
-
-                if ($obj['type'] === 'uri') {
-                    $res   = htmlspecialchars($obj['value'], ENT_XML1 | ENT_QUOTES);
-                    $body .= "\n    <{$pred_tag} rdf:resource=\"{$res}\"/>";
-                } elseif ($obj['type'] === 'literal') {
-                    $val    = htmlspecialchars($obj['value'], ENT_XML1);
-                    $attrs  = '';
-                    if ($obj['datatype']) $attrs .= ' rdf:datatype="' . htmlspecialchars($obj['datatype'], ENT_XML1 | ENT_QUOTES) . '"';
-                    if ($obj['lang'])     $attrs .= ' xml:lang="'     . htmlspecialchars($obj['lang'],     ENT_XML1 | ENT_QUOTES) . '"';
-                    $body .= "\n    <{$pred_tag}{$attrs}>{$val}</{$pred_tag}>";
-                }
-                // bnode objects: skipped
-            }
-
-            $body .= "\n  </{$element_tag}>";
-        }
+        foreach ($data['subjects'] as $subject => $triples)
+            $body .= $this->_node_to_xml(
+                $this->_assemble_subject($subject, $triples, $prefixes, !empty($data['queryable'])));
 
         return "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<rdf:RDF{$xmlns}>\n{$body}\n</rdf:RDF>";
+    }
+
+    /* ====================================================== Der Zusammenbau
+    *
+    *  Aus einem Subjekt und seinen Tripeln wird ein KNOTENBILD - Tag, Attribute, Kinder,
+    *  Text, noch ohne Schreibweise:
+    *
+    *    ['tag' => 'storage:StockItem', 'attribs' => ['rdf:about' => '…', …],
+    *     'children' => [ ['tag' => 'storage:amount', 'attribs' => [], 'text' => '2'], … ]]
+    *
+    *  Die Werte stehen ROH darin; maskiert wird erst beim Schreiben. Zwei Abnehmer:
+    *  _node_to_xml macht Text daraus (neue Subjekte, load_Stream), _extend_existing
+    *  Knoten (tag_open/cdata/tag_close an ein vorhandenes Subjekt). Bis 2026-10-04 bauten
+    *  beide selbst - zweimal dieselbe Entscheidung, und sie liefen schon auseinander:
+    *  ein leerer Knoten (bnode) als Objekt wurde dort uebersprungen und hier als leeres
+    *  Element angelegt. Jetzt wird er in beiden Wegen uebersprungen.
+    *
+    *  Hier setzt eine zweite Schreibweise an (STW: PEDL - Struktur als Enthaltensein
+    *  statt als Kante). Sie ist noch nicht entschieden: wo ein Ding zum zweiten Mal
+    *  auftritt, muss es formal eine Referenz sein, und die Grundlage (Container gegen
+    *  Property) ist in PEDL selbst noch nicht stimmig. */
+
+    // Ein Subjekt: erster Typ -> Tag, ohne Typ rdf:Description, weitere Typen als
+    // rdf:type-Kinder (⚠ Altlast, STW 09-15), danach die Praedikate in ihrer Reihenfolge.
+    private function _assemble_subject(string $subject, array $triples, array $prefixes, bool $queryable): array
+    {
+        $rdf_type = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+
+        $types  = [];
+        $others = [];
+        foreach ($triples as $t) {
+            if ($t['predicate'] === $rdf_type)
+                $types[] = $t['object']['value'];
+            else
+                $others[] = $t;
+        }
+
+        $tag = !empty($types)
+            ? $this->_uri_to_qname(array_shift($types), $prefixes)
+            : 'rdf:Description';
+
+        $attribs = ['rdf:about' => $subject];
+
+        /* queryable: dieselben Praedikate ZUSAETZLICH als Attribute. SPARQL_Tree_Query
+        *  liest ein Praedikat als ATTRIBUT (Element=Subjekt, Attribut=Praedikat,
+        *  Attributwert=Objekt); die gestreifte Kindknotenform darunter sieht es nicht.
+        *  Gemessen 2026-09-20: ohne dies fand "?s storage:designation ?o" 0 von 7.
+        *
+        *  ⚠ Ein Attributname kommt je Element nur EINMAL vor. Bei einem mehrfach
+        *  belegten Praedikat traegt darum nur das erste - die Kindknoten darunter
+        *  halten weiter alle. Das Attribut ist der Suchweg, nicht die Wahrheit.
+        *
+        *  ⚠ Der Datentyp geht im Attribut verloren (ein Attributwert ist eine
+        *  Zeichenkette). Er steht unveraendert am Kindknoten. */
+        if ($queryable)
+            foreach ($others as $t) {
+                $name = $this->_uri_to_qname($t['predicate'], $prefixes);
+                if (!array_key_exists($name, $attribs))
+                    $attribs[$name] = (string)$t['object']['value'];
+            }
+
+        $children = [];
+        foreach ($types as $extra_type)
+            $children[] = ['tag' => 'rdf:type', 'attribs' => ['rdf:resource' => $extra_type], 'text' => null];
+
+        foreach ($others as $t) {
+            $kind = $this->_assemble_predicate($t, $prefixes);
+            if ($kind !== null) $children[] = $kind;
+        }
+
+        return ['tag' => $tag, 'attribs' => $attribs, 'children' => $children];
+    }
+
+    // Ein Praedikat: Verweis -> rdf:resource ohne Text, Literal -> Text mit Datentyp
+    // und Sprache. Ein leerer Knoten (bnode) als Objekt -> null, also kein Kind.
+    private function _assemble_predicate(array $t, array $prefixes): ?array
+    {
+        $obj = $t['object'];
+        $tag = $this->_uri_to_qname($t['predicate'], $prefixes);
+
+        if ($obj['type'] === 'uri')
+            return ['tag' => $tag, 'attribs' => ['rdf:resource' => $obj['value']], 'text' => null];
+
+        if ($obj['type'] === 'literal') {
+            $attribs = [];
+            if ($obj['datatype']) $attribs['rdf:datatype'] = $obj['datatype'];
+            if ($obj['lang'])     $attribs['xml:lang']     = $obj['lang'];
+            return ['tag' => $tag, 'attribs' => $attribs, 'text' => (string)$obj['value']];
+        }
+
+        return null;
+    }
+
+    // Die RDF/XML-Schreibweise eines Knotenbilds - Einrueckung wie bisher, Attribute
+    // mit ENT_QUOTES, Text ohne.
+    private function _node_to_xml(array $node): string
+    {
+        $attr = function(array $a): string {
+            $out = '';
+            foreach ($a as $k => $v)
+                $out .= ' ' . $k . '="' . htmlspecialchars((string)$v, ENT_XML1 | ENT_QUOTES) . '"';
+            return $out;
+        };
+
+        $xml = "\n  <{$node['tag']}" . $attr($node['attribs']) . '>';
+
+        foreach ($node['children'] as $c) {
+            if ($c['text'] === null)
+                $xml .= "\n    <{$c['tag']}" . $attr($c['attribs']) . '/>';
+            else
+                $xml .= "\n    <{$c['tag']}" . $attr($c['attribs']) . '>'
+                      . htmlspecialchars($c['text'], ENT_XML1) . "</{$c['tag']}>";
+        }
+
+        return $xml . "\n  </{$node['tag']}>";
     }
 
     private function _uri_to_qname(string $uri, array $prefixes): string
