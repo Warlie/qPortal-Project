@@ -480,26 +480,54 @@ class Turtle_handle extends Interface_handle
         }
     }
 
+    /* ====================================================== Das Schreiben
+    *
+    *  WELCHER INHALT (STW 2026-10-04): instanzweit oder lokal - beides nuetzlich, das
+    *  erste die Vorgabe.
+    *
+    *    doctype_out="TURTLE"                  alles, was die Instanz an Bedeutung kennt:
+    *                                          jeder registrierte Name mit einem Knoten im
+    *                                          Baum, ueber alle geladenen Dokumente,
+    *                                          Vokabulare eingeschlossen (gefiltert wird
+    *                                          danach)
+    *    doctype_out="TURTLE;scope:document"   nur das Ausgabedokument, Element fuer
+    *                                          Element (der Weg bis 2026-10-04)
+    *
+    *  Bis 2026-10-04 gab es nur den zweiten, und er las den Typ aus full_URI() des
+    *  Knotens. Bei einer rdfs:Class-Instanz hat der Knoten seinen type mit der eigenen
+    *  Identitaet ueberschrieben - heraus kam "fridge_door rdf:type fridge_door". Jetzt in
+    *  beiden Wegen: rdf:type ist EIN Schritt link_to_class (STW 2026-09-15). */
     function save_back($format, $send_header = false)
     {
         require_once dirname(__DIR__, 2) . '/vendor/autoload.php';
 
-        $RDF_TYPE     = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
-        $RDF_ABOUT    = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#about';
-        $RDF_RESOURCE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#resource';
-        $RDF_DATATYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#datatype';
-        $XML_LANG     = 'http://www.w3.org/XML/1998/namespace#lang';
-        $RDF_DESC     = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#Description';
+        $writer = new \pietercolpaert\hardf\TriGWriter(['prefixes' => $this->_writer_prefixes()]);
 
-        // Use the TURTLE output slot so that both the base ontology and plugin-inserted
-        // subjects are visible, regardless of what idx is current at render time.
-        $turtle_idx = $this->_find_turtle_idx();
-        $idx  = $turtle_idx ?? $this->base_object->idx;
-        $root = $this->base_object->mirror[$idx] ?? null;
-        if (!is_object($root)) return '';
+        if ($this->_option('scope') === 'document')
+            $this->_write_document($writer);
+        else
+            $this->_write_instance($writer);
 
-        // Rebuild prefix map from qPortal's xmlns stack.
-        // qPortal stores URIs without trailing '#'; hardf requires '#' or '/' at the end.
+        return $writer->end();
+    }
+
+    // Eine Option aus dem Beschreibungstext, wie CSV: "TURTLE;scope:document".
+    private function _option(string $name): ?string
+    {
+        $type  = $this->base_object->TYPE[$this->base_object->idx] ?? '';
+        $parts = explode(';', (string)$type);
+        for ($i = 1; $i < count($parts); $i++) {
+            $pair = explode(':', $parts[$i], 2);
+            if (count($pair) == 2 && strtolower(trim($pair[0])) === strtolower($name))
+                return strtolower(trim($pair[1]));
+        }
+        return null;
+    }
+
+    // Die Praefixe aus dem xmlns-Stapel. qPortal fuehrt URIs ohne abschliessendes '#',
+    // hardf braucht '#' oder '/' am Ende.
+    private function _writer_prefixes(): array
+    {
         $prefixes = [];
         foreach ($this->base_object->prefixes as $key => $stack) {
             if (is_string($key) && $key !== '' && is_array($stack)) {
@@ -513,7 +541,91 @@ class Turtle_handle extends Interface_handle
         $prefixes['xsd']  = 'http://www.w3.org/2001/XMLSchema#';
         $prefixes['rdfs'] = 'http://www.w3.org/2000/01/rdf-schema#';
 
-        $writer = new \pietercolpaert\hardf\TriGWriter(['prefixes' => $prefixes]);
+        return $prefixes;
+    }
+
+    // Der Typ eines Knotens: EIN Schritt link_to_class. rdf:Description ist kein Typ.
+    //
+    // ⚠ Ist der Schritt UNBENANNT, traegt der Tag die Aussage (STW 09-15: "der Tag IST
+    // die Aussage"). So bei den Definitionen eines Vokabulars: <owl:Class rdf:about=…>
+    // stammt vom Fabrik-Prototyp der Klasse OWL_Class, und der heisst "none#none" -
+    // gemessen 2026-10-04 an 31 von 43 Subjekten. Ihr Tag (owl:Class) ist der Typ.
+    private function _type_of($node): ?string
+    {
+        $klasse = is_object($node) ? $node->linkToClass() : null;
+        if (!is_object($klasse)) return null;
+
+        $typ = $klasse->full_URI();
+        if (str_starts_with($typ, 'none#') || str_starts_with($typ, '#'))
+            $typ = $node->full_URI();
+        return ($typ === 'http://www.w3.org/1999/02/22-rdf-syntax-ns#Description') ? null : $typ;
+    }
+
+    // INSTANZWEIT: aus dem Register. Hinein kommt jeder Name mit einem Knoten im Baum -
+    // der Repraesentant fuehrt ueber link_to_class dorthin (rdf:about, rdf:ID), eine
+    // rdfs:Class steht selbst dort. Prototypen der Fabrik und leere Eintraege nicht.
+    //
+    // TOPOLOGISCH (STW): was ein Ding benutzt, steht vor ihm - sein Typ und die anderen
+    // registrierten Dinge, auf die es per rdf:resource zeigt. Bei einem Kreis (Mieter ->
+    // Konto -> Inhaber) entscheidet die Reihenfolge im Register.
+    private function _write_instance($writer): void
+    {
+        $RDF_RESOURCE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#resource';
+
+        $knoten = [];   // Name => Knoten im Baum, in Registerreihenfolge
+        foreach ($this->base_object->namespace_frameworks as $ns => $fw) {
+            foreach (($fw['node'] ?? []) as $name => $n) {
+                if (!is_object($n)) continue;
+
+                if (is_object($n->getRefprev()))
+                    $k = $n;
+                elseif (is_object($l = $n->linkToClass()) && is_object($l->getRefprev()))
+                    $k = $l;
+                else
+                    continue;
+
+                $knoten[$ns . '#' . $name] = $k;
+            }
+        }
+
+        $folge  = [];
+        $status = [];   // 1 = in Arbeit, 2 = fertig
+        $besuche = function(string $uri) use (&$besuche, &$folge, &$status, $knoten, $RDF_RESOURCE) {
+            if (isset($status[$uri])) return;
+            $status[$uri] = 1;
+
+            $k   = $knoten[$uri];
+            $vor = [];
+            if (($t = $this->_type_of($k)) !== null) $vor[] = $t;
+            for ($j = 0, $m = $k->index_max(); $j < $m; $j++) {
+                $p = $k->getRefnext($j);
+                if (is_object($p) && false !== ($r = $p->get_ns_attribute($RDF_RESOURCE))) $vor[] = $r;
+            }
+
+            foreach ($vor as $v)
+                if ($v !== $uri && isset($knoten[$v])) $besuche($v);
+
+            $status[$uri] = 2;
+            $folge[] = $uri;
+        };
+
+        foreach (array_keys($knoten) as $uri) $besuche($uri);
+
+        foreach ($folge as $uri)
+            $this->_write_node($writer, $uri, $knoten[$uri]);
+    }
+
+    // LOKAL: das Ausgabedokument, Element fuer Element - nur, was rdf:about traegt.
+    private function _write_document($writer): void
+    {
+        $RDF_ABOUT = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#about';
+
+        // Use the TURTLE output slot so that both the base ontology and plugin-inserted
+        // subjects are visible, regardless of what idx is current at render time.
+        $turtle_idx = $this->_find_turtle_idx();
+        $idx  = $turtle_idx ?? $this->base_object->idx;
+        $root = $this->base_object->mirror[$idx] ?? null;
+        if (!is_object($root)) return;
 
         for ($i = 0, $n = $root->index_max(); $i < $n; $i++) {
             $s = $root->getRefnext($i);
@@ -522,45 +634,54 @@ class Turtle_handle extends Interface_handle
             $subject = $s->get_ns_attribute($RDF_ABOUT);
             if ($subject === false || $subject === '') continue;
 
-            // type triple from element name (rdf:Description = no-type fallback, skip)
-            $type = $s->full_URI();
-            if ($type !== $RDF_DESC) {
-                $writer->addTriple($subject, $RDF_TYPE, $type);
-            }
-
-            for ($j = 0, $m = $s->index_max(); $j < $m; $j++) {
-                $p = $s->getRefnext($j);
-                if (!is_object($p)) continue;
-
-                $predicate = $p->full_URI();
-
-                // URI object via rdf:resource attribute
-                $resource = $p->get_ns_attribute($RDF_RESOURCE);
-                if ($resource !== false) {
-                    $writer->addTriple($subject, $predicate, $resource);
-                    continue;
-                }
-
-                // Literal object — getdata() with no args concatenates all text segments
-                $value = $p->getdata();
-                if ($value === null || $value === false || $value === '') continue;
-
-                $datatype = $p->get_ns_attribute($RDF_DATATYPE);
-                $lang     = $p->get_ns_attribute($XML_LANG);
-
-                if ($lang !== false) {
-                    $object = \pietercolpaert\hardf\Util::createLiteral((string)$value, $lang);
-                } elseif ($datatype !== false) {
-                    $object = \pietercolpaert\hardf\Util::createLiteral((string)$value, $datatype);
-                } else {
-                    $object = \pietercolpaert\hardf\Util::createLiteral((string)$value);
-                }
-
-                $writer->addTriple($subject, $predicate, $object);
-            }
+            $this->_write_node($writer, $subject, $s);
         }
+    }
 
-        return $writer->end();
+    // Ein Subjekt: sein Typ, dann je Kind ein Tripel - Verweis per rdf:resource, sonst
+    // der Text als Literal mit Sprache oder Datentyp. Leerer Text traegt nichts.
+    private function _write_node($writer, string $subject, $s): void
+    {
+        $RDF_TYPE     = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#type';
+        $RDF_RESOURCE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#resource';
+        $RDF_DATATYPE = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#datatype';
+        $XML_LANG     = 'http://www.w3.org/XML/1998/namespace#lang';
+
+        if (($type = $this->_type_of($s)) !== null)
+            $writer->addTriple($subject, $RDF_TYPE, $type);
+
+        for ($j = 0, $m = $s->index_max(); $j < $m; $j++) {
+            $p = $s->getRefnext($j);
+            if (!is_object($p)) continue;
+
+            $predicate = $p->full_URI();
+
+            // URI object via rdf:resource attribute
+            $resource = $p->get_ns_attribute($RDF_RESOURCE);
+            if ($resource !== false) {
+                $writer->addTriple($subject, $predicate, $resource);
+                continue;
+            }
+
+            // Literal object — getdata() with no args concatenates all text segments.
+            // ⚠ Ein Objekt im Datenteil (rdfs:range mit genau einem Repraesentanten,
+            // xml_multitree_ns) ist kein Literal - uebersprungen.
+            $value = $p->getdata();
+            if (!is_scalar($value) || $value === '' || $value === false) continue;
+
+            $datatype = $p->get_ns_attribute($RDF_DATATYPE);
+            $lang     = $p->get_ns_attribute($XML_LANG);
+
+            if ($lang !== false) {
+                $object = \pietercolpaert\hardf\Util::createLiteral((string)$value, $lang);
+            } elseif ($datatype !== false) {
+                $object = \pietercolpaert\hardf\Util::createLiteral((string)$value, $datatype);
+            } else {
+                $object = \pietercolpaert\hardf\Util::createLiteral((string)$value);
+            }
+
+            $writer->addTriple($subject, $predicate, $object);
+        }
     }
 
     function save_stream_back(&$stream, $format, $send_header = false)
