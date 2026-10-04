@@ -433,8 +433,14 @@ function checkPointers()
 
 		$this->set_first_node();
 
+		/* ⚠ Eine Stelle, die es nicht gibt, ist ein Stempel, der sich nicht aufloest.
+		*  child_node() sagt es, die Antwort wurde aber uebergangen: ".0.99" landete still
+		*  auf dem Elternknoten und galt als aufgeloest (gemessen 2026-10-04). Fuer den
+		*  Intern-Kanal hiess das: ein erfundener Stempel antwortete ANDERS als einer auf
+		*  einen verborgenen Ort - man konnte erkennen, dass dort etwas liegt. */
 		foreach ($path as $step)
-			$this->child_node(intval($step));
+			if (!$this->child_node(intval($step)))
+				return false;
 
 		// skip hash verification for non-numeric idx (me/prev/filepath stamps)
 		if ($hash_str != "0000" && is_numeric($idx_part) && $stamp != $this->position_hash_pos())

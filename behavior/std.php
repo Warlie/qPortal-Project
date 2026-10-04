@@ -622,6 +622,14 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			if (!$node->get_parser()->go_to_stamp($stamp))
 				throw new Exception('__go_to_stamp: could not resolve "' . $stamp . '"');
 			$target = &$node->get_parser()->show_xmlelement();
+			/* Ein Ort, den der Aufrufer nicht sehen darf, ist fuer ihn keiner - dieselbe
+			*  Antwort wie ein Stempel, der sich nicht aufloesen laesst (maySee, 2026-10-04).
+			*  Ein Stempel ist ein Ort, keine Berechtigung: wer ihn von jemand anderem hat,
+			*  kommt nur hin, wo er auch selbst hinsieht. Vorher hing das daran, dass der
+			*  NAECHSTE Befehl die Tuer pruefte. */
+			$cg = $node->get_contentGen();
+			if (is_object($cg) && method_exists($cg, 'maySee') && !$cg->maySee($target))
+				throw new Exception('__go_to_stamp: could not resolve "' . $stamp . '"');
 			$obj->set_node($target);
 			$value = $structur['Command']['Value'];
 			if (!empty($value))
@@ -629,11 +637,18 @@ $reg->addLog(function($node, $obj, $event){return "__redirect_node in " . $node-
 			return true;
 		};
 
-    $reg->addLog(fn($node, $obj, $event) => '__go_to_stamp: ' . ($event->get_Result_Array()['Command']['Attribute']['stamp'] ?? $obj->get_context()), 5);
+    /* ⚠ Dieselbe Stelle wie der Befehl: der Stempel steht NEBEN Command. Hier stand
+    *  ['Command']['Attribute'] - das Log nannte darum nie den Stempel, der wirklich galt. */
+    $reg->addLog(fn($node, $obj, $event) => '__go_to_stamp: ' . ($event->get_Result_Array()['Attribute']['stamp'] ?? $obj->get_context()), 5);
 
 	$reg->addDescription(
 		'Setzt den Parser auf den Knoten, den der Positionsstempel bezeichnet, und feuert dort'
-		. ' Value. Schlaegt die Aufloesung fehl, wird eine Exception geworfen.',
+		. ' Value. ⚠ Der Stempel steht im AEUSSEREN Attribute, neben Command - nicht darin:'
+		. ' {"Identifire":"*","Attribute":{"stamp":"<stempel>"},"Command":{"Name":"__go_to_stamp",'
+		. '"Value":{...}}}. Steht er innen, wird er nicht gelesen: der Befehl nimmt dann den'
+		. ' Ereigniskontext (so in einer Kette nach __position_stamp) und bleibt ohne Kontext auf'
+		. ' der Wurzel. Schlaegt die Aufloesung fehl ODER darf der Aufrufer den Ort nicht sehen'
+		. ' (maySee), wird dieselbe Exception geworfen - ein fremder Stempel verraet nichts.',
 		[
 			'stamp' => ['description' => 'Positionsstempel aus __position_stamp; fehlt er, wird der'
 			                           . ' Ereigniskontext genommen. ACHTUNG: NEBEN Command'

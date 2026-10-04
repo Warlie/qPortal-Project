@@ -302,6 +302,11 @@ diesem Request), `internal` `me`/`prev`, `absolute` `0000.[<datei>].0.0`, `exter
 (`answer_shape`/`shape_inner`) trägt jeder Knoten `uri` (Typ), `name`, `stamp` (Ort, per
 `go_to_stamp` wieder anfahrbar) und `about` (Identität, wo es `rdf:about` gibt). ⚠ Ein Stempel ist
 ein Ort, keine Identität. ⚠ `go_to_stamp` findet `[datei]` nur unter GELADENEN Bäumen.
+⚠ **`__go_to_stamp` liest den Stempel im ÄUSSEREN `Attribute`**, neben `Command`:
+`{"Identifire":"*","Attribute":{"stamp":"…"},"Command":{"Name":"__go_to_stamp","Value":{…}}}`.
+Innen wird er nicht gelesen — der Befehl nimmt dann den Ereigniskontext und bleibt ohne ihn
+still auf der Wurzel (sieht aus wie „Stempel lässt sich nicht auflösen“). Ein Ort, den der
+Aufrufer nicht sehen darf (`maySee`), antwortet wie ein Stempel, der sich nicht auflösen lässt.
 
 ## Suche
 

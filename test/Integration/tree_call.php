@@ -72,6 +72,27 @@ result('gesperrt: wie nicht vorhanden', $j4 === $j4n && !isset($j4[0]['value']['
 [, $j4d] = post(tree_named('drinnen', $call()));
 result('Tuer im verschlossenen Raum',  $j4d === $j4n, json_encode($j4d[0] ?? $j4d));
 
+/* Ein Stempel ist ein Ort, keine Berechtigung (maySee in __go_to_stamp, 2026-10-04). Den
+*  Stempel von "gesperrt" kann der Pruefschluessel nicht erfragen - er sieht den Ast nicht.
+*  Ohne stamp_key sind Stempel lesbar: der Nachbar "leer" steht eine Stelle davor. Der
+*  Stempel steht im AEUSSEREN Attribute, neben Command. */
+$hits = post(cmd('__find_node', ['json' => json_encode(['name' => T . 'final'])],
+             cmd('__where_am_i', ['scope' => 'tree'], cmd('__to_owner'))))[1][0]['value']['hits'] ?? [];
+$leer = null;
+foreach ($hits as $h) if (($h['name'] ?? '') === 'leer') $leer = $h['stamp'] ?? null;
+$hin  = fn($stempel) => post(['Identifire' => '*', 'Attribute' => ['stamp' => $stempel],
+                              'Command' => ['Name' => '__go_to_stamp', 'Value' => $call()]])[1];
+if (is_string($leer) && preg_match('/^(.*\.)(\d+)$/', $leer, $m) && false === strpos($leer, '='))
+{
+	$sichtbar = $hin($leer);
+	$gesperrt = $hin($m[1] . ($m[2] + 1));
+	$erfunden = $hin($m[1] . '99');
+	result('Stempel: sichtbarer Ort',          ($sichtbar[0]['value']['name'] ?? null) === 'leer', json_encode($sichtbar[0]['value'] ?? $sichtbar));
+	result('Stempel: verborgen wie erfunden',  $gesperrt === $erfunden, json_encode($gesperrt));
+}
+else
+	$results[] = ['Stempel (uebersprungen)', true, 'Stempel verschluesselt oder nicht gefunden: ' . var_export($leer, true)];
+
 [, $j5] = post(tree_named('unter', $call()));
 result('src: Rueckgabe des Unterdokuments', ($j5[0]['value']['results'] ?? null) === ['aus dem Unterdokument'], json_encode($j5[0]['value']['results'] ?? null));
 
