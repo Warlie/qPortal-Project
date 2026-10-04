@@ -109,6 +109,15 @@ if ($preload) {
 			if($uri == 'http://www.trscript.de/tree#template' )
 			{
 				$content->set_template(resolve_path($this->getdata()),resolve_path($this->getdata()));
+
+				/* Ein Name fuer das Ausgabedokument (2026-10-04), wie bei <add id="…">. Ohne
+				*  ihn steht das <main> nur unter seinem PFAD im Register - ein Unterdokument,
+				*  das von mehreren Eltern mit verschiedenem <main> gerufen wird (die
+				*  RstTurtle-Zyklen des Immobilienexports), kann es so nicht benennen. Mit
+				*  id nennt jedes Elterndokument sein Ziel gleich, und der Zyklus schreibt
+				*  "target": "<id>". Ohne id wie bisher. */
+				if(($main_id = trim((string) $this->get_attribute('id'))) !== '')
+					$content->set_template($main_id, resolve_path($this->getdata()));
 				
 				if($output_doc = $this->get_attribute('output_doc'))
 				{

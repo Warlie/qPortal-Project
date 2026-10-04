@@ -420,6 +420,13 @@
 	</xs:complexType>
 
 	<xs:complexType name="mainType" mixed="true">
+		<xs:annotation><xs:documentation>
+			id (seit 2026-10-04, freiwillig): ein Name fuer das Ausgabedokument im
+			Template-Register, wie bei add. Ohne id steht main nur unter seinem Pfad. Gebraucht
+			von Unterdokumenten, die mehrere Eltern mit verschiedenem main haben - etwa
+			RstTurtle mit "target".
+		</xs:documentation></xs:annotation>
+		<xs:attribute name="id" type="xs:string"/>
 		<xs:attribute name="case_folding" type="xs:integer"/>
 		<xs:attribute name="doctype" type="xs:string"/>
 		<xs:attribute name="doctype_out" type="xs:string"/>
