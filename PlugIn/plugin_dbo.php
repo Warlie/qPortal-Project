@@ -83,10 +83,16 @@ public function setWhere($val1,$op,$val2, $isString = true, $bool_op = 'AND', $l
 //echo $val2;
 	$this->lvl[] = $lvl; 
 
+	/* ⚠ Ein Wert in Anfuehrungszeichen wird MASKIERT (2026-10-04). Vorher stand er
+	*  ungeschuetzt zwischen '…' - ein Wert mit Hochkomma beendete die Zeichenkette, und
+	*  was danach kam, war SQL. Seit der Kuehlschrank einen Ort aus einer Auswahl auf der
+	*  Seite nimmt (store;places_rst parent), kommt hier eine Eingabe von aussen an.
+	*  Ohne Verbindung (Pruefstand) bleibt es wie bisher. */
 	if($isString)
 		$this->where[] = array($val1, $op, trim($val2)  );
 	else
-		$this->where[] = array($val1, $op, "'" . trim($val2) . "'" );
+		$this->where[] = array($val1, $op, "'" . (is_object($this->dbclazz) && method_exists($this->dbclazz, 'escape')
+		                                          ? $this->dbclazz->escape(trim($val2)) : trim($val2)) . "'" );
 	
 	if($bool_op)	
 		$this->bool_op[] = ' ' . $bool_op . ' ';
