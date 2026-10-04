@@ -430,18 +430,22 @@ class SPARQL_Tree_Query
 
 	/**
 	*	Steht die Instanz noch? Ihr Baum ist geladen (ein entladener Slot hat mirror
-	*	null), sie hat einen Traeger, und der fuehrt sie noch - als Attribut oder als
-	*	Kind. Ein Repraesentant (rdf:about) hat keinen Traeger und zaehlt nicht.
+	*	null), und der GANZE Weg bis zu seiner Wurzel steht: jeder Traeger fuehrt sein
+	*	Kind noch - als Attribut oder in der Kindliste. Ein Repraesentant (rdf:about) hat
+	*	keinen Traeger und zaehlt nicht.
+	*
+	*	⚠ Ein Schritt nach oben genuegt nicht: removeNode() traegt nur den entfernten
+	*	Knoten aus, nicht seine Kinder. Die Kante eines geloeschten Subjekts steht weiter
+	*	bei ihm - gemessen 2026-10-04: nach removeNode() auf dem Subjekt noch 2 liegtIn
+	*	statt 1.
 	*/
 	private function alive($inst): bool
 	{
 		if(!is_object($inst)) return false;
 
-		$traeger = $inst->getRefprev();
-		if(!is_object($traeger)) return false;
-
-		$idx = $inst->get_idx();
-		if(!is_object($this->tree->mirror[$idx] ?? null)) return false;
+		$idx  = $inst->get_idx();
+		$root = $this->tree->mirror[$idx] ?? null;
+		if(!is_object($root)) return false;
 
 		/* ⚠ Ein Baum mit '@'-Namen ist ein SYSTEMBAUM (@registry_surface_system: der
 		*  Bindungsblock des Kerns), kein Dokument. Der alte Index hatte ihn nicht, das
@@ -450,11 +454,28 @@ class SPARQL_Tree_Query
 		$quelle = (string) ($this->tree->loaded_URI[$idx] ?? '');
 		if($quelle !== '' && $quelle[0] === '@') return false;
 
-		if($inst->get_NodeType() == ATTRIBUTE)
-			return $traeger->get_ns_attribute_obj($inst->full_URI()) === $inst;
+		$k = $inst;
+		for($stufe = 0; $stufe < 512; $stufe++)
+		{
+			if($k === $root) return true;
 
-		for($i = 0, $n = $traeger->index_max(); $i < $n; $i++)
-			if($traeger->getRefnext($i) === $inst) return true;
+			$traeger = $k->getRefprev();
+			if(!is_object($traeger)) return false;
+
+			if($k->get_NodeType() == ATTRIBUTE)
+			{
+				if($traeger->get_ns_attribute_obj($k->full_URI()) !== $k) return false;
+			}
+			else
+			{
+				$gefunden = false;
+				for($i = 0, $n = $traeger->index_max(); $i < $n; $i++)
+					if($traeger->getRefnext($i) === $k) { $gefunden = true; break; }
+				if(!$gefunden) return false;
+			}
+
+			$k = $traeger;
+		}
 
 		return false;
 	}

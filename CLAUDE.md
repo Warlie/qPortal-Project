@@ -36,7 +36,7 @@ php -d error_reporting=E_ERROR test/Integration/tree_access.php        # 11/0 (<
 php -d error_reporting=E_ERROR test/proben/probe_registry_vocab.php   # ausser dieser: 32/0
 ```
 
-`seek_scope.php` und `sparql_parse.php` (67) müssen vollständig grün sein — jede rote Zeile
+`seek_scope.php` und `sparql_parse.php` (69) müssen vollständig grün sein — jede rote Zeile
 dort ist neu. `probe_registry_vocab.php` bewacht die Naht zwischen Vokabulardokument und
 `build_up()` und steht bei **32 in Ordnung / 0 rot**.
 `intern_walk.php` steht bei **35 gelaufen / 1 rot** — `__get_data` ist ein Bestandsdefekt

@@ -357,6 +357,17 @@ check('Register: Definition ist keine Instanz', count($sp3->solutions()), 2);
 $sp3->query($EX . 'SELECT ?d WHERE { ?d ex:liegtIn <https://ex.org/i#regal> }');
 check('Register: festes Objekt als URI', count($sp3->solutions()), 1);
 
+/* Loeschen: removeNode() traegt nur den entfernten Knoten aus, nicht seine Kinder.
+*  Die Kante eines geloeschten Subjekts darf trotzdem nicht mehr zaehlen - der ganze
+*  Weg zur Wurzel muss stehen (alive). */
+$milch = $reg->node_by_identity('https://ex.org/i#milch');
+$milch->removeNode();
+$sp3->query($EX . 'SELECT ?d ?o WHERE { ?d ex:liegtIn ?o }');
+check('Register: Kante eines geloeschten Subjekts', count($sp3->solutions()), 1);
+
+$sp3->query($EX . 'SELECT ?w WHERE { ?w rdf:type rdf:RDF }');
+check('Register: die Wurzel selbst ist ein Treffer', count($sp3->solutions()) >= 1, true);
+
 ConnectionProfile::set_collection(array());
 
 /* ------------------------------------------------------------------- Ergebnis */
