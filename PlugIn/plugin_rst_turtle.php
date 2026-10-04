@@ -30,11 +30,17 @@
  *       "prefixes":   { "ex": "http://example.org/vocab#" },
  *       "subject":    { "column": "_about", "type": "ex:Person" },
  *       "predicates": [
- *         { "predicate": "ex:name",  "column": "name" },
+ *         { "predicate": "ex:name",  "column": "name", "mode": "replace" },
  *         { "predicate": "ex:age",   "column": "age",  "datatype": "xsd:integer" },
  *         { "column_predicate": "pred_col", "column": "val_col", "column_datatype": "dt_col" }
  *       ]
  *     }
+ *
+ *   "mode" je Praedikat (2026-10-04): "add" (Vorgabe, wie bisher) haengt an ein
+ *     vorhandenes Subjekt an; "replace" entfernt dort zuerst die alten Werte DIESES
+ *     Praedikats - einmal je execute, danach haengen weitere Zeilen desselben Laufs
+ *     wieder an. So wird auch eine MENGE ersetzt (drei Konten -> genau die drei
+ *     neuen). Bei einem neuen Subjekt gibt es nichts zu ersetzen.
  *
  *   execute()
  *     Iterates the rst, builds the intermediate array, and calls
@@ -90,8 +96,16 @@ class RstTurtle extends plugin
         string  $column_name,
         ?string $datatype        = null,
         ?string $column_datatype = null,
-        bool    $is_uri          = false
+        bool    $is_uri          = false,
+        string  $mode            = 'add'
     ): void {
+        /* ⚠ Ein vertipptes Wort faellt sonst still auf "add" und haengt an, wo
+        *  ersetzt werden sollte - die Folge sieht man erst am doppelten Wert. */
+        if ($mode !== 'add' && $mode !== 'replace')
+            throw new \RuntimeException(
+                "RstTurtle::addPredicate — mode \"{$mode}\" ist keiner von add, replace "
+                . "(column_name=\"{$column_name}\")."
+            );
         if ($predicate !== null && $column_predicate !== null)
             throw new \RuntimeException(
                 "RstTurtle::addPredicate — \$predicate and \$column_predicate are mutually exclusive: " .
@@ -114,6 +128,7 @@ class RstTurtle extends plugin
             'datatype'         => $datatype,
             'column_datatype'  => $column_datatype,
             'is_uri'           => $is_uri,
+            'mode'             => $mode,
         ];
     }
 
@@ -167,7 +182,8 @@ class RstTurtle extends plugin
                 $p['column'],
                 $p['datatype']         ?? null,
                 $p['column_datatype']  ?? null,
-                ($p['object_type']     ?? 'literal') === 'uri'
+                ($p['object_type']     ?? 'literal') === 'uri',
+                $p['mode']             ?? 'add'
             );
         }
     }
@@ -234,12 +250,14 @@ class RstTurtle extends plugin
                     : $def['datatype'];
                 $dt = ($dt_raw !== null && $dt_raw !== '') ? $this->_resolve($dt_raw) : null;
 
-                $triples[] = [
+                $triple = [
                     'predicate' => $pred_uri,
                     'object'    => $def['is_uri']
                         ? ['type' => 'uri',     'value' => $this->_resolve((string)$value), 'datatype' => null, 'lang' => null]
                         : ['type' => 'literal', 'value' => (string)$value, 'datatype' => $dt, 'lang' => null],
                 ];
+                if ($def['mode'] === 'replace') $triple['mode'] = 'replace';
+                $triples[] = $triple;
             }
 
             if (!empty($triples))

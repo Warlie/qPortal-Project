@@ -193,11 +193,18 @@ class Turtle_handle extends Interface_handle
             unset($this->base_object->cur_pointer[$idx]);
             $this->base_object->cur_pointer[$idx] = $tree_node;
 
+            $ersetzt = [];   // Praedikate, deren alte Werte in DIESEM Lauf schon weg sind
+
             foreach ($triples as $t) {
                 if ($t['predicate'] === $RDF_TYPE) continue;
 
                 $kind = $this->_assemble_predicate($t, $prefixes);
                 if ($kind === null) continue;
+
+                if (($t['mode'] ?? 'add') === 'replace' && !isset($ersetzt[$t['predicate']])) {
+                    $this->_remove_predicate($tree_node, $t['predicate'], $t['object']);
+                    $ersetzt[$t['predicate']] = true;
+                }
 
                 $this->base_object->tag_open($this, $kind['tag'], $kind['attribs']);
                 if ($kind['text'] !== null)
@@ -214,6 +221,48 @@ class Turtle_handle extends Interface_handle
         }
 
         $this->base_object->change_idx($saved_idx);
+    }
+
+    /* ERSETZEN (2026-10-04): die alten Werte EINES Praedikats an einem vorhandenen
+    *  Subjekt entfernen, bevor die neuen angehaengt werden. Gerufen einmal je Subjekt,
+    *  Praedikat und Lauf - weitere Werte desselben Laufs haengen danach wieder an, so
+    *  wird eine Menge ersetzt.
+    *
+    *  Entfernt wird ueber removeNode(): haengt ab, rueckt die Textbehaelter nach
+    *  (removeRefnext, seit 2026-10-03), loest die Zuhoererkanten und traegt den Knoten
+    *  aus link_to_instance seiner Klasse aus.
+    *
+    *  ⚠ Das queryable-Attribut zieht mit. Es ist der Suchweg fuer SPARQL und stand bis
+    *  hierher auf dem ERSTEN Wert, waehrend sich die Kindknoten haeuften (2026-09-21) -
+    *  nach einem Ersetzen saehe SPARQL sonst den alten Wert. Steht keins, wird keins
+    *  angelegt: ein Anhaengen tut das auch nicht. */
+    private function _remove_predicate($subject_node, string $predicate, array $object): void
+    {
+        $alte = [];
+        for ($i = 0, $n = $subject_node->index_max(); $i < $n; $i++) {
+            $kind = $subject_node->getRefnext($i, true);
+            if (is_object($kind) && $this->_same_uri($kind->full_URI(), $predicate))
+                $alte[] = $kind;
+        }
+
+        foreach ($alte as $kind) $kind->removeNode();
+
+        /* ⚠ NICHT set_ns_attribute: es sucht den Praefix in der Wurzel des Dokuments,
+        *  und wo der dort nicht erklaert ist (RstTurtle schreibt die xmlns an sein
+        *  eigenes rdf:RDF, das beim Einfuegen wegfaellt), legt es einen ZWEITEN
+        *  Schluessel mit dem lokalen Namen an - gespeichert stand dann
+        *  ex:label="alt" label="neu" (gemessen 2026-10-04). Attribute sind Knoten:
+        *  den Wert des vorhandenen aendern, der Schluessel bleibt. */
+        $attr = $subject_node->get_ns_attribute_obj($predicate);
+        if (is_object($attr))
+            $attr->setdata((string)$object['value'], 0);
+    }
+
+    // full_URI() haengt '#' auch an einen Namensraum, der schon auf '/' endet
+    // (dcterms -> http://purl.org/dc/terms/#title). Beide Schreibweisen sind dasselbe.
+    private function _same_uri(string $a, string $b): bool
+    {
+        return $a === $b || str_replace('/#', '/', $a) === str_replace('/#', '/', $b);
     }
 
     private function _ontology_uri(array $data): string
