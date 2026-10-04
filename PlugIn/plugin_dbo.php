@@ -434,6 +434,19 @@ public function col($col_name)
 }
 
 public function datatype($columnname){return $this->rst-> type($columnname);}
+
+		/**
+		*@parameter: PRIM_FIELD = der Primaerschluessel aus der Tabelleninformation
+		*	(SHOW COLUMNS, Key = PRI) - der erste, mit Tabellenname (tabelle.feld). Gebraucht
+		*	von Split (2026-10-05), das ihn am Bestand liest, statt ihn genannt zu bekommen.
+		*	false ohne Ergebnismenge oder ohne Schluessel.
+		*/
+public function prim_field($tablename = null)
+{
+	if(!is_object($this->rst)) return false;
+	$p = $this->rst->prim_field($tablename);
+	return (is_array($p) && count($p)) ? $p[0] : false;
+}
 public function fields()
 {
 	$res = $this->rst->db_field_list();
