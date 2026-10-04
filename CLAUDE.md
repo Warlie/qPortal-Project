@@ -36,7 +36,7 @@ php -d error_reporting=E_ERROR test/Integration/tree_access.php        # 11/0 (<
 php -d error_reporting=E_ERROR test/proben/probe_registry_vocab.php   # ausser dieser: 32/0
 ```
 
-`seek_scope.php` und `sparql_parse.php` müssen vollständig grün sein — jede rote Zeile
+`seek_scope.php` und `sparql_parse.php` (67) müssen vollständig grün sein — jede rote Zeile
 dort ist neu. `probe_registry_vocab.php` bewacht die Naht zwischen Vokabulardokument und
 `build_up()` und steht bei **32 in Ordnung / 0 rot**.
 `intern_walk.php` steht bei **35 gelaufen / 1 rot** — `__get_data` ist ein Bestandsdefekt
@@ -357,6 +357,23 @@ fertig, haben aber keinen Aufrufer. Was beim Bau zu beachten ist:
   „andere Befehl“ für alles, was nicht `tree`/`final` ist).
 - Für die **Türschilder** ist es schon da: `__where_am_i scope=global` nach `__echo` fragt jeden
   geladenen Baum per SPARQL ab und listet alle `tree`/`final` mit Schild, Baum und Stempel.
+
+### SPARQL fragt das Register (seit 2026-10-04)
+
+Jeder Knoten ist `new_Instance()` eines registrierten Namens (Definition oder freier
+Prototyp der Fabrik) und steht in dessen `link_to_instance` — Element, Prädikat **und
+Attribut**. `SPARQL_Tree_Query` holt seine Kandidaten darum aus dem Register:
+`?s rdf:type K` = die Instanzen von K, `?s p ?o` = die Instanzen von p (Träger =
+`getRefprev()`, Objekt = Attributwert | `rdf:resource` | Kindknoten | Text). Prädikate
+als **Kindknoten** (gestreiftes RDF/XML) tragen damit; bis dahin las die Abfrage nur
+Attribute (`queryable` war die Krücke). Ausgewertet wird **kleinste Menge zuerst**,
+nach jedem Schritt neu: gebundenes Subjekt = Gang am Knoten, sonst Sammlung schneiden.
+Rückfall auf `collect_nodes`, wo das Register nichts weiß.
+
+⚠ Nachgeprüft beim Lesen (`alive()`): Baum geladen, Träger da und führt die Instanz
+noch. Bäume mit `@`-Namen (`@registry_surface_system`) sind Systembäume, keine Treffer.
+⚠ `link_to_instance` wird **ohne Referenz** befüllt — mit `&$obj` führte jede
+`rdfs:Class`-Definition sich selbst als Instanz.
 
 ### Was der SPARQL-Parser als Begriff annimmt
 

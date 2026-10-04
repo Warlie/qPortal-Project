@@ -16,14 +16,30 @@
 *
 *	Nichts wird umgewandelt — der geparste Baum IST die Tripelmenge:
 *
-*	  Subjekt     der Elementknoten (bezeichnet durch seinen Positionsstempel)
-*	  rdf:type    sein full_URI()
-*	  Praedikat   ein Attribut — die volle URI ist schon der Schluessel
-*	  Objekt      der Attributwert
+*	  Subjekt     der Elementknoten
+*	  rdf:type    EIN Schritt link_to_class (STW 09-15); ist der unbenannt, der Tag
+*	  Praedikat   ein Attribut ODER ein Kindknoten (gestreiftes RDF/XML, PEDL)
+*	  Objekt      Attributwert | rdf:resource | Kindknoten (PEDL-Form) | Text
 *
-*	Das traegt nur, weil Attribute Knoten sind und attribute() die einzige Stelle ist,
-*	an der sie erfasst werden (Interface_ns.php:633). Deshalb ist die Erfassung
-*	lueckenlos, und deshalb darf hier ueber den Index gesucht statt gelaufen werden.
+*	== Das Register ist der Index (STW 2026-10-04) ==
+*
+*	Jeder Knoten entsteht als new_Instance() eines registrierten Namens - einer
+*	Definition aus einem Vokabular oder, ohne Definition, eines freien Prototyps der
+*	Fabrik - und traegt sich seit 099d677 bei ihm in link_to_instance ein. Element,
+*	Praedikat, Attribut: alle. "Die Klasse ist kein Treffer, sondern ein Index."
+*	Darum fragt ein Tripel zuerst das Register:
+*
+*	  ?s rdf:type K     die Instanzen von K           (gemessen: 31 RentalUnit)
+*	  ?s p ?o           die Instanzen von p, Traeger = getRefprev()  (25 isTenantOf)
+*
+*	Bis dahin las die Abfrage ein Praedikat NUR als Attribut: die Beziehungen des
+*	Immobilienexports (Kindknoten) gaben 0 Zeilen, der Kuehlschrank trug nur dank
+*	"queryable". Der alte Weg ueber collect_nodes bleibt als Rueckfall, wo das
+*	Register einen Namen nicht kennt oder keine lebende Instanz hat.
+*
+*	⚠ Eingetragen wird immer, ausgetragen nicht ueberall (removeNode ja,
+*	removeRefnext allein nein): eine Instanz zaehlt nur, wenn ihr Baum geladen ist und
+*	sie noch an ihrem Traeger steht. Nachgeprueft wird beim Lesen.
 *
 *	== Wie ausgewertet wird ==
 *
@@ -32,16 +48,18 @@
 *	zurueck — es bindet (aus dem Index), verfeinert (am gebundenen Knoten) oder wirft
 *	eine Loesung weg. Konjunktion ist vertauschbar, darum darf vorher umsortiert werden.
 *
-*	Die Reihenfolge (die halbe estimateCost der Vorlage): ein Tripel mit festem Objekt
-*	schraenkt ein, eines mit Variable im Objekt zaehlt nur auf. Das Einschraenkende
-*	zuerst — sonst wird erst die ganze Menge aufgezaehlt und danach weggeworfen.
+*	Die Reihenfolge (STW 2026-10-04): jeweils die KLEINSTE Menge zuerst. Nach jedem
+*	Schritt wird neu gewaehlt. Ist das Subjekt eines Tripels schon gebunden, kostet es
+*	einen Gang am Knoten - seine eigenen Kanten (Pfad ablaufen). Sonst kostet es die
+*	Groesse seiner Sammlung aus dem Register, und die wird gegen die bisherigen
+*	Bindungen geschnitten. Jede Sammlung entsteht einmal je Abfrage.
 *
 *	== Was heute getragen wird ==
 *
-*	  Variablen an Subjekt und Objekt · rdf:type gegen den Knotentyp · Attribute als
+*	  Variablen an Subjekt und Objekt · rdf:type · Attribute UND Kindknoten als
 *	  Praedikat, mit Variable oder festem Wert im Objekt · mehrere Tripel als UND
-*	  nicht: Variablen im PRAEDIKAT, Pfade ueber Kindknoten, OPTIONAL/FILTER, Literale
-*	  mit Sprach- oder Typmarke
+*	  nicht: Variablen im PRAEDIKAT, OPTIONAL/FILTER, Literale mit Sprach- oder
+*	  Typmarke
 *
 *	@see classes/search_model/sparql/sparql_parser.php
 *	@see anttree/funct_parser_lib.js  (SPARQLObject.execute — die Vorlage)
@@ -74,11 +92,13 @@ class SPARQL_Tree_Query
 				                  . 'URI — die Aufzaehlung aller Praedikate eines Knotens gibt '
 				                  . 'get_ns_attribute() ohne Argument.');
 
-		$muster = $this->ordered($query['where']);
+		$offen     = $query['where'];
 		$loesungen = array(array());
+		$this->sammlung = array();
 
-		foreach($muster as $t)
+		while(count($offen))
 		{
+			$t = $this->smallest($offen, $loesungen);
 			$loesungen = $this->apply($t, $loesungen);
 
 			/* Eine leere Menge bleibt leer — der Rest der Tripel kann sie nicht
@@ -90,18 +110,37 @@ class SPARQL_Tree_Query
 		return $this->project($loesungen, $query['select']);
 	}
 
-	/**
-	*	Einschraenkende Tripel zuerst. Das ist die Haelfte von estimateCost, die ohne
-	*	Zahlen auskommt: WAS gefragt wird, nicht WIE VIEL es sein wird.
-	*/
-	private function ordered(array $muster): array
-	{
-		usort($muster, function($a, $b)
-		{
-			return $this->weight($a) <=> $this->weight($b);
-		});
+	/** Die Sammlungen dieser Abfrage, je Tripel einmal gebaut (Schluessel: s|p|o). */
+	private $sammlung = array();
 
-		return $muster;
+	/**
+	*	Das naechste Tripel: das mit der kleinsten Menge. Nimmt es aus $offen heraus.
+	*
+	*	Gebundenes Subjekt (alle Loesungen binden dieselben Variablen, die erste
+	*	genuegt) = ein Gang am Knoten, Kosten 1. Sonst die Groesse der Sammlung. Bei
+	*	Gleichstand die alte Regel: eine Sorte vor einem festen Wert vor dem Aufzaehlen.
+	*/
+	private function smallest(array &$offen, array $loesungen): array
+	{
+		$erste = $loesungen[0] ?? array();
+		$best  = null;
+		$wahl  = null;
+
+		foreach($offen as $i => $t)
+		{
+			$kosten = (self::is_var($t['s']) && array_key_exists($t['s'], $erste))
+			        ? 1
+			        : count($this->collection($t)) + 1;
+
+			$rang = array($kosten, $this->weight($t));
+
+			if(is_null($best) || $rang < $best) { $best = $rang; $wahl = $i; }
+		}
+
+		$t = $offen[$wahl];
+		unset($offen[$wahl]);
+
+		return $t;
 	}
 
 	private function weight(array $t): int
@@ -109,6 +148,17 @@ class SPARQL_Tree_Query
 		if($t['p'] === self::RDF_TYPE && !self::is_var($t['o'])) return 0;  // eine Sorte
 		if(!self::is_var($t['o']))                               return 1;  // ein fester Wert
 		return 2;                                                           // zaehlt nur auf
+	}
+
+	/** Die Sammlung eines Tripels - einmal je Abfrage. */
+	private function collection(array $t): array
+	{
+		$schluessel = $t['s'] . '|' . $t['p'] . '|' . $t['o'];
+
+		if(!isset($this->sammlung[$schluessel]))
+			$this->sammlung[$schluessel] = $this->from_index($t);
+
+		return $this->sammlung[$schluessel];
 	}
 
 	/**
@@ -166,8 +216,9 @@ class SPARQL_Tree_Query
 				continue;
 			}
 
-			/* Subjekt noch offen: aus dem Index holen. */
-			foreach($this->from_index($t) as $paar)
+			/* Subjekt noch offen: die Sammlung des Tripels, geschnitten mit dem, was
+			*  schon gebunden ist. */
+			foreach($this->collection($t) as $paar)
 			{
 				$erweitert = $l;
 
@@ -239,10 +290,40 @@ class SPARQL_Tree_Query
 	{
 		if($t['p'] === self::RDF_TYPE)
 		{
-			$typ = $node->full_URI();
+			$typ = self::type_of($node);
 
 			if(self::is_var($t['o']))            return array($typ);
 			return $typ === $t['o'] ? array($typ) : array();
+		}
+
+		/* Die Kanten des Knotens selbst - Kindknoten dieses Praedikats (gestreiftes
+		*  RDF/XML, PEDL). Danach das Attribut wie bisher. Dieselbe Aussage zaehlt einmal. */
+		$werte = array();
+		for($i = 0, $n = $node->index_max(); $i < $n; $i++)
+		{
+			$kind = $node->getRefnext($i);
+			if(is_object($kind) && self::same_uri($kind->full_URI(), $t['p']))
+				$werte[] = self::value_of($kind);
+		}
+
+		$attr = $node->get_ns_attribute($t['p']);
+		if($attr !== false && !is_null($attr))
+			$werte[] = $attr;
+
+		if(count($werte))
+		{
+			$passend = array();
+			$gesehen = array();
+			foreach($werte as $w)
+			{
+				$k = self::key_of($w);
+				if(isset($gesehen[$k])) continue;
+				$gesehen[$k] = true;
+
+				if(self::is_var($t['o']) || $this->gleiche_bindung($w, self::plain($t['o'])))
+					$passend[] = $w;
+			}
+			return $passend;
 		}
 
 		/* ⚠ get_ns_attribute will die VOLLE URI. Ein roher Name trifft nie, ohne
@@ -266,6 +347,171 @@ class SPARQL_Tree_Query
 	*	@return	array	array('node' => Traeger, 'value' => Objektwert)
 	*/
 	private function from_index(array $t): array
+	{
+		$aus_register = $this->from_register($t);
+
+		if(count($aus_register))
+			return $aus_register;
+
+		return $this->from_tree_index($t);
+	}
+
+	/**
+	*	Kandidaten aus dem REGISTER: die lebenden Instanzen des Namens.
+	*
+	*	rdf:type K  -> jede Instanz von K ist ein Subjekt
+	*	p           -> jede Instanz von p ist eine Kante: Traeger = Subjekt, Wert = Objekt
+	*
+	*	Leer, wenn der Name nicht registriert ist oder keine lebende Instanz hat - dann
+	*	faellt from_index auf den alten Weg zurueck.
+	*/
+	private function from_register(array $t): array
+	{
+		if($t['p'] === self::RDF_TYPE && self::is_var($t['o']))
+			return array();   // from_tree_index sagt, warum das nicht getragen wird
+
+		$name = ($t['p'] === self::RDF_TYPE) ? $t['o'] : $t['p'];
+		$fest = self::is_var($t['o']) ? null : self::plain($t['o']);
+		$res  = array();
+		$gesehen = array();
+
+		foreach($this->instances($name) as $inst)
+		{
+			if($t['p'] === self::RDF_TYPE)
+			{
+				$res[] = array('node' => $inst, 'value' => $t['o']);
+				continue;
+			}
+
+			$traeger = $inst->getRefprev();
+			$wert    = self::value_of($inst);
+
+			if(!is_null($fest) && !$this->gleiche_bindung($wert, $fest))
+				continue;
+
+			$k = spl_object_id($traeger) . '|' . self::key_of($wert);
+			if(isset($gesehen[$k])) continue;
+			$gesehen[$k] = true;
+
+			$res[] = array('node' => $traeger, 'value' => $wert);
+		}
+
+		return $res;
+	}
+
+	/** Die lebenden Instanzen eines registrierten Namens. */
+	private function instances(string $uri): array
+	{
+		if(false === strpos($uri, '#'))
+			return array();
+
+		try
+		{
+			$eintrag = &$this->tree->get_Class_of_Namespace($uri);
+		}
+		catch(Throwable $e)
+		{
+			return array();
+		}
+
+		if(!is_object($eintrag))
+			return array();
+
+		$res = array();
+		for($i = 0, $n = $eintrag->ManyInstance(); $i < $n; $i++)
+		{
+			$inst = $eintrag->linkToInstance($i);
+			if($this->alive($inst))
+				$res[] = $inst;
+		}
+
+		return $res;
+	}
+
+	/**
+	*	Steht die Instanz noch? Ihr Baum ist geladen (ein entladener Slot hat mirror
+	*	null), sie hat einen Traeger, und der fuehrt sie noch - als Attribut oder als
+	*	Kind. Ein Repraesentant (rdf:about) hat keinen Traeger und zaehlt nicht.
+	*/
+	private function alive($inst): bool
+	{
+		if(!is_object($inst)) return false;
+
+		$traeger = $inst->getRefprev();
+		if(!is_object($traeger)) return false;
+
+		$idx = $inst->get_idx();
+		if(!is_object($this->tree->mirror[$idx] ?? null)) return false;
+
+		/* ⚠ Ein Baum mit '@'-Namen ist ein SYSTEMBAUM (@registry_surface_system: der
+		*  Bindungsblock des Kerns), kein Dokument. Der alte Index hatte ihn nicht, das
+		*  Register kennt seine Knoten - gemessen 2026-10-04: zwei tree:tree mehr,
+		*  tree_sparql_plugin rot. Ausgeschlossen wie in Turtle_handle. */
+		$quelle = (string) ($this->tree->loaded_URI[$idx] ?? '');
+		if($quelle !== '' && $quelle[0] === '@') return false;
+
+		if($inst->get_NodeType() == ATTRIBUTE)
+			return $traeger->get_ns_attribute_obj($inst->full_URI()) === $inst;
+
+		for($i = 0, $n = $traeger->index_max(); $i < $n; $i++)
+			if($traeger->getRefnext($i) === $inst) return true;
+
+		return false;
+	}
+
+	/**
+	*	Der Objektwert einer Kante: ein Attribut traegt seinen Wert; ein Kindknoten
+	*	rdf:resource, sonst sein erstes Kindelement (PEDL-Form: das Ding steht IN der
+	*	Kante), sonst seinen Text.
+	*/
+	private static function value_of($inst)
+	{
+		if($inst->get_NodeType() == ATTRIBUTE)
+			return $inst->getdata();
+
+		$verweis = $inst->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#resource');
+		if($verweis !== false && !is_null($verweis))
+			return $verweis;
+
+		for($i = 0, $n = $inst->index_max(); $i < $n; $i++)
+		{
+			$kind = $inst->getRefnext($i);
+			if(is_object($kind)) return $kind;
+		}
+
+		$text = $inst->getdata();
+		return is_scalar($text) ? (string) $text : $text;
+	}
+
+	/** Ein Vergleichsschluessel fuer einen Wert: Knoten nach Objekt, sonst der Text. */
+	private static function key_of($wert): string
+	{
+		return is_object($wert) ? 'o' . spl_object_id($wert) : 's' . (string) $wert;
+	}
+
+	/** rdf:type: EIN Schritt link_to_class; ist der unbenannt ("none#…"), der Tag. */
+	private static function type_of($node): string
+	{
+		$klasse = $node->linkToClass();
+		if(is_object($klasse))
+		{
+			$typ = $klasse->full_URI();
+			if(!str_starts_with($typ, 'none#') && !str_starts_with($typ, '#'))
+				return $typ;
+		}
+		return $node->full_URI();
+	}
+
+	/** full_URI() haengt '#' auch an einen Namensraum auf '/' (dcterms). */
+	private static function same_uri(string $a, string $b): bool
+	{
+		return $a === $b || str_replace('/#', '/', $a) === str_replace('/#', '/', $b);
+	}
+
+	/**
+	*	Der alte Weg ueber collect_nodes - Rueckfall, wenn das Register nichts weiss.
+	*/
+	private function from_tree_index(array $t): array
 	{
 		$res = array();
 

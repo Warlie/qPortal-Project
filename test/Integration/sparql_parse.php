@@ -308,6 +308,55 @@ $namen = array_column($sp2->solutions(), '?name');
 sort($namen);
 check('Zwei Baeume: Attribut aus beiden', implode(',', $namen), 'drueben,home,login,offen');
 
+/* ------------------------------------------- Das Register als Index (2026-10-04)
+*
+*  Ein Praedikat steht im gestreiften RDF/XML als KINDKNOTEN, nicht als Attribut. Bis
+*  2026-10-04 las die Abfrage nur Attribute: die Beziehungen des Immobilienexports
+*  gaben 0 Zeilen. Jetzt kommen die Kandidaten aus dem Register (link_to_instance).
+*  Dazu eine rdfs:Class-Definition: sie fuehrte sich SELBST als Instanz, solange
+*  link_to_instance per Referenz befuellt wurde - und zaehlte dann als Treffer. */
+
+$reg = new xml_semantic();
+$reg->setNewTree('vokabular');
+$vok = <<<XML
+<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema">
+	<rdfs:Class rdf:about="https://ex.org/v#Lager"/>
+</rdf:RDF>
+XML;
+$reg->load_Stream($vok, 0, 'XML');
+$reg->setNewTree('bestand');
+$best = <<<XML
+<?xml version="1.0"?>
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns" xmlns:ex="https://ex.org/v">
+	<ex:Lager rdf:about="https://ex.org/i#kueche"><ex:name>Kueche</ex:name></ex:Lager>
+	<ex:Lager rdf:about="https://ex.org/i#regal"><ex:liegtIn rdf:resource="https://ex.org/i#kueche"/><ex:name>Regal</ex:name></ex:Lager>
+	<ex:Ding rdf:about="https://ex.org/i#milch"><ex:liegtIn rdf:resource="https://ex.org/i#regal"/></ex:Ding>
+</rdf:RDF>
+XML;
+$reg->load_Stream($best, 0, 'XML');
+
+$sp3 = $reg->seek_by_model('sparql');
+$sp3->use_source('hier');
+$EX = "PREFIX ex: <https://ex.org/v#>\nPREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>\n";
+
+$sp3->query($EX . 'SELECT ?d ?o WHERE { ?d ex:liegtIn ?o }');
+check('Register: Praedikat als Kindknoten', count($sp3->solutions()), 2);
+
+$sp3->query($EX . 'SELECT ?n WHERE { ?d ex:liegtIn ?o . ?o ex:name ?n }');
+$namen = array_column($sp3->solutions(), '?n');
+sort($namen);
+check('Register: zwei Kanten verbunden', implode(',', $namen), 'Kueche,Regal');
+
+$sp3->query($EX . 'SELECT ?n WHERE { ?m ex:liegtIn ?r . ?r ex:liegtIn ?k . ?k ex:name ?n }');
+check('Register: Pfad ueber drei Kanten', implode(',', array_column($sp3->solutions(), '?n')), 'Kueche');
+
+$sp3->query($EX . 'SELECT ?l WHERE { ?l rdf:type ex:Lager }');
+check('Register: Definition ist keine Instanz', count($sp3->solutions()), 2);
+
+$sp3->query($EX . 'SELECT ?d WHERE { ?d ex:liegtIn <https://ex.org/i#regal> }');
+check('Register: festes Objekt als URI', count($sp3->solutions()), 1);
+
 ConnectionProfile::set_collection(array());
 
 /* ------------------------------------------------------------------- Ergebnis */
