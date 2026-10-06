@@ -207,8 +207,25 @@ class SPARQL_Tree_Query
 				{
 					$erweitert = $l;
 
+					/* ⚠ Auch HIER kann die Objektvariable schon gebunden sein - dann prueft
+					*  das Tripel sie, statt sie zu ueberschreiben. Der Fix vom 2026-09-20
+					*  stand nur im Zweig "Subjekt noch offen". Seit smallest() die kleinste
+					*  Menge zuerst nimmt, kommt dieser Zweig mit gebundenem Objekt vor:
+					*      ?t isTenantOf ?u . ?u isUnitOf ?p . ?p propertyNo ?nr
+					*  wertet propertyNo (23) und isTenantOf (25) zuerst aus - ohne gemeinsame
+					*  Variable 575 Zwischenloesungen. isUnitOf kommt mit gebundenem ?u UND ?p,
+					*  und das Ueberschreiben von ?p liess alle 575 stehen statt der 25
+					*  (gemessen 2026-10-07 am Immobilienexport, Liegenschaft zu Mieter). */
 					if(self::is_var($t['o']))
-						$erweitert[$t['o']] = $wert;
+					{
+						if(array_key_exists($t['o'], $l))
+						{
+							if(!$this->gleiche_bindung($l[$t['o']], $wert))
+								continue;
+						}
+						else
+							$erweitert[$t['o']] = $wert;
+					}
 
 					$neu[] = $erweitert;
 				}
