@@ -119,24 +119,29 @@ function __construct($Server = "", $User = "", $pwt = "", $db_name = false, $cod
         public function db_profiles($collection){$this->profiles =  $collection;}
         
         
+        /*	⚠ ERST PRUEFEN, DANN SCHLIESSEN (2026-10-06). Vorher wurde die Verbindung
+        *	geschlossen und danach erst nachgesehen, ob es das Profil gibt. Fehlte es,
+        *	war die Datenbank fuer den Rest des Requests zu: jede weitere Abfrage starb
+        *	an "mysqli object is already closed", und der Aufrufer bekam 0 Zeilen ohne
+        *	Fehler. Gemessen auf orga beim Immobilien-Export (re_data), dessen Unter-
+        *	dokumente DBO.useProfil real_estate rufen. Ohne einen einzigen ext.-Eintrag
+        *	in der ini ist $this->profiles null - das gab dort einen TypeError statt
+        *	einer Meldung mit dem Profilnamen.
+        *	Jetzt: ein unbekanntes Profil wirft, und die bisherige Verbindung bleibt. */
         public function change_profile($name)
         {
-        	
+        	if(!is_array($this->profiles) || !array_key_exists($name, $this->profiles))
+        		throw new RuntimeException("Profilename '$name' does not exist! "
+        			. "(config.ini [database] ext.$name.URL/User/PWST/db_name/codeset)");
+
         	$this->close_db();
-        	
-        	
-        	if(array_key_exists($name, $this->profiles) )
-        	{
-        		$this->open_db(
-        			$this->profiles[$name]["URL"], 
-        			$this->profiles[$name]["User"], 
-        			$this->profiles[$name]["PWST"], 
-        			$this->profiles[$name]["db_name"], 
-        			$this->profiles[$name]["codeset"]);
-        	}
-        	else
-        	throw new RuntimeException("Profilename '$name' does not exist!");
-        	
+
+        	$this->open_db(
+        		$this->profiles[$name]["URL"],
+        		$this->profiles[$name]["User"],
+        		$this->profiles[$name]["PWST"],
+        		$this->profiles[$name]["db_name"],
+        		$this->profiles[$name]["codeset"]);
         }
         
         private function open_db($Server, $User, $pwt, $db_name = false, $codeset = false)
