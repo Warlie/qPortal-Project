@@ -251,6 +251,43 @@ class SPARQL extends plugin
 	}
 
 	/**
+	*@function: JSON = alle Zeilen der letzten Abfrage als EIN Wert, ein JSON-Text
+	*@return: Liste von Objekten, je Spalte ein Schluessel ohne Fragezeichen
+	*
+	*	Fuer <result>: eine Ergebnismenge kommt dort nur benannt an ("Objekt vor Wert"),
+	*	ein JSON-Text als Wert. So gibt eine Abfrage, die in einem Dokument steht, ihre
+	*	Zeilen ueber __call zurueck (2026-10-07, Liegenschaft zu Mieter).
+	*
+	*	⚠ Ein KNOTEN erscheint mit seiner Identitaet (rdf:about), nicht mit col() - das
+	*	gibt die volle URI des Knotens heraus, also seinen TYP: bei 25 Mietern stuende
+	*	25-mal derselbe Klassenname da. Ohne rdf:about bleibt es beim Typ.
+	*/
+	public function json()
+	{
+		$aus = array();
+
+		foreach($this->zeilen as $z)
+		{
+			$zeile = array();
+
+			foreach((is_array($z) ? $z : array('wert' => $z)) as $k => $w)
+			{
+				if($w instanceof Interface_node)
+				{
+					$about = $w->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#about');
+					$w = ($about !== false && !is_null($about) && $about !== '') ? $about : $w->full_URI();
+				}
+
+				$zeile[ltrim((string) $k, '?')] = is_object($w) ? (string) $w : $w;
+			}
+
+			$aus[] = $zeile;
+		}
+
+		return json_encode($aus, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	}
+
+	/**
 	*@function: NODE = der Knoten einer Spalte, falls einer darin steht - sonst null
 	*@parameter: columnName = Spaltenname, mit oder ohne Fragezeichen
 	*/
