@@ -291,13 +291,25 @@ $xml = $system->getXMLObj();
 //convert to MD5 Hash	
 $decode_key = md5($keyword);
 
-//detects redundant entries and blocks on invalid name pass combinations
-$db->SQL('SELECT `ID`  FROM `tbl_user_management` WHERE (`User` = "' . $db->escape($user) . '" AND `Key` = "' . $decode_key . '" ) ;');
+/* ⚠ EIN NAME IST VERGEBEN, egal mit welchem Kennwort (2026-10-07). Die Pruefung verglich
+*  Name UND Kennwort - derselbe Name mit anderem Kennwort legte ein ZWEITES Konto an
+*  (gemessen: claude_agent stand danach zweimal da). Beim Anmelden gewinnt, wessen
+*  Kennwort passt, und tbl_user_to_group haengt an der ID: die Gruppen des einen waren fuer
+*  den anderen unsichtbar. STW: "Es gab da eh kein Abweisen." Jetzt wird abgewiesen - still
+*  nach aussen (zurueck auf URLalt, wie bei jedem Fehlschlag), mit einer Zeile im Log.
+*  Vorher gemessen: keine doppelten Namen im Bestand, lokal wie auf orga. */
+$db->SQL('SELECT `ID`  FROM `tbl_user_management` WHERE `User` = "' . $db->escape($user) . '" ;');
 
 if(is_Null($tmp = $altUrl))$tmp = "";
 
-if($db->sEffectNum() == 0)
-{ 
+if($db->sEffectNum() <> 0)
+{
+	global $logger_class;
+	if(is_object($logger_class))
+		$logger_class->setAssert('CREATE_ACCOUNT abgewiesen: der Name "' . $user . '" ist vergeben', 0);
+}
+else
+{
 
 
 
