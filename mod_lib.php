@@ -348,9 +348,9 @@ if(is_Null($tmp = $url))$tmp = "";
 }
 
                                 if($_SESSION['@_mod']=='edit')
-				$system->setXMLstructur('template/edit.xml');
+				$system->setXMLstructur(EDIT_INDEX);     // wie index.php - nicht fest template/edit.xml (2026-10-07)
                                 else
-				$system->setXMLstructur('template/xml.xml');
+				$system->setXMLstructur(FRONTEND_INDEX); // wie index.php - nicht fest template/xml.xml (2026-10-07)
 				
 				$system->setboolPanel(true);
                                 $system->setControlElement("div",  array('id'=>"bars"));
@@ -447,9 +447,9 @@ $db->SQL($entry);
 
 
                                if($_SESSION['@_mod']=='edit')
-				$system->setXMLstructur('template/edit.xml');
+				$system->setXMLstructur(EDIT_INDEX);     // wie index.php - nicht fest template/edit.xml (2026-10-07)
                                 else
-				$system->setXMLstructur('template/xml.xml');
+				$system->setXMLstructur(FRONTEND_INDEX); // wie index.php - nicht fest template/xml.xml (2026-10-07)
 				
 				$system->setboolPanel(true);
                                 $system->setControlElement("div",  array('id'=>"bars"));
@@ -527,9 +527,9 @@ $db->SQL('DELETE FROM tbl_marked_for_group WHERE `code` = "' . $db->escape($code
 
 
                                if($_SESSION['@_mod']=='edit')
-				$system->setXMLstructur('template/edit.xml');
+				$system->setXMLstructur(EDIT_INDEX);     // wie index.php - nicht fest template/edit.xml (2026-10-07)
                                 else
-				$system->setXMLstructur('template/xml.xml');
+				$system->setXMLstructur(FRONTEND_INDEX); // wie index.php - nicht fest template/xml.xml (2026-10-07)
 				
 				$system->setboolPanel(true);
                                 $system->setControlElement("div",  array('id'=>"bars"));
@@ -580,9 +580,9 @@ function service_log_in( &$system , $user , $key)
                                 
 
                                 if($_SESSION['@_mod']=='edit')
-				$system->setXMLstructur('template/edit.xml');
+				$system->setXMLstructur(EDIT_INDEX);     // wie index.php - nicht fest template/edit.xml (2026-10-07)
                                 else
-				$system->setXMLstructur('template/xml.xml');
+				$system->setXMLstructur(FRONTEND_INDEX); // wie index.php - nicht fest template/xml.xml (2026-10-07)
 				
 
                                if($unlocked && is_Null($tmp = $_REQUEST['URL']))$tmp = "";
@@ -629,9 +629,9 @@ function service_log_out( &$system)
                                 
 
                                 if($_SESSION['@_mod']=='edit')
-				$system->setXMLstructur('template/edit.xml');
+				$system->setXMLstructur(EDIT_INDEX);     // wie index.php - nicht fest template/edit.xml (2026-10-07)
                                 else
-				$system->setXMLstructur('template/xml.xml');
+				$system->setXMLstructur(FRONTEND_INDEX); // wie index.php - nicht fest template/xml.xml (2026-10-07)
 				
 				$system->setboolPanel(true);
                                 $system->setControlElement("div",  array('id'=>"bars"));
