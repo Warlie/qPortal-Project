@@ -128,7 +128,8 @@ class SPARQL_Tree_Query
 
 		foreach($offen as $i => $t)
 		{
-			$kosten = (self::is_var($t['s']) && array_key_exists($t['s'], $erste))
+			/* Ein FESTES Subjekt ist wie ein gebundenes ein Gang am Knoten (2026-10-07). */
+			$kosten = ((self::is_var($t['s']) && array_key_exists($t['s'], $erste)) || !self::is_var($t['s']))
 			        ? 1
 			        : count($this->collection($t)) + 1;
 
@@ -171,6 +172,23 @@ class SPARQL_Tree_Query
 		foreach($loesungen as $l)
 		{
 			$gebunden = self::is_var($t['s']) ? ($l[$t['s']] ?? null) : null;
+
+			/* ⚠ Ein FESTES Subjekt (<…#human_4> rdfs:label ?name) stand bis 2026-10-07 wie
+			*  ein offenes da: der Zweig "Subjekt noch offen" zaehlte die ganze Menge des
+			*  Praedikats auf, und die Abfrage gab JEDES rdfs:label des Bestands heraus statt
+			*  des einen (gemessen an der Personenseite: alle Bezeichnungen statt eines Namens).
+			*  Es fiel nie auf, weil keine Abfrage im Bestand ein festes Subjekt hatte. Jetzt
+			*  wird es wie eine gebundene Zeichenkette ueber identity_index aufgeloest; gibt
+			*  es keinen Knoten mit dieser Identitaet, gibt es keine Loesung. */
+			if(!self::is_var($t['s']))
+			{
+				$knoten = $this->tree->node_by_identity(self::plain($t['s']));
+
+				if(!is_object($knoten))
+					continue;
+
+				$gebunden = $knoten;
+			}
 
 			/* ⚠ Der Kante FOLGEN: eine Variable, die aus einer OBJEKT-Stelle kommt, haelt
 			*  einen Attributwert - also eine Zeichenkette, keinen Knoten. Steht sie im
