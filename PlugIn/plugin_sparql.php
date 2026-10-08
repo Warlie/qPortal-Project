@@ -61,6 +61,12 @@ class SPARQL extends plugin
 	private int   $pos     = 0;
 	private bool  $gefragt = false;
 
+	/* Spalten, fuer die col() die IDENTITAET eines Knotens herausgibt (identity()). */
+	private array $identitaet = [];
+
+	/* Gebundene Platzhalter: Name => <URI> (bind()). */
+	private array $bindungen  = [];
+
 	/**
 	*	System.CurRef gibt dem Plugin seinen KNOTEN. Fuer die Abfrage braucht es ihn nicht
 	*	mehr - SPARQL fragt seit 2026-09-15 ueber alle geladenen Baeume -, er steht noch
@@ -122,9 +128,29 @@ class SPARQL extends plugin
 			                       . ' | Baeume: ' . implode(' ', $baeume), 6);
 		}
 
+		/* Platzhalter einsetzen (bind). Ein $name, der im Ausdruck steht, aber nicht
+		*  gebunden ist, laesst die Abfrage NICHT laufen: er wuerde sonst als Text in den
+		*  Parser gehen - im besten Fall ein Fehler, im schlechtesten eine andere Frage. */
+		$statement = (string) $statement;
+		foreach($this->bindungen as $name => $iri)
+			$statement = preg_replace_callback('/\$' . preg_quote($name, '/') . '(?![A-Za-z0-9_])/',
+				function() use ($iri) { return $iri; }, $statement);   // Callback: kein $1/\1 aus der URI
+
+		if(preg_match('/(?<![A-Za-z0-9_?])\$([A-Za-z_][A-Za-z0-9_]*)/', $statement, $offen))
+		{
+			if($logger_class)
+				$logger_class->setAssert('SPARQL.query: Platzhalter $' . $offen[1]
+					. ' ist nicht gebunden (bind) - die Abfrage laeuft nicht', 0);
+
+			$this->zeilen  = array();
+			$this->pos     = 0;
+			$this->gefragt = true;
+			return $this;
+		}
+
 		try
 		{
-			$treffer = $m->query((string) $statement);
+			$treffer = $m->query($statement);
 		}
 		catch(Throwable $e)
 		{
@@ -245,9 +271,76 @@ class SPARQL extends plugin
 		$wert = $this->wert_von($columnName);
 
 		if($wert instanceof Interface_node)
+		{
+			/* ⚠ Ohne identity() bleibt es beim TYP (full_URI) - so liest RstTurtle in der
+			*  Bibliotheks-Attrappe ?s, und daran haengt deren Ausgabe. */
+			if(isset($this->identitaet[ltrim((string) $columnName, '?')]))
+			{
+				$about = self::about_von($wert);
+				if('' !== $about) return $about;
+			}
+
 			return (string) $wert->full_URI();
+		}
 
 		return is_object($wert) ? (string) $wert : (string) $wert;
+	}
+
+	/**
+	*@function: IDENTITY = fuer diese Spalte gibt col() die Identitaet eines Knotens (rdf:about) heraus statt seines Typs
+	*@parameter: column = Spaltenname, mit oder ohne Fragezeichen
+	*
+	*	Fuer eine Liste, die je Zeile auf das DING verweist - etwa ein Link auf die Seite
+	*	eines Mieters (2026-10-07). col() ohne diesen Schalter gibt die volle URI des
+	*	Knotens, also seinen Typ: 25 Mieter waeren 25-mal "NaturalPerson". Hat der Knoten
+	*	kein rdf:about, bleibt es beim Typ.
+	*/
+	public function identity($column)
+	{
+		$this->identitaet[ltrim(trim((string) $column), '?')] = true;
+		return true;
+	}
+
+	/**
+	*@function: BIND = setzt fuer den Platzhalter $name in der naechsten Abfrage eine URI ein
+	*@parameter: name = der Platzhalter ohne $, z.B. person fuer $person
+	*@parameter: value = eine absolute URI (http/https), etwa aus der Anfrage
+	*
+	*	Der Wert kommt typischerweise aus der Adresse (Request) und wird darum NIE als
+	*	Text eingesetzt, sondern nur als URI in spitzen Klammern - und nur, wenn er wie
+	*	eine aussieht: Schema http(s), keine Leerzeichen, keines der Zeichen <>"{}|\^`.
+	*	Alles andere wird abgewiesen und geloggt; die Abfrage laeuft dann nicht (query
+	*	findet den ungebundenen Platzhalter). So kann ein Wert aus der Adresse die Frage
+	*	nicht umbauen.
+	*	@return true, wenn gebunden
+	*/
+	public function bind($name, $value)
+	{
+		global $logger_class;
+
+		$name  = trim((string) $name);
+		$value = trim((string) $value);
+
+		if(!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $name)
+		|| !preg_match('#^https?://[^\s<>"{}|\\\\^`]+$#', $value))
+		{
+			unset($this->bindungen[$name]);
+
+			if($logger_class)
+				$logger_class->setAssert('SPARQL.bind abgewiesen: $' . $name . ' = "'
+					. substr($value, 0, 120) . '" ist keine URI', 0);
+			return false;
+		}
+
+		$this->bindungen[$name] = '<' . $value . '>';
+		return true;
+	}
+
+	/** rdf:about eines Knotens, oder ''. */
+	private static function about_von($knoten): string
+	{
+		$about = $knoten->get_ns_attribute('http://www.w3.org/1999/02/22-rdf-syntax-ns#about');
+		return ($about !== false && !is_null($about)) ? (string) $about : '';
 	}
 
 	/**
