@@ -151,4 +151,106 @@ class plugin_intervalTest extends TestCase
         $this->assertEqualsWithDelta(-690.0, $sum->col('betrag'), 0.0001, "3 x -690 Soll + 2 x 690 Ist");
         $this->assertFalse($sum->next());
     }
+
+    // ===== Auffaechern (setExpand): eine Zeile ist ein Zeitraum =====
+
+    /** Mietgegenstaende wie im Triebel-Vertrag; date-Spalten wie DBO sie liefert ('Y-m-d') */
+    private function items(): IntervalSourceStub
+    {
+        return new IntervalSourceStub([
+            ['agreement' => 'agreement_3', 'unit' => 'Laden',   'net_rent' => '650.00', 'start_date' => '2022-01-01', 'end_date' => '2024-01-01'],
+            ['agreement' => 'agreement_3', 'unit' => 'Laden',   'net_rent' => '690.00', 'start_date' => '2024-01-01', 'end_date' => ''],
+            ['agreement' => 'agreement_3', 'unit' => 'Wohnung', 'net_rent' => '480.00', 'start_date' => '2022-01-01', 'end_date' => ''],
+        ], ['net_rent' => 'decimal(10,2)', 'agreement' => 'varchar(20)', 'unit' => 'varchar(20)']);
+    }
+
+    private function expanded($source, string $from, string $length): Interval
+    {
+        $soll = new Interval();
+        $soll->set_list($source);
+        if ($from !== '') $soll->getDate($from, '', $length);
+        $soll->setColumns('start_date', '', ',', 'agreement,unit,net_rent', ',,', '');
+        $soll->setExpand('end_date');
+        return $soll;
+    }
+
+    private function rowsOf($plugin, array $cols): array
+    {
+        $out = [];
+        if ($plugin->moveFirst()) {
+            do {
+                $out[] = implode('|', array_map(fn($c) => strval($plugin->col($c)), $cols));
+            } while ($plugin->next());
+        }
+        return $out;
+    }
+
+    public function testExpandGivesOneRowPerItemAndMonth(): void
+    {
+        // Nov 2023 bis Feb 2024: Laden 650 -> 690 zum Jahreswechsel, Wohnung durchgehend 480
+        $rows = $this->rowsOf($this->expanded($this->items(), '2023-11-01', '+4 month'), ['start-dt', 'unit', 'net_rent']);
+        $this->assertSame([
+            '2023-11-01 00:00:00|Laden|650.00',   '2023-11-01 00:00:00|Wohnung|480.00',
+            '2023-12-01 00:00:00|Laden|650.00',   '2023-12-01 00:00:00|Wohnung|480.00',
+            '2024-01-01 00:00:00|Laden|690.00',   '2024-01-01 00:00:00|Wohnung|480.00',
+            '2024-02-01 00:00:00|Laden|690.00',   '2024-02-01 00:00:00|Wohnung|480.00',
+        ], $rows);
+    }
+
+    public function testPriceChangeMidMonthHasNoGapAndNoDouble(): void
+    {
+        // Stichtag Monatserster: der Maerz gehoert noch dem alten Preis (gilt am 1.3.), der neue ab 1.4.
+        $source = new IntervalSourceStub([
+            ['agreement' => 'a', 'unit' => 'u', 'net_rent' => '500', 'start_date' => '2024-01-01', 'end_date' => '2024-03-15'],
+            ['agreement' => 'a', 'unit' => 'u', 'net_rent' => '520', 'start_date' => '2024-03-15', 'end_date' => ''],
+        ], ['net_rent' => 'decimal(10,2)']);
+        $rows = $this->rowsOf($this->expanded($source, '2024-01-01', '+5 month'), ['start-month', 'net_rent']);
+        $this->assertSame(['1|500', '2|500', '3|500', '4|520', '5|520'], $rows);
+    }
+
+    public function testOpenEndRunsThroughTheCurrentMonth(): void
+    {
+        $start = (new DateTime('first day of this month'))->modify('-2 month')->format('Y-m-d');
+        $source = new IntervalSourceStub([
+            ['agreement' => 'a', 'unit' => 'u', 'net_rent' => '100', 'start_date' => $start, 'end_date' => ''],
+        ], ['net_rent' => 'decimal(10,2)']);
+        $this->assertCount(3, $this->rowsOf($this->expanded($source, '', ''), ['start-dt']),
+            "zwei Monate zurueck bis einschliesslich des laufenden");
+    }
+
+    public function testPointRecordStaysOnePoint(): void
+    {
+        $source = new IntervalSourceStub([
+            ['agreement' => 'a', 'unit' => 'u', 'net_rent' => '-50', 'start_date' => '2024-02-10', 'end_date' => '2024-02-10'],
+        ], ['net_rent' => 'decimal(10,2)']);
+        $this->assertSame(['2024-02-10 00:00:00|-50'], $this->rowsOf($this->expanded($source, '', ''), ['start-dt', 'net_rent']),
+            "Ende = Beginn ist ein Zeitpunkt (eine Gutschrift), kein Zeitraum");
+    }
+
+    public function testExpandGuardStopsAStepThatDoesNotMove(): void
+    {
+        $soll = $this->expanded($this->items(), '', '');
+        $soll->setExpand('end_date', '+0 month');
+        $this->expectException(Exception::class);
+        $soll->moveFirst();
+    }
+
+    public function testPartitionKeepsGroupsTogetherForAggregation(): void
+    {
+        // zwei Vertraege, absichtlich durcheinander; je Vertrag die Soll-Summe Jan-Mrz 2024
+        $source = new IntervalSourceStub([
+            ['agreement' => 'agreement_7', 'unit' => 'Garage',  'net_rent' => '50',  'start_date' => '2023-06-01', 'end_date' => ''],
+            ['agreement' => 'agreement_3', 'unit' => 'Laden',   'net_rent' => '690', 'start_date' => '2024-01-01', 'end_date' => ''],
+            ['agreement' => 'agreement_3', 'unit' => 'Wohnung', 'net_rent' => '480', 'start_date' => '2022-01-01', 'end_date' => ''],
+        ], ['net_rent' => 'decimal(10,2)', 'agreement' => 'varchar(20)', 'unit' => 'varchar(20)']);
+        $soll = $this->expanded($source, '2024-01-01', '+3 month');
+        $soll->setPartition('agreement');
+
+        $sum = new Aggregation();
+        $sum->set_list($soll);
+        $sum->group('agreement');
+        $res = $this->rowsOf($sum, ['agreement', 'net_rent']);
+
+        $this->assertSame(['agreement_3|3510', 'agreement_7|150'], $res, "3 x (690 + 480) und 3 x 50");
+    }
 }

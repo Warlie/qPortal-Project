@@ -27,6 +27,9 @@
 *  - setColumns: weniger Vorgaben als Spalten gab Warnungen; col() ohne Platz ebenso
 *  - fields() nannte ohne Quelle nichts, mit Quelle deren Spalten statt der eines Platzes;
 *    datatype() fehlte ganz - Aggregation und Accumulation konnten Interval nicht lesen
+*  - ein Datum 'Y-m-d' (DBO, date-Spalte) brach mit "is not a valid date" ab
+* Neu 2026-10-11: setExpand (eine Zeile ist ein Zeitraum und faechert sich in Plaetze auf,
+* ganze Monate per Stichtag) und setPartition (erst nach Gruppe, darin nach Zeit).
 */
 require_once(__DIR__ . '/../plugin_interface.php');
 require_once(__DIR__ . '/../plugin_finite_automat.php');
@@ -71,6 +74,17 @@ private $lasttodatetime = '+ %d second';
 private $start_end= 'H:i';
 
 private $listOfDates = array();
+
+// Auffaechern (setExpand): jede Quellzeile ist ein ZEITRAUM und erzeugt ihre Plaetze selbst
+private $expand_until = null;
+private $expand_step = '+1 month';
+private $expand_snap = 'first day of this month';
+private $expand_open = 'first day of next month';
+private $expand_max = 10000;
+// Ordnung erst nach dieser Spalte, darin nach Zeit (setPartition)
+private $partition = null;
+// getDate gerufen: der Zeitraum begrenzt auch aufgefaecherte Zeilen
+private $has_range = false;
 
 private $filename; 
 private $hash; 
@@ -151,6 +165,7 @@ var $rst = null;
 			//$date
 			//$this->theFirst($date);
 			$this->cur_date = $date; 
+			$this->has_range = true;
 			$this->prev_date = clone $this->cur_date;
 			$this->prev_date->modify($from);
 			
@@ -441,17 +456,58 @@ monthly{1{9:00(+10hours) }2{9:00(+10hours) }}daily{8:00(+10hours)}
 		
 	}
 	
+	/**
+	* Auffaechern: jede Zeile der Quelle ist ein ZEITRAUM - Beginn in der Spalte aus setColumns
+	* (dt_col), Ende in $until_col (ausschliesslich) - und erzeugt beim Lesen ihre Plaetze im
+	* Abstand $step. Die erklaerten Spalten (setColumns) traegt jeder ihrer Plaetze.
+	*
+	* Stichtag: ein Platz liegt auf $snap (Vorgabe: der Monatserste). Er gehoert der Zeile, die an
+	* ihm gilt - beginnt eine Zeile am 15., ist ihr erster Platz der naechste Erste. So gibt es bei
+	* einer Preisanpassung zur Monatsmitte weder Luecke noch Dopplung; ganze Monate (STW
+	* 2026-10-11: "Ausreisser loese ich ueber Gutschriften").
+	*
+	* Ein leeres Ende heisst "laeuft": dann bis $open_end (Vorgabe: Erster des naechsten Monats,
+	* also einschliesslich des laufenden). Ende = Beginn heisst Zeitpunkt: ein Platz, ohne Stichtag.
+	* Wurde getDate gerufen, begrenzt dessen Zeitraum auch die aufgefaecherten Plaetze.
+	*/
+	public function setExpand($until_col, $step = '+1 month', $snap = 'first day of this month', $open_end = 'first day of next month')
+	{
+		$this->expand_until = $until_col;
+		if($step) $this->expand_step = $step;
+		if($snap) $this->expand_snap = $snap;
+		if($open_end) $this->expand_open = $open_end;
+	}
+
+	/**
+	* Ordnung erst nach dieser Spalte, darin nach Zeit - damit eine Gruppierung (Aggregation,
+	* Accumulation) die Zeilen einer Gruppe beieinander findet. Ein Rasterplatz ohne Quelle hat
+	* den leeren Wert und kommt zuerst.
+	*/
+	public function setPartition($column)
+	{
+		$this->partition = $column;
+	}
+
 	public function setRunningID($name)
 	{
 		$this->running_id = $name;
 	}
 	
-	private function &findintree(&$date)
+	private function &findintree(&$date, $part = '')
 	{
 				$arg = explode(',', $date->format('Y,n,j,H,i,s'));
 		
 		
 		$tmp = &$this->search_tree;
+		if($this->partition !== null)
+		{
+			$part = strval($part);
+			if(!isset($tmp[$part])) $tmp[$part] = array();
+			$swap = &$tmp[$part];
+			unset($tmp);
+			$tmp = &$swap;
+			unset($swap);
+		}
 		$swap;
 		for($i = 0;$i < count($arg ); $i++)
 		{
@@ -534,7 +590,7 @@ monthly{1{9:00(+10hours) }2{9:00(+10hours) }}daily{8:00(+10hours)}
 	
 	private  function writeTree(&$date, $array)
 	{
-		$tmp = &$this->findintree($date);
+		$tmp = &$this->findintree($date, ($this->partition !== null && isset($array[$this->partition])) ? $array[$this->partition] : '');
 		$note = null;
 
 		// liegt auf dem Platz der Vorgabewert des Rasters, ersetzt ihn der Datensatz; die Notiz bleibt
@@ -558,7 +614,7 @@ monthly{1{9:00(+10hours) }2{9:00(+10hours) }}daily{8:00(+10hours)}
 	private function buildList()
 	{
 		//var_dump($this->search_tree);
-		$this->catchLevel($this->search_tree, 6);
+		$this->catchLevel($this->search_tree, $this->partition !== null ? 7 : 6, $this->partition !== null);
 		
 		/*
 		$res = true;
@@ -575,7 +631,7 @@ monthly{1{9:00(+10hours) }2{9:00(+10hours) }}daily{8:00(+10hours)}
 		//var_dump($this->full_time);
 	}
 	
-	private function catchLevel(&$arr, $deep)
+	private function catchLevel(&$arr, $deep, $partition_level = false)
 	{
 		if($deep > 0)
 		{
@@ -588,7 +644,7 @@ monthly{1{9:00(+10hours) }2{9:00(+10hours) }}daily{8:00(+10hours)}
 		for($i = 1; $i < count($keys); $i++)
 			if($keys[$i] < $keys[$i - 1])
 			{
-				ksort($arr, SORT_NUMERIC);
+				ksort($arr, $partition_level ? SORT_REGULAR : SORT_NUMERIC);
 				$keys = array_keys($arr);
 				break;
 			}
@@ -653,36 +709,64 @@ monthly{1{9:00(+10hours) }2{9:00(+10hours) }}daily{8:00(+10hours)}
 		
 		if($this->rst && $this->rst->moveFirst())
 		{
-			
-			
-			
 			do
 			{
-
-				//echo $this->main_col . " " . $this->main_length . " \n";
-				$date = DateTime::createFromFormat( 'Y-m-d H:i:s', $this->rst->col($this->main_col));
-				if(!$date)throw new Exception($this->rst->col($this->main_col) . " is not a valid date\n");
-
-				$to = clone $date;
-  
-
-				if($this->main_length)
+				if($this->expand_until !== null)
+					$this->expand_row();
+				else
 				{
-					$to->modify(sprintf($this->lasttodatetime, $this->rst->col($this->main_length)));
-					//echo sprintf($this->lasttodatetime, $this->rst->col($this->main_length));
+					$date = $this->parse_date($this->rst->col($this->main_col));
+					$to = clone $date;
+					if($this->main_length)
+						$to->modify(sprintf($this->lasttodatetime, $this->rst->col($this->main_length)));
+					$cur = $this->row_from_source($date, $to, $this->rst->col($this->main_col));
+					$this->writeTree($date, $cur);
 				}
-				
-				$lastfor = $date->diff($to); 
-				//sprintf($format, $anzahl, $ort);
-				$cur = array( $this->unique_sign . 'default' => false,  $this->running_id => $this->running_counter++, $this->main_col => $this->rst->col($this->main_col), $this->note => $this->rst->col($this->note));
-				// erst NACH dem Anlegen - vorher wurde es von $cur = array(...) ueberschrieben
-				$cur['interval-in_seconds'] = $to->getTimestamp() - $date->getTimestamp();
-//<lastfor>
-//var_dump($this->columns);
-					foreach($this->columns as $key => $value)
-						$cur[$key] = $this->rst->col($key);
-					
-		// $this->note			
+			}
+			while($this->rst->next());
+		}
+	//var_dump($this->search_tree);
+	
+	$this->buildList();
+	//var_dump($this->full_time);
+	}
+	
+	/**
+	* Ein Datum aus der Quelle: 'Y-m-d H:i:s' wie bisher, dazu 'Y-m-d' - so liefert DBO eine
+	* date-Spalte, und daran brach es bis 2026-10-11 mit "is not a valid date" ab.
+	*/
+	private function parse_date($value)
+	{
+		$date = DateTime::createFromFormat('Y-m-d H:i:s', strval($value));
+		if(!$date) $date = DateTime::createFromFormat('!Y-m-d', strval($value));
+		if(!$date) throw new Exception($value . " is not a valid date\n");
+		return $date;
+	}
+
+	/** ein Wert der Quelle; eine Spalte, die sie nicht hat, ist null (die Notizspalte ist oft keine) */
+	private function source_col($name)
+	{
+		if($name === null || $name === '') return null;
+		if(method_exists($this->rst, 'fields'))
+		{
+			$fields = $this->rst->fields();
+			if(is_array($fields) && count($fields) > 0 && !in_array($name, $fields, true)) return null;
+		}
+		return $this->rst->col($name);
+	}
+
+	/** ein Platz aus der aktuellen Zeile der Quelle, von $date bis $to */
+	private function row_from_source($date, $to, $main_value)
+	{
+		$lastfor = $date->diff($to);
+		$cur = array( $this->unique_sign . 'default' => false,  $this->running_id => $this->running_counter++, $this->main_col => $main_value, $this->note => $this->source_col($this->note));
+		$cur['interval-in_seconds'] = $to->getTimestamp() - $date->getTimestamp();
+
+		foreach($this->columns as $key => $value)
+			$cur[$key] = $this->source_col($key);
+		if($this->partition !== null && !array_key_exists($this->partition, $cur))
+			$cur[$this->partition] = $this->source_col($this->partition);
+
 		$cur['interval-duration-year']  =  $lastfor->format('%y');
 		$cur['interval-duration-month']  =  $lastfor->format('%m');
 		$cur['interval-duration-day']  =  $lastfor->format('%d');
@@ -703,27 +787,53 @@ monthly{1{9:00(+10hours) }2{9:00(+10hours) }}daily{8:00(+10hours)}
 		$cur['end-hour']  =  $to->format('H');
 		$cur['end-day']  =  $to->format('j');
 		$cur['end-month']  =  $to->format('n');
-		$cur['end-year']  =  $to->format('Y'); 
-						//var_dump($cur);
-					$this->writeTree($date, $cur);
-				
-				
-				
-			}
-			while($this->rst->next());
-			//var_dump($this->sum);
-	  //return 'no dataset';
-	  //var_dump($this->full_time);
+		$cur['end-year']  =  $to->format('Y');
+		return $cur;
+	}
 
-	 
-		
+	/** die aktuelle Zeile der Quelle als Zeitraum in Plaetze auffaechern (setExpand) */
+	private function expand_row()
+	{
+		$from = $this->parse_date($this->rst->col($this->main_col));
+		$raw_until = $this->source_col($this->expand_until);
+		if($raw_until === null || $raw_until === '')
+		{
+			$until = new DateTime($this->expand_open);
+			$until->setTime(0, 0, 0);
+		}
+		else
+			$until = $this->parse_date($raw_until);
+
+		// Ende = Beginn: ein Zeitpunkt, ein Platz an seiner Stelle
+		if($until == $from)
+		{
+			if(!$this->has_range || ($from >= $this->prev_date && $from < $this->next_date))
+				$this->writeTree($from, $this->row_from_source($from, clone $from, $from->format('Y-m-d H:i:s')));
+			return;
+		}
+
+		// erster Stichtag am oder nach dem Beginn
+		$slot = clone $from;
+		$slot->modify($this->expand_snap);
+		$slot->setTime(0, 0, 0);
+		if($slot < $from) $slot->modify($this->expand_step);
+
+		$guard = 0;
+		while($slot < $until)
+		{
+			if(++$guard > $this->expand_max)
+				throw new Exception("Interval.setExpand: mehr als " . $this->expand_max . " Plaetze - Schritt '" . $this->expand_step . "' pruefen");
+			$next = clone $slot;
+			$next->modify($this->expand_step);
+			if(!$this->has_range || ($slot >= $this->prev_date && $slot < $this->next_date))
+			{
+				$at = clone $slot;
+				$this->writeTree($at, $this->row_from_source($at, $next, $at->format('Y-m-d H:i:s')));
+			}
+			$slot = $next;
+		}
 	}
-	//var_dump($this->search_tree);
-	
-	$this->buildList();
-	//var_dump($this->full_time);
-	}
-	
+
 	function getAdditiveSource(){;}
 
 	public function moveFirst()
@@ -825,6 +935,7 @@ monthly{1{9:00(+10hours) }2{9:00(+10hours) }}daily{8:00(+10hours)}
 		return array_merge(
 			array($this->main_col, $this->running_id, $this->unique_sign . 'default'),
 			array_keys($this->columns),
+			($this->partition !== null && !array_key_exists($this->partition, $this->columns)) ? array($this->partition) : array(),
 			array($this->note),
 			array_keys(self::$own_columns));
 	}
@@ -844,6 +955,11 @@ monthly{1{9:00(+10hours) }2{9:00(+10hours) }}daily{8:00(+10hours)}
 		if($columnname === $this->unique_sign . 'default') return 'tinyint(1)';
 
 		$declared = array_key_exists($columnname, $this->columns);
+		if($columnname === $this->partition && !$declared)
+		{
+			if($this->rst && method_exists($this->rst, 'datatype') && ($type = $this->rst->datatype($columnname))) return $type;
+			return 'varchar(255)';
+		}
 		if(!$declared && $columnname !== $this->main_col && $columnname !== $this->note) return false;
 
 		// die Quelle zuerst - sie weiss es
