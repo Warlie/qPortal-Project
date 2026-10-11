@@ -25,6 +25,8 @@
 *    Raster (anderes Jahr) kam ans Ende. Jetzt je Ebene geordnet, nur wo noetig (catchLevel)
 *  - writeTree: $note ungesetzt, end() auf leerem Platz, die Zeile stand zusaetzlich unter [0]
 *  - setColumns: weniger Vorgaben als Spalten gab Warnungen; col() ohne Platz ebenso
+*  - fields() nannte ohne Quelle nichts, mit Quelle deren Spalten statt der eines Platzes;
+*    datatype() fehlte ganz - Aggregation und Accumulation konnten Interval nicht lesen
 */
 require_once(__DIR__ . '/../plugin_interface.php');
 require_once(__DIR__ . '/../plugin_finite_automat.php');
@@ -788,35 +790,76 @@ monthly{1{9:00(+10hours) }2{9:00(+10hours) }}daily{8:00(+10hours)}
 	return 'no element received';
     	}
 
-    	 public function fields()
-    	 {
-    	 	if($this->rst)
-    	 	{
-    	 		$myarray = array();
-    	 		$myarray[] = 'interval-duration-year';
-		$myarray[] = 'interval-duration-month';
-		$myarray[] = 'interval-duration-day';
-		$myarray[] = 'interval-duration-hour';
-		$myarray[] = 'interval-duration-minute';
-		$myarray[] = 'interval-duration-second';
-		$myarray[] = 'interval-duration';
+	/** die Spalten, die Interval selbst erzeugt - je Platz, ob Raster oder Datensatz */
+	private static $own_columns = array(
+		'interval-in_seconds'       => 'bigint(20)',
+		'interval-duration-year'    => 'int(11)',
+		'interval-duration-month'   => 'int(11)',
+		'interval-duration-day'     => 'int(11)',
+		'interval-duration-hour'    => 'int(11)',
+		'interval-duration-minute'  => 'int(11)',
+		'interval-duration-second'  => 'int(11)',
+		'interval-duration'         => 'varchar(32)',
+		'interval-time'             => 'varchar(32)',
+		'start-dt'                  => 'datetime',
+		'start-minute'              => 'int(11)',
+		'start-hour'                => 'int(11)',
+		'start-day'                 => 'int(11)',
+		'start-month'               => 'int(11)',
+		'start-year'                => 'int(11)',
+		'end-dt'                    => 'datetime',
+		'end-minute'                => 'int(11)',
+		'end-hour'                  => 'int(11)',
+		'end-day'                   => 'int(11)',
+		'end-month'                 => 'int(11)',
+		'end-year'                  => 'int(11)',
+	);
 
-		$myarray[] = 'interval-time';
-		$myarray[] = 'start-dt';
-		$myarray[] = 'start-minute';
-		$myarray[] = 'start-hour';
-		$myarray[] = 'start-day';
-		$myarray[] = 'start-month';
-		$myarray[] = 'start-year';
-		$myarray[] = 'end-dt';
-		$myarray[] = 'end-minute';
-		$myarray[] = 'end-hour';
-		$myarray[] = 'end-day';
-		$myarray[] = 'end-month';
-		$myarray[] = 'end-year';
-		
-		return array_merge($this->rst->fields(), $myarray);
-			}
-    	 		else return array();}
+	/**
+	* Die Spalten eines Platzes - genau die, die col() liefert. Bis 2026-10-11 ohne Quelle leer und
+	* mit Quelle deren Spalten, von denen ein Platz nur die erklaerten (setColumns) traegt: ein
+	* Konsument wie Aggregation, der seine Zeilen aus fields() baut, bekam nichts oder Leeres.
+	*/
+	public function fields()
+	{
+		return array_merge(
+			array($this->main_col, $this->running_id, $this->unique_sign . 'default'),
+			array_keys($this->columns),
+			array($this->note),
+			array_keys(self::$own_columns));
+	}
+
+	/**
+	* Der Typ einer Spalte, in der Sprache der Datenbank (wie DBO: 'decimal(10,2)', 'int(11)', ...),
+	* damit Aggregation summiert, wo es Zahlen sind.
+	*  - eigene Spalten: fest (start-dt datetime, interval-in_seconds bigint, ...)
+	*  - erklaerte Spalten: der Typ der Quelle, wenn sie einen kennt; sonst aus dem Vorgabewert -
+	*    eine Zahl ist decimal, <lastfor> je nach Ausgabeformat bigint oder varchar, sonst varchar
+	*  - unbekannt: false (wie plugin::datatype)
+	*/
+	public function datatype($columnname)
+	{
+		if(isset(self::$own_columns[$columnname])) return self::$own_columns[$columnname];
+		if($columnname === $this->running_id) return 'int(11)';
+		if($columnname === $this->unique_sign . 'default') return 'tinyint(1)';
+
+		$declared = array_key_exists($columnname, $this->columns);
+		if(!$declared && $columnname !== $this->main_col && $columnname !== $this->note) return false;
+
+		// die Quelle zuerst - sie weiss es
+		if($this->rst && method_exists($this->rst, 'datatype'))
+		{
+			$type = $this->rst->datatype($columnname);
+			if($type) return $type;
+		}
+
+		if($columnname === $this->main_col) return 'datetime';
+		if(!$declared) return 'varchar(255)';
+
+		$default = $this->columns[$columnname];
+		if($default === '<lastfor>') return ($this->lastforformat == 'in_seconds' ? 'bigint(20)' : 'varchar(32)');
+		if(is_numeric($default)) return 'decimal(20,6)';
+		return 'varchar(255)';
+	}
     	
 }
