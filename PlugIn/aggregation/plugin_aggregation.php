@@ -1,14 +1,20 @@
 <?PHP
 
 /**
-*
-*
-* creates a menu
 * @-------------------------------------------
-* @title:DBO
+* @title:Aggregation
 * @autor:Stefan Wegerhoff
-* @description: Databaseobject, needs only a columndefinition to receive data from other object
+* @description: eine Zeile je Gruppe (wie GROUP BY). Die Eingabe ist nach den Gruppenspalten
+*               vorsortiert. Zahlenspalten werden summiert, Text verschiedenwertig mit Komma
+*               verbunden - entschieden nach datatype() der Quelle.
 *
+* Gelesen wird wie eine Ergebnismenge: moveFirst() sammelt die erste Gruppe, next() die naechste
+* und gibt false, wenn keine mehr kommt; col() liest die aktuelle.
+*
+* Behoben 2026-10-11 (plugin_aggregationTest):
+*  - die LETZTE Gruppe ging verloren: beim Einsammeln meldete next() schon false, obwohl ihre
+*    Daten gerade gesammelt waren (traf die Cashflow-API: der letzte Teilnehmer fehlte still)
+*  - moveFirst() setzte den Zustand nicht zurueck: ein zweiter Durchlauf war falsch
 */
 
 class Aggregation extends plugin 
@@ -103,22 +109,29 @@ private $end = false;
 	function getAdditiveSource(){;}
 	public function moveFirst()
 	{
-		if($this->rst){
-			$res = $this->rst->moveFirst();
-			return $res; 
-			
-		}else return false;
+		$this->done = false;
+		$this->end = false;
+		$this->dataSet = [];
+		if(!$this->rst || !$this->rst->moveFirst())
+		{
+			$this->end = true;
+			return false;
+		}
+		$this->init();
+		$this->collect_to_next();
+		return true;
 	}
-    	
+
+	/**
+	* naechste Gruppe. $this->end heisst: die Quelle ist erschoepft - die zuletzt gesammelte
+	* Gruppe ist dann schon gelesen worden, eine weitere gibt es nicht.
+	*/
 	public function next()
 	{
-		if($this->rst)
-		{
-			return $this->collect_to_next();
-			//return $this->rst->next();
-		}
-		else 
+		if(!$this->rst || $this->end)
 			return false;
+		$this->collect_to_next();
+		return true;
 	}
 	
     	public function set_list(&$value)
@@ -138,13 +151,12 @@ private $end = false;
     	
     	public function fields(){if($this->rst) return $this->rst->fields();else return array();}
     	
+    	/**
+    	* sammelt EINE Gruppe ab der aktuellen Zeile der Quelle. Danach steht die Quelle auf der
+    	* ersten Zeile der naechsten Gruppe, oder $this->end ist gesetzt.
+    	*/
     	private function collect_to_next()
     	{
-    		// in case the first collection is the last one, the func_tion will return false with skiping datacollection
-    		if($this->end)return false;
-    		
-    		$end = true;
-    		
     		// collects a new dataset
     		$this->dataSet = [];
     		$fields = $this->rst->fields();
@@ -169,11 +181,8 @@ private $end = false;
     			} // nextCollectionBreak will check group characteristica and will return false in case, it has changed
     			while(!$this->end && $this->nextCollectionBreak());
 
-    			//var_dump($this->dataSet);
     			// shows first time run
     			$this->done = true;
-    			
-    			return !$this->end;
     	}
     	
     	
