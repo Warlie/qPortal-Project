@@ -196,8 +196,7 @@ private $end = false;
 	  	  case 'date' :
 	  	  case 'DATE':
 	  	  	  
-			$res = array_unique($valueArray);
-	  	  	return implode(',', $res);   
+			return $this->join_texts($valueArray);
 
 	  	  	  break;
 	  	  case 'TINYINT' :
@@ -213,10 +212,22 @@ private $end = false;
 	  	  	  return array_sum(array_map('floatval', $valueArray));
 	  	  	  break;
 	  	  default:
-			$res = array_unique($valueArray);
-	  	  	return implode(',', $res);   
+			return $this->join_texts($valueArray);
 	  	  }
     	}
+    	/**
+    	* Texte verschiedenwertig mit Komma verbinden. Leere Werte (auch nur Leerzeichen) zaehlen
+    	* nicht: bis 2026-10-12 stand ein Komma vorn, sobald eine Zeile der Gruppe leer war
+    	* (Ledger: die Soll-Zeilen haben keinen Verwendungszweck).
+    	*/
+    	private function join_texts($valueArray)
+    	{
+    		$res = array();
+    		foreach($valueArray as $value)
+    			if(trim((string)$value) !== '') $res[] = $value;
+    		return implode(',', array_unique($res));
+    	}
+
     	private function init()
     	{
     		for($i = 0; $i < count($this->group); $i++)

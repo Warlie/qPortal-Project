@@ -144,6 +144,27 @@ class plugin_aggregationTest extends TestCase
         $this->assertFalse($agg->moveFirst());
     }
 
+    public function testEmptyTextsAreNotJoined(): void
+    {
+        $rows = $this->rows();
+        $rows[0]['art'] = '';
+        $rows[2]['art'] = '  ';
+        $res = $this->readAll($this->aggregation($rows));
+
+        $this->assertSame('Ist', $res[0][2], "kein Komma vorn: leere Werte zaehlen beim Verbinden nicht");
+        $this->assertSame('Soll,Ist', $res[1][2]);
+    }
+
+    public function testOnlyEmptyTextsGiveEmpty(): void
+    {
+        $rows = array_slice($this->rows(), 3);
+        $rows[0]['art'] = '';
+        $rows[1]['art'] = '';
+        $res = $this->readAll($this->aggregation($rows));
+
+        $this->assertSame('', $res[0][2]);
+    }
+
     public function testWithoutGroupEverythingIsOneRow(): void
     {
         $agg = new Aggregation();

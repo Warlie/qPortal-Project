@@ -136,7 +136,7 @@ class plugin_ledgerTest extends TestCase
         $this->assertCount(3, $res);
         $this->assertEqualsWithDelta(1170.0, $res[0][1], 0.0001);
         $this->assertEqualsWithDelta(695.0, $res[0][2], 0.0001, "415 + 280 im Januar");
-        $this->assertSame(',Miete Laden Jan,Miete Wohnung Jan', $res[0][3], "Texte verbunden - die leeren der Soll-Zeilen inklusive");
+        $this->assertSame('Miete Laden Jan,Miete Wohnung Jan', $res[0][3], "Texte verbunden, die leeren der Soll-Zeilen zaehlen nicht");
         $this->assertEqualsWithDelta(695.0, $res[1][2], 0.0001, "die Zahlung vom 1.2. gehoert dem Februar");
         $this->assertEqualsWithDelta(0.0, $res[2][2], 0.0001);
     }
