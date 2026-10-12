@@ -26,6 +26,8 @@ private $filename;
 private $hash; 
 private $output;
 private $ignore = true;
+private $group_output = null;     // Ausgabename der Gruppenspalte
+private $sum_outputs = array();   // Ausgabename => Spalte der Quelle, in Reihenfolge der Angabe
 
 var $rst = null;
 
@@ -48,13 +50,17 @@ var $rst = null;
 
 		
 		$tmp = current($this->sum);
+
+		// die Gruppenspalte unter ihrem Ausgabenamen. Bis 2026-10-12 lief sie ueber
+		// out_column[''] (undefinierter Schluessel, Warnung) und kam erst ganz unten an.
+		if($columnname === $this->group_output) return $tmp[$this->group_col];
 		
 		//if(strtolower($columnname) == 'sum_max')return $this->max;
 	
 		$col_array = explode('.', $columnname);
 		
 		$com = array_pop($col_array);
-		$col_name = $this->out_column[implode('.', $col_array)];
+		$col_name = $this->out_column[implode('.', $col_array)] ?? null;
 
 		if(strtolower($com) == 'count')
 		return $tmp[$col_name]['count'];
@@ -88,6 +94,7 @@ var $rst = null;
 	{
 		if(!$output)$output = $column;
 		$this->group_col = $column;
+		$this->group_output = $output;
 		$this->out_column[$output] = $column;
 	}
 	
@@ -102,6 +109,7 @@ var $rst = null;
 			$this->format[$column] = 'float';
 		//$this->format[$column] = 'float';
 		$this->out_column[$output] = $column;
+		$this->sum_outputs[$output] = $column;
 	}
 	
 	public function ignoreEmpty(){$this->ignore = false;}
@@ -255,7 +263,38 @@ var $rst = null;
 	return 'no element received';
     	}
     	
-    	public function fields(){if($this->rst) return $this->rst->fields();else return array();}
+    	/**
+    	* Die Spalten, die col() liefert: die Gruppe und je Summe <name>.sum, .count, .max_sum,
+    	* .max_count. Bis 2026-10-12 die Spalten der QUELLE - ein Konsument, der danach fragt
+    	* (Formula, Aggregation), fand die eigenen nicht.
+    	*/
+    	public function fields()
+    	{
+    		$res = array();
+    		if($this->group_output !== null) $res[] = $this->group_output;
+    		foreach($this->sum_outputs as $output => $column)
+    			foreach(array('sum', 'count', 'max_sum', 'max_count') as $com) $res[] = $output . '.' . $com;
+    		return $res;
+    	}
+
+    	/** in der Sprache der Datenbank wie DBO - Zahlen, damit Aggregation summiert */
+    	public function datatype($columnname)
+    	{
+    		if($columnname === $this->group_output)
+    			return ($this->rst && method_exists($this->rst, 'datatype') && ($type = $this->rst->datatype($this->group_col))) ? $type : 'varchar(255)';
+    		$col_array = explode('.', $columnname);
+    		$com = strtolower(array_pop($col_array));
+    		$output = implode('.', $col_array);
+    		if(!isset($this->sum_outputs[$output])) return false;
+    		if($com === 'count' || $com === 'max_count') return 'int(11)';
+    		if($com !== 'sum' && $com !== 'max_sum') return false;
+    		switch($this->format[$this->sum_outputs[$output]])
+    		{
+    			case 'int':      return 'bigint(20)';
+    			case 'interval': return 'varchar(32)';
+    			default:         return 'decimal(20,6)';
+    		}
+    	}
 
 }
 ?>
