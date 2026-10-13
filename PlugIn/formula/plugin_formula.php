@@ -26,10 +26,12 @@
 * == Grammatik (wie effect_parser.parseTerms) ==
 *
 *   ausdruck := Term { ("+"|"-") Term }          "haben - soll - nebenkosten", "1.19netto"
-*   Term     := [Koeffizient] [Name]             Name = [A-Za-z_][A-Za-z0-9_.]* - der Punkt ist
+*   Term     := Faktor { "*" Faktor }            "gross * slice_share" (seit 2026-10-13)
+*   Faktor   := [Koeffizient] [Name]             Name = [A-Za-z_][A-Za-z0-9_.]* - der Punkt ist
 *                                                hier erlaubt (qualifizierte Spalten: tbl.col)
 *
-* Kein Mal zwischen zwei Spalten, keine Klammern - wie im Vorbild. Ein Name mit '-' (start-dt)
+* Keine Klammern, kein Geteilt - wie im Vorbild. Das Mal zwischen Spalten kam 2026-10-13 dazu
+* (Slice liefert einen Anteil, der Betrag ist Spalte mal Anteil). Ein Name mit '-' (start-dt)
 * ist nicht ansprechbar: '-' ist das Minus.
 *
 * == Fehlende Werte ==
@@ -68,7 +70,7 @@ class Formula extends plugin
 		if($name === '' || $terms === null)
 			throw new InvalidArgumentException("Formula: '" . $name . ":" . $expression . "' ist keine Formel");
 		$deps = [];
-		foreach($terms as $t) if($t['sym'] !== null) $deps[] = $t['sym'];
+		foreach($terms as $t) foreach($t['syms'] as $sym) $deps[] = $sym;
 		$this->formeln[$name] = ['raw' => (string)$expression, 'terms' => $terms, 'deps' => array_values(array_unique($deps))];
 		$this->order = null;
 		$this->werte = null;
@@ -125,7 +127,7 @@ class Formula extends plugin
 
 	/* ----------------------------------------------------------------- intern */
 
-	/** "-2w+o" -> [{sign:-1,coef:2,sym:"w"},{sign:1,coef:1,sym:"o"}]; null = kein Zahlausdruck */
+	/** "-2w+o*p" -> [{sign:-1,coef:2,syms:["w"]},{sign:1,coef:1,syms:["o","p"]}]; null = kein Zahlausdruck */
 	public static function parseTerms($src)
 	{
 		$raw = preg_replace('/\s+/', '', $src);
@@ -135,14 +137,18 @@ class Formula extends plugin
 		$terms = [];
 		foreach($parts[0] as $part)
 		{
-			if(!preg_match('/^([+-]?)(\d*\.?\d*)([A-Za-z_][A-Za-z0-9_.]*)?$/', $part, $m)) return null;
-			$coef = $m[2]; $sym = $m[3] ?? '';
-			if(($coef === '' || $coef === '.') && $sym === '') return null;
-			$terms[] = [
-				'sign' => $m[1] === '-' ? -1 : 1,
-				'coef' => ($coef === '' ? 1.0 : floatval($coef)),
-				'sym'  => ($sym === '' ? null : $sym),
-			];
+			$sign = 1;
+			if($part[0] === '+' || $part[0] === '-') { $sign = $part[0] === '-' ? -1 : 1; $part = substr($part, 1); }
+			$coef = 1.0; $syms = [];
+			foreach(explode('*', $part) as $faktor)
+			{
+				if(!preg_match('/^(\d*\.?\d*)([A-Za-z_][A-Za-z0-9_.]*)?$/', $faktor, $m)) return null;
+				$zahl = $m[1]; $sym = $m[2] ?? '';
+				if(($zahl === '' || $zahl === '.') && $sym === '') return null;
+				if($zahl !== '') $coef *= floatval($zahl);
+				if($sym !== '') $syms[] = $sym;
+			}
+			$terms[] = ['sign' => $sign, 'coef' => $coef, 'syms' => $syms];
 		}
 		return $terms;
 	}
@@ -195,20 +201,20 @@ class Formula extends plugin
 			foreach($this->formeln[$name]['terms'] as $t)
 			{
 				$faktor = 1.0;
-				if($t['sym'] !== null)
+				foreach($t['syms'] as $sym)
 				{
-					if(array_key_exists($t['sym'], $this->werte))   $v = $this->werte[$t['sym']];
-					elseif(isset($felder[$t['sym']]))               $v = $this->rst->col($t['sym']);
+					if(array_key_exists($sym, $this->werte))   $v = $this->werte[$sym];
+					elseif(isset($felder[$sym]))               $v = $this->rst->col($sym);
 					else
 					{
-						if(!isset($this->gemeldet[$t['sym']]))
+						if(!isset($this->gemeldet[$sym]))
 						{
-							$this->gemeldet[$t['sym']] = true;
-							$this->melde("unbekannte Spalte '" . $t['sym'] . "' - zaehlt 0 (einmalige Meldung)", 5);
+							$this->gemeldet[$sym] = true;
+							$this->melde("unbekannte Spalte '" . $sym . "' - zaehlt 0 (einmalige Meldung)", 5);
 						}
 						$v = 0;
 					}
-					$faktor = is_numeric($v) ? floatval($v) : 0.0;
+					$faktor *= is_numeric($v) ? floatval($v) : 0.0;
 				}
 				$sum += $t['sign'] * $t['coef'] * $faktor;
 			}

@@ -119,18 +119,32 @@ class plugin_formulaTest extends TestCase
     public function testInvalidFormulaThrows(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        (new Formula())->formula('x', 'soll * 2');
+        (new Formula())->formula('x', 'soll / 2');
     }
 
     public function testParseTerms(): void
     {
         $this->assertSame([
-            ['sign' => -1, 'coef' => 2.0, 'sym' => 'w'],
-            ['sign' => 1,  'coef' => 1.0, 'sym' => 'o'],
+            ['sign' => -1, 'coef' => 2.0, 'syms' => ['w']],
+            ['sign' => 1,  'coef' => 1.0, 'syms' => ['o']],
         ], Formula::parseTerms('-2w+o'));
+        $this->assertSame([['sign' => 1, 'coef' => 3.0, 'syms' => ['a', 'b']]], Formula::parseTerms('a*3*b'));
         $this->assertNull(Formula::parseTerms(''));
-        $this->assertNull(Formula::parseTerms('a*b'));
+        $this->assertNull(Formula::parseTerms('a**b'));
         $this->assertNull(Formula::parseTerms('(a+b)'));
+    }
+
+    /** 2026-10-13: Spalte mal Spalte - der Betrag eines Stuecks aus Slice */
+    public function testProductOfColumns(): void
+    {
+        $f = new Formula();
+        $src = new RstStubForTesting([['gross' => '1000.00', 'slice_share' => 184 / 366, 'nebenkosten' => '150']]);
+        $f->set_list($src);
+        $f->formula('kosten', 'gross * slice_share');
+        $f->formula('rest', 'kosten - 0.5 * nebenkosten');
+
+        $this->assertSame([502.732240], $this->column($f, 'kosten'));
+        $this->assertSame([427.73224], $this->column($f, 'rest'));
     }
 
     public function testFieldsAndDatatype(): void
