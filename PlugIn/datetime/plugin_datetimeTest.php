@@ -115,6 +115,21 @@ class plugin_datetimeTest extends TestCase
         */
         
     }
+
+    /** 2026-10-13: Sum und Aggregation fragen nach dem Typ - abgeleitete Spalten sind Text */
+    public function testDatatypeOfDerivedColumn(): void
+    {
+        $src = new RstStubForTesting([['monat' => '2023-04-01 00:00:00']]);
+        $dt = new QPDateTime();
+        $dt->set_list($src);
+        $dt->setsource('monat');
+        $dt->setcolumn('jahr', 'Y');
+
+        $this->assertSame('varchar(32)', $dt->datatype('jahr'));
+        $this->assertSame('stub_datatype', $dt->datatype('monat'), "sonst der Typ der Quelle");
+        $this->assertTrue($dt->moveFirst());
+        $this->assertSame('2023', $dt->col('jahr'));
+    }
     
 
 }

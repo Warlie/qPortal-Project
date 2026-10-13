@@ -28,6 +28,7 @@ private $output;
 private $ignore = true;
 private $group_output = null;     // Ausgabename der Gruppenspalte
 private $sum_outputs = array();   // Ausgabename => Spalte der Quelle, in Reihenfolge der Angabe
+private $sorted = false;          // sortGroups(): Gruppen nach ihrem Wert ordnen
 
 var $rst = null;
 
@@ -113,6 +114,10 @@ var $rst = null;
 	}
 	
 	public function ignoreEmpty(){$this->ignore = false;}
+
+	/** die Gruppen nach ihrem Wert ordnen (Jahr, Monat) statt in der Reihenfolge des ersten Auftretens -
+	*   die Quelle ist ja unsortiert. Ohne Argument: ein Remote-Parameter bliebe stehen. */
+	public function sortGroups(){$this->sorted = true; $this->sum = array();}
 		
 	private function neutral_format($format)
 	{
@@ -221,6 +226,7 @@ var $rst = null;
 				
 			}
 			while($this->rst->next());
+			if($this->sorted) ksort($this->sum, SORT_STRING);
 			//var_dump($this->sum);
 	  //return 'no dataset';
 		

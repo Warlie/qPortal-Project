@@ -141,6 +141,14 @@ private $source = '';
 			return 'no element received';
 	}
 
+	/** abgeleitete Spalten sind Text; sonst der Typ der Quelle (fuer Sum/Aggregation, 2026-10-13) */
+	public function datatype($columnname)
+	{
+		if(isset($this->rel[$columnname])) return 'varchar(32)';
+		if($this->rst && method_exists($this->rst, 'datatype')) return $this->rst->datatype($columnname);
+		return false;
+	}
+
 	/** die Spalten der Quelle und die abgeleiteten */
 	public function fields()
 	{

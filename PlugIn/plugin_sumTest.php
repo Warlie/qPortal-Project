@@ -88,6 +88,25 @@ class plugin_sumTest extends TestCase
         $this->assertSame(['human_13|-60', 'human_4|0'], $this->readAll($f, ['mieter', 'offen']));
     }
 
+    /** ohne sortGroups in der Reihenfolge des ersten Auftretens, mit nach dem Wert */
+    public function testSortGroups(): void
+    {
+        $s = new Sum();
+        $src = new RstStubForTesting([
+            ['jahr' => '2024', 'soll' => '10'],
+            ['jahr' => '2022', 'soll' => '1'],
+            ['jahr' => '2024', 'soll' => '5'],
+            ['jahr' => '2023', 'soll' => '2'],
+        ]);
+        $s->set_list($src);
+        $s->groups('jahr', 'jahr');
+        $s->sum('soll', 'soll', '', '');
+        $this->assertSame(['2024|15', '2022|1', '2023|2'], $this->readAll($s, ['jahr', 'soll.sum']));
+
+        $s->sortGroups();
+        $this->assertSame(['2022|1', '2023|2', '2024|15'], $this->readAll($s, ['jahr', 'soll.sum']));
+    }
+
     public function testOutputName(): void
     {
         $s = new Sum();
