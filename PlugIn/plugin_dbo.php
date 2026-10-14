@@ -169,7 +169,15 @@ public function setWhereRST($name, $op, &$rst, $col, $isString = true)
 {
 	//echo  $name . " ";
 	$bool_op = 'AND';
-	$rst->moveFirst();
+	/* ⚠ Leere Menge (2026-10-14): ein ODER ueber nichts ist FALSCH - und das steht jetzt
+	*  ausdruecklich da. Vorher lief das do/while trotzdem einmal, col() gab null, daraus
+	*  wurde name = '' (Deprecated trim(null)) - leer nur durch Zufall: bei einer Zahlenspalte
+	*  ist '' gleich 0. Die Bedingung wegzulassen waere falsch, dann traefe die Abfrage alles. */
+	if(!$rst->moveFirst())
+	{
+		$this->setWhere('1', '=', '0', true, 'AND', 0);
+		return;
+	}
 	do
 		{
 			$this->setWhere($name,$op,$rst->col($col), $isString, $bool_op,1);
