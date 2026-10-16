@@ -1606,9 +1606,27 @@ function applyNotationFormat ( &$value, string $key) //, object $db_connection
                                 
         			case 'date':
 
+        				/* ⚠ Ein unmoegliches Datum ist NULL, nicht der Folgetag (2026-10-17). strtotime
+        				*  rollt ueber: aus 2025-02-30 wurde der 2. Maerz, aus Unlesbarem der 1.1.1970 -
+        				*  ohne Fehler, in eine Vertragspartei. Andere Schreibweisen (05.10.2025) gehen
+        				*  weiter durch strtotime wie bisher. */
         				$timestamp = strtotime($value);
+        				if($timestamp === false
+        				|| (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', trim($value), $teil)
+        				    && !checkdate(intval($teil[2]), intval($teil[3]), intval($teil[1]))))
+        				{
+        					// ⚠ NULL allein genuegt nicht: INSERT IGNORE macht daraus in einer
+        					//   NOT-NULL-Spalte 0000-00-00. Darum dort wie oben bei NULL: abbrechen.
+        					if($this->field[$key]['Null'] == 'NO')
+        						throw new RuntimeException("no valid date in field: $key (\"" . $value . "\")");
+        					$value = 'NULL';
+        					return;
+        				}
         				$value = "'" . date('Y-m-d', $timestamp) . "'";
         				return;
+        			/* enum war hier unbekannt und fiel in den Zahlenzweig: "tenant" wurde NULL, und
+        			*  MariaDB setzte den ersten Wert ("landlord") ein (2026-10-17). */
+        			case 'enum(':
             	case 'text':
             	case 'year':
 				case 'datet':
