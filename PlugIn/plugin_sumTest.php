@@ -117,4 +117,15 @@ class plugin_sumTest extends TestCase
 
         $this->assertSame(['human_13|1330', 'human_4|500'], $this->readAll($s, ['wer', 'forderung.sum']));
     }
+
+    /** wie bei Aggregation: 661 x 8265.88 (Woolworth, 2026-10-18) gab 5463746.6799999 */
+    public function testFloatSumHasNoResidue(): void
+    {
+        $s = new Sum();
+        $src = new RstStubForTesting(array_fill(0, 661, ['mieter' => 'construct_40', 'soll' => '8265.88']));
+        $s->set_list($src);
+        $s->groups('mieter', 'mieter');
+        $s->sum('soll', 'soll', '', '');
+        $this->assertSame(['construct_40|5463746.68'], $this->readAll($s, ['mieter', 'soll.sum']));
+    }
 }

@@ -176,4 +176,16 @@ class plugin_aggregationTest extends TestCase
         $this->assertEqualsWithDelta(5.0, $res[0][1], 0.0001, "-690 + 415 + 280 - 500 + 500");
         $this->assertSame('human_13,human_4', $res[0][0]);
     }
+
+    /**
+     * 661 Monate zu 8265.88 (Woolworth auf orga, 2026-10-18) standen als 5463746.6799999 auf der
+     * Seite: array_sum ueber Gleitzahlen sammelt Reste. Summiert wird auf 6 Stellen, wie Formula.
+     */
+    public function testDecimalSumHasNoFloatResidue(): void
+    {
+        $rows = array_fill(0, 661, ['party' => 'construct_40', 'betrag' => '8265.88', 'art' => 'Soll']);
+        $res = $this->readAll($this->aggregation($rows));
+
+        $this->assertSame('5463746.68', (string)$res[0][1]);
+    }
 }

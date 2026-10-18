@@ -209,7 +209,8 @@ private $end = false;
 	  	  case 'NUMERIC' :
 	  	  case 'FLOAT' :
 	  	  case 'REAL' :
-	  	  	  return array_sum(array_map('floatval', $valueArray));
+	  	  	  // auf 6 Stellen wie Formula: 661 x 8265.88 gab sonst 5463746.6799999 (2026-10-18)
+	  	  	  return round(array_sum(array_map('floatval', $valueArray)), 6);
 	  	  	  break;
 	  	  default:
 			return $this->join_texts($valueArray);

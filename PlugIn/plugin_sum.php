@@ -163,7 +163,8 @@ var $rst = null;
 				return strval($value);
         		break;
 			case 'float':
-				return strval($value);
+				// auf 6 Stellen wie Formula: 661 x 8265.88 gab sonst 5463746.6799999 (2026-10-18)
+				return strval(round($value, 6));
         		break;
 			case 'interval':
 
