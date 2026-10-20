@@ -24,13 +24,13 @@ class NotationEscapeFake
  */
 class RstNotationFormatTest extends TestCase
 {
-    private function format($type, $value, $null = 'NO')
+    private function format($type, $value, $null = 'NO', $default = null)
     {
         $ref = new ReflectionClass('rst');
         $rst = $ref->newInstanceWithoutConstructor();
         $f = $ref->getProperty('field');
         $f->setAccessible(true);
-        $f->setValue($rst, ['t.c' => ['Type' => $type, 'Null' => $null, 'Default' => null]]);
+        $f->setValue($rst, ['t.c' => ['Type' => $type, 'Null' => $null, 'Default' => $default]]);
         $c = $ref->getProperty('db_connection');
         $c->setAccessible(true);
         $c->setValue($rst, new NotationEscapeFake());
@@ -88,5 +88,30 @@ class RstNotationFormatTest extends TestCase
     public function testNumberUnchanged()
     {
         $this->assertSame('42', $this->format('int(10) unsigned', '42'));
+    }
+
+    public function testDecimalCommaBecomesPoint()
+    {
+        $this->assertSame('12.5', $this->format('decimal(14,4)', '12,5'));
+    }
+
+    public function testNoNumberInNotNullColumnStops()
+    {
+        // vorher NULL - INSERT IGNORE schrieb daraus 0 (gemessen 2026-10-20: Gewicht "abc" wurde 0)
+        $this->expectException(RuntimeException::class);
+        $this->format('decimal(14,4)', 'abc', 'NO');
+    }
+
+    public function testNoNumberInNullColumnIsNull()
+    {
+        // vorher eine Ausnahme - auch fuer ein leeres Feld
+        $this->assertSame('NULL', $this->format('decimal(10,2)', 'abc', 'YES'));
+        $this->assertSame('NULL', $this->format('decimal(10,2)', '', 'YES'));
+    }
+
+    public function testEmptyNumberInNotNullColumnTakesDefault()
+    {
+        // das leere Steuerfeld am Mietgegenstand (tbl_rental_item.tax_rate NOT NULL DEFAULT 0.00)
+        $this->assertSame('0.00', $this->format('decimal(5,2)', '', 'NO', '0.00'));
     }
 }

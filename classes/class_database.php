@@ -1654,9 +1654,11 @@ function applyNotationFormat ( &$value, string $key) //, object $db_connection
                 	return;
                 }
                 
-                //test for null as valid
-                if($this->field[$key]['Null'] != 'NO')
-        		 	throw new RuntimeException("\"" . $key . "\":Number expected (\"" . $value . "\"), empty string given and null not allwoed");
+                /* ⚠ Die Bedingung war vertauscht (bis 2026-10-20): eine NOT-NULL-Spalte bekam NULL,
+                *  und INSERT IGNORE schrieb daraus 0 - "abc" als Gewicht wurde still 0. Eine Spalte
+                *  mit NULL warf dagegen. Jetzt wie beim Datum: NOT NULL bricht ab, sonst NULL. */
+                if($this->field[$key]['Null'] == 'NO')
+        		 	throw new RuntimeException("\"" . $key . "\":Number expected (\"" . $value . "\"), and null not allowed");
         		else
         		{
         			$value = 'NULL';
