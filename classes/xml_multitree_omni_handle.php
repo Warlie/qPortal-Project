@@ -198,10 +198,9 @@ class xml_omni extends xml_objex
 
 					//NAMESPACES
 					
-					$pair = explode(':',$special_array[$i]);
-					$this->SPECIAL[$this->idx][strtoupper($pair[0])] = strtoupper($pair[1]);
-					//echo strtoupper($pair[0]) . ' ' . strtoupper($pair[1]);
-					$obj->set_attribute(strtoupper($pair[0]),strtoupper($pair[1]));
+					[$key, $value] = My_Handle_factory::special_pair($special_array[$i]);
+					$this->SPECIAL[$this->idx][$key] = $value;
+					$obj->set_attribute($key, $value);
 					}
 				}
 				

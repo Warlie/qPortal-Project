@@ -65,11 +65,13 @@
 		            Semantik glattgezogen - Prototypen vertragen sich mit eindeutigen
 		            Definitionen, Bedeutung ist instanzweit (SPARQL ueber alle Baeume und
 		            das Register, Turtle instanzweit, ein Prototyp kennt seine Instanzen).
+		       3.2.x Zwischenstaende auf dem Weg zu 3.3 (PHP_handle im template).
+		            3.2.1 die Argumente am doctype werden an EINER Stelle zerlegt.
 		       4.0  wenn der PHP-Quelltext einmalig aus den Dokumenten heraus ersetzt wird.
 		            Dann ein neues Repository - der Bruch ist zu brutal fuer dieselbe
 		            Historie, und danach gibt es eher einen laufenden Strom als Versionen.
 		-->
-		<owl:versionInfo>3.2</owl:versionInfo>
+		<owl:versionInfo>3.2.1</owl:versionInfo>
 	</owl:Ontology>
 
 	<!-- Geprägt aus den pedl-Grundlagen. Interfaces und Traits sind Deklarationen
