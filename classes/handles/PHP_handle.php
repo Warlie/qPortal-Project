@@ -101,7 +101,8 @@ class PHP_handle extends Interface_handle
 		$treePos = $this->base_object->position_stamp();
 
 		//keine .pedl: TREE heisst, das Dokument ist geladen - eine .pedl laesst sich spaeter daraus erzeugen (STW, 3.2.5)
-		$this->register_in_registry($str_source, false);
+		//nur die eingebundenen Dateien: die eigenen Klassen benennt das Bild, global (3.2.6)
+		$this->register_in_registry($str_source, false, true);
 		$this->base_object->go_to_stamp($treePos);
 
 		$this->image_of_file($str_source, $treePos);
@@ -159,8 +160,6 @@ class PHP_handle extends Interface_handle
 			foreach($entry['meta']['implements'] ?? [] as $interface)$needed[] = $interface;
 		}
 
-		$this->verify_in_registry($needed);
-
 		$obj_class = new Obj_Class_Collection($result, $this->base_object, $foreign);
 
 		$this->base_object->go_to_stamp($treePos);
@@ -168,6 +167,9 @@ class PHP_handle extends Interface_handle
 		$obj_class->create_rdf_entry($this->base_object);
 		$this->base_object->use_ns_def_strict(false);
 		$this->base_object->go_to_stamp($treePos);
+
+		//erst jetzt: die eigenen Namen traegt seit 3.2.6 das Bild selbst ein
+		$this->verify_in_registry($needed);
 	}
 
 	/* Ob etwas geladen ist, sagt die rdf:ID im Register (STW). Was danach fehlt, wurde
@@ -192,7 +194,10 @@ class PHP_handle extends Interface_handle
 		}
 	}
 
-	private function register_in_registry($source, bool $write_pedl = true)
+	/* $only_includes (3.2.6): die Klassen der Datei selbst bleiben draussen, sie stehen im
+	*  eigenen Baum und tragen ihre rdf:ID von dort - einmal, global. Eine .pedl wird dann
+	*  nicht gelesen: sie braechte die eigenen Klassen mit. */
+	private function register_in_registry($source, bool $write_pedl = true, bool $only_includes = false)
 	{
 		global $logger_class;
 		$corr_xml_file = str_replace(".php", ".pedl", $this->attribute_values['URI']);
@@ -223,7 +228,7 @@ class PHP_handle extends Interface_handle
 		if($force_rebuild && is_file($corr_xml_file))
 			$logger_class->setAssert("INFO forced rebuild of " . $corr_xml_file, 0);
 
-		if(!$force_rebuild && is_file($corr_xml_file))
+		if(!$force_rebuild && !$only_includes && is_file($corr_xml_file))
 		{
 
 			if($this->use_PEDL_file($this->base_object, $corr_xml_file))
@@ -301,6 +306,21 @@ class PHP_handle extends Interface_handle
 			/*
 			*	This class builds up a xml image of a php document's structure 
 			*/
+			if($only_includes)
+			{
+				$own = PHP_Ast_Scan::project_relative($this->attribute_values['URI']);
+				foreach($result as $entry)
+				{
+					if(!isset($entry['meta']['name'])
+						|| !in_array($entry['meta']['kind'] ?? null, ['class', 'interface', 'trait'], true))continue;
+
+					//die eigenen - und was schon einen Namen hat, egal in welchem Dokument
+					if(($entry['file'] ?? null) === $own
+						|| $this->base_object->isURIused('@registry_surface_system#' . $entry['meta']['name']))
+						$list[] = $entry['meta']['name'];
+				}
+			}
+
 			$obj_class = new Obj_Class_Collection($result,$this->base_object, $list); //finds pre defined values
 			
 			$this->base_object->use_ns_def_strict(true);

@@ -338,7 +338,13 @@ $old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
 		* TODO geeignet f�r exception
 		*/
 
-		if(!$parser->seek_node('@registry_surface_system#PhpClass',array('http://www.w3.org/2006/05/pedl-lib#name' => $class_Name)))
+		/* Ob eine Klasse geladen ist, sagt ihre rdf:ID (STW, 3.2.6). seek_node sucht nur im
+		*  Register-Baum; eine Klasse, die <add doctype="PHP;TARGET:TREE"> in ihr eigenes
+		*  Dokument geladen hat, steht dort nicht, ihr Name aber global - instanziiert wird
+		*  ueber den Namen (create_Ns_Node). seek_node bleibt zuerst und unveraendert; ohne
+		*  TARGET:TREE gibt es keine PhpClass ausserhalb des Registers, der Zusatz greift nie. */
+		if(!$parser->seek_node('@registry_surface_system#PhpClass',array('http://www.w3.org/2006/05/pedl-lib#name' => $class_Name))
+			&& !$this->is_PhpClass_elsewhere($parser, $class_Name))
 			{
 
 				//change to controldoc
@@ -515,6 +521,14 @@ $old_pos = '0000.' . $this->get_idx() . $this->position_stamp();
      {
          return 'Tree_Object:' . $this->namespace . '#' . $this->name;
      }
+
+	private function is_PhpClass_elsewhere($parser, $class_Name)
+	{
+		if(is_null($class_Name) || !$parser->isURIused('@registry_surface_system#' . $class_Name))return false;
+
+		$node = $parser->get_Tree_Node_of_Namespace('@registry_surface_system#' . $class_Name);
+		return is_object($node) && $node->full_URI() === '@registry_surface_system#PhpClass';
+	}
 	
 }
 
