@@ -150,9 +150,11 @@ class PHP_handle extends Interface_handle
 			*  and split one parameter into two whenever a default value held a comma.
 			*  The entry shape is unchanged, so everything below this line stays as it was.
 			*
-			*  Includes are no longer followed: classes from an included file are already
-			*  registered and were dropped by the void list anyway - every generated .pedl
-			*  holds exactly one PhpClass.
+			*  Includes with a literal path ARE followed (PHP_Ast_Scan::scan_source, $seen
+			*  against cycles), as the old cross_seek did: their classes fill the resource
+			*  list the rdfs:seeAlso to a parent's .pedl comes from, and the ones not yet
+			*  registered are written as well - each into the .pedl of ITS file, one .pedl
+			*  per php file with all of its classes (3.2.3).
 			*
 			*  A source PHP itself rejects is reported and left alone; writing half a .pedl
 			*  for a file that cannot even be loaded helps nobody.
@@ -216,9 +218,18 @@ class PHP_handle extends Interface_handle
 	}
 	
 
+	/* Eine .pedl je PHP-DATEI, mit allen Klassen dieser Datei (3.2.3). Bis dahin schrieb
+	*  jede Klasse ihre eigene - der Name kommt aber aus dem Pfad der Datei, bei zwei
+	*  Klassen in einer Datei ueberschrieb die letzte die erste. Erbte sie von ihr, zeigte
+	*  ihr seeAlso danach auf sich selbst, und use_PEDL_file folgte dem ohne Ende. Bei
+	*  einer Klasse je Datei - dem Bestand - ist die Datei byte-gleich. */
 	private function create_new_PEDL_file(Obj_Class_Collection $obj_class, string $xml_file)
 	{ 
-		foreach ($obj_class as  $pedl_class) {
+		$per_file = [];
+		foreach ($obj_class as $pedl_class)
+			$per_file[$pedl_class->get_Path_URL()][] = $pedl_class;
+
+		foreach ($per_file as $php_path => $classes_of_file) {
 
 			//unset($myPrivateModel);
 		$myPrivateModel = new xml_xPath_sParqle();
@@ -234,13 +245,16 @@ class PHP_handle extends Interface_handle
 	
 		
 		$myPrivateModel->createTree('@registry_surface_system','rdf:RDF', $namespace);
-		$myPrivateModel->set_first_node();
-		$pedl_class->create_rdf_entry($myPrivateModel);
+		foreach ($classes_of_file as $pedl_class)
+		{
+			$myPrivateModel->set_first_node();
+			$pedl_class->create_rdf_entry($myPrivateModel);
+		}
 		//unset($handle);
 		$handle = &My_Handle_factory::handle_factory('XML');
 		$handle->set_object($myPrivateModel);
 		$handle->set_attribute('XML_OPTION_CASE_FOLDING',false);
-		$corr_xml_file = str_replace(".php", ".pedl", $pedl_class->get_Path_URL());
+		$corr_xml_file = str_replace(".php", ".pedl", $php_path);
 		//var_dump($handle->save_back("UTF-8"));
 		//echo $corr_xml_file . "\n";
 		file_put_contents($corr_xml_file, $handle->save_back("UTF-8"));
@@ -255,9 +269,16 @@ class PHP_handle extends Interface_handle
 	@param a path of a file
 	@return boolean
 	*/
-	private function use_PEDL_file( $parser, string $xml_file)
+	private function use_PEDL_file( $parser, string $xml_file, array &$seen = [])
 	{
 		global $logger_class;
+
+		/* Jede .pedl nur einmal je Lauf, wie $seen im Scanner (3.2.3). Ein seeAlso auf eine
+		*  schon besuchte Datei - sich selbst, einen Kreis, eine Raute - ist erledigt. */
+		$real = realpath($xml_file) ?: $xml_file;
+		if(isset($seen[$real])) return true;
+		$seen[$real] = true;
+
 		$myPrivateModel = new xml_xPath_sParqle();
 		 $myPrivateModel ->load($xml_file, false);
 		 $myPrivateModel->set_first_node();
@@ -292,14 +313,18 @@ class PHP_handle extends Interface_handle
 		 	foreach($myPrivateModel->array_Of_Objects_Related_To_Tag_Name('http://www.w3.org/2000/01/rdf-schema#seeAlso') as $seeAlso)
 		 		if(false !== ($data = $seeAlso->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#src')) && 
 		 			file_exists($data))
-		 				if(!$this->use_PEDL_file( $parser, $data))return false;
+		 				if(!$this->use_PEDL_file( $parser, $data, $seen))return false;
 
 		 /* -------------------------------------------------------------------------- */
 		 
 		 $myBranches = $myPrivateModel->array_Of_Objects_Related_To_Tag_Name('@registry_surface_system#PhpClass') ;
 
-		 if(count($myBranches)> 0 )
-		 	 $myBranches[0]->cloning($parser->show_xmlelement());
+		 /* alle Klassen der Datei, in ihrer Reihenfolge - bis 3.2.3 nur die erste */
+		 foreach($myBranches as $branch)
+		 {
+		 	 $parser->set_first_node();
+		 	 $branch->cloning($parser->show_xmlelement());
+		 }
 
 		 /*
 		 $handle = &My_Handle_factory::handle_factory('XML');
@@ -651,7 +676,8 @@ class Obj_Class
 			$xml_model->tag_close($this, "rdfs:subClassOf");
 			
 			// gives seeAlso for the 
-			if(array_key_exists(trim($this->subClassOf), $this->my_list_of_resources))
+			if(array_key_exists(trim($this->subClassOf), $this->my_list_of_resources)
+				&& $this->my_list_of_resources[trim($this->subClassOf)] !== $this->xml_path)
 			{
 				$attrib = array('pedl:src' => $this->my_list_of_resources[trim($this->subClassOf)]);
 				$xml_model->tag_open($this, "rdfs:seeAlso", $attrib);
