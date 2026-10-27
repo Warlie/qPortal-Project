@@ -32,6 +32,51 @@ class PHP_handle extends Interface_handle
 		$this->base_object = &$obj;
 	}
 	
+	/* TARGET:TREE - das Bild der Klasse kommt in einen eigenen Baum, etwa fuer <add> im
+	*  template. TARGET:REGISTRY sagt ausdruecklich, was ohne Argument ohnehin gilt. Ohne
+	*  TARGET keine Meinung: <object> ruft 'PHP' und landet ueber die Pfadregel wie immer
+	*  im Register (3.2.2). */
+	function destination(array $args)
+	{
+		switch($args['TARGET'] ?? '')
+		{
+			case 'TREE':     return 'tree';
+			case 'REGISTRY': return 'registry';
+			default:         return null;
+		}
+	}
+
+	/* Der eigene Baum bekommt dieselbe Wurzel wie das Register und die .pedl: rdf:RDF mit
+	*  den Namensraeumen, unter die create_rdf_entry schreibt und use_PEDL_file klont. */
+	function prepare(&$parser, $ident, array $args)
+	{
+		if('tree' !== $this->destination($args)) return false;
+
+		$parser->setNewTree($ident);
+		$parser->createTree($ident, 'rdf:RDF', self::rdf_namespaces());
+		$parser->set_definition_context('TYPE', 'XML');
+		$parser->set_definition_context('MIME', '<?xml version="1.0" encoding="UTF-8"?>');
+		$parser->set_definition_context('DOC', '');
+
+		return true;
+	}
+
+	static function rdf_namespaces()
+	{
+		require_once(__DIR__ . '/PHP_ast_scan.php');
+		$namespace = array();
+		$namespace['xmlns'] = '@registry_surface_system';
+		$namespace['xmlns:owl'] = 'http://www.w3.org/2002/07/owl';
+		$namespace['xmlns:rdf'] = 'http://www.w3.org/1999/02/22-rdf-syntax-ns';
+		$namespace['xmlns:rdfs'] = 'http://www.w3.org/2000/01/rdf-schema';
+		$namespace['xmlns:xsd'] = 'http://www.w3.org/2000/01/rdf-schema';
+		$namespace['xmlns:pedl'] = 'http://www.w3.org/2006/05/pedl-lib';
+		//Beschreibungsschicht: Dublin Core fuer title/creator/description, pedl-desc fuer den Rest
+		$namespace['xmlns:dcterms'] = PHP_Ast_Scan::NS_DCTERMS;
+		$namespace['xmlns:desc'] = PHP_Ast_Scan::NS_DESC;
+		return $namespace;
+	}
+
 	function parse_document($source)
 	{
 		global $logger_class;
@@ -43,7 +88,11 @@ class PHP_handle extends Interface_handle
 		$this->base_object->set_first_node();
 		
 		$xmlPos = $this->base_object->position_stamp();
-		$this->base_object->go_to_stamp(
+
+		/* Im eigenen Baum ist die Wurzel (rdf:RDF aus prepare) schon der Ort; sonst das
+		*  Register. TARGET kommt ueber handle_select als Attribut. */
+		if('tree' !== $this->destination(['TARGET' => $this->attribute_values['TARGET'] ?? '']))
+			$this->base_object->go_to_stamp(
 					$this->base_object->getControlUnit( $ws)->getPositionStampReg()
 				);		
 
@@ -179,16 +228,7 @@ class PHP_handle extends Interface_handle
 		$myPrivateModel->set_definition_context('DOC','');
 			
 			
-		$namespace = array();
-		$namespace['xmlns'] = '@registry_surface_system';
-		$namespace['xmlns:owl'] = 'http://www.w3.org/2002/07/owl';
-		$namespace['xmlns:rdf'] = 'http://www.w3.org/1999/02/22-rdf-syntax-ns';
-		$namespace['xmlns:rdfs'] = 'http://www.w3.org/2000/01/rdf-schema';
-		$namespace['xmlns:xsd'] = 'http://www.w3.org/2000/01/rdf-schema';
-		$namespace['xmlns:pedl'] = 'http://www.w3.org/2006/05/pedl-lib';
-		//Beschreibungsschicht: Dublin Core fuer title/creator/description, pedl-desc fuer den Rest
-		$namespace['xmlns:dcterms'] = PHP_Ast_Scan::NS_DCTERMS;
-		$namespace['xmlns:desc'] = PHP_Ast_Scan::NS_DESC;
+		$namespace = self::rdf_namespaces();
 		
 		//echo get_Class($this->my_Xml_Object);
 	

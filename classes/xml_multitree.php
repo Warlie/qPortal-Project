@@ -965,7 +965,7 @@ $res = $client->getRaw();
                 return $this->idx;
 }
 
-if(false === stripos($ref,'.php'))
+if('tree' === $this->load_destination($ref, $spezial))
 {
         //echo $ref;
         //RDF:about func
@@ -986,7 +986,7 @@ if(false === stripos($ref,'.php'))
 
         
    //creates a new identifire to index correlation
-	$this->setNewTree($tmp2);
+	$this->prepare_tree($tmp2, $spezial);
 
 
 }
@@ -1028,6 +1028,20 @@ $tmp = $ref;
         return $this->idx;
 
    }
+/* Wohin load() eine Datei legt: 'tree' oder 'registry'. Hier unten nur die Pfadregel
+*  des Bestands - ein .php geht ins Register. xml_omni fragt vorher den Handle (3.2.2). */
+function load_destination($ref, $spezial)
+{
+	return (false === stripos($ref, '.php')) ? 'tree' : 'registry';
+}
+
+/* Der Platz fuer einen eigenen Baum. Hier unten nur reservieren; die Wurzel kommt mit dem
+*  ersten tag_open. xml_omni laesst vorher den Handle vorbereiten. */
+function prepare_tree($ident, $spezial)
+{
+	$this->setNewTree($ident);
+}
+
 //-----------------------------------------------------------------
 //--------------------------setNewTree-----------------------------
 

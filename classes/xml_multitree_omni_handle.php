@@ -88,7 +88,13 @@ class xml_omni extends xml_objex
 			return;
 		}
 
-		if($special <> 'PHP')
+		/* Die Dokumentangaben gehoeren dem Baum, in den geschrieben wird. Ein PHP-Handle
+		*  verwaltet sie selbst: im Register gar nicht, im eigenen Baum setzt prepare()
+		*  sie als XML. Bis 3.2.2 stand hier $special <> 'PHP' - mit Argumenten
+		*  ('PHP;TARGET:TREE') schrieb das MIME/TYPE des Quelltextes ans Register. */
+		$handle_owns_context = ('PHP' === My_Handle_factory::special_split($special)[0]);
+
+		if(!$handle_owns_context)
 		{
                 $this->special = $special;
                 $this->MIME[$this->idx] = $this->MIME_check($source);
@@ -103,7 +109,7 @@ class xml_omni extends xml_objex
 			$this->handle_select($source,$casefolding,$special,$ref);
                         $this->used_parser = true;
 
-                if($special <> 'PHP')
+                if(!$handle_owns_context)
                 {
                 $this->cur_pos_array[$this->idx] = array(); //
                 $this->deep[$this->idx] = 0;
@@ -114,6 +120,42 @@ class xml_omni extends xml_objex
 		$this->executed();
    }
    
+   /* Der Handle sagt, wohin er schreibt; hat er keine Meinung, gilt die Pfadregel. Ein
+   *  unbekannter Typ wirft erst beim Laden selbst, wie bisher. */
+   function load_destination($ref, $spezial)
+   {
+	if($handle = $this->handle_for($spezial))
+	{
+		[, $args] = My_Handle_factory::special_split($spezial);
+		if(null !== ($ziel = $handle->destination($args))) return $ziel;
+	}
+
+	return parent::load_destination($ref, $spezial);
+   }
+
+   function prepare_tree($ident, $spezial)
+   {
+	if($handle = $this->handle_for($spezial))
+	{
+		[, $args] = My_Handle_factory::special_split($spezial);
+		if($handle->prepare($this, $ident, $args)) return;
+	}
+
+	parent::prepare_tree($ident, $spezial);
+   }
+
+   private function handle_for($spezial)
+   {
+	try
+	{
+		return My_Handle_factory::handle_factory(My_Handle_factory::special_split($spezial)[0]);
+	}
+	catch(ErrorException $e)
+	{
+		return null;
+	}
+   }
+
    // this function is defined in the ns class
    function executed()
    {}

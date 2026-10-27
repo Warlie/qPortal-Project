@@ -47,6 +47,22 @@ class Interface_handle
 
 	}
 
+	/* Wohin der Handle schreibt, gefragt von xml::load() VOR dem Laden (3.2.2):
+	*  'tree' (eigener Baum), 'registry' (Register der surface_tree_engine) oder null -
+	*  keine Meinung, dann gilt die Pfadregel des Bestands (.php ins Register).
+	*  $args sind die Argumente am doctype (My_Handle_factory::special_split). */
+	function destination(array $args)
+	{
+		return null;
+	}
+
+	/* Legt den eigenen Baum an, bevor geladen wird. false = nichts getan, dann reserviert
+	*  load() den Platz wie bisher mit setNewTree und der erste Tag wird die Wurzel. */
+	function prepare(&$parser, $ident, array $args)
+	{
+		return false;
+	}
+
 	function parse_document_from_array(array $data): void
 	{
 
