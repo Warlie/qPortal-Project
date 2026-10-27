@@ -117,4 +117,17 @@
 		</xs:documentation></xs:annotation>
 	</xs:element>
 
+	<!-- ===================================================== Transport -->
+
+	<xs:element name="code_snippet" type="xs:string">
+		<xs:annotation><xs:documentation>
+			Quelltext als Transportform (3.2.7) - kein Schild, sondern der Inhalt selbst.
+			Gepraegt als PhpSnippet im Registrierungsbogen; PHP_handle schreibt ihn nur mit
+			doctype "PHP;TARGET:TREE;SNIPPET:ON", als CDATA: unter PhpMethod der Rumpf der
+			Methode, unter PhpClass der Rumpf der Klasse ohne Methoden und Konstanten. Die
+			pedl-Kommentare (/*@ ... @*/) stehen nicht darin, sie sind schon desc:-Knoten.
+			Ohne Sprache: Code hat keine.
+		</xs:documentation></xs:annotation>
+	</xs:element>
+
 </xs:schema>

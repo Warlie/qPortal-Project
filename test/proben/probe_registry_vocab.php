@@ -67,6 +67,11 @@ echo "\n1) Was das Dokument praegt, praegt es wirklich\n" . str_repeat('=', 74) 
 foreach($gepraegt as $name => $tag)
 {
 	if(!isset($reg[$name]))          { printf("  [ROT ] %-18s aus %-24s NICHT registriert\n", $name, $tag); $rot++; }
+	/* desc: ist eine Beschreibungs- und Transportschicht ohne eigene Knotenklassen
+	*  (kein classes/ns/desc/) - eine Praegung daraus traegt ihren Namen, kein Verhalten.
+	*  Ausgenommen seit 3.2.7 (STW), wie dcterms unten in 3). */
+	elseif('Interface_node' === get_class($reg[$name]) && 0 === strpos($tag, 'desc:'))
+	                                 { printf("  [ ok ] %-18s aus %-24s Interface_node (desc: traegt kein Verhalten)\n", $name, $tag); $ok++; }
 	elseif('Interface_node' === get_class($reg[$name]))
 	                                 { printf("  [ROT ] %-18s aus %-24s STUMPF (Interface_node)\n", $name, $tag); $rot++; }
 	else { printf("  [ ok ] %-18s aus %-24s %s\n", $name, $tag, get_class($reg[$name])); $ok++; }

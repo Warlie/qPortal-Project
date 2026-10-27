@@ -163,8 +163,12 @@ class PHP_handle extends Interface_handle
 		$obj_class = new Obj_Class_Collection($result, $this->base_object, $foreign);
 
 		$this->base_object->go_to_stamp($treePos);
+		/* PhpSnippet nur auf Anforderung (STW, 3.2.7): doctype="PHP;TARGET:TREE;SNIPPET:ON".
+		*  Im Register nie - dieser Weg ist nur das Bild. */
+		$with_snippet = ('ON' === ($this->attribute_values['SNIPPET'] ?? ''));
+
 		$this->base_object->use_ns_def_strict(true);
-		$obj_class->create_rdf_entry($this->base_object);
+		$obj_class->create_rdf_entry($this->base_object, $with_snippet);
 		$this->base_object->use_ns_def_strict(false);
 		$this->base_object->go_to_stamp($treePos);
 
@@ -597,12 +601,12 @@ class Obj_Class_Collection implements \IteratorAggregate, \Countable
 	/**
 	* updates the list in registry
 	*/
-	public function create_rdf_entry( xml_ns &$xml_model)
+	public function create_rdf_entry( xml_ns &$xml_model, bool $with_snippet = false)
 	{
 		foreach( $this->collection_Array as $value)
 			{
 				
-				$value->create_rdf_entry($xml_model);
+				$value->create_rdf_entry($xml_model, $with_snippet);
 				
 			
 			}
@@ -678,6 +682,7 @@ class Obj_Class
 	private $isAbstract = false;
 	private $isFinal = false;
 	private $desc = [];
+	private $snippet = null;
 
 	public function __construct($array_tag, &$list_of_resources)
 	{
@@ -696,6 +701,7 @@ class Obj_Class
 			$this->isAbstract = $meta['abstract'];
 			$this->isFinal    = $meta['final'];
 			$this->desc       = $meta['desc'] ?? [];
+			$this->snippet    = $meta['snippet'] ?? null;
 		}
 		else
 		{
@@ -727,6 +733,19 @@ class Obj_Class
 	*   Statisch, weil Klasse, Funktion und Member dasselbe brauchen und keine
 	*   gemeinsame Basis haben.
 	*/
+	/* PhpSnippet - geprägt aus desc:code_snippet, eine Transportform (STW): der Quelltext
+	*  woertlich als Text des Knotens, in CDATA, weil PHP '<' und '&' enthaelt. null heisst
+	*  "es gibt keinen" (abstrakte Methode) und schreibt nichts. */
+	public static function write_snippet(xml_ns &$xml_model, &$owner, ?string $text) : void
+	{
+		if(is_null($text))return;
+
+		$xml_model->tag_open($owner, 'PhpSnippet', array());
+		$xml_model->get_Element()->set_bolcdata(true);
+		$xml_model->cdata($owner, $text);
+		$xml_model->tag_close($owner, 'PhpSnippet');
+	}
+
 	public static function write_desc(xml_ns &$xml_model, &$owner, array $desc) : void
 	{
 		foreach($desc as $one)
@@ -775,7 +794,9 @@ class Obj_Class
 		return  trim($this->name);
 	}
 	
-	public function create_rdf_entry( xml_ns &$xml_model)
+	/* $with_snippet (3.2.7): nur das Bild im eigenen Baum traegt den Quelltext - Register
+	*  und .pedl brauchen ihn nicht. */
+	public function create_rdf_entry( xml_ns &$xml_model, bool $with_snippet = false)
 	{
 
 
@@ -823,6 +844,8 @@ class Obj_Class
 			$attrib = array('pedl:src' => $this->php_path, 'pedl:hash'=>hash_file('sha256', $this->php_path));
 			$xml_model->tag_open($this, "pedl:hasCodeResource", $attrib);
 			$xml_model->tag_close($this, "pedl:hasCodeResource");
+
+		if($with_snippet)self::write_snippet($xml_model, $this, $this->snippet);
 		
 
 		
@@ -839,7 +862,7 @@ class Obj_Class
 			foreach( $this->functionList as $value)
 			{
 
-				$prim = &$value->create_rdf_entry($xml_model,$this->name);
+				$prim = &$value->create_rdf_entry($xml_model,$this->name, $with_snippet);
 				if($prim) $this->constructor = &$prim;
 
 			}
@@ -868,6 +891,7 @@ class Obj_Function
 	private $returnType = '';
 	private $isConstructor = null;
 	private $desc = [];
+	private $snippet = null;
 
 	public function __construct($array_tag, &$parser)
 	{
@@ -890,6 +914,7 @@ class Obj_Function
 			$this->returnType    = $meta['returnType'];
 			$this->isConstructor = $meta['constructor'];
 			$this->desc          = $meta['desc'] ?? [];
+			$this->snippet       = $meta['snippet'] ?? null;
 
 			$counter = 0;
 			foreach($meta['params'] as $param)
@@ -954,7 +979,7 @@ class Obj_Function
 		
 	}
 
-	public function &create_rdf_entry( xml_ns &$xml_model, $name)
+	public function &create_rdf_entry( xml_ns &$xml_model, $name, bool $with_snippet = false)
 	{
 		//echo  $xml_model->cur_node();
 
@@ -986,6 +1011,8 @@ class Obj_Function
 			}
 			$res = null;
 			if( $name == trim($this->name))$res = &$xml_model->show_xmlelement() ;
+
+		if($with_snippet)Obj_Class::write_snippet($xml_model, $this, $this->snippet);
 
 		/* closed under the name it was opened with; tag_close ignores the name, but a
 		*  PhpConstructor that closes as PhpMethod is a trap waiting for the day it does not

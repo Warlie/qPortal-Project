@@ -33,12 +33,12 @@ php -d error_reporting=E_ERROR test/Integration/tree_access.php        # 11/0 (<
 
 ```bash
 # Sonden — sie prüfen nicht, sie ZEIGEN. Ausgabe wird gelesen, kein grün/rot.
-php -d error_reporting=E_ERROR test/proben/probe_registry_vocab.php   # ausser dieser: 32/0
+php -d error_reporting=E_ERROR test/proben/probe_registry_vocab.php   # ausser dieser: 33/0
 ```
 
 `seek_scope.php` und `sparql_parse.php` (69) müssen vollständig grün sein — jede rote Zeile
 dort ist neu. `probe_registry_vocab.php` bewacht die Naht zwischen Vokabulardokument und
-`build_up()` und steht bei **32 in Ordnung / 0 rot**.
+`build_up()` und steht bei **33 in Ordnung / 0 rot**.
 `intern_walk.php` steht bei **35 gelaufen / 1 rot** — `__get_data` ist ein Bestandsdefekt
 (über den Intern-Kanal ist der Aufrufer der ContentGenerator und damit kein Knoten; STW hat
 entschieden, das nicht umzubauen). Diese Zahl ist die Vergleichsmarke: ändert sie sich, hat

@@ -32,6 +32,7 @@
 	xmlns:owl="http://www.w3.org/2002/07/owl"
 	xmlns:pedl="http://www.w3.org/2006/05/pedl-lib"
 	xmlns:dcterms="http://purl.org/dc/terms/"
+	xmlns:desc="http://www.trscript.de/2026/pedl-desc"
 	xmlns:tree="http://www.trscript.de/tree">
 
 	<!-- Der Bogen benennt sich selbst. dcterms:identifier ist der Standardbegriff
@@ -81,11 +82,14 @@
 		            3.2.6 die eigenen Klassen benennt nur das Bild (rdf:ID, global),
 		            ins Register kommen nur die eingebundenen Dateien; tree:object
 		            erkennt eine so geladene Klasse an ihrem Namen.
+            3.2.7 doctype "PHP;TARGET:TREE;SNIPPET:ON" legt den Quelltext als
+            PhpSnippet (desc:code_snippet) unter PhpClass und PhpMethod - ohne die
+            pedl-Kommentare, nie im Register.
 		       4.0  wenn der PHP-Quelltext einmalig aus den Dokumenten heraus ersetzt wird.
 		            Dann ein neues Repository - der Bruch ist zu brutal fuer dieselbe
 		            Historie, und danach gibt es eher einen laufenden Strom als Versionen.
 		-->
-		<owl:versionInfo>3.2.6</owl:versionInfo>
+		<owl:versionInfo>3.2.7</owl:versionInfo>
 	</owl:Ontology>
 
 	<!-- Geprägt aus den pedl-Grundlagen. Interfaces und Traits sind Deklarationen
@@ -99,6 +103,13 @@
 	<pedl:Object_Class       rdf:ID="PhpTrait"/>
 	<pedl:Object_Parameter   rdf:ID="PhpProperty"/>
 	<pedl:Object_Parameter   rdf:ID="PhpConstant"/>
+
+	<!-- Quelltext als Transportform (STW, 3.2.7): desc:code_snippet, nicht pedl -
+	     eingebetteter Code in pedl ist eine andere Idee (pedl:script). Unter PhpMethod
+	     der ganze Inhalt der Methode, unter PhpClass der Inhalt der Klasse ohne Methoden
+	     und Konstanten; pedl-Kommentare (/*@ ... @*/) stehen schon als desc: daneben.
+	     Zerlegt wird eine Schicht darueber. -->
+	<desc:code_snippet       rdf:ID="PhpSnippet"/>
 
 	<!-- Zweite Stufe: aus den geprägten Namen wieder Namen prägen. -->
 	<PhpClass     rdf:ID="System"/>

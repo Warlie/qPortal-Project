@@ -125,11 +125,13 @@ class PHP_Ast_Scan
 	{
 		if($real = realpath($file))$seen[$real] = true;
 
-		$ast = (new ParserFactory())->createForNewestSupportedVersion()->parse($source);
+		$parser = (new ParserFactory())->createForNewestSupportedVersion();
+		$ast = $parser->parse($source);
 
 		if(is_null($ast))return [];
 
 		$visitor = new PHP_Ast_Scan_Visitor(self::project_relative($file));
+		$visitor->set_tokens($parser->getTokens());
 
 		/* Der Dateikopf - @title, @autor, @description - steht in vielen Plugins vor dem
 		*  ersten require_once. Der Parser haengt ihn dann an die Einbindung, nicht an die
@@ -210,6 +212,65 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 
 	public function result() : array {return $this->entries;}
 
+	/* Die Tokens der Datei - aus ihnen werden die Snippets geschnitten (3.2.7). Ein Token
+	*  traegt seinen Text woertlich; aneinandergereiht ergeben sie die Datei byte-genau. */
+	private $tokens = [];
+	public function set_tokens(array $tokens) : void {$this->tokens = $tokens;}
+
+	/* Der Text zwischen den Tokens $from und $to (beide einschliesslich), ohne die Spannen
+	*  in $without und ohne pedl-Kommentare (/*@ ... @*\/ - die stehen schon als desc:). */
+	private function snippet(int $from, int $to, array $without = []) : string
+	{
+		$text = '';
+		for($i = $from; $i <= $to && isset($this->tokens[$i]); $i++)
+		{
+			foreach($without as [$a, $b])
+				if($i >= $a && $i <= $b){$i = $b; continue 2;}
+
+			$token = $this->tokens[$i];
+			if(T_COMMENT === $token->id && str_starts_with($token->text, '/*@'))continue;
+
+			$text .= $token->text;
+		}
+		return $text;
+	}
+
+	/* der Koerper zwischen der ersten '{' im Knoten und seiner letzten '}' */
+	private function body_tokens(Node $node) : ?array
+	{
+		$start = $node->getStartTokenPos();
+		$end   = $node->getEndTokenPos();
+		if($start < 0 || $end < 0)return null;
+
+		for($i = $start; $i <= $end; $i++)
+			if('{' === $this->tokens[$i]->text)
+				return [$i + 1, $end - 1];
+
+		return null;
+	}
+
+	/* Inhalt der Klasse ohne Methoden und Konstanten (STW, 3.2.7). Was vor einer Methode
+	*  steht - ihr Doc-Kommentar - bleibt hier, damit nichts verloren geht. */
+	private function class_snippet(Node\Stmt\ClassLike $node) : ?string
+	{
+		if(is_null($body = $this->body_tokens($node)))return null;
+
+		$without = [];
+		foreach($node->stmts as $stmt)
+			if($stmt instanceof Node\Stmt\ClassMethod || $stmt instanceof Node\Stmt\ClassConst)
+				$without[] = [$stmt->getStartTokenPos(), $stmt->getEndTokenPos()];
+
+		return $this->snippet($body[0], $body[1], $without);
+	}
+
+	/* der ganze Inhalt der Methode; eine abstrakte hat keinen */
+	private function method_snippet(Node\Stmt\ClassMethod $method) : ?string
+	{
+		if(is_null($method->stmts) || is_null($body = $this->body_tokens($method)))return null;
+
+		return $this->snippet($body[0], $body[1]);
+	}
+
 	/* literal include/require targets found in this file */
 	public function includes() : array {return $this->includes;}
 
@@ -247,7 +308,8 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 		$name = $node->name->toString();
 
 		$meta = ['kind' => $kind, 'name' => $name, 'extends' => '', 'implements' => [],
-			'abstract' => false, 'final' => false, 'desc' => $this->desc_entries($node)];
+			'abstract' => false, 'final' => false, 'desc' => $this->desc_entries($node),
+			'snippet' => $this->class_snippet($node)];
 
 		//der Dateikopf gehoert der ersten Klasse, nicht jeder
 		if(!$this->head_used)
@@ -335,6 +397,7 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 			'returnType' => $this->type_text($method->returnType),
 			'params'     => $params,
 			'desc'       => $desc,
+			'snippet'    => $this->method_snippet($method),
 		];
 	}
 

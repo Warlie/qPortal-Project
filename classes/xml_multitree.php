@@ -1576,7 +1576,10 @@ return $res;
                 }
                 else
                 {
-                        return '<![CDATA[' . $param . ']]>';
+                        /* ']]>' im Text schloesse den Abschnitt vorzeitig - etwa im Quelltext eines
+                        *  Handles, der selbst CDATA schreibt (3.2.7). Geteilt in zwei Abschnitte,
+                        *  liest expat den Text unveraendert zurueck. Ohne ']]>' byte-gleich. */
+                        return '<![CDATA[' . str_replace(']]>', ']]]]><![CDATA[>', (string) $param) . ']]>';
                 }
         }
 
