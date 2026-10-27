@@ -37,6 +37,21 @@ class PHP_Ast_Scan
 	*/
 	const NS_DCTERMS = 'http://purl.org/dc/terms/';
 
+	/* Die Praefixe, die der PEDL-Kopf erklaert (PHP_handle::rdf_namespaces baut daraus
+	*  die Wurzel, in dieser Reihenfolge). Im /*@ ... @* /-Block sind sie ohne Erklaerung
+	*  frei; jeden anderen erklaert der Block selbst mit "xmlns:x:: <uri>" (3.2.8).
+	*  ⚠ xsd zeigt seit jeher auf rdf-schema, nicht auf XML Schema - nicht angefasst, die
+	*    .pedl-Dateien tragen es so. */
+	const HEAD_NAMESPACES = [
+		'owl'     => 'http://www.w3.org/2002/07/owl',
+		'rdf'     => 'http://www.w3.org/1999/02/22-rdf-syntax-ns',
+		'rdfs'    => 'http://www.w3.org/2000/01/rdf-schema',
+		'xsd'     => 'http://www.w3.org/2000/01/rdf-schema',
+		'pedl'    => 'http://www.w3.org/2006/05/pedl-lib',
+		'dcterms' => self::NS_DCTERMS,
+		'desc'    => self::NS_DESC,
+	];
+
 	/* Was ein @schluessel: im Quelltext im Baum wird.
 	*  Dublin Core, wo Dublin Core es meint - Aussagen ueber ein Dokument. Alles
 	*  Uebrige sind Aussagen ueber Code, dafuer hat Dublin Core kein Vokabular; das
@@ -53,9 +68,8 @@ class PHP_Ast_Scan
 	*  delivers/columns/effect stehen bewusst NICHT in DESC_KEYS: dort wuerde @delivers: zur
 	*  flachen Textform, und die Ausgabebeschreibung soll ein Verweis sein koennen. */
 	const HEAD_KNOWN    = ['delivers', 'columns', 'effect', 'text'];
-	/* Nur Praefixe, deren Namensraum der PEDL-Kopf erklaert - ein fremdes waere ein Tag
-	*  ohne Namensraum. */
-	const HEAD_PREFIXES = ['desc', 'dcterms'];
+	/* Welche Praefixe ein Kopf tragen darf: die aus HEAD_NAMESPACES und die, die der Block
+	*  erklaert. Bis 3.2.7 nur desc und dcterms. */
 	/* Angaben zu einer Aussage in der Klammer: "tricky(lang=de)::". Links der Schluessel
 	*  in der Notation, rechts das Attribut am erzeugten Element. Ein allgemeiner Platz -
 	*  vorgesehen sind noch die Richtung einer Verfeinerung und group/one/all (STW 06-15).
@@ -201,6 +215,11 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 {
 	private $file;
 	private $entries = [];
+	/* Praefix => URI aus "xmlns:x:: <uri>", fuer den ganzen Lauf und nicht je Datei: die
+	*  Praefixtabelle des Baums kennt keine Geltungsbereiche (xml_multitree_ns.php:579),
+	*  und das Register sammelt viele Dateien in einem Baum. Derselbe Praefix mit einer
+	*  anderen URI wuerde dort den ersten still umdeuten. */
+	private static $erklaert = [];
 	private $includes = [];
 	private $printer;
 
@@ -624,9 +643,21 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 			$res[] = $mit(['tag' => $tag, 'text' => $inhalt], $attr);
 		};
 
+		/* Praefixe, die DIESER Block erklaert - nur hier duerfen Koepfe sie tragen. */
+		$lokal = [];
+
 		foreach(explode("\n", $text) as $zeile)
 		{
-			if(is_null($kopf = $this->block_head($zeile)))
+			/* "xmlns:x:: <uri>" erklaert einen Praefix fuer den Rest des Blocks. Die Zeile
+			*  ist keine Aussage und unterbricht keinen Abschnitt; sie steht danach als
+			*  xmlns:x an jedem Element, das x benutzt. */
+			if(preg_match('#^xmlns:([A-Za-z_][A-Za-z0-9_\-]*)::\s+<([^<>\s]+)>$#', trim($zeile), $x))
+			{
+				$this->declare_prefix($x[1], $x[2], $lokal);
+				continue;
+			}
+
+			if(is_null($kopf = $this->block_head($zeile, $lokal)))
 			{
 				$zeilen[] = $zeile;
 				continue;
@@ -642,8 +673,29 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 		return $res;
 	}
 
-	/* [tag, wert, attribute] fuer eine Kopfzeile, sonst null. */
-	private function block_head(string $zeile) : ?array
+	/* Nimmt eine Erklaerung "xmlns:$praefix:: <$uri>" in $lokal auf - oder meldet, warum
+	*  nicht. Ein Praefix des PEDL-Kopfes ist schon erklaert; mit derselben URI ist die Zeile
+	*  ueberfluessig, mit einer anderen waere sie ein Widerspruch. */
+	private function declare_prefix(string $praefix, string $uri, array &$lokal) : void
+	{
+		$schon = PHP_Ast_Scan::HEAD_NAMESPACES[$praefix] ?? self::$erklaert[$praefix] ?? null;
+
+		if(!is_null($schon) && $schon !== $uri)
+		{
+			self::melden('xmlns:' . $praefix . ':: <' . $uri . '> - der Praefix steht schon fuer <'
+				. $schon . '>, Erklaerung weggelassen');
+			return;
+		}
+
+		if(isset(PHP_Ast_Scan::HEAD_NAMESPACES[$praefix]))return;
+
+		self::$erklaert[$praefix] = $uri;
+		$lokal[$praefix] = $uri;
+	}
+
+	/* [tag, wert, attribute] fuer eine Kopfzeile, sonst null. $lokal sind die Praefixe,
+	*  die der Block erklaert hat (Praefix => URI). */
+	private function block_head(string $zeile, array $lokal = []) : ?array
 	{
 		$t = trim($zeile);
 
@@ -655,9 +707,16 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 
 			if(false !== ($p = strpos($name, ':')))
 			{
-				if(!in_array(strtolower(substr($name, 0, $p)), PHP_Ast_Scan::HEAD_PREFIXES, true))
+				$praefix = substr($name, 0, $p);
+
+				/* Im Block erklaert: die Erklaerung reist am Element mit. */
+				if(isset($lokal[$praefix]))
+					return [$name, trim($m[2] ?? ''), ['xmlns:' . $praefix => $lokal[$praefix]] + $attr];
+
+				if(!isset(PHP_Ast_Scan::HEAD_NAMESPACES[strtolower($praefix)]))
 				{
-					self::melden('Kopf "' . $name . '::" mit unbekanntem Praefix - bleibt Fliesstext');
+					self::melden('Kopf "' . $name . '::" mit unbekanntem Praefix - bleibt Fliesstext'
+						. ' (erklaeren mit "xmlns:' . $praefix . ':: <uri>")');
 					return null;
 				}
 				return [$name, trim($m[2] ?? ''), $attr];

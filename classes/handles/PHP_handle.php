@@ -66,14 +66,11 @@ class PHP_handle extends Interface_handle
 		require_once(__DIR__ . '/PHP_ast_scan.php');
 		$namespace = array();
 		$namespace['xmlns'] = '@registry_surface_system';
-		$namespace['xmlns:owl'] = 'http://www.w3.org/2002/07/owl';
-		$namespace['xmlns:rdf'] = 'http://www.w3.org/1999/02/22-rdf-syntax-ns';
-		$namespace['xmlns:rdfs'] = 'http://www.w3.org/2000/01/rdf-schema';
-		$namespace['xmlns:xsd'] = 'http://www.w3.org/2000/01/rdf-schema';
-		$namespace['xmlns:pedl'] = 'http://www.w3.org/2006/05/pedl-lib';
-		//Beschreibungsschicht: Dublin Core fuer title/creator/description, pedl-desc fuer den Rest
-		$namespace['xmlns:dcterms'] = PHP_Ast_Scan::NS_DCTERMS;
-		$namespace['xmlns:desc'] = PHP_Ast_Scan::NS_DESC;
+		/* Eine Tabelle fuer Kopf und Block (3.2.8): was hier erklaert ist, darf ein
+		*  /*@ ... @* /-Kopf ohne eigene Erklaerung tragen. Beschreibungsschicht: Dublin Core
+		*  fuer title/creator/description, pedl-desc fuer den Rest. */
+		foreach(PHP_Ast_Scan::HEAD_NAMESPACES as $praefix => $uri)
+			$namespace['xmlns:' . $praefix] = $uri;
 		return $namespace;
 	}
 

@@ -94,7 +94,7 @@ Datei-Weg ruft es bereits; `load_Stream` nicht.
 | Suchmodelle | `classes/search_model/<name>/` — `internal`, `xpath` (Stub), `sparql` |
 | Automat | `classes/finite_state_machine/` — `Acceptor`/`Transducer` (regex je Übergang, baut einen Knotenbaum; Beispiel `classes/fs_parser/qp_workflow.php`) und `Mealy_Automat` (`class_Mealy.php`: ein Zeichen je Schritt, sammelt in eine flache Tabelle) |
 | SPARQL-Parser | `classes/search_model/sparql/sparql_parser.php` — Grammatik auf dem Mealy, portiert aus `anttree/funct_parser_lib.js` |
-| Beschreibungsschicht | `dcterms:` (`http://purl.org/dc/terms/`, **nicht** `elements/1.1`) für Aussagen über ein *Dokument*, `desc:` für Aussagen über *Code*. Schlüsseltabelle: `PHP_Ast_Scan::DESC_KEYS`. ⚠ `SVG_Overview_handle` schreibt bewusst weiter `elements/1.1` — Inkscape/CC-Konvention |
+| Beschreibungsschicht | `dcterms:` (`http://purl.org/dc/terms/`, **nicht** `elements/1.1`) für Aussagen über ein *Dokument*, `desc:` für Aussagen über *Code*. Schlüsseltabelle: `PHP_Ast_Scan::DESC_KEYS`. Im `/*@ … @*/`-Block macht `name::` einen Unterknoten (ein Doppelpunkt bleibt Text); Präfixe aus `PHP_Ast_Scan::HEAD_NAMESPACES` (zugleich der PEDL-Kopf) sind frei, andere erklärt der Block mit `xmlns:ex:: <uri>` (3.2.8). ⚠ `SVG_Overview_handle` schreibt bewusst weiter `elements/1.1` — Inkscape/CC-Konvention |
 | Registry-Befehle | `behavior/*.php` — per `glob` in `index.php:250` geladen |
 | Plugins | `PlugIn/`, registriert in `config/default.ini` unter `[short]` |
 
