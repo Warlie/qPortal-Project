@@ -73,11 +73,14 @@
 		            3.2.3 eine .pedl je PHP-Datei mit allen ihren Klassen; use_PEDL_file
 		            besucht jede .pedl nur einmal (vorher Endlosschleife bei zwei
 		            Klassen einer Datei, die voneinander erben).
+		            3.2.4 TARGET:TREE traegt zuerst ins Register ein (Identitaet per
+		            rdf:ID, eingebundene Dateien dort), der Baum bekommt nur das Bild
+		            der einen Datei; was danach im Register fehlt, wird gemeldet.
 		       4.0  wenn der PHP-Quelltext einmalig aus den Dokumenten heraus ersetzt wird.
 		            Dann ein neues Repository - der Bruch ist zu brutal fuer dieselbe
 		            Historie, und danach gibt es eher einen laufenden Strom als Versionen.
 		-->
-		<owl:versionInfo>3.2.3</owl:versionInfo>
+		<owl:versionInfo>3.2.4</owl:versionInfo>
 	</owl:Ontology>
 
 	<!-- Geprägt aus den pedl-Grundlagen. Interfaces und Traits sind Deklarationen

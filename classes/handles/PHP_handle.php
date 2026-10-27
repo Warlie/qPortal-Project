@@ -77,7 +77,121 @@ class PHP_handle extends Interface_handle
 		return $namespace;
 	}
 
+	/* Ohne TARGET:TREE der Bestand: die Datei samt eingebundenen Dateien ins Register.
+	*
+	*  Mit TARGET:TREE (3.2.4) zuerst GENAU DASSELBE - das Register ist der Ort der
+	*  Identitaet, dort traegt rdf:ID ein, ob eine Klasse geladen ist, und Abhaengigkeiten
+	*  lassen sich dort ohne Adressierungsfrage aufloesen (STW). Danach bekommt der eigene
+	*  Baum das Bild NUR dieser einen Datei. Weil das Register zuerst eingetragen hat,
+	*  behaelt es die Namen; die Kopie im Baum bleibt namenlos ("duplicate URI ... the
+	*  existing entry stays"). Bis 3.2.3 war es umgekehrt: die Anzeige nahm dem Register
+	*  den Namen. */
 	function parse_document($source)
+	{
+		if('tree' !== $this->destination(['TARGET' => $this->attribute_values['TARGET'] ?? '']))
+		{
+			$this->register_in_registry($source);
+			return;
+		}
+
+		$str_source = self::source_text($source);
+
+		//die Wurzel des eigenen Baums (rdf:RDF aus prepare)
+		$this->base_object->set_first_node();
+		$treePos = $this->base_object->position_stamp();
+
+		$this->register_in_registry($str_source);
+		$this->base_object->go_to_stamp($treePos);
+
+		$this->image_of_file($str_source, $treePos);
+	}
+
+	private static function source_text($source)
+	{
+		if(!($source instanceof FileHandle))return $source;
+
+		$str_source = '';
+		while(!$source->eof())
+			$str_source .= $source->get_line();
+		$source->close_File();
+
+		return $str_source;
+	}
+
+	/* Das Bild der einen Datei in den eigenen Baum. Gescannt wird mit den Includes, damit
+	*  die Ressourcenliste das seeAlso auf die .pedl der Eltern traegt; ausgelassen wird
+	*  alles, was aus einer anderen Datei kommt - das steht im Register. Keine .pedl von
+	*  hier: die schreibt der Registerweg. */
+	private function image_of_file(string $str_source, string $treePos)
+	{
+		global $logger_class;
+		require_once(__DIR__ . '/PHP_ast_scan.php');
+
+		try
+		{
+			$result = PHP_Ast_Scan::scan($str_source, $this->attribute_values['URI']);
+		}
+		catch (\PhpParser\Error $e)
+		{
+			$logger_class->setAssert("ERROR " . $this->attribute_values['URI']
+				. " is not parsable, no image written: " . $e->getMessage(), 0);
+			return;
+		}
+
+		$own = PHP_Ast_Scan::project_relative($this->attribute_values['URI']);
+		$foreign = [];
+		$needed  = [];
+
+		foreach($result as $entry)
+		{
+			$kind = $entry['meta']['kind'] ?? null;
+			if(!in_array($kind, ['class', 'interface', 'trait'], true))continue;
+
+			if($entry['file'] !== $own)
+			{
+				$foreign[] = $entry['meta']['name'];
+				continue;
+			}
+
+			$needed[] = $entry['meta']['name'];
+			if('' !== ($entry['meta']['extends'] ?? ''))$needed[] = $entry['meta']['extends'];
+			foreach($entry['meta']['implements'] ?? [] as $interface)$needed[] = $interface;
+		}
+
+		$this->verify_in_registry($needed);
+
+		$obj_class = new Obj_Class_Collection($result, $this->base_object, $foreign);
+
+		$this->base_object->go_to_stamp($treePos);
+		$this->base_object->use_ns_def_strict(true);
+		$obj_class->create_rdf_entry($this->base_object);
+		$this->base_object->use_ns_def_strict(false);
+		$this->base_object->go_to_stamp($treePos);
+	}
+
+	/* Ob etwas geladen ist, sagt die rdf:ID im Register (STW). Was danach fehlt, wurde
+	*  nicht gefunden - etwa ein require mit zusammengesetztem Pfad, dem der Scanner nicht
+	*  folgen kann. PHP-eigene Klassen und Interfaces (Exception, Countable) stehen nie
+	*  dort und werden uebergangen. */
+	private function verify_in_registry(array $names)
+	{
+		global $logger_class;
+
+		foreach(array_unique(array_map('trim', $names)) as $name)
+		{
+			$bare = ltrim($name, '\\');
+
+			if((class_exists($bare, false) || interface_exists($bare, false))
+				&& (new ReflectionClass($bare))->isInternal())continue;
+
+			if(!$this->base_object->isURIused('@registry_surface_system#' . $name))
+				$logger_class->setAssert('WARNING ' . $name . ' is not in the registry after loading '
+					. $this->attribute_values['URI'] . ' - not found, or included by a path the'
+					. ' scanner cannot follow (PHP_handle::verify_in_registry)', 0);
+		}
+	}
+
+	private function register_in_registry($source)
 	{
 		global $logger_class;
 		$corr_xml_file = str_replace(".php", ".pedl", $this->attribute_values['URI']);
@@ -88,15 +202,12 @@ class PHP_handle extends Interface_handle
 		$this->base_object->set_first_node();
 		
 		$xmlPos = $this->base_object->position_stamp();
-
-		/* Im eigenen Baum ist die Wurzel (rdf:RDF aus prepare) schon der Ort; sonst das
-		*  Register. TARGET kommt ueber handle_select als Attribut. */
-		if('tree' !== $this->destination(['TARGET' => $this->attribute_values['TARGET'] ?? '']))
-			$this->base_object->go_to_stamp(
+		$this->base_object->go_to_stamp(
 					$this->base_object->getControlUnit( $ws)->getPositionStampReg()
 				);		
 
-		
+		/* nach dem Sprung: die Liste ist je Baum, gemeint ist die des Registers. Im Bestand
+		*  stand load() schon dort, der Sprung wechselte den Baum nicht. */
 		$list = [];
 
 		foreach($this->base_object->array_Of_Objects_Related_To_Tag_Name('@registry_surface_system#PhpClass') as $value)
