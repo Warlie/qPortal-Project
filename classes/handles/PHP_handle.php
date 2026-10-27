@@ -100,7 +100,8 @@ class PHP_handle extends Interface_handle
 		$this->base_object->set_first_node();
 		$treePos = $this->base_object->position_stamp();
 
-		$this->register_in_registry($str_source);
+		//keine .pedl: TREE heisst, das Dokument ist geladen - eine .pedl laesst sich spaeter daraus erzeugen (STW, 3.2.5)
+		$this->register_in_registry($str_source, false);
 		$this->base_object->go_to_stamp($treePos);
 
 		$this->image_of_file($str_source, $treePos);
@@ -191,7 +192,7 @@ class PHP_handle extends Interface_handle
 		}
 	}
 
-	private function register_in_registry($source)
+	private function register_in_registry($source, bool $write_pedl = true)
 	{
 		global $logger_class;
 		$corr_xml_file = str_replace(".php", ".pedl", $this->attribute_values['URI']);
@@ -309,7 +310,8 @@ class PHP_handle extends Interface_handle
 			//here we create our entries in our registry
 			$obj_class->create_rdf_entry($this->base_object);
 
-			$this->create_new_PEDL_file($obj_class, $corr_xml_file);
+			if($write_pedl)
+				$this->create_new_PEDL_file($obj_class, $corr_xml_file);
 
 		//$myPrivateModel->save_file("UTF-8",false, $corr_xml_file);
 		//var_dump($handle->save_back("UTF-8"));
