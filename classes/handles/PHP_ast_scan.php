@@ -40,13 +40,13 @@ class PHP_Ast_Scan
 	/* Die Praefixe, die der PEDL-Kopf erklaert (PHP_handle::rdf_namespaces baut daraus
 	*  die Wurzel, in dieser Reihenfolge). Im /*@ ... @* /-Block sind sie ohne Erklaerung
 	*  frei; jeden anderen erklaert der Block selbst mit "xmlns:x:: <uri>" (3.2.8).
-	*  ⚠ xsd zeigt seit jeher auf rdf-schema, nicht auf XML Schema - nicht angefasst, die
-	*    .pedl-Dateien tragen es so. */
+	*  xsd zeigte bis 3.2.9 auf rdf-schema (seit dem ersten Upload, ebenso in TreeEngine
+	*  und den Workspaces); damit hatte die rdf-schema-URI zwei Praefixe. */
 	const HEAD_NAMESPACES = [
 		'owl'     => 'http://www.w3.org/2002/07/owl',
 		'rdf'     => 'http://www.w3.org/1999/02/22-rdf-syntax-ns',
 		'rdfs'    => 'http://www.w3.org/2000/01/rdf-schema',
-		'xsd'     => 'http://www.w3.org/2000/01/rdf-schema',
+		'xsd'     => 'http://www.w3.org/2001/XMLSchema',
 		'pedl'    => 'http://www.w3.org/2006/05/pedl-lib',
 		'dcterms' => self::NS_DCTERMS,
 		'desc'    => self::NS_DESC,

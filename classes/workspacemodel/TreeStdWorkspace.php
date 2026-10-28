@@ -55,7 +55,7 @@ private $objectList = array();
 		$namespace['xmlns:owl'] = 'http://www.w3.org/2002/07/owl';
 		$namespace['xmlns:rdf'] = 'http://www.w3.org/1999/02/22-rdf-syntax-ns';
 		$namespace['xmlns:rdfs'] = 'http://www.w3.org/2000/01/rdf-schema';
-		$namespace['xmlns:xsd'] = 'http://www.w3.org/2000/01/rdf-schema';
+		$namespace['xmlns:xsd'] = 'http://www.w3.org/2001/XMLSchema';
 		$namespace['xmlns:pedl'] = 'http://www.w3.org/2006/05/pedl-lib';
 		
 		//echo get_Class($this->my_Xml_Object);

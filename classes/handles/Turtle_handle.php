@@ -585,8 +585,8 @@ class Turtle_handle extends Interface_handle
             }
         }
 
-        // qPortal core hardcodes xmlns:xsd = rdfs namespace (historical bug in TreeEngine.php).
-        // Override with correct standard URIs so Turtle output is valid.
+        // Until 3.2.9 the core declared xmlns:xsd = rdfs namespace (TreeEngine.php and others).
+        // Fixed there; the override stays so documents written before still give valid Turtle.
         $prefixes['xsd']  = 'http://www.w3.org/2001/XMLSchema#';
         $prefixes['rdfs'] = 'http://www.w3.org/2000/01/rdf-schema#';
 

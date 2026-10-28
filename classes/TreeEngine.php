@@ -93,7 +93,7 @@ public function set_CurRef($new){ $this->obj_cur_ref->setdata($new,0);}
 		$namespace['xmlns:owl'] = 'http://www.w3.org/2002/07/owl';
 		$namespace['xmlns:rdf'] = 'http://www.w3.org/1999/02/22-rdf-syntax-ns';
 		$namespace['xmlns:rdfs'] = 'http://www.w3.org/2000/01/rdf-schema';
-		$namespace['xmlns:xsd'] = 'http://www.w3.org/2000/01/rdf-schema';
+		$namespace['xmlns:xsd'] = 'http://www.w3.org/2001/XMLSchema';
 		$namespace['xmlns:pedl'] = 'http://www.w3.org/2006/05/pedl-lib';
 		
 		$this->my_Xml_Object->createTree('http://www.w3.org/1999/02/22-rdf-syntax-ns','rdf:RDF', $namespace);
@@ -116,7 +116,7 @@ public function set_CurRef($new){ $this->obj_cur_ref->setdata($new,0);}
 		$namespace['xmlns:owl'] = 'http://www.w3.org/2002/07/owl';
 		$namespace['xmlns:rdf'] = 'http://www.w3.org/1999/02/22-rdf-syntax-ns';
 		$namespace['xmlns:rdfs'] = 'http://www.w3.org/2000/01/rdf-schema';
-		$namespace['xmlns:xsd'] = 'http://www.w3.org/2000/01/rdf-schema';
+		$namespace['xmlns:xsd'] = 'http://www.w3.org/2001/XMLSchema';
 		$namespace['xmlns:pedl'] = 'http://www.w3.org/2006/05/pedl-lib';
 		//Beschreibungsschicht: Dublin Core fuer title/creator/description, pedl-desc fuer den Rest
 		$namespace['xmlns:dcterms'] = PHP_Ast_Scan::NS_DCTERMS;
