@@ -445,9 +445,24 @@ class PHP_handle extends Interface_handle
 		 
 		 /* walk through seeAlso entries for preload relevant data */
 		 	foreach($myPrivateModel->array_Of_Objects_Related_To_Tag_Name('http://www.w3.org/2000/01/rdf-schema#seeAlso') as $seeAlso)
-		 		if(false !== ($data = $seeAlso->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#src')) && 
-		 			file_exists($data))
-		 				if(!$this->use_PEDL_file( $parser, $data, $seen))return false;
+		 		if(false !== ($data = $seeAlso->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#src')))
+		 		{
+		 			/* Fehlt die .pedl, auf die ein seeAlso zeigt - meist die der Elternklasse -,
+		 			*  ist auch diese hier nicht zu gebrauchen (3.2.13). Bis dahin wurde der
+		 			*  Verweis still uebersprungen: die Klasse kam ohne ihre Eltern ins Register,
+		 			*  ihr subClassOf zeigte ins Leere ("Missing RDF edge ref"), und jede Seite
+		 			*  mit diesem Plugin wurde 404. Neu entstand die fehlende .pedl nie - der
+		 			*  Hash des Kindes stimmte ja. Mit false wird die Datei gescannt, samt
+		 			*  Includes, und beide .pedl werden geschrieben. */
+		 			if(!file_exists($data))
+		 			{
+		 				$logger_class->setAssert("INFO " . $xml_file . " points to " . $data
+		 					. ", which is missing - rebuilding.", 0);
+		 				return false;
+		 			}
+
+		 			if(!$this->use_PEDL_file( $parser, $data, $seen))return false;
+		 		}
 
 		 /* -------------------------------------------------------------------------- */
 		 
