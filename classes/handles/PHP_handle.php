@@ -6,6 +6,17 @@
 
 class PHP_handle extends Interface_handle 
 {
+	/* Formatnummer der .pedl (3.2.14). Steht als pedl:format an der Wurzel jeder .pedl;
+	*  use_PEDL_file nimmt eine .pedl nur, wenn sie dieselbe Nummer traegt - sonst wird
+	*  die PHP-Datei neu gescannt und die .pedl neu geschrieben. HOCHZAEHLEN, sobald sich
+	*  aendert, was in einer .pedl steht (Kopf, Knoten, Attribute) - nicht bei jeder
+	*  Systemversion. So erneuern sich alle .pedl nach einer Aenderung am Erzeuger von
+	*  selbst, ohne dass eine PHP-Datei angefasst wird (STW: "das Problem bekommen wir
+	*  jetzt oefter, da wir herumprobieren muessen").
+	*    1  erste Nummer (3.2.14); alle .pedl davor tragen keine und werden einmal neu
+	*       geschrieben - auch die mit dem alten xmlns:xsd-Kopf von vor 3.2.9 */
+	const PEDL_FORMAT = 1;
+
 	public $attribute_values = array();
 	var $base_object = null;
 	var $heads = array();
@@ -378,6 +389,9 @@ class PHP_handle extends Interface_handle
 		//echo get_Class($this->my_Xml_Object);
 	
 		
+		//die Formatnummer an die Wurzel - use_PEDL_file prueft sie (3.2.14)
+		$namespace['pedl:format'] = (string) self::PEDL_FORMAT;
+
 		$myPrivateModel->createTree('@registry_surface_system','rdf:RDF', $namespace);
 		foreach ($classes_of_file as $pedl_class)
 		{
@@ -417,6 +431,16 @@ class PHP_handle extends Interface_handle
 		 $myPrivateModel ->load($xml_file, false);
 		 $myPrivateModel->set_first_node();
 		 $parser->set_first_node();
+
+		 /* Eine .pedl aus einem anderen Format ist veraltet, auch wenn ihr Hash stimmt
+		 *  (3.2.14, siehe PEDL_FORMAT). */
+		 $format = $myPrivateModel->show_xmlelement()->get_ns_attribute('http://www.w3.org/2006/05/pedl-lib#format');
+		 if((string) self::PEDL_FORMAT !== (string) $format)
+		 {
+		 	$logger_class->setAssert("INFO " . $xml_file . " has pedl format "
+		 		. (false === $format ? 'none' : $format) . ", expected " . self::PEDL_FORMAT . " - rebuilding.", 0);
+		 	return false;
+		 }
 		
 		 	$code_resources = $myPrivateModel->array_Of_Objects_Related_To_Tag_Name('http://www.w3.org/2006/05/pedl-lib#hasCodeResource');
 		 	if(count($code_resources) === 0) return false;

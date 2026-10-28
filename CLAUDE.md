@@ -809,6 +809,10 @@ Token sieht es nie. ⚠ Im Kern liegt **kein** Adapter: eine zweite Fassung lief
   ⚠ Erzeugte Artefakte (`*.pedl`, `*_shortcut.php`) sind ebenfalls ignoriert: git holt sie
   nicht zurück, und eine gelöschte `.pedl` kommt erst beim nächsten **Gebrauch** ihres
   Plugins wieder, nicht beim nächsten Seitenaufruf.
+  Seit 3.2.14 trägt jede `.pedl` `pedl:format` an der Wurzel (`PHP_handle::PEDL_FORMAT`);
+  eine andere Nummer heißt neu schreiben. **Wer ändert, was in einer `.pedl` steht, zählt
+  die Nummer hoch** — dann erneuern sich alle von selbst, ohne eine PHP-Datei anzufassen.
+  Fehlt die `.pedl` hinter einem `seeAlso` (Elternklasse), wird seit 3.2.13 neu gescannt.
 - **Kleinschrittig, additiv daneben.** Bestandsverhalten nicht ändern, wo es niemand
   verlangt hat; neue Parameter mit Vorgaben, die alte Aufrufe unberührt lassen.
 - **Kein DOM.** SAX bleibt, flache Arrays statt Objektgraphen — wegen Portierbarkeit bis C
