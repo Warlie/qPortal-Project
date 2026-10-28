@@ -50,8 +50,17 @@ Ohne ihn käme er seit `[intern] anonymous = 0` gar nicht mehr herein, und er st
 Stufe 0 — `__save_back` verlangt 10. Auf einer Installation ohne Schlüssel fällt er auf den
 Sitzungsweg zurück.
 
-`./server.sh` startet `symfony server:start` auf **https**; die Prüfstände sprechen dann
-`https://localhost:8002`. Mit `php -S` geht nur http — dann `QPORTAL_URL` setzen.
+`./server.sh` startet `symfony server:start --port=8001` auf **https** — diese Arbeitskopie
+läuft also unter `https://localhost:8001`. ⚠ Die Prüfstände haben `https://localhost:8002`
+als Vorgabe eingebaut; hier darum beide Variablen setzen:
+
+```bash
+export QPORTAL_URL=https://localhost:8001/index.php
+export QPORTAL_FIXTURE_URL=https://localhost:8001/test/Integration/fixture_entry.php
+```
+
+Mit `php -S` geht nur http — dann ebenso `QPORTAL_URL` setzen. Claudes Prüfskripte
+(`.claude/tools/run_marks.sh` u. a., ungetrackt) setzen beides schon.
 
 ## Baum ohne index.php hochfahren
 
