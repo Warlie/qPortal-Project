@@ -179,7 +179,10 @@ Das Vokabular steht seit `fb32f2e` in **`ontologies/registry_surface.owl`**, nic
 `tag_open()`-Folge in `TreeEngine::build_up()`. Ein Name wird dort aus einer pedl-Grundlage
 **geprägt** und ist danach als Tag brauchbar — eine PHP-Klasse je Tag braucht es nicht
 (`<pedl:Object_Class rdf:ID="PhpClass"/>`, danach `<PhpClass rdf:ID="System"/>`). So
-entstehen `PhpInterface`, `PhpTrait`, `PhpProperty`, `Funktion`.
+entstehen `PhpInterface`, `PhpTrait`, `PhpProperty`, `Function` (`tree`, `first`, `final`;
+bis 3.2.12 `Funktion`, ein Tippfehler). Die gebundene Funktion mit Empfänger ist
+`pedl:Object_Function`, die freie ohne Empfänger `pedl:Free_Function` — gedacht für den Code
+einer PHP-Datei außerhalb von Klassen.
 
 **Die Naht:** in PHP bleibt nur, was sich nicht aufschreiben lässt — der Bindungsblock
 (`<System>` mit `pedl:ParameterCollection`, wo `cdata_ref()` echte Objekte einhängt und

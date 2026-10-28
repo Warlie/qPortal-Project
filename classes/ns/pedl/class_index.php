@@ -18,7 +18,8 @@ require_once('pedl_hasFunctions.php');
 require_once('pedl_Functions.php');
 require_once('pedl_hasParameter.php');
 require_once('pedl_ParameterCollection.php');
-require_once('pedl_Object_Funktion.php');
+require_once('pedl_Object_Function.php');
+require_once('pedl_Free_Function.php');
 require_once('pedl_Object_Constructor.php');
 require_once('pedl_Object_Parameter.php');
 require_once('pedl_name.php');
@@ -43,11 +44,12 @@ class PEDL_factory
 			$this->node['script'] = new PEDL_Script('script', $ns);
 
 			$this->node['Object_Class'] = new PEDL_Object_Class('Object_Class', $ns);
-			$this->node['hasFunktions'] = new PEDL_hasFunctions('hasFunktions', $ns);
-			$this->node['Funktions'] = new PEDL_Functions('Funktions', $ns);
+			$this->node['hasFunctions'] = new PEDL_hasFunctions('hasFunctions', $ns);
+			$this->node['Functions'] = new PEDL_Functions('Functions', $ns);
 			$this->node['hasParameter'] = new PEDL_hasFunctions('hasParameter', $ns);
 			$this->node['ParameterCollection'] = new PEDL_Functions('ParameterCollection', $ns);
-			$this->node['Object_Funktion'] = new PEDL_Object_Funktion('Object_Funktion', $ns);
+			$this->node['Object_Function'] = new PEDL_Object_Function('Object_Function', $ns);
+			$this->node['Free_Function'] = new PEDL_Free_Function('Free_Function', $ns);
 			$this->node['Object_Constructor'] = new PEDL_Object_Constructor('Object_Constructor', $ns);
 			$this->node['Object_Parameter'] = new PEDL_Object_Parameter('Object_Parameter', $ns);
 			$this->node['hasCodeResource'] = new PEDL_hasCodeResource('hasCodeResource', $ns);

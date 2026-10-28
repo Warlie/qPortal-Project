@@ -851,7 +851,7 @@ else
 {
 if(get_class($dom->show_xmlelement()) == 'PEDL_Object_Constructor')$color = 'aa22aa';
 if(get_class($dom->show_xmlelement()) == 'PEDL_Object_Class')$color = '000000';
-if(get_class($dom->show_xmlelement()) == 'PEDL_Object_Funktion')$color = 'ff2222';
+if(get_class($dom->show_xmlelement()) == 'PEDL_Object_Function')$color = 'ff2222';
 if(get_class($dom->show_xmlelement()) == 'PEDL_Object_Parameter')$color = 'aaaa00';
 }
 $this->idxtable_nodePos[$pos]['x'] = $dblx;

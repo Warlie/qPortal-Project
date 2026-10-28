@@ -1066,8 +1066,8 @@ else
 		$xml->tag_close($this, "pedl:Object_Class");
 		
 		$attrib = array('rdf:ID' => 'PhpMethod');
-		$xml->tag_open($this, "pedl:Object_Funktion", $attrib);
-		$xml->tag_close($this, "pedl:Object_Funktion");
+		$xml->tag_open($this, "pedl:Object_Function", $attrib);
+		$xml->tag_close($this, "pedl:Object_Function");
 		
 		$attrib = array('rdf:ID' => 'PhpConstructor');
 		$xml->tag_open($this, "pedl:Object_Constructor", $attrib);

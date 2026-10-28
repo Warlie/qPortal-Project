@@ -132,7 +132,7 @@ function event_message_in($type,&$obj)
 	//var_dump($this);
 	
 	//receive date from a funtion object, if there is a function-object, it causes a alterdataevent
-	$send = ["Identifire"=>"http://www.w3.org/2006/05/pedl-lib#Object_Funktion", "Command"=> ["Name"=> "__get_data", "Attribute"=>[], "Value"=> "0"]]; //  'http://www.w3.org/2006/05/pedl-lib#Object_Funktion?__get_data=0' 			
+	$send = ["Identifire"=>"http://www.w3.org/2006/05/pedl-lib#Object_Function", "Command"=> ["Name"=> "__get_data", "Attribute"=>[], "Value"=> "0"]]; //  'http://www.w3.org/2006/05/pedl-lib#Object_Function?__get_data=0' 			
 
 		//var_dump("asks for data", $send);
 	$this->send_messages($send,$Event);

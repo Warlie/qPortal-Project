@@ -14,10 +14,10 @@
 	     Darum Namensraum und Namen von qPortal statt pedl.js:
 	       pedl.js  http://www.auster-gmbh.de/2006/05/pedl-lib
 	       qPortal  http://www.w3.org/2006/05/pedl-lib       (classes/ns/class_index.php:40)
-	       Object_Function   -> Object_Funktion
-	       hasFunction       -> hasFunktions
-	       Functions         -> Funktions
+	       hasFunction       -> hasFunctions
 	       object_parameter  -> Object_Parameter   (das Label in pedl.js hiess schon so)
+	     Bis 3.2.12 schrieb qPortal Object_Funktion, hasFunktions, Funktions - ein
+	     Tippfehler (STW), seitdem wie pedl.js.
 	     Uebernommen: createFullBagEntry(1, Typ, URI, Label, Kommentar, Typ) als
 	     <Typ rdf:ID>, mit rdfs:label/rdfs:comment; setIDGraph(S, P, O) als Aussage an S;
 	     setManuallyGraph(hasFunction, range, createUnionOf(...)) als owl:unionOf.
@@ -75,8 +75,8 @@
 		<rdfs:subClassOf rdf:resource="#Class"/>
 	</owl:Class>
 
-	<owl:Class rdf:ID="Object_Funktion">
-		<rdfs:label>pedl:Object_Funktion</rdfs:label>
+	<owl:Class rdf:ID="Object_Function">
+		<rdfs:label>pedl:Object_Function</rdfs:label>
 		<rdfs:comment>function of a Object Class</rdfs:comment>
 		<datatype rdf:resource="http://www.w3.org/2000/01/rdf-schema#Resource"/>
 	</owl:Class>
@@ -91,8 +91,8 @@
 		<rdfs:comment>Superclass for all PEDL data types (extends rdfs:Datatype beyond literals)</rdfs:comment>
 	</rdfs:Datatype>
 
-	<rdf:Seq rdf:ID="Funktions">
-		<rdfs:label>pedl:Funktions</rdfs:label>
+	<rdf:Seq rdf:ID="Functions">
+		<rdfs:label>pedl:Functions</rdfs:label>
 		<rdfs:comment>contains functions</rdfs:comment>
 	</rdf:Seq>
 
@@ -118,20 +118,20 @@
 	<rdf:value rdf:ID="Object_Parameter">
 		<rdfs:label>pedl:Object_Parameter</rdfs:label>
 		<rdfs:comment>Parameter of a function</rdfs:comment>
-		<rdfs:domain rdf:resource="#Object_Funktion"/>
+		<rdfs:domain rdf:resource="#Object_Function"/>
 		<rdfs:range rdf:resource="http://www.w3.org/2000/01/rdf-schema#Resource"/>
 		<datatype rdf:resource="http://www.w3.org/2000/01/rdf-schema#Resource"/>
 	</rdf:value>
 
-	<rdf:Property rdf:ID="hasFunktions">
-		<rdfs:label>pedl:hasFunktions</rdfs:label>
+	<rdf:Property rdf:ID="hasFunctions">
+		<rdfs:label>pedl:hasFunctions</rdfs:label>
 		<rdfs:comment>relation between pedl:class and its functions</rdfs:comment>
 		<rdfs:domain rdf:resource="#Class"/>
 		<rdfs:range>
 			<owl:Class>
 				<owl:unionOf rdf:parseType="Collection">
 					<owl:Class rdf:about="#Instance-Function"/>
-					<rdf:Description rdf:about="#Funktions"/>
+					<rdf:Description rdf:about="#Functions"/>
 				</owl:unionOf>
 			</owl:Class>
 		</rdfs:range>
@@ -167,8 +167,13 @@
 	<!-- ============================ 2. von qPortal registriert, in pedl.js nicht -->
 	<!-- Nur Name und Knotenklasse; was sie tun, steht im Code, nicht hier. Die Art
 	     (Klasse, Eigenschaft, Folge) folgt der Knotenklasse, die sie teilen:
-	     hasParameter nimmt PEDL_hasFunctions wie hasFunktions, ParameterCollection
-	     PEDL_Functions wie Funktions. -->
+	     hasParameter nimmt PEDL_hasFunctions wie hasFunctions, ParameterCollection
+	     PEDL_Functions wie Functions. -->
+
+	<owl:Class rdf:ID="Free_Function">
+		<rdfs:label>pedl:Free_Function</rdfs:label>
+		<rdfs:comment>die freie Funktion, ohne Empfaenger, ueber ihren Namen gerufen - Gegenstueck zu Object_Function (3.2.12). Knotenklasse PEDL_Free_Function, ohne Verhalten</rdfs:comment>
+	</owl:Class>
 
 	<owl:Class rdf:ID="Object_Constructor">
 		<rdfs:label>pedl:Object_Constructor</rdfs:label>
@@ -177,12 +182,12 @@
 
 	<rdf:Property rdf:ID="hasParameter">
 		<rdfs:label>pedl:hasParameter</rdfs:label>
-		<rdfs:comment>Knotenklasse PEDL_hasFunctions, wie hasFunktions</rdfs:comment>
+		<rdfs:comment>Knotenklasse PEDL_hasFunctions, wie hasFunctions</rdfs:comment>
 	</rdf:Property>
 
 	<rdf:Seq rdf:ID="ParameterCollection">
 		<rdfs:label>pedl:ParameterCollection</rdfs:label>
-		<rdfs:comment>Knotenklasse PEDL_Functions, wie Funktions. Im Bindungsblock von TreeEngine::build_up() haengen hier echte Objekte (cdata_ref).</rdfs:comment>
+		<rdfs:comment>Knotenklasse PEDL_Functions, wie Functions. Im Bindungsblock von TreeEngine::build_up() haengen hier echte Objekte (cdata_ref).</rdfs:comment>
 	</rdf:Seq>
 
 	<rdf:Property rdf:ID="hasCodeResource">

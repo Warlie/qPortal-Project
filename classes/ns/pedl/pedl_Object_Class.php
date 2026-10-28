@@ -318,7 +318,7 @@ function event_Instance(&$instance,$type,&$obj)
 		{
 			
 			//collects all Object_functions and lists it up 
-			if($this->getRefnext($i)->is_Node('http://www.w3.org/2006/05/pedl-lib#Object_Funktion'))
+			if($this->getRefnext($i)->is_Node('http://www.w3.org/2006/05/pedl-lib#Object_Function'))
 				{
 					$go = true;
 					$func = &$this->getRefnext($i);
@@ -460,7 +460,7 @@ private function find_functions(&$class, array &$result,$priority = 1)
 	for($i = 0; $class->index_max() > $i;$i++)
 		{
 			//echo 'booh';
-			if($class->getRefnext($i)->is_Node('http://www.w3.org/2006/05/pedl-lib#Object_Funktion'))
+			if($class->getRefnext($i)->is_Node('http://www.w3.org/2006/05/pedl-lib#Object_Function'))
 				{
 					$go = true;
 					

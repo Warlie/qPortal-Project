@@ -40,7 +40,7 @@
 * &cloning(&$prev_obj) : add node with all branches to the prev node 
 */
 
-class PEDL_Object_Funktion extends Interface_node
+class PEDL_Object_Function extends Interface_node
 {
 var $name = 'empty';
 var $type = 'none';
@@ -73,7 +73,7 @@ private array $functions = [ 'param_out' => function ($obj,$array) {return $obj-
 
 function &get_Instance()
 {
-return new PEDL_Object_Funktion();
+return new PEDL_Object_Function();
 }
 
 function set_id_name($id)
@@ -110,7 +110,7 @@ protected function event_readdata($own)
 //		echo ' in event_readdata( ';
 //echo $this->full_URI() . "\n";
 	global $logger_class;
-	//echo '             data in "' . $this->full_URI() . '" will read and causes an readdataevent ' . '(PEDL_Object_Funktion:event_readdata)' . "\n";
+	//echo '             data in "' . $this->full_URI() . '" will read and causes an readdataevent ' . '(PEDL_Object_Function:event_readdata)' . "\n";
 	$logger_class->setAssert('event_readdata in "' . $this->full_URI() . '" will read and causes an readdataevent' ,5);
 
 		if($own)

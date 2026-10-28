@@ -93,18 +93,21 @@
             im Text (vorher dahinter); Pruefstand test/Integration/tree_subtree.php.
             3.2.11 <first> zaehlt nicht als gefundene Seite - vorher kam in jedem
             Dokument mit <first> nie die 404, sondern die zuletzt geladene Vorlage.
+            3.2.12 Tippfehler Funktion -> Function (Object_Function, hasFunctions,
+            Functions, der gepraegte Name Function); neu pedl:Free_Function, die freie
+            Funktion ohne Empfaenger, fuer Code ausserhalb von Klassen.
 		       4.0  wenn der PHP-Quelltext einmalig aus den Dokumenten heraus ersetzt wird.
 		            Dann ein neues Repository - der Bruch ist zu brutal fuer dieselbe
 		            Historie, und danach gibt es eher einen laufenden Strom als Versionen.
 		-->
-		<owl:versionInfo>3.2.11</owl:versionInfo>
+		<owl:versionInfo>3.2.12</owl:versionInfo>
 	</owl:Ontology>
 
 	<!-- Geprägt aus den pedl-Grundlagen. Interfaces und Traits sind Deklarationen
 	     wie eine Klasse und kommen aus derselben Grundlage; Eigenschaften und
 	     Konstanten sind benannte Plätze und nehmen die Parameter-Grundlage. -->
 	<pedl:Object_Class       rdf:ID="PhpClass"/>
-	<pedl:Object_Funktion    rdf:ID="PhpMethod"/>
+	<pedl:Object_Function    rdf:ID="PhpMethod"/>
 	<pedl:Object_Constructor rdf:ID="PhpConstructor"/>
 	<pedl:Object_Parameter   rdf:ID="PhpParameter"/>
 	<pedl:Object_Class       rdf:ID="PhpInterface"/>
@@ -154,13 +157,19 @@
 	     (rdf_ID.php:57 / rdf_about.php:83): ohne '#' gilt der Namensraum dieses
 	     Bogens, also ein NEUER Name; mit '#' der davor, also der vorhandene
 	     tree-Knoten aus classes/ns/tree/class_index.php.
-	     tree:tree ist eine FREIE Funktion — sie wird über ihren Namen gerufen,
-	     die Argumente sind die restliche Namensliste der Nachricht. Darum nicht
-	     pedl:Object_Funktion, die braucht einen Empfänger. -->
-	<pedl:Object_Class rdf:ID="Funktion"/>
-	<Funktion rdf:about="http://www.trscript.de/tree#tree"/>
-	<Funktion rdf:about="http://www.trscript.de/tree#first"/>
-	<Funktion rdf:about="http://www.trscript.de/tree#final"/>
+	     tree, first und final sind derselbe Typ (TREE_tree) und werden gleich
+	     behandelt (STW): Function aus pedl:Object_Class. Eine Object_Class ist
+	     eine Sammlung von Object_Function, und so lassen sich content, program und
+	     template unter ihnen sehen - auch wenn das vom klassischen Klassenkonzept
+	     weit abweicht. Bis 3.2.12 hiess der Name "Funktion" (ein Tippfehler, wie
+	     Object_Funktion).
+	     pedl:Free_Function (die freie Funktion ohne Empfaenger, 3.2.12) wird hier
+	     NICHT benutzt - sie ist fuer den Code einer PHP-Datei ausserhalb von
+	     Klassen da. -->
+	<pedl:Object_Class rdf:ID="Function"/>
+	<Function rdf:about="http://www.trscript.de/tree#tree"/>
+	<Function rdf:about="http://www.trscript.de/tree#first"/>
+	<Function rdf:about="http://www.trscript.de/tree#final"/>
 
 	<!-- tree:name als Bezeichner - aber nur, wo das eine Aussage ist.
 	     subPropertyOf sagt: tree:name tut, was rdf:ID tut. Was es NICHT sagt, und

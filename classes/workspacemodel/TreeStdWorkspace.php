@@ -79,8 +79,8 @@ private $objectList = array();
 		$this->my_Xml_Object->tag_close($this, "pedl:Object_Class");
 		
 		$attrib = array('rdf:ID' => 'PhpMethod');
-		$this->my_Xml_Object->tag_open($this, "pedl:Object_Funktion", $attrib);
-		$this->my_Xml_Object->tag_close($this, "pedl:Object_Funktion");
+		$this->my_Xml_Object->tag_open($this, "pedl:Object_Function", $attrib);
+		$this->my_Xml_Object->tag_close($this, "pedl:Object_Function");
 		
 		$attrib = array('rdf:ID' => 'PhpConstructor');
 		$this->my_Xml_Object->tag_open($this, "pedl:Object_Constructor", $attrib);
@@ -195,7 +195,7 @@ private $objectList = array();
 		$this->my_Xml_Object->set_node_attrib('rdf:ID','PhpClass');
 		$this->my_Xml_Object->parent_node();
 		
-		$this->my_Xml_Object->create_Ns_Node("pedl:Object_Funktion");
+		$this->my_Xml_Object->create_Ns_Node("pedl:Object_Function");
 		$this->my_Xml_Object->set_node_attrib('rdf:ID','PhpMethod');
 		$this->my_Xml_Object->parent_node();
 		
