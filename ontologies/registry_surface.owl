@@ -91,11 +91,13 @@
             Upload falsch, in TreeEngine, den Workspaces und dem PEDL-Kopf).
             3.2.10 was ein subtree in einem element einhaengt, steht an seiner Stelle
             im Text (vorher dahinter); Pruefstand test/Integration/tree_subtree.php.
+            3.2.11 <first> zaehlt nicht als gefundene Seite - vorher kam in jedem
+            Dokument mit <first> nie die 404, sondern die zuletzt geladene Vorlage.
 		       4.0  wenn der PHP-Quelltext einmalig aus den Dokumenten heraus ersetzt wird.
 		            Dann ein neues Repository - der Bruch ist zu brutal fuer dieselbe
 		            Historie, und danach gibt es eher einen laufenden Strom als Versionen.
 		-->
-		<owl:versionInfo>3.2.10</owl:versionInfo>
+		<owl:versionInfo>3.2.11</owl:versionInfo>
 	</owl:Ontology>
 
 	<!-- Geprägt aus den pedl-Grundlagen. Interfaces und Traits sind Deklarationen

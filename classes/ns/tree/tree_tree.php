@@ -398,7 +398,12 @@ $obj->set_node($this);
 			,$obj);
 		
 		
-		$obj->myrequester->found_relevant_page(); // found relevant page
+		/* <first> laeuft bei JEDEM Aufruf und ist keine Seite (3.2.11). Es erbt diesen
+		*  Zweig; bis dahin galt in jedem Dokument mit <first> jede Adresse als gefunden,
+		*  die 404 kam nie, und ausgegeben wurde die zuletzt geladene Vorlage - in
+		*  template/xml.xml die pedl_def.owl aus dem <first>. */
+		if(!($this instanceof TREE_first))
+			$obj->myrequester->found_relevant_page(); // found relevant page
 		
 		return true;
 		/*
