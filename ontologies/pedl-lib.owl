@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	PEDL-Lib - Uebersicht ueber das Vokabular von PEDL (Program Element Definition
+	Language), so wie qPortal es fuehrt.
+
+	Eine UEBERSICHT, kein Vokabular des Systems: niemand laedt diese Datei. Die Namen
+	entstehen in der Fabrik (classes/ns/pedl/class_index.php), das Vokabular des
+	Bogens steht in registry_surface.owl. Wer diese Datei laedt, praegt Namen in einen
+	Namensraum, dessen Knoten die Fabrik schon stellt - dort gewinnt der erste.
+
+	Herkunft (2026-10-28):
+	  1. Die Definitionen aus anttree/pedl.js (STW; in ~/rauhnacht/qPortal-Project, Stand
+	     7. Jun). anttree kam aktiv nie zum Einsatz - es gilt, was qPortal macht (STW).
+	     Darum Namensraum und Namen von qPortal statt pedl.js:
+	       pedl.js  http://www.auster-gmbh.de/2006/05/pedl-lib
+	       qPortal  http://www.w3.org/2006/05/pedl-lib       (classes/ns/class_index.php:40)
+	       Object_Function   -> Object_Funktion
+	       hasFunction       -> hasFunktions
+	       Functions         -> Funktions
+	       object_parameter  -> Object_Parameter   (das Label in pedl.js hiess schon so)
+	     Uebernommen: createFullBagEntry(1, Typ, URI, Label, Kommentar, Typ) als
+	     <Typ rdf:ID>, mit rdfs:label/rdfs:comment; setIDGraph(S, P, O) als Aussage an S;
+	     setManuallyGraph(hasFunction, range, createUnionOf(...)) als owl:unionOf.
+	     NICHT uebernommen - Verhalten, kein Vokabular: die setBehavior-Funktionen an
+	     Object_Function, object_parameter, script, pipe_in, pipe, setValue, call_function,
+	     und handling = TAG an pedl:event. rdfs:Datatype steht in pedl.js als eigener
+	     Eintrag, weil der Baum dort die Oberklasse erst anlegen muss; OWL kennt es.
+	  2. Was qPortal registriert, ohne dass pedl.js es definiert (PEDL_factory).
+	  3. Die Attribute, die PHP_handle beim Abbilden einer PHP-Datei schreibt - ohne eigene
+	     Knotenklasse.
+
+	Gepraegt wird wie im Registrierungsbogen: der Typ ist der Tag (<pedl:Class
+	rdf:ID="pipe"/>), im Prototyping von qPortal zugleich Instanz von und Unterklasse von.
+	Mit '#' an den Namensraeumen, damit auch ein gewoehnlicher RDF-Leser die Datei nimmt
+	(rapper: gueltig); qPortal streicht das '#' beim Parsen ohnehin.
+-->
+<rdf:RDF
+	xmlns="http://www.w3.org/2006/05/pedl-lib#"
+	xml:base="http://www.w3.org/2006/05/pedl-lib"
+	xmlns:pedl="http://www.w3.org/2006/05/pedl-lib#"
+	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+	xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+	xmlns:owl="http://www.w3.org/2002/07/owl#">
+
+	<owl:Ontology rdf:about="http://www.w3.org/2006/05/pedl-lib">
+		<rdfs:label>PEDL-Lib</rdfs:label>
+		<rdfs:comment>Program Element Device Language</rdfs:comment>
+		<!-- pedl.js: getNameSpaceObj(xlink) + setGraphObj(owl:imports). Davor steht ein
+		     zweites owl:imports gleich nach dem Ontologie-Knoten, ohne vorher geholten
+		     Namensraum - vermutlich auf owl selbst; nicht uebernommen. -->
+		<owl:imports rdf:resource="http://www.w3.org/1999/xlink"/>
+	</owl:Ontology>
+
+	<!-- ================================================ 1. aus pedl.js: Klassen -->
+
+	<owl:Class rdf:ID="Instance-Function">
+		<rdfs:label>Instance-Function</rdfs:label>
+		<rdfs:comment>Class, which is direct a function</rdfs:comment>
+	</owl:Class>
+
+	<owl:Class rdf:ID="Functional-Class">
+		<rdfs:label>pedl:Functional-Class</rdfs:label>
+		<rdfs:comment>Class, which is direct a function</rdfs:comment>
+	</owl:Class>
+
+	<owl:Class rdf:ID="Class">
+		<rdfs:label>pedl:Class</rdfs:label>
+		<rdfs:comment>Class, which offers special behaviors</rdfs:comment>
+	</owl:Class>
+
+	<owl:Class rdf:ID="Object_Class">
+		<rdfs:label>pedl:Object_Class</rdfs:label>
+		<rdfs:comment>signs an object with functions to call</rdfs:comment>
+		<!-- pedl.js: Object_Class is a pedl:Class (can carry hasFunction declarations) -->
+		<rdfs:subClassOf rdf:resource="#Class"/>
+	</owl:Class>
+
+	<owl:Class rdf:ID="Object_Funktion">
+		<rdfs:label>pedl:Object_Funktion</rdfs:label>
+		<rdfs:comment>function of a Object Class</rdfs:comment>
+		<datatype rdf:resource="http://www.w3.org/2000/01/rdf-schema#Resource"/>
+	</owl:Class>
+
+	<owl:Class rdf:ID="Result">
+		<rdfs:label>pedl:Result</rdfs:label>
+		<rdfs:comment>result of function</rdfs:comment>
+	</owl:Class>
+
+	<rdfs:Datatype rdf:ID="Datatype">
+		<rdfs:label>pedl:Datatype</rdfs:label>
+		<rdfs:comment>Superclass for all PEDL data types (extends rdfs:Datatype beyond literals)</rdfs:comment>
+	</rdfs:Datatype>
+
+	<rdf:Seq rdf:ID="Funktions">
+		<rdfs:label>pedl:Funktions</rdfs:label>
+		<rdfs:comment>contains functions</rdfs:comment>
+	</rdf:Seq>
+
+	<Class rdf:ID="pipe">
+		<rdfs:label>pedl:pipe</rdfs:label>
+		<rdfs:comment>a data-pipe</rdfs:comment>
+	</Class>
+
+	<Object_Class rdf:ID="setValue">
+		<rdfs:label>pedl:setValue</rdfs:label>
+		<rdfs:comment>element to save a value to start a process</rdfs:comment>
+	</Object_Class>
+
+	<!-- =========================================== 1. aus pedl.js: Eigenschaften -->
+
+	<rdf:Property rdf:ID="datatype">
+		<rdfs:label>pedl:datatype</rdfs:label>
+		<rdfs:comment>Declares the pedl:Datatype of a parameter or function result</rdfs:comment>
+		<rdfs:range rdf:resource="#Datatype"/>
+	</rdf:Property>
+
+	<!-- In pedl.js vom Typ rdf:value. -->
+	<rdf:value rdf:ID="Object_Parameter">
+		<rdfs:label>pedl:Object_Parameter</rdfs:label>
+		<rdfs:comment>Parameter of a function</rdfs:comment>
+		<rdfs:domain rdf:resource="#Object_Funktion"/>
+		<rdfs:range rdf:resource="http://www.w3.org/2000/01/rdf-schema#Resource"/>
+		<datatype rdf:resource="http://www.w3.org/2000/01/rdf-schema#Resource"/>
+	</rdf:value>
+
+	<rdf:Property rdf:ID="hasFunktions">
+		<rdfs:label>pedl:hasFunktions</rdfs:label>
+		<rdfs:comment>relation between pedl:class and its functions</rdfs:comment>
+		<rdfs:domain rdf:resource="#Class"/>
+		<rdfs:range>
+			<owl:Class>
+				<owl:unionOf rdf:parseType="Collection">
+					<owl:Class rdf:about="#Instance-Function"/>
+					<rdf:Description rdf:about="#Funktions"/>
+				</owl:unionOf>
+			</owl:Class>
+		</rdfs:range>
+	</rdf:Property>
+
+	<rdf:Property rdf:ID="script">
+		<rdfs:label>pedl:script</rdfs:label>
+		<rdfs:comment>groundproperty for script extensions</rdfs:comment>
+	</rdf:Property>
+
+	<rdf:Property rdf:ID="pipe_in">
+		<rdfs:label>pedl:pipe_in</rdfs:label>
+		<rdfs:comment>transports a dataset to domain</rdfs:comment>
+		<rdfs:range rdf:resource="#pipe"/>
+	</rdf:Property>
+
+	<rdf:Property rdf:ID="pipe_out">
+		<rdfs:label>pedl:pipe_out</rdfs:label>
+		<rdfs:comment>transports a dataset to range</rdfs:comment>
+		<rdfs:range rdf:resource="#pipe"/>
+	</rdf:Property>
+
+	<rdf:Property rdf:ID="call_function">
+		<rdfs:label>pedl:call_function</rdfs:label>
+		<rdfs:comment>element to start a process</rdfs:comment>
+	</rdf:Property>
+
+	<rdf:Property rdf:ID="event">
+		<rdfs:label>pedl:event</rdfs:label>
+		<rdfs:comment>event listener name that triggers a pipeline element</rdfs:comment>
+	</rdf:Property>
+
+	<!-- ============================ 2. von qPortal registriert, in pedl.js nicht -->
+	<!-- Nur Name und Knotenklasse; was sie tun, steht im Code, nicht hier. Die Art
+	     (Klasse, Eigenschaft, Folge) folgt der Knotenklasse, die sie teilen:
+	     hasParameter nimmt PEDL_hasFunctions wie hasFunktions, ParameterCollection
+	     PEDL_Functions wie Funktions. -->
+
+	<owl:Class rdf:ID="Object_Constructor">
+		<rdfs:label>pedl:Object_Constructor</rdfs:label>
+		<rdfs:comment>Knotenklasse PEDL_Object_Constructor (classes/ns/pedl/pedl_Object_Constructor.php)</rdfs:comment>
+	</owl:Class>
+
+	<rdf:Property rdf:ID="hasParameter">
+		<rdfs:label>pedl:hasParameter</rdfs:label>
+		<rdfs:comment>Knotenklasse PEDL_hasFunctions, wie hasFunktions</rdfs:comment>
+	</rdf:Property>
+
+	<rdf:Seq rdf:ID="ParameterCollection">
+		<rdfs:label>pedl:ParameterCollection</rdfs:label>
+		<rdfs:comment>Knotenklasse PEDL_Functions, wie Funktions. Im Bindungsblock von TreeEngine::build_up() haengen hier echte Objekte (cdata_ref).</rdfs:comment>
+	</rdf:Seq>
+
+	<rdf:Property rdf:ID="hasCodeResource">
+		<rdfs:label>pedl:hasCodeResource</rdfs:label>
+		<rdfs:comment>Knotenklasse PEDL_hasCodeResource; traegt pedl:src und pedl:hash der PHP-Datei, aus der eine Klasse stammt</rdfs:comment>
+	</rdf:Property>
+
+	<rdf:Property rdf:ID="src">
+		<rdfs:label>pedl:src</rdfs:label>
+		<rdfs:comment>Knotenklasse PEDL_Object_Parameter; der Pfad der PHP-Datei</rdfs:comment>
+	</rdf:Property>
+
+	<rdf:Property rdf:ID="hash">
+		<rdfs:label>pedl:hash</rdfs:label>
+		<rdfs:comment>Knotenklasse PEDL_hash; sha256 der PHP-Datei - stimmt er nicht, wird die .pedl neu erzeugt</rdfs:comment>
+	</rdf:Property>
+
+	<rdf:Property rdf:ID="name">
+		<rdfs:label>pedl:name</rdfs:label>
+		<rdfs:comment>Knotenklasse PEDL_name; der Name in PHP</rdfs:comment>
+	</rdf:Property>
+
+	<rdf:Property rdf:ID="refersTo">
+		<rdfs:label>pedl:refersTo</rdfs:label>
+		<rdfs:comment>Knotenklasse PEDL_refersTo (classes/ns/pedl/pedl_refersTo.php)</rdfs:comment>
+	</rdf:Property>
+
+	<rdf:Description rdf:ID="convert">
+		<rdfs:label>pedl:convert</rdfs:label>
+		<rdfs:comment>Knotenklasse PEDL_Convert (classes/ns/pedl/pedl_Convert.php, "noch im aufbau")</rdfs:comment>
+	</rdf:Description>
+
+	<rdf:Description rdf:ID="create_alt_field">
+		<rdfs:label>pedl:create_alt_field</rdfs:label>
+		<rdfs:comment>Knotenklasse PEDL_Create_Alt_Field (classes/ns/pedl/pedl_Create_Alt_Field.php)</rdfs:comment>
+	</rdf:Description>
+
+	<!-- ===================== 3. Attribute, die PHP_handle schreibt (ohne Knotenklasse) -->
+	<!-- An PhpClass, PhpMethod, PhpParameter, PhpProperty, PhpConstant im Bild einer
+	     PHP-Datei und in der .pedl. Die Werte sind Text aus dem PHP-Quelltext. -->
+
+	<rdf:Property rdf:ID="visibility"><rdfs:label>pedl:visibility</rdfs:label><rdfs:comment>public, protected, private - oder implicit beim Konstruktor ohne Angabe</rdfs:comment></rdf:Property>
+	<rdf:Property rdf:ID="static"><rdfs:label>pedl:static</rdfs:label></rdf:Property>
+	<rdf:Property rdf:ID="abstract"><rdfs:label>pedl:abstract</rdfs:label></rdf:Property>
+	<rdf:Property rdf:ID="final"><rdfs:label>pedl:final</rdfs:label></rdf:Property>
+	<rdf:Property rdf:ID="readonly"><rdfs:label>pedl:readonly</rdfs:label></rdf:Property>
+	<rdf:Property rdf:ID="returns"><rdfs:label>pedl:returns</rdfs:label><rdfs:comment>Rueckgabetyp einer Methode</rdfs:comment></rdf:Property>
+	<rdf:Property rdf:ID="type"><rdfs:label>pedl:type</rdfs:label><rdfs:comment>deklarierter Typ eines Parameters oder einer Eigenschaft</rdfs:comment></rdf:Property>
+	<rdf:Property rdf:ID="default"><rdfs:label>pedl:default</rdfs:label><rdfs:comment>Vorgabewert als PHP-Ausdruck</rdfs:comment></rdf:Property>
+	<rdf:Property rdf:ID="byRef"><rdfs:label>pedl:byRef</rdfs:label></rdf:Property>
+	<rdf:Property rdf:ID="variadic"><rdfs:label>pedl:variadic</rdfs:label></rdf:Property>
+	<rdf:Property rdf:ID="nullable"><rdfs:label>pedl:nullable</rdfs:label></rdf:Property>
+	<rdf:Property rdf:ID="optional"><rdfs:label>pedl:optional</rdfs:label></rdf:Property>
+
+</rdf:RDF>
