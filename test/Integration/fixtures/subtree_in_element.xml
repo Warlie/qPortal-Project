@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand: <subtree> IN einem neuen <element> (value=...), mit Text davor und danach.
+     Je Fall ein eigenes Element, damit die Ausgabe sich auseinanderhalten laesst. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="subtree in element">
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one">test/Integration/fixtures/out_blank.xml</main>
+		<add id="teil" case_folding="0" doctype="XML">test/Integration/fixtures/subtree_part.xml</add>
+	</template>
+	<content name="http://www.w3.org/1999/xhtml#html">
+		<element type="xhtml" value="h1">vor-<subtree id="teil" />-nach</element>
+		<element type="xhtml" value="h2">a<subtree id="teil" />b<subtree id="teil" />c</element>
+		<element type="xhtml" value="h3">a<element type="xhtml" value="i">E</element>b<subtree id="teil" />c</element>
+		<element type="xhtml" value="h4"><subtree id="teil" /></element>
+		<element type="xhtml" value="h5">a<subtree id="teil" />b<element type="xhtml" value="i">E</element>c</element>
+	</content>
+</final>
+</indextree>

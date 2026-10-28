@@ -1,0 +1,14 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand: <subtree> in einem <element> OHNE value - es aendert den vorhandenen
+     Ausgabeknoten (process_exist_xhtml), hier <html>. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="subtree in vorhandenem element">
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one">test/Integration/fixtures/out_blank.xml</main>
+		<add id="teil" case_folding="0" doctype="XML">test/Integration/fixtures/subtree_part.xml</add>
+	</template>
+	<content name="http://www.w3.org/1999/xhtml#html">
+		<element type="xhtml">vor-<subtree id="teil" />-nach</element>
+	</content>
+</final>
+</indextree>

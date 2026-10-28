@@ -15,6 +15,11 @@ class TREE_subtree extends Interface_node
 var $name = 'empty';
 var $type = 'none';
 var $namespace = 'none';
+/* Wie viele Knoten der letzte Lauf an den Ausgabeknoten gehaengt hat. Das umgebende
+*  <element> setzt seinen Text danach neu zusammen und braucht die Zahl, damit der Text
+*  hinter dem Eingehaengten in den richtigen Behaelter kommt (3.2.10, wie $rueckgabe bei
+*  <sub>; Pruefstand test/Integration/tree_subtree.php). */
+public $eingehaengt = 0;
 	
 function __construct()
 {
@@ -63,6 +68,7 @@ function event_message_in($type,&$obj)
 		
 		if($obj instanceof EventObject )
 		{
+		$this->eingehaengt = 0;
 		$template = $obj->get_requester()->get_out_template($other_template);
 		//echo $obj->get_requester()->get_out_template();
 		$obj->get_requester()->set_current_template($obj->get_requester()->get_out_template()) ;
@@ -133,7 +139,9 @@ function event_message_in($type,&$obj)
 	if($this->get_parser()->seek_node($tag_name,$tag_array) )
 	{
 		//var_dump("addtree",$obj->get_node(), "for cloning", $this->get_parser()->show_xmlelement());
+		$vorher = $obj->get_node()->index_max();
 		$this->get_parser()->show_xmlelement()->cloning($obj->get_node());
+		$this->eingehaengt = $obj->get_node()->index_max() - $vorher;
 		//echo "cloning done";
 
 	}

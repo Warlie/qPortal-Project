@@ -29,6 +29,7 @@ php -d error_reporting=E_ERROR test/Integration/tree_call.php          # 16/0
 php -d error_reporting=E_ERROR test/Integration/schema_check.php       # 20/0 (Bestand: 512 gueltig / 60 nicht)
 php -d error_reporting=E_ERROR test/Integration/lang_choice.php        # 18/0 (Sprachfassungen)
 php -d error_reporting=E_ERROR test/Integration/tree_access.php        # 11/0 (<access>-Klammer)
+php -d error_reporting=E_ERROR test/Integration/tree_subtree.php       # 6/0 (<subtree> in <element>; ohne Schluessel ueber die Sitzung)
 ```
 
 ```bash
@@ -508,6 +509,9 @@ Zurückgegeben wird nur, wenn das `<sub>` selbst unter `content` oder `element` 
   nicht (`getdata()` greift nicht auf `link_to_class` zurück). Jetzt gibt `TREE_result` ihn der
   Instanz mit, `tree_sub` hängt ihn an den empfangenden Knoten und merkt ihn sich in
   `$rueckgabe`.
+- **`<subtree>` in einem `<element>`** (seit 3.2.10): was er klont, steht an **seiner** Stelle
+  im Text — `TREE_subtree::$eingehaengt` sagt der Zusammensetzung, wie viele Knoten es waren.
+  Vorher `vor--nach<b>X</b>`. Prüfstand `tree_subtree.php`.
 - **`<sub>` in einem `<element>`** lief schon immer, aber das Element setzt danach seinen Text neu
   (`setdata($string, $point)` **ersetzt**) und tilgte die Rückgabe — `vor--nach`. Beide
   Zusammensetzungsschleifen (`process_exist_xhtml`, `process_new_xhtml`) haben jetzt einen Zweig für

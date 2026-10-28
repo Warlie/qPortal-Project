@@ -383,6 +383,21 @@ function process_new_xhtml(&$obj,$name,$attrib)
 						$string .= $this->getdata($i);
 						$string .= (string) ($this->getRefnext($i)->rueckgabe ?? '');
 					}
+					elseif($this->getRefnext($i,false)->full_URI() == 'http://www.trscript.de/tree#subtree')
+					{
+						/* Ein <subtree> hat beim Lauf Knoten an diesen Ausgabeknoten geklont.
+						*  Der Text davor schliesst den Behaelter vor dem ersten davon ab, der
+						*  danach beginnt hinter dem letzten (3.2.10 - vorher "vor--nach<b>X</b>",
+						*  test/Integration/tree_subtree.php). Hat er nichts eingehaengt, laeuft
+						*  der Text weiter wie bisher. */
+						$string .= $this->getdata($i);
+						if(0 < ($n = (int) $this->getRefnext($i)->eingehaengt))
+						{
+							$new_node->setdata($string,$point);
+							$point += $n;
+							$string = '';
+						}
+					}
 					elseif($this->getRefnext($i,false)->full_URI() == 'http://www.trscript.de/tree#object')
 					{
 						$string .= $this->getdata($i);
@@ -531,6 +546,21 @@ function process_exist_xhtml(&$obj,$attrib)
 						*  vorher stand "vor--nach"). */
 						$string .= $this->getdata($i);
 						$string .= (string) ($this->getRefnext($i)->rueckgabe ?? '');
+					}
+					elseif($this->getRefnext($i,false)->full_URI() == 'http://www.trscript.de/tree#subtree')
+					{
+						/* Ein <subtree> hat beim Lauf Knoten an diesen Ausgabeknoten geklont.
+						*  Der Text davor schliesst den Behaelter vor dem ersten davon ab, der
+						*  danach beginnt hinter dem letzten (3.2.10 - vorher "vor--nach<b>X</b>",
+						*  test/Integration/tree_subtree.php). Hat er nichts eingehaengt, laeuft
+						*  der Text weiter wie bisher. */
+						$string .= $this->getdata($i);
+						if(0 < ($n = (int) $this->getRefnext($i)->eingehaengt))
+						{
+							$cur_element->setdata($string,$point);
+							$point += $n;
+							$string = '';
+						}
 					}
 					elseif($this->getRefnext($i,false)->full_URI() == 'http://www.trscript.de/tree#object')
 					{ //if($name == "http://www.w3.org/1999/xhtml#unqueID" )die();
