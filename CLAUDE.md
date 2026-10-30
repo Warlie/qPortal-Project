@@ -184,6 +184,12 @@ bis 3.2.12 `Funktion`, ein Tippfehler). Die gebundene Funktion mit Empfänger is
 `pedl:Object_Function`, die freie ohne Empfänger `pedl:Free_Function` — gedacht für den Code
 einer PHP-Datei außerhalb von Klassen.
 
+**`pedl:turtle`** (3.2.15) trägt Turtle-Text wörtlich als Aussage neben seinem Elternknoten —
+im Dokument als `<pedl:turtle><![CDATA[ … ]]></pedl:turtle>`, in PHP als Kopf `pedl:turtle::`
+im `/*@ … @*/`-Block (in der `.pedl` und im Bild als CDATA, `PHP_handle::write_desc`). Klein
+geschrieben wie `pedl:name`/`pedl:src`: ein Träger, keine Klasse. ⚠ Ausgewertet wird noch
+nichts — der Text wird nicht zu Tripeln; dafür stünden `Turtle_handle` und hardf bereit.
+
 **Die Naht:** in PHP bleibt nur, was sich nicht aufschreiben lässt — der Bindungsblock
 (`<System>` mit `pedl:ParameterCollection`, wo `cdata_ref()` echte Objekte einhängt und
 `get_Element()` die Griffe für `get_CurRef`/`set_CurRef` abgreift) und die beiden

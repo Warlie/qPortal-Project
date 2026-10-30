@@ -205,6 +205,11 @@
 		<rdfs:comment>Knotenklasse PEDL_hash; sha256 der PHP-Datei - stimmt er nicht, wird die .pedl neu erzeugt</rdfs:comment>
 	</rdf:Property>
 
+	<rdf:Property rdf:ID="turtle">
+		<rdfs:label>pedl:turtle</rdfs:label>
+		<rdfs:comment>Knotenklasse PEDL_turtle, ohne Verhalten (3.2.15); traegt Turtle-Text woertlich als Aussage neben dem Elternknoten - im Dokument in CDATA, in PHP als Kopf "pedl:turtle::" im /*@ @*/-Block. Ausgewertet wird er noch nicht</rdfs:comment>
+	</rdf:Property>
+
 	<rdf:Property rdf:ID="name">
 		<rdfs:label>pedl:name</rdfs:label>
 		<rdfs:comment>Knotenklasse PEDL_name; der Name in PHP</rdfs:comment>

@@ -27,6 +27,7 @@ require_once('pedl_refersTo.php');
 require_once('pedl_hash.php');
 require_once('pedl_hasCodeResource.php');
 require_once('pedl_src.php');
+require_once('pedl_turtle.php');
 
 class PEDL_factory 
 {
@@ -57,6 +58,7 @@ class PEDL_factory
 			$this->node['name'] = new PEDL_name('name', $ns);
 			$this->node['refersTo'] = new PEDL_refersTo('refersTo', $ns);
 			$this->node['hash'] = new PEDL_hash('hash', $ns);
+			$this->node['turtle'] = new PEDL_turtle('turtle', $ns);
 			
 			$this->nativ->set_is_Class();
 			foreach ($this->node as $value)

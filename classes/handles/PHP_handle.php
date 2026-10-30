@@ -801,6 +801,8 @@ class Obj_Class
 
 			$attrib = $zusatz;
 			$xml_model->tag_open($owner, $one['tag'], $attrib);
+			/* Turtle traegt <uri> - in CDATA bleibt es lesbar wie im Quelltext (3.2.15) */
+			if('pedl:turtle' === $one['tag'])$xml_model->get_Element()->set_bolcdata(true);
 			$xml_model->cdata($owner, $one['text']);
 			$xml_model->tag_close($owner, $one['tag']);
 		}
