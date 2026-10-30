@@ -102,11 +102,13 @@
             Nummer heisst neu schreiben - hochzaehlen, wenn sich die .pedl aendert.
             3.2.15 pedl:turtle - Turtle-Text als Aussage neben dem Elternknoten, in Dokumenten
             und im /*@ @*/-Block (Kopf "pedl:turtle::"); traegt nur, wertet noch nicht aus.
+            3.2.16 PhpFunction und PhpFile aus pedl:Free_Function - das Bild einer PHP-Datei
+            zeigt auch, was ausserhalb von Klassen steht.
 		       4.0  wenn der PHP-Quelltext einmalig aus den Dokumenten heraus ersetzt wird.
 		            Dann ein neues Repository - der Bruch ist zu brutal fuer dieselbe
 		            Historie, und danach gibt es eher einen laufenden Strom als Versionen.
 		-->
-		<owl:versionInfo>3.2.15</owl:versionInfo>
+		<owl:versionInfo>3.2.16</owl:versionInfo>
 	</owl:Ontology>
 
 	<!-- Geprägt aus den pedl-Grundlagen. Interfaces und Traits sind Deklarationen
@@ -120,6 +122,13 @@
 	<pedl:Object_Class       rdf:ID="PhpTrait"/>
 	<pedl:Object_Parameter   rdf:ID="PhpProperty"/>
 	<pedl:Object_Parameter   rdf:ID="PhpConstant"/>
+
+	<!-- Was ausserhalb von Klassen steht (3.2.16) - freie Funktionen, ohne Empfaenger.
+	     PhpFunction ist ein "function foo()" auf oberster Ebene. PhpFile ist der lose
+	     Code der Datei, der beim Einbinden laeuft: die namenlose freie Funktion der
+	     Datei. Beide nur im Bild (TARGET:TREE), nicht in der .pedl. -->
+	<pedl:Free_Function      rdf:ID="PhpFunction"/>
+	<pedl:Free_Function      rdf:ID="PhpFile"/>
 
 	<!-- Quelltext als Transportform (STW, 3.2.7): desc:code_snippet, nicht pedl -
 	     eingebetteter Code in pedl ist eine andere Idee (pedl:script). Unter PhpMethod

@@ -177,6 +177,15 @@ class PHP_handle extends Interface_handle
 
 		$this->base_object->use_ns_def_strict(true);
 		$obj_class->create_rdf_entry($this->base_object, $with_snippet);
+
+		/* was ausserhalb von Klassen steht (3.2.16) - hinter den Klassen, damit deren
+		*  Stempel bleiben, wo sie waren */
+		$frei = PHP_Ast_Scan::free_parts($str_source, $this->attribute_values['URI']);
+		foreach($frei['functions'] as $meta)
+			(new Obj_Free($meta, $own))->create_rdf_entry($this->base_object, $with_snippet);
+		if(!is_null($frei['file']))
+			(new Obj_Free($frei['file'], $own))->create_rdf_entry($this->base_object, $with_snippet);
+
 		$this->base_object->use_ns_def_strict(false);
 		$this->base_object->go_to_stamp($treePos);
 
@@ -1182,7 +1191,9 @@ class Obj_Parameter
 	public function create_rdf_entry( xml &$xml_model, $class_name, $function_name)
 	{
 		//echo  $xml_model->cur_node();
-		$attrib = array('rdf:ID' => trim($class_name . '.'  . $function_name . '.' . $this->name),'pedl:name' => trim($this->name));
+		/* eine freie Funktion hat keine Klasse davor (3.2.16) - sonst stuende ".foo.x" da */
+		$vorn = ('' === $class_name) ? $function_name : $class_name . '.'  . $function_name;
+		$attrib = array('rdf:ID' => trim($vorn . '.' . $this->name),'pedl:name' => trim($this->name));
 		if($this->has_value )$attrib['pedl:refersTo'] = $this->value_content ;
 
 		if('' !== $this->decl_type)      $attrib['pedl:type']     = $this->decl_type;
@@ -1211,6 +1222,67 @@ class Obj_Parameter
 		//$xml_model->set_node_attrib('pedl:name',trim($this->name));
 		//
 		//$xml_model->parent_node();
+	}
+}
+
+/** Was ausserhalb von Klassen steht (3.2.16) - nur fuer das Bild, nie in der .pedl.
+*
+*   PhpFunction: ein "function foo()" auf oberster Ebene, aufgebaut wie eine Methode,
+*   rdf:ID ist ihr Name (freie Funktionen teilen sich in PHP einen Namensraum).
+*   PhpFile: der lose Code der Datei, der beim Einbinden laeuft - die namenlose freie
+*   Funktion der Datei. Ohne rdf:ID: eine Datei hat einen Ort (pedl:hasCodeResource),
+*   keinen Namen; zweimal plugin_xmldo.php in verschiedenen Ordnern waere sonst einer.
+*/
+class Obj_Free
+{
+	private $meta;
+	private $php_path;
+	private $parameterList = array();
+
+	public function __construct(array $meta, string $php_path)
+	{
+		$this->meta     = $meta;
+		$this->php_path = $php_path;
+
+		$counter = 0;
+		foreach($meta['params'] ?? [] as $param)
+			$this->parameterList[] = new Obj_Parameter($param, $counter++);
+	}
+
+	public function create_rdf_entry( xml_ns &$xml_model, bool $with_snippet = false)
+	{
+		$meta = $this->meta;
+
+		if('file' === $meta['kind'])
+		{
+			$tagname = 'PhpFile';
+			$attrib  = array('pedl:name' => $meta['name']);
+		}
+		else
+		{
+			$tagname = 'PhpFunction';
+			$attrib  = array('rdf:ID' => $meta['name'], 'pedl:name' => $meta['name']);
+			if($meta['byRef'])             $attrib['pedl:byRef']   = 'true';
+			if('' !== $meta['returnType']) $attrib['pedl:returns'] = $meta['returnType'];
+		}
+
+		$xml_model->tag_open($this, $tagname, $attrib);
+
+		Obj_Class::write_desc($xml_model, $this, $meta['desc'] ?? []);
+
+		foreach($this->parameterList as $value)
+			$value->create_rdf_entry($xml_model, '', $meta['name']);
+
+		if('file' === $meta['kind'])
+		{
+			$attrib = array('pedl:src' => $this->php_path, 'pedl:hash' => hash_file('sha256', $this->php_path));
+			$xml_model->tag_open($this, "pedl:hasCodeResource", $attrib);
+			$xml_model->tag_close($this, "pedl:hasCodeResource");
+		}
+
+		if($with_snippet)Obj_Class::write_snippet($xml_model, $this, $meta['snippet']);
+
+		$xml_model->tag_close($this, $tagname);
 	}
 }
 

@@ -34,12 +34,12 @@ php -d error_reporting=E_ERROR test/Integration/tree_subtree.php       # 6/0 (<s
 
 ```bash
 # Sonden — sie prüfen nicht, sie ZEIGEN. Ausgabe wird gelesen, kein grün/rot.
-php -d error_reporting=E_ERROR test/proben/probe_registry_vocab.php   # ausser dieser: 33/0
+php -d error_reporting=E_ERROR test/proben/probe_registry_vocab.php   # ausser dieser: 35/0
 ```
 
 `seek_scope.php` und `sparql_parse.php` (69) müssen vollständig grün sein — jede rote Zeile
 dort ist neu. `probe_registry_vocab.php` bewacht die Naht zwischen Vokabulardokument und
-`build_up()` und steht bei **33 in Ordnung / 0 rot**.
+`build_up()` und steht bei **35 in Ordnung / 0 rot**.
 `intern_walk.php` steht bei **35 gelaufen / 1 rot** — `__get_data` ist ein Bestandsdefekt
 (über den Intern-Kanal ist der Aufrufer der ContentGenerator und damit kein Knoten; STW hat
 entschieden, das nicht umzubauen). Diese Zahl ist die Vergleichsmarke: ändert sie sich, hat
@@ -189,6 +189,16 @@ im Dokument als `<pedl:turtle><![CDATA[ … ]]></pedl:turtle>`, in PHP als Kopf 
 im `/*@ … @*/`-Block (in der `.pedl` und im Bild als CDATA, `PHP_handle::write_desc`). Klein
 geschrieben wie `pedl:name`/`pedl:src`: ein Träger, keine Klasse. ⚠ Ausgewertet wird noch
 nichts — der Text wird nicht zu Tripeln; dafür stünden `Turtle_handle` und hardf bereit.
+
+**Was außerhalb von Klassen steht** (3.2.16), aus `pedl:Free_Function` geprägt und **nur im
+Bild** (`TARGET:TREE`), nie in der `.pedl`: `PhpFunction` für ein `function foo()` auf oberster
+Ebene (aufgebaut wie `PhpMethod`, `rdf:ID` = Name, Parameter `foo.x`) und `PhpFile` für den
+losen Code der Datei, ohne `rdf:ID` — eine Datei hat einen Ort (`pedl:hasCodeResource`), keinen
+Namen. `PhpFile` gibt es nur, wo loser Code steht (Einbindungen zählen nicht); der Dateikopf geht
+an ihn nur in einer Datei ohne Klasse. Beide stehen **hinter** den Klassen, deren Stempel
+bleiben. Gelesen über `PHP_Ast_Scan::free_parts()`, nicht über `scan()`.
+⚠ Steht im Bild ein `PhpClass`, lädt `PEDL_Object_Class` die Datei per `require_once`
+(`pedl_Object_Class.php:235`) — ihr loser Code **läuft** dann mit. `PhpFile` lädt nichts.
 
 **Die Naht:** in PHP bleibt nur, was sich nicht aufschreiben lässt — der Bindungsblock
 (`<System>` mit `pedl:ParameterCollection`, wo `cdata_ref()` echte Objekte einhängt und

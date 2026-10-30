@@ -120,6 +120,24 @@ class PHP_Ast_Scan
 		return self::scan_source($source, $file, $follow_includes, $seen);
 	}
 
+	/* Was ausserhalb von Klassen steht (3.2.16): freie Funktionen und der lose Code der
+	*  Datei. Ein eigener Einstieg, nur fuer das Bild - scan() und damit .pedl und
+	*  Register sehen davon nichts. Includes werden nicht verfolgt.
+	*  ['functions' => [meta, ...], 'file' => meta | null]
+	*/
+	public static function free_parts(string $source, string $file) : array
+	{
+		$parser = (new ParserFactory())->createForNewestSupportedVersion();
+		$ast = $parser->parse($source);
+
+		if(is_null($ast))return ['functions' => [], 'file' => null];
+
+		$visitor = new PHP_Ast_Scan_Visitor(self::project_relative($file));
+		$visitor->set_tokens($parser->getTokens());
+
+		return $visitor->free_parts($ast);
+	}
+
 	/* One form for every path that reaches the .pedl, so a generated file does not bake in
 	*  the machine it was generated on. Paths outside the project stay as they are.
 	*/
@@ -378,6 +396,81 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 		}
 
 		return null;
+	}
+
+	/* Die oberste Ebene ohne Klassen (3.2.16). Eine freie Funktion wird wie eine Methode
+	*  gelesen. Alles andere ausser Einbindungen ist loser Code: aneinanderliegende
+	*  Anweisungen bilden ein Stueck (mit dem, was zwischen ihnen steht), die Stuecke
+	*  stehen in ihrer Reihenfolge im Snippet. Wo sie zwischen den Klassen stehen, sagt
+	*  es noch nicht. PhpFile gibt es nur, wo loser Code steht.
+	*
+	*  Der Dateikopf geht an PhpFile nur in einer Datei ohne Klasse - sonst bekommt ihn
+	*  weiter die erste Klasse (take_classlike).
+	*/
+	public function free_parts(array $ast) : array
+	{
+		$functions = [];
+		$stuecke   = [];
+		$desc      = [];
+		$klasse    = false;
+		$offen     = false;
+
+		foreach($ast as $stmt)
+		{
+			if($stmt instanceof Node\Stmt\ClassLike){$klasse = true; $offen = false; continue;}
+
+			if($stmt instanceof Node\Stmt\Function_)
+			{
+				$functions[] = $this->function_meta($stmt);
+				$offen = false;
+				continue;
+			}
+
+			$desc = array_merge($desc, $this->desc_entries($stmt));
+
+			if(($stmt instanceof Node\Stmt\Expression && $stmt->expr instanceof Node\Expr\Include_)
+				|| $stmt instanceof Node\Stmt\Nop
+				|| ($stmt instanceof Node\Stmt\InlineHTML && '' === trim($stmt->value)))
+			{
+				$offen = false;
+				continue;
+			}
+
+			if($offen)$stuecke[count($stuecke) - 1][1] = $stmt->getEndTokenPos();
+			else      $stuecke[] = [$stmt->getStartTokenPos(), $stmt->getEndTokenPos()];
+			$offen = true;
+		}
+
+		$file = null;
+		if($stuecke)
+			$file = [
+				'kind'    => 'file',
+				'name'    => basename($this->file),
+				'desc'    => $klasse ? [] : $desc,
+				'snippet' => implode("\n", array_map(fn($s) => $this->snippet($s[0], $s[1]), $stuecke)),
+			];
+
+		return ['functions' => $functions, 'file' => $file];
+	}
+
+	private function function_meta(Node\Stmt\Function_ $function) : array
+	{
+		$params = [];
+		foreach($function->params as $param)$params[] = $this->param_meta($param);
+
+		//vor dem Array: route_param_desc fuellt $params
+		$desc = $this->route_param_desc($this->desc_entries($function), $params);
+		$body = $this->body_tokens($function);
+
+		return [
+			'kind'       => 'function',
+			'name'       => $function->name->toString(),
+			'byRef'      => $function->byRef,
+			'returnType' => $this->type_text($function->returnType),
+			'params'     => $params,
+			'desc'       => $desc,
+			'snippet'    => is_null($body) ? null : $this->snippet($body[0], $body[1]),
+		];
 	}
 
 	private function visibility(int $flags) : string
