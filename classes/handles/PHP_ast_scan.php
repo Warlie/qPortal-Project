@@ -173,6 +173,8 @@ class PHP_Ast_Scan
 		foreach($ast as $stmt)
 		{
 			if($stmt instanceof Node\Stmt\ClassLike)break;
+			//eine freie Funktion beschreibt sich selbst (PhpFunction, 3.2.16), nicht die Klasse
+			if($stmt instanceof Node\Stmt\Function_)continue;
 			$head = array_merge($head, $visitor->desc_entries($stmt));
 		}
 		$visitor->set_head_desc($head);
