@@ -433,8 +433,55 @@ function save_stream_back(&$stream, $format,$send_header = false)
 
 }
 	
+/** Eine Option aus dem Beschreibungstext, wie bei CSV und TURTLE: "XML;download:bestand.owl".
+*   Der Wert bleibt, wie er dasteht (ein Dateiname hat Gross- und Kleinschreibung); null, wenn sie fehlt.
+*/
+function option($name)
+{
+	$parts = explode(';', (string)($this->base_object->TYPE[$this->base_object->idx] ?? ''));
+	for($i = 1;$i < count($parts);$i++)
+	{
+		$pair = explode(':', $parts[$i], 2);
+		if(count($pair) == 2 && strtolower(trim($pair[0])) === strtolower($name))
+			return trim($pair[1]);
+	}
+	return null;
+}
+
+/** Die Kopfzeilen fuer "als Datei ausliefern", oder null ohne die Option download.
+*/
+function download_header()
+{
+	if(is_null($name = $this->option('download')))
+		return null;
+
+	$name = preg_replace('/[^A-Za-z0-9._-]/', '_', basename($name));
+	if($name === '' || $name === '.' || $name === '..')
+		$name = 'download.xml';
+	$mime = $this->option('mime');
+	if(is_null($mime) || !preg_match('#^[A-Za-z0-9.+-]+/[A-Za-z0-9.+-]+$#', $mime))
+		$mime = 'application/xml';
+
+	return array(
+		'Content-Type: ' . $mime . '; charset=UTF-8',
+		'Content-Disposition: attachment; filename="' . $name . '"',
+		'Cache-Control: no-cache, no-store, must-revalidate');
+}
+
 function send_header()
 {
+	/* Als Datei ausliefern (STW 2026-10-30: den Bestand als OWL-Datei, um die Struktur im Auge zu
+	*  behalten): doctype_out="XML;download:bestand.owl", wahlweise ";mime:application/rdf+xml"
+	*  (Vorgabe application/xml). Der Browser speichert dann, statt eine Seite zu zeigen. Ohne die
+	*  Option bleibt alles wie bisher. Der Name kommt aus dem Dokument, nicht vom Besucher - trotzdem
+	*  nur der Dateiteil und kein Zeichen, das den Kopf aufbrechen koennte. */
+	if(!is_null($kopf = $this->download_header()))
+	{
+		foreach($kopf as $zeile)
+			header($zeile);
+		return;
+	}
+
 	                        if (
 	                        	(array_key_exists("HTTP_ACCEPT", $_SERVER) && stristr($_SERVER["HTTP_ACCEPT"],"application/xhtml+xml")) ||
 					/* Geprueft wurde HTTP_ACCEPT, gelesen HTTP_USER_AGENT — ein Verschreiber,
