@@ -175,6 +175,11 @@
 		<rdfs:comment>die freie Funktion, ohne Empfaenger, ueber ihren Namen gerufen - Gegenstueck zu Object_Function (3.2.12). Knotenklasse PEDL_Free_Function, ohne Verhalten</rdfs:comment>
 	</owl:Class>
 
+	<owl:Class rdf:ID="Free_Variable">
+		<rdfs:label>pedl:Free_Variable</rdfs:label>
+		<rdfs:comment>der freie benannte Platz, keinem Objekt zugehoerig - Gegenstueck zu Object_Parameter (3.2.19); "Variable", weil ihm nichts uebergeben wird. Knotenklasse PEDL_Free_Variable, ohne Verhalten</rdfs:comment>
+	</owl:Class>
+
 	<owl:Class rdf:ID="Object_Constructor">
 		<rdfs:label>pedl:Object_Constructor</rdfs:label>
 		<rdfs:comment>Knotenklasse PEDL_Object_Constructor (classes/ns/pedl/pedl_Object_Constructor.php)</rdfs:comment>

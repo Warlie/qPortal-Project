@@ -123,14 +123,14 @@ class PHP_Ast_Scan
 	/* Was ausserhalb von Klassen steht (3.2.16): freie Funktionen und der lose Code der
 	*  Datei. Ein eigener Einstieg, nur fuer das Bild - scan() und damit .pedl und
 	*  Register sehen davon nichts. Includes werden nicht verfolgt.
-	*  ['functions' => [meta, ...], 'file' => meta | null]
+	*  ['functions' => [meta, ...], 'constants' => [meta, ...], 'file' => meta | null]
 	*/
 	public static function free_parts(string $source, string $file) : array
 	{
 		$parser = (new ParserFactory())->createForNewestSupportedVersion();
 		$ast = $parser->parse($source);
 
-		if(is_null($ast))return ['functions' => [], 'file' => null];
+		if(is_null($ast))return ['functions' => [], 'constants' => [], 'file' => null];
 
 		$visitor = new PHP_Ast_Scan_Visitor(self::project_relative($file));
 		$visitor->set_tokens($parser->getTokens());
@@ -412,6 +412,7 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 	public function free_parts(array $ast) : array
 	{
 		$functions = [];
+		$constants = [];
 		$stuecke   = [];
 		$desc      = [];
 		$klasse    = false;
@@ -424,6 +425,24 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 			if($stmt instanceof Node\Stmt\Function_)
 			{
 				$functions[] = $this->function_meta($stmt);
+				$offen = false;
+				continue;
+			}
+
+			/* Konstanten (3.2.19): "const X = ..." und define('X', ...) mit festem Namen
+			*  sind Erklaerungen wie eine Funktion - eigene Knoten, nicht im losen Code. */
+			if($stmt instanceof Node\Stmt\Const_)
+			{
+				$beschreibung = $this->desc_entries($stmt);
+				foreach($stmt->consts as $one)
+					$constants[] = $this->global_constant_meta($one->name->toString(), $one->value, $beschreibung);
+				$offen = false;
+				continue;
+			}
+
+			if(!is_null($define = $this->define_of($stmt)))
+			{
+				$constants[] = $this->global_constant_meta($define[0], $define[1], $this->desc_entries($stmt));
 				$offen = false;
 				continue;
 			}
@@ -452,7 +471,33 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 				'snippet' => implode("\n", array_map(fn($s) => $this->snippet($s[0], $s[1]), $stuecke)),
 			];
 
-		return ['functions' => $functions, 'file' => $file];
+		return ['functions' => $functions, 'constants' => $constants, 'file' => $file];
+	}
+
+	/* define('X', wert) als Anweisung, mit einem Namen, der im Quelltext steht - sonst null.
+	*  Ein zusammengesetzter Name entsteht erst zur Laufzeit und bleibt loser Code. */
+	private function define_of(Node\Stmt $stmt) : ?array
+	{
+		if(!($stmt instanceof Node\Stmt\Expression))return null;
+
+		$call = $stmt->expr;
+		if(!($call instanceof Node\Expr\FuncCall) || !($call->name instanceof Node\Name)
+			|| 'define' !== strtolower($call->name->toString()) || count($call->args) < 2)return null;
+
+		$name = $call->args[0]->value ?? null;
+		if(!($name instanceof Node\Scalar\String_))return null;
+
+		return [$name->value, $call->args[1]->value];
+	}
+
+	private function global_constant_meta(string $name, Node\Expr $value, array $desc) : array
+	{
+		return [
+			'kind'    => 'constant',
+			'name'    => $name,
+			'default' => $this->printer->prettyPrintExpr($value),
+			'desc'    => $desc,
+		];
 	}
 
 	private function function_meta(Node\Stmt\Function_ $function) : array

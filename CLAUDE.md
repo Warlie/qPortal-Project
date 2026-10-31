@@ -34,12 +34,12 @@ php -d error_reporting=E_ERROR test/Integration/tree_subtree.php       # 6/0 (<s
 
 ```bash
 # Sonden — sie prüfen nicht, sie ZEIGEN. Ausgabe wird gelesen, kein grün/rot.
-php -d error_reporting=E_ERROR test/proben/probe_registry_vocab.php   # ausser dieser: 35/0
+php -d error_reporting=E_ERROR test/proben/probe_registry_vocab.php   # ausser dieser: 36/0
 ```
 
 `seek_scope.php` und `sparql_parse.php` (69) müssen vollständig grün sein — jede rote Zeile
 dort ist neu. `probe_registry_vocab.php` bewacht die Naht zwischen Vokabulardokument und
-`build_up()` und steht bei **35 in Ordnung / 0 rot**.
+`build_up()` und steht bei **36 in Ordnung / 0 rot**.
 `intern_walk.php` steht bei **35 gelaufen / 1 rot** — `__get_data` ist ein Bestandsdefekt
 (über den Intern-Kanal ist der Aufrufer der ContentGenerator und damit kein Knoten; STW hat
 entschieden, das nicht umzubauen). Diese Zahl ist die Vergleichsmarke: ändert sie sich, hat
@@ -205,6 +205,12 @@ losen Code der Datei, ohne `rdf:ID` — eine Datei hat einen Ort (`pedl:hasCodeR
 Namen. `PhpFile` gibt es nur, wo loser Code steht (Einbindungen zählen nicht); der Dateikopf geht
 an ihn nur in einer Datei ohne Klasse. Beide stehen **hinter** den Klassen, deren Stempel
 bleiben. Gelesen über `PHP_Ast_Scan::free_parts()`, nicht über `scan()`.
+Seit 3.2.19 ebenso **`PhpGlobalConstant`** aus `pedl:Free_Variable` (Gegenstück zu
+`Object_Parameter`; „Variable“, weil einem solchen Platz nichts übergeben wird — STW): `const X = …`
+und `define('X', …)` mit festem Namen, Wert als `pedl:default`; sie fallen aus dem losen Code. Ein
+`define` mit errechnetem Namen bleibt loser Code. ⚠ Ein `/*@ @*/`-Block direkt vor der ersten
+Anweisung hängt der Parser an diese — steht dort ein `define`, bekommt die Konstante den Block,
+nicht `PhpFile`.
 ⚠ Steht im Bild ein `PhpClass`, lädt `PEDL_Object_Class` die Datei per `require_once`
 (`pedl_Object_Class.php:235`) — ihr loser Code **läuft** dann mit. `PhpFile` lädt nichts.
 

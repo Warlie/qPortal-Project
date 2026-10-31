@@ -181,6 +181,8 @@ class PHP_handle extends Interface_handle
 		/* was ausserhalb von Klassen steht (3.2.16) - hinter den Klassen, damit deren
 		*  Stempel bleiben, wo sie waren */
 		$frei = PHP_Ast_Scan::free_parts($str_source, $this->attribute_values['URI']);
+		foreach($frei['constants'] as $meta)
+			(new Obj_Free($meta, $own))->create_rdf_entry($this->base_object, $with_snippet);
 		foreach($frei['functions'] as $meta)
 			(new Obj_Free($meta, $own))->create_rdf_entry($this->base_object, $with_snippet);
 		if(!is_null($frei['file']))
@@ -1227,6 +1229,7 @@ class Obj_Parameter
 
 /** Was ausserhalb von Klassen steht (3.2.16) - nur fuer das Bild, nie in der .pedl.
 *
+*   PhpGlobalConstant: "const X" oder define('X', ...) auf oberster Ebene (3.2.19).
 *   PhpFunction: ein "function foo()" auf oberster Ebene, aufgebaut wie eine Methode,
 *   rdf:ID ist ihr Name (freie Funktionen teilen sich in PHP einen Namensraum).
 *   PhpFile: der lose Code der Datei, der beim Einbinden laeuft - die namenlose freie
@@ -1258,6 +1261,12 @@ class Obj_Free
 			$tagname = 'PhpFile';
 			$attrib  = array('pedl:name' => $meta['name']);
 		}
+		elseif('constant' === $meta['kind'])
+		{
+			//wie PhpConstant an der Klasse: der Wert als Quelltext in pedl:default (3.2.19)
+			$tagname = 'PhpGlobalConstant';
+			$attrib  = array('rdf:ID' => $meta['name'], 'pedl:name' => $meta['name'], 'pedl:default' => $meta['default']);
+		}
 		else
 		{
 			$tagname = 'PhpFunction';
@@ -1280,7 +1289,7 @@ class Obj_Free
 			$xml_model->tag_close($this, "pedl:hasCodeResource");
 		}
 
-		if($with_snippet)Obj_Class::write_snippet($xml_model, $this, $meta['snippet']);
+		if($with_snippet && isset($meta['snippet']))Obj_Class::write_snippet($xml_model, $this, $meta['snippet']);
 
 		$xml_model->tag_close($this, $tagname);
 	}

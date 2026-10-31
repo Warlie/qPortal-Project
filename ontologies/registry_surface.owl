@@ -108,11 +108,13 @@
             auch an der ersten Klasse (gemessen: kein Bestand betroffen, .pedl unveraendert).
             3.2.18 pedl:fm_in und pedl:fm_out - Marken fuer formale Methoden; worauf sie zeigen,
             ist offen (rdf:resource, wo ein Verweis vorliegt, sonst Text).
+            3.2.19 pedl:Free_Variable, daraus PhpGlobalConstant - Konstanten ausserhalb von
+            Klassen im Bild (const und define mit festem Namen).
 		       4.0  wenn der PHP-Quelltext einmalig aus den Dokumenten heraus ersetzt wird.
 		            Dann ein neues Repository - der Bruch ist zu brutal fuer dieselbe
 		            Historie, und danach gibt es eher einen laufenden Strom als Versionen.
 		-->
-		<owl:versionInfo>3.2.18</owl:versionInfo>
+		<owl:versionInfo>3.2.19</owl:versionInfo>
 	</owl:Ontology>
 
 	<!-- Geprägt aus den pedl-Grundlagen. Interfaces und Traits sind Deklarationen
@@ -133,6 +135,10 @@
 	     Datei. Beide nur im Bild (TARGET:TREE), nicht in der .pedl. -->
 	<pedl:Free_Function      rdf:ID="PhpFunction"/>
 	<pedl:Free_Function      rdf:ID="PhpFile"/>
+	<!-- Eine Konstante auf oberster Ebene (3.2.19): "const X = ..." und define('X', ...)
+	     mit festem Namen. Aus pedl:Free_Variable, dem Gegenstueck zu Object_Parameter,
+	     aus dem PhpConstant (die Klassenkonstante) gepraegt ist. Nur im Bild. -->
+	<pedl:Free_Variable      rdf:ID="PhpGlobalConstant"/>
 
 	<!-- Quelltext als Transportform (STW, 3.2.7): desc:code_snippet, nicht pedl -
 	     eingebetteter Code in pedl ist eine andere Idee (pedl:script). Unter PhpMethod
