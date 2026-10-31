@@ -23,9 +23,9 @@ QPORTAL_URL=http://127.0.0.1:8002/index.php php test/Integration/intern_walk.php
 # Das komplette qPortal mit eigenem INTERN-Baum (Server muss laufen)
 php -d error_reporting=E_ERROR test/Integration/tree_passthrough.php   # 7/0
 php -d error_reporting=E_ERROR test/Integration/tree_echo.php          # 21/0
-php -d error_reporting=E_ERROR test/Integration/tree_where.php         # 31/0
+php -d error_reporting=E_ERROR test/Integration/tree_where.php         # 34/0
 php -d error_reporting=E_ERROR test/Integration/logger_listen.php      # 18/0 (Teil 1 ohne Server)
-php -d error_reporting=E_ERROR test/Integration/tree_call.php          # 16/0
+php -d error_reporting=E_ERROR test/Integration/tree_call.php          # 22/0
 php -d error_reporting=E_ERROR test/Integration/schema_check.php       # 20/0 (Bestand: 512 gueltig / 60 nicht)
 php -d error_reporting=E_ERROR test/Integration/lang_choice.php        # 18/0 (Sprachfassungen)
 php -d error_reporting=E_ERROR test/Integration/tree_access.php        # 11/0 (<access>-Klammer)
