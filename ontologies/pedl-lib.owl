@@ -210,6 +210,16 @@
 		<rdfs:comment>Knotenklasse PEDL_turtle, ohne Verhalten (3.2.15); traegt Turtle-Text woertlich als Aussage neben dem Elternknoten - im Dokument in CDATA, in PHP als Kopf "pedl:turtle::" im /*@ @*/-Block. Ausgewertet wird er noch nicht</rdfs:comment>
 	</rdf:Property>
 
+	<rdf:Property rdf:ID="fm_in">
+		<rdfs:label>pedl:fm_in</rdfs:label>
+		<rdfs:comment>Knotenklasse PEDL_fm_in, ohne Verhalten (3.2.18); Marke fuer formale Methoden: was hineingeht. Worauf sie zeigt, ist offen - rdf:resource, wo ein Verweis vorliegt, sonst freier Text</rdfs:comment>
+	</rdf:Property>
+
+	<rdf:Property rdf:ID="fm_out">
+		<rdfs:label>pedl:fm_out</rdfs:label>
+		<rdfs:comment>Knotenklasse PEDL_fm_out, ohne Verhalten (3.2.18); Marke fuer formale Methoden: was herauskommt. Gegenstueck zu fm_in</rdfs:comment>
+	</rdf:Property>
+
 	<rdf:Property rdf:ID="name">
 		<rdfs:label>pedl:name</rdfs:label>
 		<rdfs:comment>Knotenklasse PEDL_name; der Name in PHP</rdfs:comment>

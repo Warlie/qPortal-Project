@@ -190,6 +190,14 @@ im `/*@ … @*/`-Block (in der `.pedl` und im Bild als CDATA, `PHP_handle::write
 geschrieben wie `pedl:name`/`pedl:src`: ein Träger, keine Klasse. ⚠ Ausgewertet wird noch
 nichts — der Text wird nicht zu Tripeln; dafür stünden `Turtle_handle` und hardf bereit.
 
+**`pedl:fm_in` / `pedl:fm_out`** (3.2.18) sind Marken für formale Methoden (fm = formal method):
+was hineingeht, was herauskommt. **Worauf sie zeigen, ist bewusst offen** (STW). Liegt ein Verweis
+vor, ist er `rdf:resource` — `<pedl:fm_in rdf:resource="…"/>`, in PHP `pedl:fm_in:: #name` (die
+Verweisform des Blocks) —, sonst freier Text. Unterstrich statt Bindestrich, weil ein Kopfname im
+`/*@ @*/`-Block keinen `-` kennt. Vokabular ohne Verhalten (`PEDL_fm_in`, `PEDL_fm_out`).
+⚠ Im **Dokument** braucht `rdf:resource="#name"` einen Default-Namensraum mit nativem Knoten,
+sonst `native namespace is missing` — dort eine volle URI schreiben.
+
 **Was außerhalb von Klassen steht** (3.2.16), aus `pedl:Free_Function` geprägt und **nur im
 Bild** (`TARGET:TREE`), nie in der `.pedl`: `PhpFunction` für ein `function foo()` auf oberster
 Ebene (aufgebaut wie `PhpMethod`, `rdf:ID` = Name, Parameter `foo.x`) und `PhpFile` für den
