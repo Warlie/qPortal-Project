@@ -110,11 +110,13 @@
             ist offen (rdf:resource, wo ein Verweis vorliegt, sonst Text).
             3.2.19 pedl:Free_Variable, daraus PhpGlobalConstant - Konstanten ausserhalb von
             Klassen im Bild (const und define mit festem Namen).
+            3.2.20 PhpInclude und pedl:pos - das Bild einer Datei ohne Klassen traegt ihre
+            Reihenfolge; der lose Code steht in Stuecken, die Datei laesst sich zurueckschreiben.
 		       4.0  wenn der PHP-Quelltext einmalig aus den Dokumenten heraus ersetzt wird.
 		            Dann ein neues Repository - der Bruch ist zu brutal fuer dieselbe
 		            Historie, und danach gibt es eher einen laufenden Strom als Versionen.
 		-->
-		<owl:versionInfo>3.2.19</owl:versionInfo>
+		<owl:versionInfo>3.2.20</owl:versionInfo>
 	</owl:Ontology>
 
 	<!-- Geprägt aus den pedl-Grundlagen. Interfaces und Traits sind Deklarationen
@@ -139,6 +141,9 @@
 	     mit festem Namen. Aus pedl:Free_Variable, dem Gegenstueck zu Object_Parameter,
 	     aus dem PhpConstant (die Klassenkonstante) gepraegt ist. Nur im Bild. -->
 	<pedl:Free_Variable      rdf:ID="PhpGlobalConstant"/>
+	<!-- Eine Einbindung mit festem Pfad (3.2.20): sie fuehrt den losen Code einer anderen
+	     Datei aus, ruft also deren PhpFile - darum aus Free_Function. Nur im Bild. -->
+	<pedl:Free_Function      rdf:ID="PhpInclude"/>
 
 	<!-- Quelltext als Transportform (STW, 3.2.7): desc:code_snippet, nicht pedl -
 	     eingebetteter Code in pedl ist eine andere Idee (pedl:script). Unter PhpMethod

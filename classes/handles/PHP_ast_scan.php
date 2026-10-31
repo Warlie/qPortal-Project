@@ -123,14 +123,14 @@ class PHP_Ast_Scan
 	/* Was ausserhalb von Klassen steht (3.2.16): freie Funktionen und der lose Code der
 	*  Datei. Ein eigener Einstieg, nur fuer das Bild - scan() und damit .pedl und
 	*  Register sehen davon nichts. Includes werden nicht verfolgt.
-	*  ['functions' => [meta, ...], 'constants' => [meta, ...], 'file' => meta | null]
+	*  ['functions' => [...], 'constants' => [...], 'includes' => [...], 'file' => meta | null]
 	*/
 	public static function free_parts(string $source, string $file) : array
 	{
 		$parser = (new ParserFactory())->createForNewestSupportedVersion();
 		$ast = $parser->parse($source);
 
-		if(is_null($ast))return ['functions' => [], 'constants' => [], 'file' => null];
+		if(is_null($ast))return ['functions' => [], 'constants' => [], 'includes' => [], 'file' => null];
 
 		$visitor = new PHP_Ast_Scan_Visitor(self::project_relative($file));
 		$visitor->set_tokens($parser->getTokens());
@@ -400,78 +400,129 @@ class PHP_Ast_Scan_Visitor extends NodeVisitorAbstract
 		return null;
 	}
 
-	/* Die oberste Ebene ohne Klassen (3.2.16). Eine freie Funktion wird wie eine Methode
-	*  gelesen. Alles andere ausser Einbindungen ist loser Code: aneinanderliegende
-	*  Anweisungen bilden ein Stueck (mit dem, was zwischen ihnen steht), die Stuecke
-	*  stehen in ihrer Reihenfolge im Snippet. Wo sie zwischen den Klassen stehen, sagt
-	*  es noch nicht. PhpFile gibt es nur, wo loser Code steht.
+	/* Die oberste Ebene ohne Klassen (3.2.16), in Dateireihenfolge (3.2.20).
 	*
-	*  Der Dateikopf geht an PhpFile nur in einer Datei ohne Klasse - sonst bekommt ihn
-	*  weiter die erste Klasse (take_classlike).
+	*  Eine freie Funktion wird wie eine Methode gelesen; Konstanten (const, define mit
+	*  festem Namen, 3.2.19) und Einbindungen mit festem Pfad (3.2.20) sind eigene Knoten.
+	*  Alles andere ist loser Code: aneinanderliegende Anweisungen bilden ein Stueck,
+	*  samt dem, was zwischen ihnen steht. Was vor einem Knoten steht (<?php, Kommentare),
+	*  wird ein eigenes Stueck; nur Leerraum faellt weg. Jedes Glied traegt 'pos', die
+	*  laufende Nummer in der Datei - auch die Klassen zaehlen mit, ohne dass sie hier
+	*  einen Eintrag bekommen. So laesst sich die Datei aus dem Bild wieder hinschreiben.
+	*
+	*  PhpFile gibt es nur, wo loser Code steht (Einbindungen zaehlen nicht). Der Dateikopf
+	*  geht an PhpFile nur in einer Datei ohne Klasse - sonst bekommt ihn weiter die erste
+	*  Klasse (take_classlike).
 	*/
 	public function free_parts(array $ast) : array
 	{
 		$functions = [];
 		$constants = [];
-		$stuecke   = [];
+		$includes  = [];
+		$stuecke   = [];     // [pos, von, bis] in Tokens
 		$desc      = [];
 		$klasse    = false;
-		$offen     = false;
+		$lose      = false;  // steht irgendwo wirklich loser Code?
+		$offen     = false;  // haengt die naechste lose Anweisung am letzten Stueck?
+		$pos       = 0;
+		$cursor    = 0;      // erstes Token, das noch keinem Glied gehoert
+
+		/* was vor einem Knoten steht, wird ein eigenes Stueck - ausser es ist nur Leerraum */
+		$luecke = function(int $bis) use (&$stuecke, &$pos, &$cursor) : void
+		{
+			if($bis >= $cursor && '' !== trim($this->snippet($cursor, $bis)))
+				$stuecke[] = [++$pos, $cursor, $bis];
+		};
 
 		foreach($ast as $stmt)
 		{
-			if($stmt instanceof Node\Stmt\ClassLike){$klasse = true; $offen = false; continue;}
+			$von = $stmt->getStartTokenPos();
+			$bis = $stmt->getEndTokenPos();
 
-			if($stmt instanceof Node\Stmt\Function_)
+			$knoten = null;
+
+			if($stmt instanceof Node\Stmt\ClassLike)$knoten = 'class';
+			elseif($stmt instanceof Node\Stmt\Function_)$knoten = 'function';
+			elseif($stmt instanceof Node\Stmt\Const_ || !is_null($this->define_of($stmt)))$knoten = 'constant';
+			elseif(!is_null($this->include_of($stmt)))$knoten = 'include';
+
+			if(is_null($knoten))
 			{
-				$functions[] = $this->function_meta($stmt);
-				$offen = false;
+				$desc = array_merge($desc, $this->desc_entries($stmt));
+
+				if(!($stmt instanceof Node\Stmt\Nop
+					|| ($stmt instanceof Node\Stmt\InlineHTML && '' === trim($stmt->value))))$lose = true;
+
+				//das Stueck reicht bis hierher, samt dem, was davor stand
+				if($offen)$stuecke[count($stuecke) - 1][2] = $bis;
+				else      $stuecke[] = [++$pos, $cursor, $bis];
+				$offen  = true;
+				$cursor = $bis + 1;
 				continue;
 			}
 
-			/* Konstanten (3.2.19): "const X = ..." und define('X', ...) mit festem Namen
-			*  sind Erklaerungen wie eine Funktion - eigene Knoten, nicht im losen Code. */
+			$luecke($von - 1);
+			$offen  = false;
+			$cursor = $bis + 1;
+
+			if('class' === $knoten){$klasse = true; ++$pos; continue;}
+
+			if('function' === $knoten)
+			{
+				$functions[] = $this->function_meta($stmt) + ['pos' => ++$pos];
+				continue;
+			}
+
+			if('include' === $knoten)
+			{
+				[$art, $ziel] = $this->include_of($stmt);
+				$includes[] = ['kind' => 'include', 'name' => $ziel, 'include' => $art,
+					'desc' => $this->desc_entries($stmt), 'pos' => ++$pos];
+				continue;
+			}
+
 			if($stmt instanceof Node\Stmt\Const_)
 			{
 				$beschreibung = $this->desc_entries($stmt);
 				foreach($stmt->consts as $one)
-					$constants[] = $this->global_constant_meta($one->name->toString(), $one->value, $beschreibung);
-				$offen = false;
+					$constants[] = $this->global_constant_meta($one->name->toString(), $one->value, $beschreibung)
+						+ ['form' => 'const', 'pos' => ++$pos];
 				continue;
 			}
 
-			if(!is_null($define = $this->define_of($stmt)))
-			{
-				$constants[] = $this->global_constant_meta($define[0], $define[1], $this->desc_entries($stmt));
-				$offen = false;
-				continue;
-			}
-
-			$desc = array_merge($desc, $this->desc_entries($stmt));
-
-			if(($stmt instanceof Node\Stmt\Expression && $stmt->expr instanceof Node\Expr\Include_)
-				|| $stmt instanceof Node\Stmt\Nop
-				|| ($stmt instanceof Node\Stmt\InlineHTML && '' === trim($stmt->value)))
-			{
-				$offen = false;
-				continue;
-			}
-
-			if($offen)$stuecke[count($stuecke) - 1][1] = $stmt->getEndTokenPos();
-			else      $stuecke[] = [$stmt->getStartTokenPos(), $stmt->getEndTokenPos()];
-			$offen = true;
+			$define = $this->define_of($stmt);
+			$constants[] = $this->global_constant_meta($define[0], $define[1], $this->desc_entries($stmt))
+				+ ['form' => 'define', 'pos' => ++$pos];
 		}
 
+		//was hinter der letzten Anweisung steht - ein Kommentar, das schliessende Tag
+		$luecke(count($this->tokens) - 1);
+
 		$file = null;
-		if($stuecke)
+		if($lose)
 			$file = [
 				'kind'    => 'file',
 				'name'    => basename($this->file),
 				'desc'    => $klasse ? [] : $desc,
-				'snippet' => implode("\n", array_map(fn($s) => $this->snippet($s[0], $s[1]), $stuecke)),
+				'pieces'  => array_map(fn($s) => ['pos' => $s[0], 'text' => $this->snippet($s[1], $s[2])], $stuecke),
 			];
 
-		return ['functions' => $functions, 'constants' => $constants, 'file' => $file];
+		return ['functions' => $functions, 'constants' => $constants, 'includes' => $includes, 'file' => $file];
+	}
+
+	/* include/require als Anweisung mit festem Pfad: [Art, Pfad] - sonst null. Ein Pfad,
+	*  der erst zur Laufzeit entsteht, bleibt loser Code (wie bei define). */
+	private function include_of(Node\Stmt $stmt) : ?array
+	{
+		if(!($stmt instanceof Node\Stmt\Expression) || !($stmt->expr instanceof Node\Expr\Include_))return null;
+		if(!($stmt->expr->expr instanceof Node\Scalar\String_))return null;
+
+		$art = [Node\Expr\Include_::TYPE_INCLUDE      => 'include',
+		        Node\Expr\Include_::TYPE_INCLUDE_ONCE => 'include_once',
+		        Node\Expr\Include_::TYPE_REQUIRE      => 'require',
+		        Node\Expr\Include_::TYPE_REQUIRE_ONCE => 'require_once'][$stmt->expr->type];
+
+		return [$art, $stmt->expr->expr->value];
 	}
 
 	/* define('X', wert) als Anweisung, mit einem Namen, der im Quelltext steht - sonst null.

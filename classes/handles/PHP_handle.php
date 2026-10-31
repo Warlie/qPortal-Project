@@ -181,6 +181,8 @@ class PHP_handle extends Interface_handle
 		/* was ausserhalb von Klassen steht (3.2.16) - hinter den Klassen, damit deren
 		*  Stempel bleiben, wo sie waren */
 		$frei = PHP_Ast_Scan::free_parts($str_source, $this->attribute_values['URI']);
+		foreach($frei['includes'] as $meta)
+			(new Obj_Free($meta, $own))->create_rdf_entry($this->base_object, $with_snippet);
 		foreach($frei['constants'] as $meta)
 			(new Obj_Free($meta, $own))->create_rdf_entry($this->base_object, $with_snippet);
 		foreach($frei['functions'] as $meta)
@@ -1230,6 +1232,8 @@ class Obj_Parameter
 /** Was ausserhalb von Klassen steht (3.2.16) - nur fuer das Bild, nie in der .pedl.
 *
 *   PhpGlobalConstant: "const X" oder define('X', ...) auf oberster Ebene (3.2.19).
+*   PhpInclude: eine Einbindung mit festem Pfad (3.2.20). Alle tragen pedl:pos, die
+*   Stelle in der Datei; der lose Code steht in Stuecken mit derselben Zaehlung.
 *   PhpFunction: ein "function foo()" auf oberster Ebene, aufgebaut wie eine Methode,
 *   rdf:ID ist ihr Name (freie Funktionen teilen sich in PHP einen Namensraum).
 *   PhpFile: der lose Code der Datei, der beim Einbinden laeuft - die namenlose freie
@@ -1265,7 +1269,15 @@ class Obj_Free
 		{
 			//wie PhpConstant an der Klasse: der Wert als Quelltext in pedl:default (3.2.19)
 			$tagname = 'PhpGlobalConstant';
-			$attrib  = array('rdf:ID' => $meta['name'], 'pedl:name' => $meta['name'], 'pedl:default' => $meta['default']);
+			$attrib  = array('rdf:ID' => $meta['name'], 'pedl:name' => $meta['name'], 'pedl:default' => $meta['default'],
+				'pedl:form' => $meta['form']);
+		}
+		elseif('include' === $meta['kind'])
+		{
+			/* eine Einbindung fuehrt den losen Code einer anderen Datei aus (3.2.20); der Pfad
+			*  steht, wie er geschrieben ist - aufgeloest wird beim Einbinden */
+			$tagname = 'PhpInclude';
+			$attrib  = array('pedl:src' => $meta['name'], 'pedl:include' => $meta['include']);
 		}
 		else
 		{
@@ -1274,6 +1286,9 @@ class Obj_Free
 			if($meta['byRef'])             $attrib['pedl:byRef']   = 'true';
 			if('' !== $meta['returnType']) $attrib['pedl:returns'] = $meta['returnType'];
 		}
+
+		/* die Stelle in der Datei (3.2.20) - danach laesst sie sich wieder hinschreiben */
+		if(isset($meta['pos']))$attrib['pedl:pos'] = (string) $meta['pos'];
 
 		$xml_model->tag_open($this, $tagname, $attrib);
 
@@ -1290,6 +1305,16 @@ class Obj_Free
 		}
 
 		if($with_snippet && isset($meta['snippet']))Obj_Class::write_snippet($xml_model, $this, $meta['snippet']);
+
+		/* der lose Code in Stuecken, jedes mit seiner Stelle (3.2.20) */
+		if($with_snippet)
+			foreach($meta['pieces'] ?? [] as $stueck)
+			{
+				$xml_model->tag_open($this, 'PhpSnippet', array('pedl:pos' => (string) $stueck['pos']));
+				$xml_model->get_Element()->set_bolcdata(true);
+				$xml_model->cdata($this, $stueck['text']);
+				$xml_model->tag_close($this, 'PhpSnippet');
+			}
 
 		$xml_model->tag_close($this, $tagname);
 	}

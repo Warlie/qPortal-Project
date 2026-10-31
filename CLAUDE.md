@@ -34,12 +34,12 @@ php -d error_reporting=E_ERROR test/Integration/tree_subtree.php       # 6/0 (<s
 
 ```bash
 # Sonden — sie prüfen nicht, sie ZEIGEN. Ausgabe wird gelesen, kein grün/rot.
-php -d error_reporting=E_ERROR test/proben/probe_registry_vocab.php   # ausser dieser: 36/0
+php -d error_reporting=E_ERROR test/proben/probe_registry_vocab.php   # ausser dieser: 37/0
 ```
 
 `seek_scope.php` und `sparql_parse.php` (69) müssen vollständig grün sein — jede rote Zeile
 dort ist neu. `probe_registry_vocab.php` bewacht die Naht zwischen Vokabulardokument und
-`build_up()` und steht bei **36 in Ordnung / 0 rot**.
+`build_up()` und steht bei **37 in Ordnung / 0 rot**.
 `intern_walk.php` steht bei **35 gelaufen / 1 rot** — `__get_data` ist ein Bestandsdefekt
 (über den Intern-Kanal ist der Aufrufer der ContentGenerator und damit kein Knoten; STW hat
 entschieden, das nicht umzubauen). Diese Zahl ist die Vergleichsmarke: ändert sie sich, hat
@@ -211,6 +211,18 @@ und `define('X', …)` mit festem Namen, Wert als `pedl:default`; sie fallen aus
 `define` mit errechnetem Namen bleibt loser Code. ⚠ Ein `/*@ @*/`-Block direkt vor der ersten
 Anweisung hängt der Parser an diese — steht dort ein `define`, bekommt die Konstante den Block,
 nicht `PhpFile`.
+
+**Reihenfolge und Zurückschreiben** (3.2.20): Einbindungen mit festem Pfad werden **`PhpInclude`**
+(aus `pedl:Free_Function` — eine Einbindung ruft den losen Code einer anderen Datei; `pedl:src` wie
+geschrieben, `pedl:include` die Art). Jedes Glied der obersten Ebene trägt **`pedl:pos`**, die
+laufende Nummer in der Datei (Klassen zählen mit, ohne das Attribut zu tragen); der lose Code
+steht in `PhpFile` als **mehrere** `PhpSnippet` mit derselben Zählung. Was vor einem Knoten steht
+(`<?php`, Kommentare), wird ein eigenes Stück, nur Leerraum fällt weg. Konstanten tragen
+`pedl:form` (`define`/`const`). Damit lässt sich eine Datei **ohne Klassen und Funktionen** aus
+ihrem Bild wieder hinschreiben — gemessen an `index.php`: `php -l` sauber, ohne Leerraum Token für
+Token gleich (bis auf `require_once 'x'` statt `require_once('x')`). Der Schreiber ist noch eine
+Probe (`.claude/tools/zurueck.php`), kein `save_back('PHP')`. ⚠ `/*@ @*/`-Blöcke stehen nicht im
+Snippet, sondern als `desc:` — sie kämen beim Zurückschreiben nicht wieder.
 ⚠ Steht im Bild ein `PhpClass`, lädt `PEDL_Object_Class` die Datei per `require_once`
 (`pedl_Object_Class.php:235`) — ihr loser Code **läuft** dann mit. `PhpFile` lädt nichts.
 
