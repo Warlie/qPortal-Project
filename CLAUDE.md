@@ -784,6 +784,14 @@ Konstante und löst dabei `__ROOT_DIR`/`__PROGRAM_DIR` auf. Die Unterscheidung t
 `__PROGRAM_DIR` sind die Dokumente **dieser Installation**, `__ROOT_DIR` ist, was zum
 **System** gehört (`PLUG_IN_FOLDER`, `REGISTRY_VOCABULARY`).
 
+**`[session] start`** (3.2.22): `always` (Vorgabe, Bestand) legt für jeden Besucher eine
+Sitzung samt `PHPSESSID` an; `resume` setzt nur fort, was der Browser mitbringt, und legt
+neu nur an bei `?i=__edit`/`__intern`/`__install`, in `login()` (`LOG_IN`) und per Plugin
+**`Session.start`** (`qp_session_wanted`/`qp_session_open`, `mod_lib.php`). Ohne Sitzung ist
+`$_SESSION` ein leeres Array. Gemessen: Seiten byte-gleich, nur ohne Cookie. ⚠ Unter
+`resume` fällt `Cache-Control: public, max-age=1800` weg — der kam aus `session_cache_limiter`.
+`Session.start` geht nur, solange noch keine Ausgabe lief (sonst `false`, Log Stufe 0).
+
 `parse_ini_file_multi` (`mod_lib.php:4`) macht aus Punkt-Schlüsseln verschachtelte Arrays:
 `sparql.fuseki.endpoint = ""` wird zu `$ini_array['search']['sparql']['fuseki']['endpoint']`.
 

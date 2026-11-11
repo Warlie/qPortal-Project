@@ -1517,11 +1517,79 @@ function isLocked(&$system, $sector, $state)
 
 }
 
+/**
+* Soll index.php gleich zu Beginn eine Sitzung starten? ([session] start)
+*
+*   always  ja, immer - der Bestand, und die Vorgabe, wenn nichts eingestellt ist
+*   resume  nur, wenn der Browser schon einen Sitzungscookie mitbringt oder ein
+*           Moduswechsel (__edit, __intern, __install) ausdruecklich eine verlangt.
+*           Neu angelegt wird sonst nur ueber qp_session_open(): LOG_IN und das
+*           Plugin Session.start.
+*
+* Wozu: ein Besucher, der nur liest, bekommt keinen Cookie. Ein Cookie entsteht erst
+* durch eine Handlung, fuer die er unbedingt erforderlich ist (§ 25 Abs. 2 Nr. 2 TDDDG).
+* __main bleibt draussen - es setzt nur zurueck, dafuer braucht es keine neue Sitzung.
+*/
+function qp_session_wanted($i = '')
+{
+	$art = defined('SESSION_START') ? strtolower(trim((string) SESSION_START)) : 'always';
+
+	if('resume' !== $art) return true;
+
+	if(isset($_COOKIE[session_name()]) && '' !== (string) $_COOKIE[session_name()]) return true;
+
+	return in_array((string) $i, ['__edit', '__intern', '__install'], true);
+}
+
+/**
+* Eine Sitzung oeffnen, falls noch keine laeuft.
+*
+* Was vor dem Oeffnen schon in $_SESSION stand (unter resume ein leeres Array, in das
+* der Request bis hierher geschrieben haben kann), geht in die Sitzung mit hinein.
+* Gespeichertes gewinnt nicht: eine NEUE Sitzung hat ohnehin nichts gespeichert.
+*
+* @param string $wer  steht in der Logzeile, wenn es nicht geht
+* @return bool        true, wenn danach eine Sitzung laeuft
+*/
+function qp_session_open($wer = '')
+{
+	global $logger_class;
+
+	if(PHP_SESSION_ACTIVE === session_status()) return true;
+
+	/* Der Cookie ist ein Header. Lief schon Ausgabe, kann er nicht mehr gesetzt werden -
+	*  session_start() wuerde dann nur warnen und eine Sitzung ohne Cookie fuehren, die
+	*  beim naechsten Aufruf nicht wiederkommt. Lieber sagen, dass es nicht ging. */
+	if(headers_sent($datei, $zeile))
+	{
+		if(is_object($logger_class))
+			$logger_class->setAssert("Sitzung fuer \"$wer\" nicht geoeffnet: Ausgabe lief schon ab $datei:$zeile", 0);
+		return false;
+	}
+
+	$vorher = (isset($_SESSION) && is_array($_SESSION)) ? $_SESSION : [];
+
+	if(!session_start()) return false;
+
+	foreach($vorher as $schluessel => $wert)
+		if(!array_key_exists($schluessel, $_SESSION)) $_SESSION[$schluessel] = $wert;
+
+	if(is_object($logger_class))
+		$logger_class->setAssert("Sitzung geoeffnet fuer \"$wer\"", 5);
+
+	return true;
+}
+
 function login(&$system, $user, $key)
 {
 
 global $_SESSION;
 global $logger_class;
+
+/* Anmelden IST der Grund fuer eine Sitzung - unter [session] start = resume ist hier
+*  vielleicht noch keine offen. Ohne sie landeten die Anmeldedaten im leeren Array und
+*  waeren mit dem Ende des Aufrufs weg; die Anmeldung schluege still fehl. */
+qp_session_open('LOG_IN');
 
 $decode_key = md5($key);
 

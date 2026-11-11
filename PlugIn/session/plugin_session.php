@@ -254,6 +254,17 @@ global $_SESSION;
 			var_dump($_SESSION);
 		}
 		
+	/**
+	*@function: START = oeffnet eine Sitzung, falls noch keine laeuft ([session] start = resume).
+	*	Fuer Dokumente, die eine brauchen - Anmelde- oder Registrierformular -, damit der
+	*	Cookie erst entsteht, wo jemand etwas tut. Gibt 'true' oder 'false' zurueck; false
+	*	heisst: die Seite hatte schon Ausgabe geschickt (Logzeile Stufe 0).
+	*/
+	public function start()
+	{
+		return qp_session_open('Session.start') ? 'true' : 'false';
+	}
+
 		public function fields()
 		{
 			global $_SESSION;

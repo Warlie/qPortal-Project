@@ -65,6 +65,9 @@ $list_of_configuration_parameters = [
 
 	'INTERN_ANONYMOUS' => ['intern', 'anonymous'],
 
+	// always | resume - wann eine Sitzung (und ihr Cookie) entsteht, siehe qp_session_wanted()
+	'SESSION_START' => ['session', 'start'],
+
 	'QUERY_PARAM' => ['runtime', 'QUERY_PARAM'],
 
 	'PEDL_FORCE_REBUILD' => ['runtime', 'PEDL_FORCE_REBUILD']
@@ -198,7 +201,18 @@ if(file_exists(CONFIG))
                                 /* starten der Session */
 				//$SID = session_id();
 				//if(empty($SID))
-                                session_start();
+                                /* [session] start (2026-11-11): always legt fuer jeden Besucher eine
+                                *  Sitzung an - der Bestand. resume setzt nur fort, was der Browser
+                                *  schon mitbringt, und oeffnet sonst nur auf ausdruecklichen Wunsch:
+                                *  ein Moduswechsel hier, LOG_IN (login() in mod_lib.php) oder ein
+                                *  Dokument per Session.start. Wer nur liest, bekommt keinen Cookie.
+                                *  Ohne Sitzung steht $_SESSION als leeres Array da - lesen geht wie
+                                *  bei einem anonymen Besucher, und qp_session_open() uebernimmt, was
+                                *  bis dahin hineingeschrieben wurde. */
+                                if(qp_session_wanted($_REQUEST['i'] ?? ''))
+                                	session_start();
+                                else
+                                	$_SESSION = [];
 
 /*
                                 if(isset($_SESSION['besucht'])) {
