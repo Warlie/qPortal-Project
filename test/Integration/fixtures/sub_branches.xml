@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer <sub call> (tree_call.php): ein Dokument, mehrere Aeste. final schreibt FINAL,
+     der Ast lager LAGER, der Ast kuehl KUEHL; jeder gibt seinen Namen gross als result zurueck. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<first>
+	<content name="http://www.w3.org/1999/xhtml#html">
+		<element type="xhtml">FIRST</element>
+	</content>
+</first>
+<final name="home" value="das Dokument als Ganzes">
+	<program>
+		<result>R-FINAL</result>
+	</program>
+	<content name="http://www.w3.org/1999/xhtml#html">
+		<element type="xhtml">FINAL</element>
+	</content>
+</final>
+<tree name="lager" value="ein Ast">
+	<program>
+		<result>R-LAGER</result>
+	</program>
+	<content name="http://www.w3.org/1999/xhtml#html">
+		<element type="xhtml">LAGER</element>
+	</content>
+</tree>
+<tree name="kuehl" value="ein anderer Ast">
+	<program>
+		<result>R-KUEHL</result>
+	</program>
+	<content name="http://www.w3.org/1999/xhtml#html">
+		<element type="xhtml">KUEHL</element>
+	</content>
+</tree>
+</indextree>

@@ -94,6 +94,30 @@ function event_initiated()
 				}
 			}
 		}
+
+	/* id (2026-11-11): ein tree mit id und src ist ein Prozess, den ein <sub id> von
+	*  ueberall rufen kann. Die id ist GLOBAL und steht im ContentGenerator; das src
+	*  wird vorgeladen (dieselbe Schlange wie mode="load"), damit auch die ids im
+	*  geladenen Dokument bekannt sind - transitiv, und ein Kreis laedt nichts doppelt.
+	*  ⚠ Das kostet: jeder Seitenaufbau laedt diese Dokumente mit. Ohne src keine id. */
+	$id = $this->get_ns_attribute('http://www.trscript.de/tree#id');
+
+	if(false !== $id && '' !== trim((string) $id) && is_object($this->contentGenerator)
+	&& method_exists($this->contentGenerator, 'register_tree_id'))
+	{
+		$quelle = $this->get_ns_attribute('http://www.trscript.de/tree#src');
+
+		if(false === $quelle || '' === trim((string) $quelle))
+		{
+			global $logger_class;
+
+			if(is_object($logger_class))
+				$logger_class->setAssert('tree "' . $this->get_ns_attribute('http://www.trscript.de/tree#name')
+					. '": id "' . $id . '" ohne src - nicht eingetragen', 0);
+		}
+		elseif($this->contentGenerator->register_tree_id((string) $id, $this))
+			$this->in_die_ladeschlange();
+	}
 }
 
 /* Laeuft dieser Zweig mit dem umgebenden, statt ueber seinen Namen gemeint zu sein?

@@ -156,6 +156,19 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
     }
 
     /**
+     * Ein freier Scope-Name: der gewuenschte, solange er nicht offen ist, sonst mit
+     * angehaengter Zaehlung. Fuer <sub>, das nach seinem src heisst - ruft sich ein
+     * Dokument ueber eine id im Kreis, waere der Name noch offen (2026-11-11).
+     */
+    public function freeScopeName(string $wunsch): string
+    {
+        $name = $wunsch;
+        for ($n = 2; array_key_exists($name, $this->scopes); $n++)
+            $name = $wunsch . '#' . $n;
+        return $name;
+    }
+
+    /**
      * Fügt einen Parameter als Schlüssel-Wert-Paar zum aktuellen (oder einem bestimmten) Scope hinzu.
      */
     public function addParamToScope($param_name, $param_value, ?string $name = null): bool
@@ -461,6 +474,59 @@ var $heap = array(); //muss überarbeitet werden, namenskonflikte
 	{
 		return is_object($node) ? $node->get_ns_attribute($uri)
 		                        : $this->XMLlist->show_ns_attrib($uri);
+	}
+
+	/**
+	*	DIE BAUM-IDS (2026-11-11). Ein <tree id="…" src="…"> traegt sich hier ein, ein
+	*	<sub id="…"> schlaegt hier nach. Global wie namespace_frameworks und nicht nach
+	*	Baumindex geschluesselt: die id nennt einen Prozess, nicht eine Stelle in einem
+	*	Dokument (STW).
+	*
+	*	Je id eine LISTE: Sprachfassungen desselben Asts (Geschwister gleichen Namens mit
+	*	xml:lang) tragen sinnvollerweise dieselbe id, gewaehlt wird beim Nachschlagen.
+	*	Dieselbe id an einer ANDEREN Stelle ist ein Konflikt - der erste Eintrag gilt,
+	*	wie bei set_Object_to_Namespace, und der zweite steht im Log.
+	*/
+	private $tree_ids = [];
+
+	public function register_tree_id(string $id, $node): bool
+	{
+		global $logger_class;
+
+		$id = trim($id);
+		if('' === $id || !is_object($node)) return false;
+
+		foreach($this->tree_ids[$id] ?? [] as $da)
+		{
+			if($da === $node) return true;
+
+			/* Fassung: derselbe Elternknoten, derselbe Name. Sonst Konflikt. */
+			if($da->getRefprev() !== $node->getRefprev()
+			|| $da->get_ns_attribute('http://www.trscript.de/tree#name') !== $node->get_ns_attribute('http://www.trscript.de/tree#name'))
+			{
+				if(is_object($logger_class))
+					$logger_class->setAssert('tree id "' . $id . '" ist schon vergeben (an "'
+						. $da->get_ns_attribute('http://www.trscript.de/tree#name') . '") - "'
+						. $node->get_ns_attribute('http://www.trscript.de/tree#name') . '" nicht eingetragen', 0);
+
+				return false;
+			}
+		}
+
+		$this->tree_ids[$id][] = $node;
+		return true;
+	}
+
+	/** Der tree zu einer id - unter Fassungen die gewaehlte Sprache, sonst null. */
+	public function tree_by_id(string $id)
+	{
+		$liste = $this->tree_ids[trim($id)] ?? [];
+
+		foreach($liste as $knoten)
+			if($this->isChosenLanguage($knoten))
+				return $knoten;
+
+		return $liste[0] ?? null;
 	}
 
 	/**

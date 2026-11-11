@@ -158,6 +158,9 @@
 		<xs:attributeGroup ref="tree:nodeAttributes"/>
 		<xs:attribute name="name" type="xs:string" use="required"/>
 		<xs:attribute name="consider_aspect" type="xs:string"/>
+		<!-- id (2026-11-11): mit src ein Prozess, den <sub id> von ueberall ruft. Global im
+		     ContentGenerator; das src wird bei jedem Aufbau vorgeladen. Ohne src keine id. -->
+		<xs:attribute name="id" type="xs:string"/>
 	</xs:complexType>
 
 	<xs:attributeGroup name="nodeAttributes">
@@ -351,13 +354,26 @@
 			werden an den Ausgabeknoten geklont, ein einfacher Wert angehaengt (in element an seiner
 			Stelle im Text). Scope-Name ist der src - derselbe src zweimal in einem Request scheitert
 			(leaveScope raeumt nicht ab); __call nimmt eigene Scopes.
+			call (2026-11-11) startet statt first/final einen ANDEREN Ast des gerufenen
+			Dokuments: eine Namensliste wie der Pfad beim start von aussen, getrennt durch
+			Leerraum (";" gehoert zur Praefixform eines tree:name). first und die once laufen
+			mit; ein Name, den kein tree traegt, steht im Log (Stufe 0). name ordnet den Scope.
+			Statt src geht id (ein tree id src, global); variable setzt call aus einem Argument.
+			Ueber id sind Kreise moeglich - [runtime] SUB_DEPTH begrenzt die Tiefe.
 		</xs:documentation></xs:annotation>
 		<xs:choice minOccurs="0" maxOccurs="unbounded">
 			<xs:element name="param" type="tree:paramType"/>
 		</xs:choice>
-		<xs:attribute name="src" type="xs:string" use="required"/>
+		<!-- src ODER id: id nennt einen <tree id src> irgendwo in einem geladenen Dokument -->
+		<xs:attribute name="src" type="xs:string"/>
+		<xs:attribute name="id" type="xs:string"/>
+		<!-- variable="x": der call kommt beim Aufruf aus dem Argument x (apply_arguments) -->
+		<xs:attribute name="variable" type="xs:string"/>
 		<xs:attribute name="method" type="xs:string"/>
 		<xs:attribute name="name" type="xs:string"/>
+		<xs:attribute name="call">
+			<xs:simpleType><xs:list itemType="xs:string"/></xs:simpleType>
+		</xs:attribute>
 		<xs:anyAttribute namespace="##other" processContents="skip"/>
 	</xs:complexType>
 

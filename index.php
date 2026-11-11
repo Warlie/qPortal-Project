@@ -33,6 +33,8 @@ $list_of_configuration_parameters = [
 	'PROGRAM_DIR' => ['runtime', 'PROGRAM_DIR'],
 	'PLUG_IN_FOLDER' => ['runtime', 'PLUG_IN_FOLDER'],
 	'REGISTRY_VOCABULARY' => ['runtime', 'REGISTRY_VOCABULARY'],
+	// wie tief <sub> ineinander stecken darf - ein Kreis ueber <sub id> endet hier
+	'SUB_DEPTH' => ['runtime', 'SUB_DEPTH'],
 	'FRONTEND_INDEX' => ['runtime', 'FRONTEND_INDEX'],
 	'EDIT_INDEX' => ['runtime', 'EDIT_INDEX'],
 	'INTERN' => ['runtime', 'INTERN'],

@@ -87,7 +87,44 @@ function complete()
 
 
 	
+/* Wie tief <sub> gerade ineinander steckt - ueber alle Instanzen, je Request. */
+private static $tiefe = 0;
+
+/**
+*	Die Tiefenklammer um den Lauf (2026-11-11). Ueber eine id kann ein Dokument sich
+*	im Kreis rufen, und Dokumente sind zustandslos: ohne Abbruchbedingung im Dokument
+*	endet das sonst im Stapelueberlauf. Die Grenze steht in [runtime] SUB_DEPTH.
+*/
 function event_message_in($type,&$obj)
+	{
+		$grenze = defined('SUB_DEPTH') ? intval(SUB_DEPTH) : 32;
+
+		if(self::$tiefe >= $grenze)
+		{
+			global $logger_class;
+
+			if(is_object($logger_class))
+				$logger_class->setAssert('sub: Tiefe ' . $grenze . ' erreicht (SUB_DEPTH) - "'
+					. ($this->get_ns_attribute('http://www.trscript.de/tree#src')
+					   ?: 'id ' . $this->get_ns_attribute('http://www.trscript.de/tree#id'))
+					. '" nicht mehr gerufen', 0);
+
+			return false;
+		}
+
+		self::$tiefe++;
+
+		try
+		{
+			return $this->run_sub($type, $obj);
+		}
+		finally
+		{
+			self::$tiefe--;
+		}
+	}
+
+private function run_sub($type,&$obj)
 	{
 		global $_SESSION;
 
@@ -126,8 +163,42 @@ function event_message_in($type,&$obj)
 		if(is_object($cg) && !$cg->mayEnter($this))
 			throw new NoPermissionException('not Allowed');
 
+	/* ------------------------------------------------------ Ziel: src oder id ------------------------------------------------------------*/
+		$uri_src = $this->get_ns_attribute('http://www.trscript.de/tree#src');
+
+		/* id (2026-11-11): das Ziel ist ein <tree id="…" src="…"> irgendwo in einem
+		*  geladenen Dokument (ContentGenerator::tree_by_id). Gerufen wird sein DOKUMENT;
+		*  vorgeladen ist es schon, load() gibt den vorhandenen Baum zurueck - darum
+		*  realpath, mit derselben Schreibweise wie drain_documents.
+		*  ⚠ Erst maySee am tree: sonst waere die id eine Tuer an der Sperre vorbei. */
+		$ziel_id = $this->get_ns_attribute('http://www.trscript.de/tree#id');
+
+		if((false === $uri_src || '' === trim((string) $uri_src)) && false !== $ziel_id && '' !== trim((string) $ziel_id))
+		{
+			global $logger_class;
+
+			$ziel = is_object($cg) && method_exists($cg, 'tree_by_id') ? $cg->tree_by_id((string) $ziel_id) : null;
+
+			if(!is_object($ziel))
+			{
+				if(is_object($logger_class))
+					$logger_class->setAssert('sub: id "' . $ziel_id . '" - kein tree mit dieser id geladen, nichts gerufen', 0);
+				return false;
+			}
+
+			if(method_exists($cg, 'maySee') && !$cg->maySee($ziel))
+				throw new NoPermissionException('not Allowed');
+
+			$uri_src = resolve_path((string) $ziel->get_ns_attribute('http://www.trscript.de/tree#src'));
+			$uri_src = realpath($uri_src) ?: $uri_src;
+		}
+
 	/* ------------------------------------------------------ Variable section ------------------------------------------------------------*/
-		$this->contentGenerator->createScope($uri_src = $this->get_ns_attribute('http://www.trscript.de/tree#src'));
+		/* Der Scope heisst nach seinem src. Ist der Name schon offen - ein Kreis ueber
+		*  id, A ruft B ruft A -, bekommt der innere einen eigenen, wie bei __call. */
+		$this->contentGenerator->createScope(
+			method_exists($this->contentGenerator, 'freeScopeName')
+				? $this->contentGenerator->freeScopeName((string) $uri_src) : $uri_src);
 		// collects all param tag info
 		// runns thought all children nodes 
 		for($i = 0 ; $i < $this->index_max();$i++)
@@ -175,6 +246,10 @@ function event_message_in($type,&$obj)
 			$this->get_parser()->load($uri_src,0);
 		//$this->get_parser()->ALL_URI();
 
+		/* Die Wurzel des gerufenen Dokuments - gleich nach dem Laden gegriffen, die Suchen
+		*  danach bewegen den Zeiger. Gebraucht fuer call (siehe unten). */
+		$wurzel = $this->get_parser()->show_xmlelement();
+
 		// changes content in document, based on the parameter section
 		self::apply_arguments($this->get_parser(), $param_arr);
 
@@ -212,7 +287,41 @@ function event_message_in($type,&$obj)
 			foreach($myonces as $myonce)
 				if(is_object($myonce))
 					$myonce->hold_messages($type,$obj);
-			
+
+			/* call (2026-11-11): einen ANDEREN Ast des gerufenen Dokuments starten statt
+			*  first/final - so lassen sich zusammengehoerige Prozesse in einem Dokument
+			*  buendeln (STW). Der Wert ist eine Namensliste wie der Pfad beim start von
+			*  aussen, getrennt durch Leerraum wie bei xs:list: ";" steht schon in der
+			*  Praefixform eines tree:name (fridge;power_consumption).
+			*  Derselbe Weg wie ein tree mit src (TREE_tree::run_branch): ein start an den
+			*  indextree des Dokuments, die Liste in Attribute. Die once laufen trotzdem -
+			*  sie richten das DOKUMENT ein, nicht einen Ast.
+			*  Nicht name: der ordnet den Scope (STW). */
+			$call = $this->get_ns_attribute('http://www.trscript.de/tree#call');
+			$call = (false === $call) ? [] : preg_split('/\s+/', trim((string) $call), -1, PREG_SPLIT_NO_EMPTY);
+
+			if($call && is_object($wurzel))
+			{
+				global $logger_class;
+
+				if(is_object($logger_class))
+					$logger_class->setAssert('sub "' . $uri_src . '": call ' . implode(' ', $call), 5);
+
+				/* ⚠ Ein Name, den kein Ast traegt, laeuft sonst still ins Leere: final weist
+				*  ihn ab, und nur first laeuft. Geprueft wird nur das erste Segment - die
+				*  weiteren liegen hinter einem src in anderen Dokumenten. */
+				if(is_object($logger_class)
+					&& !$this->get_parser()->collect_nodes('http://www.trscript.de/tree#tree',
+						['http://www.trscript.de/tree#name' => $call[0]]))
+					$logger_class->setAssert('sub "' . $uri_src . '": call "' . $call[0]
+						. '" - kein tree dieses Namens im Dokument, es laeuft nur first', 0);
+
+				$wurzel->hold_messages(
+					["Identifire"=>"http://www.trscript.de/tree#indextree", "Command"=> ["Name"=> "start" ], "Attribute"=>$call],
+					$obj);
+			}
+			else
+			{
 			if($myfirst)
 				{
 					$myfirst->hold_messages($type,$obj);
@@ -221,6 +330,7 @@ function event_message_in($type,&$obj)
 				{
 					$myfinal->hold_messages($type,$obj);
 				}
+			}
 
 			$this->get_parser()->flash_result();
 			
@@ -358,6 +468,7 @@ public static function apply_arguments($parser, array $param_arr)
 	$parser->flash_result();
 	$parser->seek_node('http://www.trscript.de/tree#variable');
 	$parser->seek_node('http://www.trscript.de/tree#object');
+	$parser->seek_node('http://www.trscript.de/tree#sub');
 	$res_tags = $parser->get_result();
 
 	foreach($res_tags as $value)
@@ -368,6 +479,16 @@ public static function apply_arguments($parser, array $param_arr)
 				$param_arr))
 			{
 				$value->set_ns_attribute('http://www.trscript.de/tree#id', $param_arr[$var_name]);
+				$belegt++;
+			}
+
+		/* <sub variable="x"> (2026-11-11) bekommt seinen CALL aus dem Argument x - das
+		*  Ziel (src/id) steht fest, der Ast ist variabel (STW). */
+		if($value instanceof TREE_sub)
+			if(false !== ($var_name = $value->get_ns_attribute('http://www.trscript.de/tree#variable'))
+			&& array_key_exists($var_name, $param_arr))
+			{
+				$value->set_ns_attribute('http://www.trscript.de/tree#call', (string) $param_arr[$var_name]);
 				$belegt++;
 			}
 

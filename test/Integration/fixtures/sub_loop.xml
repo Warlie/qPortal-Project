@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer SUB_DEPTH (tree_call.php): das Dokument ruft sich ueber seine eigene id - ohne Abbruchbedingung, die Tiefengrenze faengt es. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Pruefstand">
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one">test/Integration/fixtures/out_blank.xml</main>
+	</template>
+	<tree name=".selbst" id="selbst" src="test/Integration/fixtures/sub_loop.xml"/>
+	<content name="http://www.w3.org/1999/xhtml#html">
+		<sub id="selbst" />
+	</content>
+</final>
+</indextree>

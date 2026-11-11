@@ -227,6 +227,35 @@ result('__call mit Argumenten: Vorgabe ist weg',
        strpos($mit, 'VORGABE') === false,
        strpos($mit, 'VORGABE') === false ? 'kein VORGABE im Log' : 'die Vorgabe steht noch da');
 
+/* <sub call> (2026-11-11): einen ANDEREN Ast des gerufenen Dokuments starten, nicht
+*  first/final. sub_branches.xml hat final und die Aeste lager und kuehl; jeder schreibt
+*  seinen Namen und gibt R-<Name> zurueck. first laeuft immer mit, sein FIRST wird nur vom
+*  content danach ueberschrieben - beim unbekannten Namen bleibt es als einziges stehen. */
+$ast = function (string $v) use ($token) : string
+{
+	$ch = curl_init((getenv('QPORTAL_FIXTURE_URL') ?: 'https://localhost:8002/test/Integration/fixture_entry.php') . '?doc=' . $v);
+	curl_setopt_array($ch, [CURLOPT_POST => true,
+		CURLOPT_POSTFIELDS => json_encode(['Identifire' => T . 'indextree', 'Command' => ['Name' => 'start'], 'Attribute' => []]),
+		CURLOPT_HTTPHEADER => array_filter(['Content-Type: application/json', $token !== '' ? 'Authorization: Bearer ' . $token : null]),
+		CURLOPT_RETURNTRANSFER => true, CURLOPT_SSL_VERIFYPEER => false, CURLOPT_SSL_VERIFYHOST => false, CURLOPT_TIMEOUT => 30]);
+	$s = (string) curl_exec($ch);
+	curl_close($ch);
+	return preg_match('/<html[^>]*>([^<]*)</', $s, $m) ? $m[1] : (preg_match('#<html[^>]*/>#', $s) ? '' : '(keine Seite)');
+};
+foreach (['none' => 'FINALR-FINAL', 'lager' => 'LAGERR-LAGER', 'kuehl' => 'KUEHLR-KUEHL', 'nix' => 'FIRST'] as $v => $soll)
+	result('<sub call="' . $v . '">', ($ist = $ast('sub_call_' . $v)) === $soll, 'Seite: ' . $ist);
+
+/* <sub id> und <sub variable> (2026-11-11). Ein <tree id src> meldet einen Prozess global
+*  an (ContentGenerator::tree_by_id), sein Dokument wird vorgeladen; <sub id> ruft es, ohne
+*  den Pfad zu kennen. variable setzt den call aus einem Argument: sub_relay.xml bekommt
+*  ziel=lager. sub_loop.xml ruft sich ueber seine eigene id - die Tiefengrenze faengt es,
+*  die Seite steht (leer: jede Ebene ersetzt den Text der darueber). */
+foreach (['sub_id_call'    => ['<sub id call>',         'KUEHLR-KUEHL'],
+          'sub_id_unknown' => ['<sub id> unbekannt',    'DAVOR'],
+          'sub_variable'   => ['<sub variable>',        'LAGERR-LAGER'],
+          'sub_loop'       => ['Kreis ueber id: Grenze', '']] as $doc => [$was, $soll])
+	result($was, ($ist = $ast($doc)) === $soll, 'Seite: ' . ($ist === '' ? '(leer)' : $ist));
+
 $ok = 0; $fail = 0;
 foreach ($results as [$name, $good, $note])
 {

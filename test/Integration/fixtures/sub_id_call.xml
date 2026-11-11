@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer <sub id> (tree_call.php): ein tree mit id und src meldet sub_branches.xml an, der sub ruft ueber die id dessen Ast kuehl. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Pruefstand">
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one">test/Integration/fixtures/out_blank.xml</main>
+	</template>
+	<tree name=".lager" id="lager" src="test/Integration/fixtures/sub_branches.xml"/>
+	<content name="http://www.w3.org/1999/xhtml#html">
+		<sub id="lager" call="kuehl" />
+	</content>
+</final>
+</indextree>

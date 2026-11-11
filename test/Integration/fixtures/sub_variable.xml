@@ -1,0 +1,12 @@
+<?xml version='1.0' encoding="UTF-8"?>
+<!-- Pruefstand fuer <sub variable> (tree_call.php): sub_relay.xml bekommt ziel=lager und ruft damit den Ast in sub_branches.xml. -->
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Pruefstand">
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="output:one">test/Integration/fixtures/out_blank.xml</main>
+	</template>
+	<content name="http://www.w3.org/1999/xhtml#html">
+		<sub src="test/Integration/fixtures/sub_relay.xml"><param name="ziel">lager</param></sub>
+	</content>
+</final>
+</indextree>

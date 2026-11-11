@@ -25,8 +25,8 @@ php -d error_reporting=E_ERROR test/Integration/tree_passthrough.php   # 7/0
 php -d error_reporting=E_ERROR test/Integration/tree_echo.php          # 21/0
 php -d error_reporting=E_ERROR test/Integration/tree_where.php         # 34/0
 php -d error_reporting=E_ERROR test/Integration/logger_listen.php      # 18/0 (Teil 1 ohne Server)
-php -d error_reporting=E_ERROR test/Integration/tree_call.php          # 22/0
-php -d error_reporting=E_ERROR test/Integration/schema_check.php       # 20/0 (Bestand: 512 gueltig / 60 nicht)
+php -d error_reporting=E_ERROR test/Integration/tree_call.php          # 30/0
+php -d error_reporting=E_ERROR test/Integration/schema_check.php       # 45/0 (je Fixture eine Zeile; Bestand nur Befund)
 php -d error_reporting=E_ERROR test/Integration/lang_choice.php        # 18/0 (Sprachfassungen)
 php -d error_reporting=E_ERROR test/Integration/tree_access.php        # 11/0 (<access>-Klammer)
 php -d error_reporting=E_ERROR test/Integration/tree_subtree.php       # 6/0 (<subtree> in <element>; ohne Schluessel ueber die Sitzung)
@@ -570,6 +570,28 @@ Zurückgegeben wird nur, wenn das `<sub>` selbst unter `content` oder `element` 
   (`setdata($string, $point)` **ersetzt**) und tilgte die Rückgabe — `vor--nach`. Beide
   Zusammensetzungsschleifen (`process_exist_xhtml`, `process_new_xhtml`) haben jetzt einen Zweig für
   `tree#sub`, der dessen `$rueckgabe` an **seiner** Stelle einsetzt.
+
+- **`call` — einen anderen Ast starten** (3.2.21, mit `variable` und `id`): `<sub src="lager.xml" call="kuehlung">`
+  startet statt `first`/`final` den Ast `kuehlung` des gerufenen Dokuments — zusammengehörige
+  Prozesse lassen sich so in **einem** Dokument bündeln. Der Wert ist eine Namensliste wie der
+  Pfad beim `start` von außen, **durch Leerraum getrennt** (`xs:list`; `;` gehört zur
+  Präfixform eines `tree:name`). Derselbe Weg wie ein `tree` mit `src`: ein `start` mit der
+  Liste an den `indextree` des Dokuments. `once` und `first` laufen mit; ein erstes Segment,
+  das kein `tree` trägt, steht im Log (Stufe 0) — sonst liefe nur `first`, still.
+  **Nicht `name`**: der ordnet am `<sub>` den Scope (STW).
+- **`<sub variable="x">`** bekommt seinen `call` beim Aufruf aus dem Argument `x` — dieselbe
+  Stelle wie `<object variable>` (`apply_arguments`). Das Ziel steht fest, der Ast ist variabel.
+- **`<sub id="…">` statt `src`** ruft einen **`<tree id="…" src="…">`** irgendwo in einem
+  geladenen Dokument. Die id ist **global** (`ContentGenerator::register_tree_id`/`tree_by_id`,
+  nicht nach Baumindex); Sprachfassungen desselben Asts dürfen sie teilen, gewählt wird über
+  `isChosenLanguage`; dieselbe id an anderer Stelle: der erste gilt, Logzeile Stufe 0. Ein
+  `tree` mit id **lädt sein `src` bei jedem Aufbau vor** (Schlange wie `mode="load"`, transitiv,
+  nichts doppelt) — er startet es nicht. ⚠ Das kostet; ids nicht „zur Ordnung" vergeben. Vor
+  dem Ruf `maySee` am `tree`. Ohne `src` keine id.
+- **Kreise** sind über id möglich (Dokumente sind zustandslos): der Scope weicht auf
+  `src#2`, … aus (`freeScopeName`), die Tiefe begrenzt **`[runtime] SUB_DEPTH`** (32).
+  Prüfstand: `tree_call.php` (`fixtures/sub_branches.xml`, `sub_call_*`, `sub_id_*`,
+  `sub_variable`/`sub_relay`, `sub_loop`).
 
 ⚠ Fallen im Bestand, gemessen oder gelesen, nicht behoben:
 - `leaveScope()` nimmt nur vom Stapel, löscht `$scopes[$name]` nicht — derselbe `src` zweimal in
