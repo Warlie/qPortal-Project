@@ -59,6 +59,28 @@ class plugin_sumTest extends TestCase
         ], $this->readAll($this->sum(), ['mieter', 'soll.sum', 'haben.sum', 'soll.count', 'soll.max_sum']));
     }
 
+    /** leere Quelle (2026-11-23): keine Gruppe, auch keine unter null - und kein Deprecated */
+    public function testEmptySourceGivesNoGroup(): void
+    {
+        $s = new Sum();
+        $src = new RstStubForTesting([]);
+        $s->set_list($src);
+        $s->groups('alle', 'alle');
+        $s->sum('value', 'haben', '', '');
+        $this->assertSame([], $this->readAll($s, ['alle', 'haben.sum']));
+    }
+
+    /** eine Zeile mit leerem Gruppenwert zaehlt weiter (unter '') */
+    public function testRowWithoutGroupButValueStillCounts(): void
+    {
+        $s = new Sum();
+        $src = new RstStubForTesting([['alle' => '', 'value' => '5']]);
+        $s->set_list($src);
+        $s->groups('alle', 'alle');
+        $s->sum('value', 'haben', '', '');
+        $this->assertSame(['|5'], $this->readAll($s, ['alle', 'haben.sum']));
+    }
+
     public function testFieldsAreItsOwn(): void
     {
         $this->assertSame([

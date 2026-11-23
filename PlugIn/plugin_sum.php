@@ -178,7 +178,11 @@ var $rst = null;
 
 		if($this->rst)
 		{
-			$this->rst->moveFirst();
+			/* Leere Quelle (2026-11-23): do/while lief einmal, auch ohne Zeile - daraus wurde eine Gruppe
+			*  unter dem Schluessel null (Deprecated "null as an array offset" mitten in der Seite, Summe 0
+			*  statt keiner Zeile). Sagt moveFirst() ausdruecklich false, gibt es nichts zu sammeln; eine
+			*  Quelle ohne Rueckgabe (null) laeuft wie bisher. */
+			$hat_zeilen = ($this->rst->moveFirst() !== false);
 			
 			foreach ($this->columns as $value)
 			{
@@ -189,7 +193,7 @@ var $rst = null;
 				$this->max[ $value]['count'] = 0;
 			}
 			
-			do
+			if($hat_zeilen) do
 			{
 				$tmp = $this->rst->col($this->group_col );
 				if(!($tmp) && !$this->ignore)continue;
